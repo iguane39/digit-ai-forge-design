@@ -1,0 +1,2 @@
+id;regle;domaine;source;statut
+GL01;Contraste du texte courant;a11y;https://www.w3.org/TR/WCAG22/#contrast-minimum;ok

@@ -1,0 +1,11 @@
+<!DOCTYPE html><html lang="fr" data-theme="light"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Fixture verte</title>
+<style>:root{--bg:#fff}[data-theme="dark"]{--bg:#111}
+@media (prefers-color-scheme: dark){:root{--bg:#111}}
+@media (max-width:768px){.t{display:block}} @media (max-width:390px){.t{font-size:14px}}
+@media (prefers-reduced-motion: reduce){*{animation:none}} @media print{nav{display:none}}</style></head>
+<body><div class="demo">Données de démonstration — non contractuelles</div>
+<nav><a href="#accueil">Accueil</a><a href="#liste">Liste</a></nav>
+<main id="app"></main>
+<script>const R={"accueil":function(){return"A"},"liste":function(){return"L"}};
+document.documentElement.classList.toggle('dark',false);</script></body></html>

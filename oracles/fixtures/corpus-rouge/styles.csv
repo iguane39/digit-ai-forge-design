@@ -1,0 +1,6 @@
+id;nom;famille;tension;quand;anti_pattern;source;statut
+ST01;Minimalisme;reduction;grille contre respiration;editorial;grille jamais cassee;https://www.moma.org/;ok
+ST01;Doublon;reduction;idem;idem;idem;https://www.moma.org/;ok
+ST02;Sans source;matiere;douceur;bien-etre;ombres molles;a-verifier-plus-tard;ok
+ST03;Statut invalide;brut;lisibilite;portfolio;illisible;https://brutalist-web.design/;brouillon
+ST04;Chantier;brut;lisibilite;portfolio;illisible;https://brutalist-web.design/;todo

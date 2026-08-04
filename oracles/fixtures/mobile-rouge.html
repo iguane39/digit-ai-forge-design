@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
+<title>Fixture rouge — oracle-mobile</title>
+<!-- provenance : chantier forge-design, 04/08/2026. Déclenche M1 à M6. -->
+<style>
+  /* M2 · cibles tactiles sous 44 px */
+  .btn { height: 32px; min-width: 28px; }
+  a.lien { min-height: 24px; }
+
+  /* M3 · barre fixe collée au bord, sans safe-area */
+  .barre-basse { position: fixed; bottom: 0; left: 0; right: 0; }
+
+  /* M5 · plein écran sans traitement du paysage */
+  .ecran { height: 100vh; }
+
+  /* M6 · mouvement sans échappatoire */
+  .carte { transition: transform .3s ease-out; }
+  @keyframes pulse { from { opacity: .6 } to { opacity: 1 } }
+
+  /* M4 · aucune règle de reflow sous 768 px, et masquage de colonnes */
+  @media (max-width: 600px) {
+    td.secondaire { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="ecran">
+    <button class="btn">Filtrer</button>
+    <a class="lien" href="#detail">Détail</a>
+
+    <table>
+      <thead><tr><th>Dossier</th><th class="secondaire">Ouvert le</th><th>Statut</th></tr></thead>
+      <tbody>
+        <tr><td>D-1042</td><td class="secondaire">02/07/2026</td><td>En cours</td></tr>
+        <tr><td>D-1043</td><td class="secondaire">03/07/2026</td><td>Clos</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <nav class="barre-basse">Accueil · Dossiers · Profil</nav>
+</body>
+</html>

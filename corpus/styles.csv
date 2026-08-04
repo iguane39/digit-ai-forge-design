@@ -1,0 +1,25 @@
+id;nom;famille;tension;quand;anti_pattern;source;statut
+ST01;Minimalisme suisse;réduction;grille stricte contre respiration;contenu dense à hiérarchiser, institutionnel, éditorial sobre;devient froid et interchangeable dès que la grille n'est pas cassée au moins une fois;https://www.moma.org/collection/terms/international-typographic-style;ok
+ST02;Brutalisme web;brut;lisibilité contre affirmation;portfolio, culture, marque qui assume l'inconfort;illisible si le contraste et la taille de corps ne sont pas tenus;https://brutalist-web.design/;ok
+ST03;Néo-brutalisme;brut;naïveté contre crédibilité;produit jeune, outil créatif, communauté;bordures noires 3px + ombres dures deviennent un template en trois écrans;https://brutalist-web.design/;ok
+ST04;Éditorial magazine;narratif;densité contre élégance;contenu long, marque de contenu, rapport annuel;chapeau + filet + colonne devient du broadsheet générique sans image forte;https://www.nngroup.com/articles/scannable-content/;ok
+ST05;Bento grid;composition;variété contre chaos;page d'accueil produit, résumé de fonctionnalités;chaque bloc doit porter une info différente, sinon c'est une grille de cartes déguisée;https://m3.material.io/foundations/layout/applying-layout/window-size-classes;ok
+ST06;Glassmorphisme;matière;profondeur contre lisibilité;superposition assumée, lecteur média, overlay;flou décoratif sur fond neutre = coût GPU sans gain de sens;https://developer.apple.com/design/human-interface-guidelines/materials;ok
+ST07;Claymorphisme;matière;douceur contre sérieux;enfance, éducation, bien-être;ombres doubles molles sur tout composant = jouet involontaire;https://m3.material.io/styles/elevation/overview;ok
+ST08;Néomorphisme;matière;subtilité contre accessibilité;démonstration technique uniquement;contraste structurellement sous 3:1, incompatible WCAG 2.2 AA;https://www.w3.org/TR/WCAG22/#non-text-contrast;ok
+ST09;Maximalisme;abondance;richesse contre charge cognitive;mode, musique, événement, marque à forte personnalité;sans hiérarchie typographique tenue, devient du bruit en deux écrans;https://www.nngroup.com/articles/aesthetic-usability-effect/;ok
+ST10;Art déco géométrique;ornement;symétrie contre modernité;luxe, hôtellerie, spiritueux, patrimoine;les motifs doivent venir du sujet, pas d'une bibliothèque de formes;https://www.vam.ac.uk/articles/art-deco;ok
+ST11;Postmoderne Memphis;ornement;joie contre crédibilité;créatif, festival, jeunesse;formes flottantes sans rôle sémantique = décoration pure;https://www.designmuseum.org/;ok
+ST12;Terminal monospace;technique;authenticité contre lisibilité;outil développeur, observabilité, CLI;monospace comme raccourci de « technique » est un tell IA;skill:impeccable#typography_rules;ok
+ST13;Tableau de bord dense;densité;information contre respiration;gestion, back-office, supervision, finance;aérer sans proposer une densité compacte est le premier reproche des utilisateurs métier;skill:ameliore-le-design#inventaire-ecrans;ok
+ST14;Papier et impression;matière;tactilité contre écran;édition, artisanat, alimentaire, culture;crème + serif + terracotta est un défaut IA, pas un choix;skill:frontend-design#calibration;ok
+ST15;Organique naturel;matière;irrégularité contre rigueur;santé, alimentation, environnement, cosmétique;formes molles génériques sans ancrage dans le sujet;https://www.nngroup.com/articles/imagery-ux/;ok
+ST16;Luxe raffiné;réduction;silence contre richesse;joaillerie, immobilier, conseil haut de gamme;le vide seul ne fait pas le luxe : il faut une matière ou un détail exceptionnel;https://www.vam.ac.uk/;ok
+ST17;Ludique jouet;abondance;plaisir contre sérieux;enfance, jeu, apprentissage;les micro-animations partout tuent la lisibilité et fatiguent;skill:impeccable#motion;ok
+ST18;Industriel utilitaire;technique;robustesse contre chaleur;logistique, industrie, terrain, maintenance;gris sur gris sans accent = illisible en extérieur;https://www.w3.org/TR/WCAG22/#contrast-minimum;ok
+ST19;Rétro-futurisme;narratif;nostalgie contre actualité;jeu, musique, science, aérospatial;néon sur noir est la palette IA la plus reconnaissable;skill:impeccable#color_rules;ok
+ST20;Y2K;narratif;kitsch contre utilisabilité;mode jeune, musique, réseau social;chrome et dégradés sur tout = illisible et daté;https://www.designmuseum.org/;ok
+ST21;Cartographique;composition;territoire contre performance;immobilier, mobilité, réseau, terrain;sans tuiles réseau, le zoom continu est impossible : SVG ou GeoJSON simplifié;skill:ameliore-le-design#contrat-technique;ok
+ST22;Data-first;densité;preuve contre séduction;analytique, recherche, reporting;les sparklines décoratifs miment la sophistication sans rien dire;skill:impeccable#visual-details;ok
+ST23;Sombre technique;densité;confort nocturne contre contraste;trading, observabilité, audio, écoute nocturne;le sombre par inversion casse les contrastes et les ombres : recalculer;skill:ameliore-le-design#pieges-connus;ok
+ST24;Signalétique;composition;orientation contre décor;parcours long, formulaire complexe, administration;les numéros 01/02/03 n'ont de sens que si le contenu est une séquence réelle;skill:frontend-design#structure;ok

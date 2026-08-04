@@ -1,0 +1,27 @@
+id;nom;surface;job;quand;anti_pattern;source;statut
+PT01;Hero-thèse;landing;dire en une image ce que le produit est;toute page d'accueil;grand chiffre + petit label + stats + dégradé : la réponse template;skill:frontend-design#design-principles;ok
+PT02;Preuve par la démo;landing;montrer le produit en fonctionnement;produit visuel ou interactif;capture morte présentée comme démo;https://www.nngroup.com/articles/ux-mapping-cheat-sheet/;ok
+PT03;Bandeau de confiance;landing;lever l'objection de crédibilité;B2B, service, finance;logos clients illisibles alignés sans hiérarchie;https://www.nngroup.com/articles/trust-and-credibility/;ok
+PT04;Comparatif d'offres;landing;aider à choisir un plan;abonnement, service à paliers;trois colonnes identiques dont celle du milieu est « recommandée » sans raison;https://www.nngroup.com/articles/pricing-pages/;ok
+PT05;FAQ en accordéon;landing;répondre sans allonger la page;objections récurrentes connues;accordéon qui cache l'information la plus demandée;https://www.w3.org/WAI/ARIA/apg/patterns/accordion/;ok
+PT06;Tableau de bord à blocs cliquables;app;donner l'état et mener au détail;supervision, gestion, pilotage;KPI qui ne mène nulle part : un chiffre sans écran derrière;skill:ameliore-le-design#inventaire-ecrans;ok
+PT07;Liste maîtresse-détail;app;parcourir sans perdre le contexte;CRUD, messagerie, dossier;navigation pleine page à chaque sélection sur écran large;https://m3.material.io/foundations/layout/canonical-layouts/list-detail;ok
+PT08;Filtre en en-tête de colonne;data;filtrer là où la donnée est;table de gestion;barre de filtres détachée de la colonne concernée;skill:ameliore-le-design#patterns-interaction;ok
+PT09;Sélection et actions de masse;data;agir sur plusieurs lignes;administration, modération;actions de masse sans compteur ni confirmation;https://www.nngroup.com/articles/bulk-actions/;ok
+PT10;Densité commutable;data;servir le débutant et l'habitué;application de gestion;aérer sans proposer le mode compact;skill:ameliore-le-design#inventaire-ecrans;ok
+PT11;État de vue porté par l'URL;data;partager exactement ce qu'on voit;tri, filtres, colonnes;état en mémoire seulement : le lien envoyé ne montre pas la même chose;https://developer.mozilla.org/en-US/docs/Web/API/History_API;ok
+PT12;Palette de commandes;app;atteindre n'importe quoi au clavier;outil dense, usage quotidien;palette qui double le menu sans rien accélérer;https://www.w3.org/WAI/ARIA/apg/patterns/combobox/;ok
+PT13;Assistant multi-étapes;formulaire;découper une saisie longue;plus de 8 champs ou 2 domaines;étapes sans retour possible ni sauvegarde intermédiaire;https://www.nngroup.com/articles/wizards/;ok
+PT14;Validation à la sortie du champ;formulaire;corriger au bon moment;tout formulaire;erreur affichée à chaque frappe : punition en direct;https://www.nngroup.com/articles/errors-forms-design-guidelines/;ok
+PT15;Sauvegarde optimiste;app;faire sentir la vitesse;édition inline, préférences;spinner bloquant sur une action réversible;https://www.nngroup.com/articles/response-times-3-important-limits/;ok
+PT16;État vide instructif;app;enseigner l'interface;première visite, filtre sans résultat;« Aucun résultat » sans issue proposée;skill:impeccable#interaction;ok
+PT17;Onboarding par bulles ancrées;app;montrer la tâche, pas le composant;première connexion;bulle qui décrit l'interface au lieu de la tâche;https://www.nngroup.com/articles/onboarding-tutorials/;ok
+PT18;Barre d'onglets basse;mobile;atteindre 3 à 5 destinations au pouce;application mobile;menu desktop compressé en mobile;https://developer.apple.com/design/human-interface-guidelines/tab-bars;ok
+PT19;Feuille modale ancrée en bas;mobile;agir sans quitter le contexte;action secondaire, filtre, partage;modale centrée sur mobile, hors zone du pouce;https://m3.material.io/components/bottom-sheets/overview;ok
+PT20;Reflow de table en cartes;mobile;lire une table sur 390 px;toute table de gestion;défilement horizontal ou colonnes masquées;skill:ameliore-le-design#pieges-connus;ok
+PT21;Balayage pour action;mobile;raccourcir les gestes fréquents;liste d'éléments actionnables;action destructive au balayage sans annulation;https://developer.apple.com/design/human-interface-guidelines/gestures;ok
+PT22;Zone de sécurité respectée;mobile;ne rien cacher sous l'encoche;plein écran, barre fixe;position fixe collée au bord sans safe-area-inset;https://developer.apple.com/design/human-interface-guidelines/layout;ok
+PT23;Divulgation progressive;app;commencer simple, révéler à la demande;options avancées, réglages;tout afficher d'emblée pour « ne rien cacher »;https://www.nngroup.com/articles/progressive-disclosure/;ok
+PT24;Séquence d'apparition orchestrée;landing;créer un moment mémorable;chargement de page;animations dispersées sur chaque élément;skill:impeccable#motion;ok
+PT25;Annulation plutôt que confirmation;app;fluidifier les actions réversibles;suppression réversible, envoi;boîte de confirmation sur chaque action anodine;https://www.nngroup.com/articles/confirmation-dialog/;ok
+PT26;Bibliothèque de composants vivante;app;prouver que le système tient;maquette de conviction, design system;composants montrés au repos seulement, sans leurs états;skill:ameliore-le-design#patterns-interaction;ok

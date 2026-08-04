@@ -1,0 +1,4 @@
+date;client;scope;style_id;typo_id;palette_id;hue_accent;signature
+2026-03-02;Client A;refonte;ST13;TY08;PA02;230;bandeau de filtres persistant
+2026-05-18;Client B;landing;ST13;TY08;PA05;250;bandeau de filtres persistant
+2026-11-30;Client C;refonte;ST13;TY08;PA02;230;idem mais hors fenetre de 180 jours

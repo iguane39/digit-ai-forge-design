@@ -1,0 +1,36 @@
+id;regle;domaine;seuil;source;statut
+GL01;Contraste du texte courant;a11y;>= 4.5:1;https://www.w3.org/TR/WCAG22/#contrast-minimum;ok
+GL02;Contraste du grand texte;a11y;>= 3:1 au-delà de 24px ou 18.66px gras;https://www.w3.org/TR/WCAG22/#contrast-minimum;ok
+GL03;Contraste des éléments d'interface et graphiques;a11y;>= 3:1;https://www.w3.org/TR/WCAG22/#non-text-contrast;ok
+GL04;Focus visible sur tout élément atteignable au clavier;a11y;jamais supprimé sans remplacement;https://www.w3.org/TR/WCAG22/#focus-visible;ok
+GL05;Apparence du focus non masquée par un élément fixe;a11y;critère 2.4.11 AA;https://www.w3.org/TR/WCAG22/#focus-not-obscured-minimum;ok
+GL06;Cible de pointeur minimale;a11y;>= 24x24 CSS px (WCAG) et >= 44x44 (HIG);https://www.w3.org/TR/WCAG22/#target-size-minimum;ok
+GL07;Reflow sans défilement bidirectionnel;a11y;320px de large sans scroll horizontal;https://www.w3.org/TR/WCAG22/#reflow;ok
+GL08;Zoom du texte;a11y;200% sans perte de contenu ni de fonction;https://www.w3.org/TR/WCAG22/#resize-text;ok
+GL09;Contrat clavier des composants custom;a11y;conforme aux ARIA Authoring Practices;https://www.w3.org/WAI/ARIA/apg/patterns/;ok
+GL10;Piège de focus dans les boîtes de dialogue;a11y;entrée, cycle, échappement, restitution du focus;https://www.w3.org/WAI/ARIA/apg/patterns/dialog-modal/;ok
+GL11;Lien d'évitement vers le contenu principal;a11y;premier élément focusable;https://www.w3.org/TR/WCAG22/#bypass-blocks;ok
+GL12;Hiérarchie de titres continue;a11y;aucun niveau sauté;https://www.w3.org/WAI/tutorials/page-structure/headings/;ok
+GL13;Libellé associé à chaque champ;a11y;label for ou aria-labelledby;https://www.w3.org/WAI/tutorials/forms/labels/;ok
+GL14;Mouvement réduit respecté;motion;prefers-reduced-motion: reduce traité;https://developer.mozilla.org/en-US/docs/Web/CSS/@media/prefers-reduced-motion;ok
+GL15;Propriétés animées;motion;transform et opacity seulement;https://web.dev/articles/animations-guide;ok
+GL16;Courbe d'animation;motion;décélération exponentielle, sans dépassement;skill:impeccable#motion;ok
+GL17;Longueur de ligne du texte courant;typo;65 à 75 caractères;https://www.nngroup.com/articles/legibility-readability-comprehension/;ok
+GL18;Rapport de l'échelle typographique;typo;>= 1.25 entre deux pas;skill:impeccable#typography_principles;ok
+GL19;Interlignage sur fond sombre;typo;+0.05 à +0.1 par rapport au thème clair;skill:impeccable#typography_principles;ok
+GL20;Casse des passages longs;typo;jamais en capitales;https://www.nngroup.com/articles/glanceable-fonts/;ok
+GL21;Espace de couleur des tokens;couleur;OKLCH, pas HSL;https://www.w3.org/TR/css-color-4/#ok-lab;ok
+GL22;Chroma aux extrêmes de luminosité;couleur;<= 0.10 si L >= 0.85 ou L <= 0.15;skill:impeccable#color_principles;ok
+GL23;Teinte des neutres;couleur;chroma 0.005 à 0.01 vers la hue de marque;skill:impeccable#color_principles;ok
+GL24;Répartition du poids visuel;couleur;60 neutre / 30 secondaire / 10 accent;skill:impeccable#color_principles;ok
+GL25;Noir et blanc purs;couleur;proscrits, toujours teintés;skill:impeccable#color_rules;ok
+GL26;Échelle d'espacement;espace;pas de 4px, tokens sémantiques;skill:impeccable#spatial_principles;ok
+GL27;Espacement entre frères;espace;gap plutôt que marges;https://developer.mozilla.org/en-US/docs/Web/CSS/gap;ok
+GL28;Grille responsive sans breakpoint;espace;repeat(auto-fit, minmax(280px, 1fr));https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_grid_layout;ok
+GL29;Portée des requêtes de conteneur;espace;composant en @container, page en @media;https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_containment/Container_queries;ok
+GL30;Seuil de réponse perçue comme instantanée;interaction;<= 100 ms;https://www.nngroup.com/articles/response-times-3-important-limits/;ok
+GL31;Seuil avant indicateur de progression;interaction;au-delà de 1 s;https://www.nngroup.com/articles/response-times-3-important-limits/;ok
+GL32;Constance du vocabulaire d'action;contenu;le bouton Publier produit Publié;skill:frontend-design#writing;ok
+GL33;Contenu des messages d'erreur;contenu;ce qui s'est passé et comment le réparer;https://www.nngroup.com/articles/error-message-guidelines/;ok
+GL34;Virtualisation des tables;perf;au-delà de 500 lignes;skill:ameliore-le-design#contrat-technique;ok
+GL35;Plafond de poids du livrable autonome;perf;<= 10 Mo, zéro requête réseau;skill:ameliore-le-design#regles-dures;ok

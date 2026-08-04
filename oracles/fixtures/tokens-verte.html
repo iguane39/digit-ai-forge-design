@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens</title>
+<!-- provenance : chantier forge-design, 04/08/2026. T1-T6 sans écart. -->
+<style>
+  :root {
+    --fond-page: #f4f2ee;
+    --fond-surface: #e8e4dc;
+    --texte-principal: #1b1f26;
+    --texte-secondaire: #454b55;
+    --trait: #cdc7ba;
+    --signal: #7a3f20;
+    --voile-fond: oklch(0.20 0.020 62 / 0.45);   /* semi-transparent : contraste indecidable */
+    --halo: oklch(0.93 0.04 62);
+    --puits: oklch(0.12 0.03 62);
+    --espace-sm: 8px;
+    --espace-md: 16px;
+    --espace-lg: 32px;
+    --police-titre: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond-page: #14171c;
+      --fond-surface: #1e222a;
+      --texte-principal: #eceff4;
+      --texte-secondaire: #b9c0cc;
+      --trait: #333a45;
+      --signal: #e6a179;
+      --voile-fond: oklch(0.08 0.015 62 / 0.60);
+      --halo: oklch(0.90 0.05 62);
+      --puits: oklch(0.14 0.03 62);
+    }
+  }
+
+  body {
+    background: var(--fond-page);
+    color: var(--texte-principal);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: var(--espace-lg);
+  }
+  h1, h2, h3 { font-family: var(--police-titre); }
+  .carte {
+    background: var(--fond-surface);
+    border: 1px solid var(--trait);
+    padding: 16px;
+    margin-bottom: 24px;
+  }
+  .note { color: var(--texte-secondaire); padding: 8px 12px; }
+  .lien { color: var(--signal); }
+</style>
+</head>
+<body>
+  <h1>Tableau de bord</h1>
+  <div class="carte">
+    <h3>Traitements</h3>
+    <p class="note">Trois traitements en cours.</p>
+    <a class="lien" href="#detail">Voir le détail</a>
+  </div>
+</body>
+</html>

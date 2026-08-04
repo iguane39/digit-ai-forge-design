@@ -1,0 +1,71 @@
+{
+  "file": "demo\\rendus\\maquette-sombre.html",
+  "breakpoints": {
+    "1920": {
+      "png": "demo\\rendus\\maquette-sombre-w1920.png",
+      "issues": {
+        "v1_overflow": [],
+        "v2_contrast": [],
+        "v3_align": [],
+        "v4_overlap": [],
+        "v7_spacing": [],
+        "unmeasured": []
+      },
+      "blocking": 0
+    },
+    "1440": {
+      "png": "demo\\rendus\\maquette-sombre-w1440.png",
+      "issues": {
+        "v1_overflow": [],
+        "v2_contrast": [],
+        "v3_align": [],
+        "v4_overlap": [],
+        "v7_spacing": [],
+        "unmeasured": []
+      },
+      "blocking": 0
+    },
+    "1024": {
+      "png": "demo\\rendus\\maquette-sombre-w1024.png",
+      "issues": {
+        "v1_overflow": [],
+        "v2_contrast": [],
+        "v3_align": [],
+        "v4_overlap": [],
+        "v7_spacing": [],
+        "unmeasured": []
+      },
+      "blocking": 0
+    },
+    "768": {
+      "png": "demo\\rendus\\maquette-sombre-w768.png",
+      "issues": {
+        "v1_overflow": [],
+        "v2_contrast": [],
+        "v3_align": [],
+        "v4_overlap": [],
+        "v7_spacing": [
+          {
+            "what": "3×span dans div.kpi « Délai moyen de prise en charge4,2 j−0,6 … »",
+            "detail": "écarts de 47 / 67px"
+          }
+        ],
+        "unmeasured": []
+      },
+      "blocking": 0
+    },
+    "390": {
+      "png": "demo\\rendus\\maquette-sombre-w390.png",
+      "issues": {
+        "v1_overflow": [],
+        "v2_contrast": [],
+        "v3_align": [],
+        "v4_overlap": [],
+        "v7_spacing": [],
+        "unmeasured": []
+      },
+      "blocking": 0
+    }
+  },
+  "verdict": "PASS"
+}

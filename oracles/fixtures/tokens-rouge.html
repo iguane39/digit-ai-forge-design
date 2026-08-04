@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — oracle-tokens</title>
+<!-- provenance : chantier forge-design, 04/08/2026. Déclenche T1 à T6. -->
+<style>
+  :root {
+    --fond-page: #ffffff;
+    --texte-principal: #1b1f26;
+    --texte-faible: #9aa0a6;      /* T5 · 2.6:1 sur --fond-page */
+    --accent: #c2410c;             /* T4 · absent du thème sombre */
+    --halo: oklch(0.92 0.19 250);  /* T6 · chroma élevé à L=0.92 */
+    --police-corps: Georgia, serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond-page: #14171c;
+      --texte-principal: #eceff4;
+      --texte-faible: #6b7280;
+      --halo: oklch(0.90 0.05 250);
+      --surbrillance: #fde68a;     /* T4 · défini en sombre seulement */
+    }
+  }
+
+  body { background: var(--fond-page); color: var(--texte-principal); }
+
+  /* T1 · couleurs en dur hors bloc de tokens */
+  .carte { background: #f3f4f6; border: 1px solid #d1d5db; }
+  .badge { color: #b91c1c; }
+
+  /* T2 · famille de police en dur */
+  .titre { font-family: "Playfair Display", serif; }
+
+  /* T3 · espacements hors échelle 4pt */
+  .carte { padding: 13px 18px; }
+  .note { margin-bottom: 6px; }
+</style>
+</head>
+<body>
+  <h1 class="titre">Tableau de bord</h1>
+  <div class="carte">
+    <span class="badge">Retard</span>
+    <p class="note">Trois traitements en cours.</p>
+  </div>
+</body>
+</html>

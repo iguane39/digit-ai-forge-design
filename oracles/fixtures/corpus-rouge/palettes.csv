@@ -1,0 +1,2 @@
+id;nom;theme;hue;fond;surface;texte;texte_faible;trait;accent;secteurs;source;statut
+PA01;Ardoise;clair;230;oklch(0.97 0.008 230);oklch(0.94 0.012 230);;oklch(0.45 0.020 230);oklch(0.86 0.015 230);oklch(0.52 0.140 230);SaaS;https://www.w3.org/TR/css-color-4/#ok-lab;ok

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Fixture rouge — slop rendu à l'exécution</title>
+<!-- provenance : chantier forge-design, 04/08/2026.
+     Verrou de non-régression : tout le slop est ici DANS des gabarits JS, pas
+     dans le DOM statique. Un oracle qui ne lit que le DOM rendrait PASS. -->
+<style>:root{--fond:#f3f1ec;--texte:#171a21}body{background:var(--fond);color:var(--texte)}</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const ITEMS = [{t:"Rapide"},{t:"Fiable"},{t:"Ouvert"}];
+const ECRAN = () => `
+  <p>Bienvenue 🚀 sur votre espace</p>
+  <section class="grille">
+    ${ITEMS.map(i => `
+      <div class="carte"><svg viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/></svg><h3>${i.t}</h3><p>ok</p></div>`).join("")}
+  </section>
+  <div class="tendance">
+    <svg viewBox="0 0 120 40"><polyline points="0,30 40,26 80,18 120,10" fill="none" stroke="currentColor"/></svg>
+  </div>`;
+document.getElementById("app").innerHTML = ECRAN();
+</script>
+</body>
+</html>

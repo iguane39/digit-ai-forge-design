@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="fr" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Maquette — Suivi des demandes d'intervention</title>
+<style>
+/* ============================================================
+   Tokens — direction retenue : Tableau de bord dense (ST13)
+   Palette PA05 Bleu institutionnel, hue 250. Typo système : ce run
+   de validation n'embarque pas de fonte, l'écart est déclaré.
+   ============================================================ */
+:root {
+  --fond-page: oklch(0.98 0.006 250);
+  --fond-surface: oklch(0.95 0.010 250);
+  --fond-creux: oklch(0.92 0.012 250);
+  --texte-principal: oklch(0.23 0.018 250);
+  --texte-faible: oklch(0.46 0.018 250);
+  --trait: oklch(0.87 0.012 250);
+  --accent: oklch(0.48 0.150 250);
+  --accent-contraste: oklch(0.99 0.004 250);
+  --alerte: oklch(0.50 0.140 30);
+  --alerte-fond: oklch(0.94 0.020 30);
+  --succes: oklch(0.48 0.110 150);
+  --succes-fond: oklch(0.94 0.020 150);
+  --ombre: 0 2px 8px oklch(0.23 0.018 250 / 0.10);
+  --ombre-haute: 0 8px 24px oklch(0.23 0.018 250 / 0.14);
+  --voile-fond: oklch(0.23 0.018 250 / 0.45);
+
+  --police-titre: Georgia, "Iowan Old Style", ui-serif, serif;
+  --police-corps: ui-sans-serif, system-ui, "Segoe UI", sans-serif;
+  --police-mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --texte-xs: 0.75rem; --texte-sm: 0.875rem; --texte-md: 1rem;
+  --texte-lg: 1.375rem; --texte-xl: 1.875rem; --texte-2xl: 2.5rem;
+
+  --espace-xs: 4px; --espace-sm: 8px; --espace-md: 16px;
+  --espace-lg: 24px; --espace-xl: 32px; --espace-2xl: 48px;
+
+  --rayon-sm: 2px; --rayon-md: 6px; --rayon-lg: 14px;
+  --densite: 12px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond-page: oklch(0.17 0.010 250);
+    --fond-surface: oklch(0.22 0.014 250);
+    --fond-creux: oklch(0.26 0.016 250);
+    --texte-principal: oklch(0.96 0.006 250);
+    --texte-faible: oklch(0.76 0.012 250);
+    --trait: oklch(0.33 0.018 250);
+    --accent: oklch(0.72 0.130 250);
+    --accent-contraste: oklch(0.16 0.010 250);
+    --alerte: oklch(0.75 0.130 30);
+    --alerte-fond: oklch(0.27 0.030 30);
+    --succes: oklch(0.75 0.100 150);
+    --succes-fond: oklch(0.26 0.028 150);
+    --ombre: 0 2px 8px oklch(0.10 0.010 250 / 0.50);
+    --ombre-haute: 0 8px 24px oklch(0.10 0.010 250 / 0.60);
+    --voile-fond: oklch(0.08 0.008 250 / 0.60);
+  }
+}
+
+:root[data-theme="dark"] {
+  --fond-page: oklch(0.17 0.010 250); --fond-surface: oklch(0.22 0.014 250);
+  --fond-creux: oklch(0.26 0.016 250); --texte-principal: oklch(0.96 0.006 250);
+  --texte-faible: oklch(0.76 0.012 250); --trait: oklch(0.33 0.018 250);
+  --accent: oklch(0.72 0.130 250); --accent-contraste: oklch(0.16 0.010 250);
+  --alerte: oklch(0.75 0.130 30); --alerte-fond: oklch(0.27 0.030 30);
+  --succes: oklch(0.75 0.100 150); --succes-fond: oklch(0.26 0.028 150);
+  --ombre: 0 2px 8px oklch(0.10 0.010 250 / 0.50);
+  --ombre-haute: 0 8px 24px oklch(0.10 0.010 250 / 0.60);
+  --voile-fond: oklch(0.08 0.008 250 / 0.60);
+}
+
+:root[data-theme="light"] {
+  --fond-page: oklch(0.98 0.006 250); --fond-surface: oklch(0.95 0.010 250);
+  --fond-creux: oklch(0.92 0.012 250); --texte-principal: oklch(0.23 0.018 250);
+  --texte-faible: oklch(0.46 0.018 250); --trait: oklch(0.87 0.012 250);
+  --accent: oklch(0.48 0.150 250); --accent-contraste: oklch(0.99 0.004 250);
+  --alerte: oklch(0.50 0.140 30); --alerte-fond: oklch(0.94 0.020 30);
+  --succes: oklch(0.48 0.110 150); --succes-fond: oklch(0.94 0.020 150);
+  --ombre: 0 2px 8px oklch(0.23 0.018 250 / 0.10);
+  --ombre-haute: 0 8px 24px oklch(0.23 0.018 250 / 0.14);
+  --voile-fond: oklch(0.23 0.018 250 / 0.45);
+}
+
+/* ------------------------------ socle ------------------------------ */
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--fond-page);
+  color: var(--texte-principal);
+  font-family: var(--police-corps);
+  font-size: var(--texte-md);
+  line-height: 1.55;
+}
+h1, h2, h3 { font-family: var(--police-titre); line-height: 1.2; margin: 0; }
+h1 { font-size: var(--texte-2xl); letter-spacing: -0.02em; }
+h2 { font-size: var(--texte-xl); }
+h3 { font-size: var(--texte-lg); }
+p { margin: 0; max-width: 68ch; }
+a { color: var(--accent); }
+code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
+
+:where(a, button, input, select, summary, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--rayon-sm);
+}
+.evitement {
+  position: absolute; left: -9999px;
+  background: var(--accent); color: var(--accent-contraste);
+  padding: var(--espace-sm) var(--espace-md);
+}
+.evitement:focus { left: var(--espace-md); top: var(--espace-md); z-index: 60; }
+
+/* ------------------------------ chrome ------------------------------ */
+.bandeau-demo {
+  position: sticky; top: 0; z-index: 40;
+  background: var(--alerte-fond);
+  color: var(--texte-principal);
+  border-bottom: 1px solid var(--trait);
+  padding: var(--espace-sm) var(--espace-md);
+  padding-top: max(var(--espace-sm), env(safe-area-inset-top, 0px));
+  font-size: var(--texte-sm);
+  text-align: center;
+}
+.enveloppe { display: grid; grid-template-columns: 248px 1fr; min-height: 100dvh; }
+.rail {
+  background: var(--fond-surface);
+  border-right: 1px solid var(--trait);
+  padding: var(--espace-lg) var(--espace-md);
+  padding-left: max(var(--espace-md), env(safe-area-inset-left, 0px));
+}
+.marque { font-family: var(--police-titre); font-size: var(--texte-lg); margin-bottom: var(--espace-lg); }
+.rail nav { display: flex; flex-direction: column; gap: var(--espace-xs); }
+.rail nav a {
+  display: flex; align-items: center; gap: var(--espace-sm);
+  min-height: 44px; padding: var(--espace-sm) var(--espace-md);
+  border-radius: var(--rayon-md);
+  color: var(--texte-principal); text-decoration: none;
+}
+.rail nav a:hover { background: var(--fond-creux); }
+.rail nav a[aria-current="page"] { background: var(--accent); color: var(--accent-contraste); }
+.contenu { padding: var(--espace-xl); min-width: 0; }
+.entete-page { display: flex; flex-wrap: wrap; gap: var(--espace-md); align-items: baseline; margin-bottom: var(--espace-xl); }
+.entete-page p { color: var(--texte-faible); }
+
+/* ------------------------------ composants ------------------------------ */
+.btn {
+  min-height: 44px; min-width: 44px;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--espace-sm);
+  padding: var(--espace-sm) var(--espace-md);
+  border: 1px solid var(--accent); border-radius: var(--rayon-md);
+  background: var(--accent); color: var(--accent-contraste);
+  font: inherit; font-size: var(--texte-sm); cursor: pointer;
+  transition: transform .18s cubic-bezier(.16, 1, .3, 1);
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0); }
+.btn[disabled] { opacity: .5; cursor: not-allowed; }
+.btn-fantome { background: transparent; color: var(--accent); }
+.btn-discret { background: transparent; color: var(--texte-faible); border-color: var(--trait); }
+
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(196px, 1fr)); gap: var(--espace-md); margin-bottom: var(--espace-xl); }
+.kpi {
+  background: var(--fond-surface); border: 1px solid var(--trait);
+  border-radius: var(--rayon-lg); padding: var(--espace-lg);
+  box-shadow: var(--ombre);
+}
+.kpi .valeur { font-family: var(--police-titre); font-size: var(--texte-2xl); display: block; }
+.kpi .libelle { color: var(--texte-faible); font-size: var(--texte-sm); }
+.kpi .tendance { font-size: var(--texte-xs); color: var(--texte-faible); }
+
+.panneau {
+  background: var(--fond-surface); border: 1px solid var(--trait);
+  border-radius: var(--rayon-lg); padding: var(--espace-lg); margin-bottom: var(--espace-lg);
+}
+.alerte-bloc {
+  background: var(--alerte-fond); border: 1px solid var(--trait);
+  border-radius: var(--rayon-md); padding: var(--espace-md);
+  display: flex; gap: var(--espace-md); align-items: flex-start;
+}
+.etiquette {
+  display: inline-flex; align-items: center; gap: var(--espace-xs);
+  padding: var(--espace-xs) var(--espace-sm);
+  border: 1px solid var(--trait); border-radius: var(--rayon-sm);
+  font-size: var(--texte-xs);
+}
+.etiquette-urgente { background: var(--alerte-fond); color: var(--alerte); }
+.etiquette-close { background: var(--succes-fond); color: var(--succes); }
+
+/* ------------------------------ table ------------------------------ */
+.barre-table { display: flex; flex-wrap: wrap; gap: var(--espace-sm); align-items: center; margin-bottom: var(--espace-md); }
+.champ {
+  min-height: 44px; padding: var(--espace-sm) var(--espace-md);
+  border: 1px solid var(--trait); border-radius: var(--rayon-md);
+  background: var(--fond-page); color: var(--texte-principal); font: inherit; font-size: var(--texte-sm);
+}
+table { width: 100%; border-collapse: collapse; font-size: var(--texte-sm); }
+caption { text-align: left; color: var(--texte-faible); padding-bottom: var(--espace-sm); font-size: var(--texte-sm); }
+th, td { text-align: left; padding: var(--densite) var(--espace-md); border-bottom: 1px solid var(--trait); }
+thead th { background: var(--fond-creux); font-weight: 600; vertical-align: top; }
+thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-height: 44px; }
+tbody tr:hover { background: var(--fond-creux); }
+.tri { background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 0; min-height: 44px; }
+.rang-tri { color: var(--texte-faible); font-size: var(--texte-xs); }
+
+/* ------------------------------ graphique ------------------------------ */
+.graphe { width: 100%; height: auto; }
+.graphe .trace { fill: none; stroke: var(--accent); stroke-width: 2; }
+.graphe .axe { stroke: var(--trait); stroke-width: 1; }
+.graphe text { fill: var(--texte-faible); font-size: 11px; font-family: var(--police-corps); }
+
+/* ------------------------------ châssis mobile ------------------------------ */
+.chassis {
+  width: 390px; max-width: 100%; height: 720px;
+  margin: 0 auto; position: relative;
+  border: 12px solid var(--texte-principal); border-radius: 40px;
+  background: var(--fond-page); overflow: hidden;
+  box-shadow: var(--ombre-haute);
+}
+.chassis-encoche {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 140px; height: 28px; background: var(--texte-principal);
+  border-bottom-left-radius: var(--rayon-lg); border-bottom-right-radius: var(--rayon-lg);
+}
+.chassis-etat { display: flex; justify-content: space-between; padding: var(--espace-sm) var(--espace-lg); font-size: var(--texte-xs); color: var(--texte-faible); }
+.chassis-vue { padding: var(--espace-md); height: 596px; overflow: auto; }
+.chassis-onglets {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  display: flex; border-top: 1px solid var(--trait); background: var(--fond-surface);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.chassis-onglets a {
+  flex: 1; min-height: 56px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: var(--espace-xs);
+  font-size: var(--texte-xs); text-decoration: none; color: var(--texte-faible);
+}
+.chassis-onglets a[aria-current="page"] { color: var(--accent); }
+.voile {
+  position: absolute; inset: 0;
+  background: var(--voile-fond);
+  border: 0; padding: 0; margin: 0;
+}
+.feuille {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: var(--fond-surface); border-top: 1px solid var(--trait);
+  border-top-left-radius: var(--rayon-lg); border-top-right-radius: var(--rayon-lg);
+  padding: var(--espace-md); padding-bottom: var(--espace-2xl);
+  box-shadow: var(--ombre-haute);
+}
+.feuille-poignee { width: 40px; height: 4px; border-radius: var(--rayon-sm); background: var(--trait); margin: 0 auto var(--espace-md); }
+
+/* ------------------------------ états ------------------------------ */
+.etat-vide { text-align: center; padding: var(--espace-2xl) var(--espace-md); }
+.etat-vide h3 { margin-bottom: var(--espace-sm); }
+.etat-vide p { color: var(--texte-faible); margin: 0 auto var(--espace-md); }
+.squelette { background: var(--fond-creux); border-radius: var(--rayon-sm); height: 16px; margin-bottom: var(--espace-sm); }
+.grille-composants { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--espace-lg); }
+
+/* ------------------------------ responsive ------------------------------ */
+@media (max-width: 1024px) {
+  .enveloppe { grid-template-columns: 200px 1fr; }
+  .contenu { padding: var(--espace-lg); }
+}
+@media (max-width: 768px) {
+  .enveloppe { grid-template-columns: 1fr; }
+  .rail { border-right: 0; border-bottom: 1px solid var(--trait); }
+  .rail nav { flex-direction: row; flex-wrap: wrap; }
+  .contenu { padding: var(--espace-md); }
+
+  /* reflow des tables en cartes — jamais de colonne masquée */
+  table, tbody, tr, td { display: block; width: 100%; }
+  thead { position: absolute; left: -9999px; }
+  tr { border: 1px solid var(--trait); border-radius: var(--rayon-md); margin-bottom: var(--espace-md); padding: var(--espace-sm); }
+  td { border-bottom: 0; display: flex; justify-content: space-between; gap: var(--espace-md); padding: var(--espace-sm); }
+  td::before { content: attr(data-libelle); color: var(--texte-faible); font-weight: 600; }
+}
+@media (max-width: 480px) {
+  h1 { font-size: var(--texte-xl); }
+  .contenu { padding: var(--espace-sm); }
+}
+@media (orientation: landscape) and (max-height: 480px) {
+  .enveloppe { min-height: auto; }
+  .chassis { height: auto; min-height: 320px; }
+  .chassis-vue { height: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    transition-duration: .01ms !important;
+  }
+}
+@media print {
+  .rail, .bandeau-demo, .chassis-onglets { display: none; }
+  .enveloppe { grid-template-columns: 1fr; }
+  body { background: var(--fond-page); }
+}
+</style>
+</head>
+<body>
+<a class="evitement" href="#contenu-principal">Aller au contenu</a>
+
+<div class="bandeau-demo" role="status">
+  Données de démonstration — non contractuelles. Aucun montant réel, aucun locataire réel.
+</div>
+
+<div class="enveloppe">
+  <aside class="rail">
+    <div class="marque">Bailleur — Interventions</div>
+    <nav aria-label="Navigation principale">
+      <a href="#tableau-de-bord" data-nav="tableau-de-bord">Tableau de bord</a>
+      <a href="#demandes" data-nav="demandes">Demandes</a>
+      <a href="#demande" data-nav="demande">Fiche demande</a>
+      <a href="#composants" data-nav="composants">Bibliothèque</a>
+      <a href="#etats" data-nav="etats">États système</a>
+      <a href="#mobile" data-nav="mobile">Vue mobile</a>
+    </nav>
+    <p>
+      <button class="btn btn-discret" id="bascule-densite" type="button">Densité : confortable</button>
+    </p>
+    <p>
+      <button class="btn btn-discret" id="bascule-theme" type="button">Thème : auto</button>
+    </p>
+  </aside>
+
+  <main class="contenu" id="contenu-principal" tabindex="-1"></main>
+</div>
+
+<script>/*MOTION_VENDORE*/</script>
+<script>
+/* ============================================================
+   Données de démonstration — constantes en tête, rendu dynamique.
+   ============================================================ */
+const DEMANDES = [
+  { ref: "DI-4821", logement: "Résidence Lilas — B12", objet: "Fuite sous évier", urgence: "Urgente", statut: "En cours", ouverte: "2026-07-28", delai: 3 },
+  { ref: "DI-4822", logement: "Résidence Lilas — A04", objet: "Volet roulant bloqué", urgence: "Normale", statut: "En cours", ouverte: "2026-07-29", delai: 9 },
+  { ref: "DI-4823", logement: "Cité Verte — C21", objet: "Chaudière en défaut", urgence: "Urgente", statut: "Planifiée", ouverte: "2026-07-30", delai: 1 },
+  { ref: "DI-4824", logement: "Cité Verte — C08", objet: "Interphone muet", urgence: "Normale", statut: "Clôturée", ouverte: "2026-07-21", delai: 0 },
+  { ref: "DI-4825", logement: "Les Tilleuls — D02", objet: "Infiltration plafond", urgence: "Urgente", statut: "En cours", ouverte: "2026-08-01", delai: 2 },
+  { ref: "DI-4826", logement: "Les Tilleuls — D15", objet: "Serrure hall à changer", urgence: "Normale", statut: "Planifiée", ouverte: "2026-08-02", delai: 12 },
+];
+
+const VOLUME = [18, 24, 21, 33, 29, 41, 37];
+
+const ETAT = { tri: "ref", sens: 1, filtre: "", densite: "confortable", feuilleOuverte: false };
+
+/* ------------------------------ utilitaires ------------------------------ */
+const echapper = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function lignesFiltrees() {
+  const q = ETAT.filtre.trim().toLowerCase();
+  const base = q
+    ? DEMANDES.filter((d) => (d.ref + d.logement + d.objet + d.statut).toLowerCase().includes(q))
+    : DEMANDES.slice();
+  return base.sort((a, b) => String(a[ETAT.tri]).localeCompare(String(b[ETAT.tri])) * ETAT.sens);
+}
+
+function etiquetteStatut(d) {
+  const classe = d.statut === "Clôturée" ? "etiquette-close" : d.urgence === "Urgente" ? "etiquette-urgente" : "";
+  return '<span class="etiquette ' + classe + '">' + echapper(d.statut) + "</span>";
+}
+
+function courbe(valeurs, largeur, hauteur) {
+  const max = Math.max.apply(null, valeurs);
+  const pas = largeur / (valeurs.length - 1);
+  return valeurs.map((v, i) => (i * pas).toFixed(1) + "," + (hauteur - (v / max) * hauteur * 0.86).toFixed(1)).join(" ");
+}
+
+/* ------------------------------ écrans ------------------------------ */
+const ROUTES = {
+  "tableau-de-bord": () => `
+    <div class="entete-page">
+      <h1>Tableau de bord</h1>
+      <p>Semaine du 28 juillet au 3 août 2026 — patrimoine de 1 240 logements.</p>
+    </div>
+    <section class="kpis" aria-label="Indicateurs">
+      <div class="kpi"><span class="libelle">Demandes ouvertes</span><span class="valeur">37</span><span class="tendance">+4 sur 7 jours</span></div>
+      <div class="kpi"><span class="libelle">Urgentes non planifiées</span><span class="valeur">3</span><span class="tendance">objectif : 0</span></div>
+      <div class="kpi"><span class="libelle">Délai moyen de prise en charge</span><span class="valeur">4,2 j</span><span class="tendance">−0,6 j sur 30 jours</span></div>
+      <div class="kpi"><span class="libelle">Clôturées ce mois</span><span class="valeur">128</span><span class="tendance">+11 %</span></div>
+    </section>
+    <section class="panneau">
+      <h2>Volume hebdomadaire</h2>
+      <p>Demandes reçues sur les sept dernières semaines.</p>
+      <svg class="graphe" viewBox="0 0 640 200" role="img" aria-labelledby="titre-volume">
+        <title id="titre-volume">Volume de demandes par semaine : 18, 24, 21, 33, 29, 41 puis 37</title>
+        <line class="axe" x1="0" y1="176" x2="640" y2="176"></line>
+        <polyline class="trace" points="${courbe(VOLUME, 640, 176)}"></polyline>
+        <text x="0" y="194">S-6</text>
+        <text x="600" y="194">S-0</text>
+      </svg>
+    </section>
+    <section class="panneau">
+      <h2>Ce qui demande une décision</h2>
+      <div class="alerte-bloc">
+        <div>
+          <strong>3 demandes urgentes sans intervenant assigné.</strong>
+          <p>La plus ancienne attend depuis 3 jours. Assigner depuis la liste des demandes.</p>
+          <p><a href="#demandes">Ouvrir la liste filtrée sur les urgentes</a></p>
+        </div>
+      </div>
+    </section>`,
+
+  "demandes": () => {
+    const lignes = lignesFiltrees();
+    if (!lignes.length) {
+      return `
+        <div class="entete-page"><h1>Demandes</h1></div>
+        ${barreTable()}
+        <section class="panneau">
+          <div class="etat-vide">
+            <h3>Aucune demande ne correspond à « ${echapper(ETAT.filtre)} »</h3>
+            <p>Élargis la recherche, ou repars de la liste complète.</p>
+            <button class="btn" type="button" data-action="vider-filtre">Effacer le filtre</button>
+          </div>
+        </section>`;
+    }
+    return `
+      <div class="entete-page">
+        <h1>Demandes</h1>
+        <p>${lignes.length} demande(s) affichée(s) sur ${DEMANDES.length}.</p>
+      </div>
+      ${barreTable()}
+      <section class="panneau">
+        <table>
+          <caption>Demandes d'intervention — tri sur « ${echapper(ETAT.tri)} », sens ${ETAT.sens > 0 ? "croissant" : "décroissant"}.</caption>
+          <thead>
+            <tr>
+              <th scope="col"><button class="tri" type="button" data-tri="ref">Référence <span class="rang-tri">${ETAT.tri === "ref" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="logement">Logement <span class="rang-tri">${ETAT.tri === "logement" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="objet">Objet <span class="rang-tri">${ETAT.tri === "objet" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="statut">Statut <span class="rang-tri">${ETAT.tri === "statut" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col">Échéance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${lignes.map((d) => `
+              <tr>
+                <td data-libelle="Référence"><a href="#demande">${echapper(d.ref)}</a></td>
+                <td data-libelle="Logement">${echapper(d.logement)}</td>
+                <td data-libelle="Objet">${echapper(d.objet)}</td>
+                <td data-libelle="Statut">${etiquetteStatut(d)}</td>
+                <td data-libelle="Échéance">${d.delai === 0 ? "clôturée" : "sous " + d.delai + " j"}</td>
+              </tr>`).join("")}
+          </tbody>
+        </table>
+      </section>`;
+  },
+
+  "demande": () => `
+    <div class="entete-page">
+      <h1>DI-4821 — Fuite sous évier</h1>
+      <p>Résidence Lilas — B12 · ouverte le 28 juillet 2026 · <span class="etiquette etiquette-urgente">Urgente</span></p>
+    </div>
+    <section class="panneau">
+      <h2>Ce qui a été signalé</h2>
+      <p>Écoulement continu sous l'évier de la cuisine, constaté par le locataire. Coupure d'eau partielle effectuée par le gardien.</p>
+    </section>
+    <section class="panneau">
+      <h2>Suivi</h2>
+      <ol>
+        <li>28/07 — signalement reçu par téléphone, qualifié urgent.</li>
+        <li>28/07 — passage du gardien, coupure partielle.</li>
+        <li>29/07 — devis plombier demandé. <em>En attente.</em></li>
+      </ol>
+      <p><button class="btn" type="button">Assigner un intervenant</button>
+         <button class="btn btn-fantome" type="button">Ajouter au suivi</button></p>
+    </section>
+    <section class="panneau">
+      <h2>Pièces jointes</h2>
+      <div class="alerte-bloc">
+        <div>
+          <strong>Le devis n'a pas pu être joint.</strong>
+          <p>Le fichier dépasse 10 Mo. Compresse-le, ou envoie-le en deux fois.</p>
+        </div>
+      </div>
+    </section>`,
+
+  "composants": () => `
+    <div class="entete-page">
+      <h1>Bibliothèque</h1>
+      <p>Chaque composant est montré en fonctionnement, avec ses états.</p>
+    </div>
+    <div class="grille-composants">
+      <section class="panneau">
+        <h2>Actions</h2>
+        <p><button class="btn" type="button">Principal</button></p>
+        <p><button class="btn btn-fantome" type="button">Secondaire</button></p>
+        <p><button class="btn btn-discret" type="button">Discret</button></p>
+        <p><button class="btn" type="button" disabled>Désactivé</button></p>
+      </section>
+      <section class="panneau">
+        <h2>Saisie</h2>
+        <p><label for="ex-champ">Référence</label><br>
+           <input class="champ" id="ex-champ" type="text" placeholder="DI-0000"></p>
+        <p><label for="ex-select">Urgence</label><br>
+           <select class="champ" id="ex-select"><option>Normale</option><option>Urgente</option></select></p>
+      </section>
+      <section class="panneau">
+        <h2>Statuts</h2>
+        <p><span class="etiquette">Planifiée</span>
+           <span class="etiquette etiquette-urgente">Urgente</span>
+           <span class="etiquette etiquette-close">Clôturée</span></p>
+      </section>
+      <section class="panneau">
+        <h2>Chargement</h2>
+        <div class="squelette"></div>
+        <div class="squelette"></div>
+        <div class="squelette"></div>
+      </section>
+    </div>`,
+
+  "etats": () => `
+    <div class="entete-page"><h1>États système</h1></div>
+    <section class="panneau">
+      <h2>Vide</h2>
+      <div class="etat-vide">
+        <h3>Aucune demande sur ce logement</h3>
+        <p>C'est plutôt bon signe. Tu peux quand même en créer une.</p>
+        <button class="btn" type="button">Créer une demande</button>
+      </div>
+    </section>
+    <section class="panneau">
+      <h2>Erreur</h2>
+      <div class="alerte-bloc">
+        <div>
+          <strong>La liste n'a pas pu être chargée.</strong>
+          <p>Le service de gestion locative n'a pas répondu. Réessaie, ou consulte le dernier export.</p>
+          <p><button class="btn btn-fantome" type="button">Réessayer</button></p>
+        </div>
+      </div>
+    </section>
+    <section class="panneau">
+      <h2>Accès refusé</h2>
+      <p>Ton profil « gardien » ne donne pas accès aux montants. Demande l'accès à ton responsable de secteur.</p>
+    </section>`,
+
+  "mobile": () => `
+    <div class="entete-page">
+      <h1>Vue mobile</h1>
+      <p>Simulée dans un châssis. Le rendu système réel, les gestes natifs et la performance sur appareil ne sont pas reproduits.</p>
+    </div>
+    <div class="chassis">
+      <div class="chassis-encoche" aria-hidden="true"></div>
+      <div class="chassis-etat" aria-hidden="true"><span>9:41</span><span>100 %</span></div>
+      <div class="chassis-vue">
+        <h2>Mes demandes</h2>
+        <p>3 en cours, 1 planifiée.</p>
+        ${DEMANDES.slice(0, 4).map((d) => `
+          <div class="panneau">
+            <strong>${echapper(d.ref)}</strong> ${etiquetteStatut(d)}
+            <p>${echapper(d.objet)}</p>
+            <p class="mono">${echapper(d.logement)}</p>
+          </div>`).join("")}
+        <button class="btn" type="button" data-action="feuille-ouvrir">Filtrer</button>
+      </div>
+      ${ETAT.feuilleOuverte ? `
+      <button class="voile" type="button" data-action="feuille-fermer" aria-label="Fermer le filtre"></button>
+      <div class="feuille" role="dialog" aria-modal="true" aria-label="Filtrer les demandes">
+        <div class="feuille-poignee" aria-hidden="true"></div>
+        <h3>Filtrer</h3>
+        <p><button class="btn btn-fantome" type="button">Urgentes seulement</button></p>
+        <p><button class="btn btn-fantome" type="button">Non assignées</button></p>
+        <p><button class="btn" type="button" data-action="feuille-fermer">Fermer</button></p>
+      </div>` : ""}
+      <nav class="chassis-onglets" aria-label="Navigation mobile">
+        <a href="#mobile" aria-current="page">Demandes</a>
+        <a href="#tableau-de-bord">Tableau</a>
+        <a href="#composants">Réglages</a>
+      </nav>
+    </div>`,
+};
+
+function barreTable() {
+  return `
+    <div class="barre-table">
+      <label class="mono" for="recherche">Rechercher</label>
+      <input class="champ" id="recherche" type="search" value="${echapper(ETAT.filtre)}" placeholder="référence, logement, objet">
+      <button class="btn btn-discret" type="button" data-action="densite-table">Densité : ${ETAT.densite}</button>
+    </div>`;
+}
+
+/* ------------------------------ routage ------------------------------ */
+function route() {
+  const brut = location.hash.replace(/^#/, "");
+  return ROUTES[brut] ? brut : "tableau-de-bord";
+}
+
+function rendre() {
+  const r = route();
+  document.querySelector("main").innerHTML = ROUTES[r]();
+  document.querySelectorAll("[data-nav]").forEach((a) => {
+    if (a.getAttribute("data-nav") === r) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+  });
+  document.documentElement.style.setProperty("--densite", ETAT.densite === "compact" ? "4px" : "12px");
+  animerEntree();
+}
+
+function animerEntree() {
+  const reduit = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduit || typeof Motion === "undefined") return;
+  Motion.animate(
+    "main .panneau, main .kpi",
+    { opacity: [0, 1], transform: ["translateY(8px)", "none"] },
+    { duration: 0.32, delay: Motion.stagger ? Motion.stagger(0.04) : 0, easing: [0.16, 1, 0.3, 1] }
+  );
+}
+
+addEventListener("hashchange", rendre);
+
+document.addEventListener("input", (e) => {
+  if (e.target.id === "recherche") { ETAT.filtre = e.target.value; rendre(); document.getElementById("recherche").focus(); }
+});
+
+document.addEventListener("click", (e) => {
+  const tri = e.target.closest("[data-tri]");
+  if (tri) {
+    const cle = tri.getAttribute("data-tri");
+    ETAT.sens = ETAT.tri === cle ? -ETAT.sens : 1;
+    ETAT.tri = cle;
+    rendre();
+    return;
+  }
+  const action = e.target.closest("[data-action]");
+  if (action) {
+    const a = action.getAttribute("data-action");
+    if (a === "vider-filtre") { ETAT.filtre = ""; rendre(); }
+    if (a === "densite-table") { ETAT.densite = ETAT.densite === "compact" ? "confortable" : "compact"; rendre(); }
+    if (a === "feuille-ouvrir") { ETAT.feuilleOuverte = true; rendre(); }
+    if (a === "feuille-fermer") { ETAT.feuilleOuverte = false; rendre(); }
+    return;
+  }
+  if (e.target.id === "bascule-theme") {
+    const ordre = ["auto", "light", "dark"];
+    const suivant = ordre[(ordre.indexOf(document.documentElement.getAttribute("data-theme")) + 1) % 3];
+    document.documentElement.setAttribute("data-theme", suivant);
+    e.target.textContent = "Thème : " + suivant;
+  }
+  if (e.target.id === "bascule-densite") {
+    ETAT.densite = ETAT.densite === "compact" ? "confortable" : "compact";
+    e.target.textContent = "Densité : " + ETAT.densite;
+    rendre();
+  }
+});
+
+rendre();
+</script>
+</body>
+</html>

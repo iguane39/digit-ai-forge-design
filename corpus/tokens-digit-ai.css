@@ -1,0 +1,110 @@
+/* tokens-digit-ai.css — mode « digit-ai » de systeme-de-marque.
+ *
+ * Valeurs canoniques extraites de digit-ai-page-html/assets/boilerplate.html
+ * le 04/08/2026. La charte fait foi : ces valeurs ne sont pas retouchées ici.
+ *
+ * DEUX CONFLITS CONNUS AVEC LES ORACLES DE LA FORGE — déclarés, non masqués :
+ *
+ *  1. oracle-slop S4 se déclenche sur --card et --surface (#FFFFFF, blanc pur).
+ *     La règle S4 vient d'impeccable (« pure black/white never appears in
+ *     nature »). La charte Digit-AI la contredit frontalement.
+ *     Arbitrage : sur un livrable Digit-AI, la charte gagne et le finding S4 est
+ *     accepté comme exception déclarée dans la restitution. Sur un livrable
+ *     client, le mode « client » s'applique et la question ne se pose pas.
+ *     Alternative si tu veux fermer le conflit : teinter à #FEFEFF (chroma
+ *     imperceptible, S4 satisfait) — c'est une modification de charte, donc ta
+ *     décision, pas la mienne.
+ *
+ *  2. La charte Digit-AI est light-theme only. oracle-tokens T4 exige la parité
+ *     clair/sombre. Le bloc sombre ci-dessous est une EXTENSION de la forge,
+ *     dérivée par recalcul de contraste — il ne figure dans aucune charte
+ *     officielle. À faire valider avant tout usage client.
+ */
+
+:root {
+  /* --- Canonique Digit-AI, valeurs inchangées --- */
+  --bg: #FAFBFF;
+  --card: #FFFFFF;
+  --surface: #FFFFFF;
+  --ink: #0F172A;
+  --muted: #64748B;
+  --faint: #94A3B8;
+  --line: #E6EAF2;
+  --blue: #2563EB;
+  --green: #15803D;
+  --green-fill: #F2FCF5;
+  --green-line: #CFEEDD;
+  --amber: #D97706;
+  --amber-fill: #FFFBEB;
+  --amber-line: #FDE9C8;
+  --teal: #0E9488;
+  --teal-fill: #EFFDFB;
+  --teal-line: #C7F0EA;
+  --head: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Consolas", monospace;
+  --r: 12px;
+  --r-sm: 8px;
+
+  /* --- Alias au nommage de la forge ---
+   * oracle-tokens T5 résout les paires de contraste par le nom. Sans ces alias,
+   * aucun contraste n'est mesuré et l'oracle le déclare (avertissement T5).
+   * Ce sont des alias, pas de nouvelles valeurs. */
+  --fond: var(--bg);
+  --surface-carte: var(--card);
+  --texte: var(--ink);
+  --texte-faible: var(--muted);
+  --trait: var(--line);
+  --accent: var(--blue);
+
+  /* --- Échelle d'espacement 4pt (T3) ---
+   * Absente de la charte, qui ne fixe que couleurs, polices et rayons.
+   * Ajout de la forge, aligné sur le pas de 4 exigé par oracle-tokens T3. */
+  --espace-xs: 4px;
+  --espace-sm: 8px;
+  --espace-md: 16px;
+  --espace-lg: 24px;
+  --espace-xl: 32px;
+  --espace-2xl: 48px;
+}
+
+/* --- EXTENSION FORGE : thème sombre dérivé, hors charte officielle ---
+ * Le sombre n'est pas une inversion : contrastes recalculés, surfaces élevées
+ * plutôt qu'ombrées. Contraste vérifié ≥ 4.5:1 sur --texte et --texte-faible. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0E1219;
+    --card: #171C25;
+    --surface: #171C25;
+    --ink: #ECEFF6;
+    --muted: #A6B0C2;
+    --faint: #7C879A;
+    --line: #2A3140;
+    --blue: #6FA0FF;
+    --green: #5FCB86;
+    --green-fill: #12261A;
+    --green-line: #24422F;
+    --amber: #F0AE4E;
+    --amber-fill: #2A1F0E;
+    --amber-line: #46351A;
+    --teal: #4FC9BC;
+    --teal-fill: #0C2624;
+    --teal-line: #1B403C;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #0E1219; --card: #171C25; --surface: #171C25;
+  --ink: #ECEFF6; --muted: #A6B0C2; --faint: #7C879A; --line: #2A3140;
+  --blue: #6FA0FF; --green: #5FCB86; --green-fill: #12261A; --green-line: #24422F;
+  --amber: #F0AE4E; --amber-fill: #2A1F0E; --amber-line: #46351A;
+  --teal: #4FC9BC; --teal-fill: #0C2624; --teal-line: #1B403C;
+}
+
+:root[data-theme="light"] {
+  --bg: #FAFBFF; --card: #FFFFFF; --surface: #FFFFFF;
+  --ink: #0F172A; --muted: #64748B; --faint: #94A3B8; --line: #E6EAF2;
+  --blue: #2563EB; --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD;
+  --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8;
+  --teal: #0E9488; --teal-fill: #EFFDFB; --teal-line: #C7F0EA;
+}
