@@ -18,8 +18,8 @@
   --police-mono: "…", ui-monospace, monospace;
 
   /* Échelle typographique — rapport >= 1.25 entre deux pas */
-  --texte-xs: 0.75rem; --texte-sm: 0.875rem; --texte-md: 1rem;
-  --texte-lg: 1.375rem; --texte-xl: 1.875rem; --texte-2xl: 2.5rem;
+  --texte-xs: 0.75rem; --texte-sm: 1rem; --texte-md: 1.25rem;
+  --texte-lg: 1.625rem; --texte-xl: 2.125rem; --texte-2xl: 2.75rem;
 
   /* Espacement — pas de 4px, noms sémantiques et non pixellisés */
   --espace-xs: 4px; --espace-sm: 8px; --espace-md: 16px;
@@ -42,6 +42,7 @@
 | Chroma aux extrêmes de luminosité | ≤ 0.10 si L ≥ 0.85 ou L ≤ 0.15 | T6 |
 | Parité des thèmes | tout token de couleur existe des deux côtés | T4 |
 | Échelle d'espacement | multiples de 4 | T3 |
+| Tracking optique | ~-0.02em sur le display, ~0 sur le corps | corpus GL49 (apple-design) |
 | Aucune valeur en dur hors `:root` | 0 couleur, 0 police littérale | T1, T2 |
 
 ## Nommage — c'est une précondition, pas une préférence
@@ -52,6 +53,42 @@ contient `texte`, `text`, `fg`, `encre` ou `ink` ; un token de surface contient
 plus tester T5 et le déclare `non_juge` — le contraste retombe alors sur
 `render_page.py` V2, plus lent et plus tardif. Suivre la convention n'est pas une
 coquetterie : c'est ce qui permet au contrôle de tourner tôt.
+
+## Tokens d'état sémantique — convention optionnelle
+
+La structure imposée ne prévoit aucun token d'état (erreur, succès). Quand la
+page témoin doit démontrer un état d'erreur (voir « Page témoin » ci-dessous),
+ajouter les tokens nécessaires en suivant cette convention — elle n'est **pas
+obligatoire**, mais évite d'improviser une couleur en dur qui violerait T1 :
+
+```css
+:root {
+  /* ... */
+  --texte-erreur: oklch(0.50 0.18 25);
+  --fond-erreur: oklch(0.95 0.03 25);
+  --texte-succes: oklch(0.45 0.14 145);
+  --fond-succes: oklch(0.95 0.03 145);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --texte-erreur: oklch(0.75 0.15 25);  --fond-erreur: oklch(0.28 0.05 25);
+    --texte-succes: oklch(0.72 0.13 145); --fond-succes: oklch(0.26 0.04 145);
+  }
+}
+```
+
+Dérivées de la palette de marque (même hue de base que `--accent`, pas un
+rouge/vert générique importé sans lien avec le reste des tokens), contraste
+≥ 4.5:1 sur les deux thèmes — même seuil que T5.
+
+Préfixer par `texte-` / `fond-` plutôt que nommer juste `--erreur` fait entrer
+la paire dans la convention T5 (voir « Nommage » ci-dessus) : `oracle-tokens`
+mesure alors son contraste automatiquement au lieu de le laisser à la charge
+d'un contrôle manuel. Cette convention ne s'oppose à aucune des règles T1–T6 :
+déclarée dans le bloc `:root` (T1 satisfait, pas de couleur en dur ailleurs),
+sans police (T2 sans objet), sans espacement (T3 sans objet), définie des deux
+côtés clair/sombre si utilisée (T4), chroma à modérer aux luminosités extrêmes
+comme tout token de couleur (T6).
 
 ## Teinter les neutres
 
