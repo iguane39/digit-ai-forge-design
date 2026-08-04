@@ -9,8 +9,8 @@
 | C3 | Poids ≤ 10 Mo, aucune requête réseau | `check_maquette.py` | bloquant |
 | C4 | Navigation clavier de bout en bout | parcours scripté ou manuel tracé | bloquant |
 | C5 | États vide / chargement / erreur atteignables | parcours | bloquant |
-| C6 | Aucune donnée chiffrée non marquée | `check_maquette.py` + `oracle-claims` | bloquant |
-| C7 | Nommage du fichier conforme | `oracle-nommage` | bloquant |
+| C6 | Aucune donnée chiffrée non marquée | `check_maquette.py` + `~/.claude/skills/quality-oracles/scripts/oracle-claims.mjs` | bloquant |
+| C7 | Nommage du fichier conforme | `~/.claude/skills/quality-oracles/scripts/oracle-nommage.mjs` | bloquant |
 | C8 | Direction visuelle non générique | jugement argumenté ou arbitrage commanditaire | avertissement |
 | C9 | Aucun marqueur de design généré (S1–S10) | `oracle-slop` | bloquant |
 | C10 | Couleurs et polices tracées aux tokens, parité clair/sombre (T1–T6) | `oracle-tokens` | bloquant |
@@ -19,8 +19,21 @@
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
 
 `check_maquette.py` juge ce qui est décidable sur le fichier. Ce qui exige un
-rendu réel est déclaré `non_juge` et délégué à `render_page.py` — jamais
-approuvé par lecture du code.
+rendu réel est délégué à `render_page.py` (V1–V7), **installé le 04/08/2026** dans
+`~/.claude/skills/digit-ai-page-html/scripts/` — il n'y était pas, alors que le
+registre global le déclarait déjà. `check_html.py`, qui l'accompagne, est un
+contrôle statique de charte, d'accessibilité structurelle et d'impression : il ne
+rend pas la page et ne mesure ni débordement, ni chevauchement, ni contraste rendu.
+
+Si `render_page.py` ou Playwright venaient à manquer, C1 se déclare `non_juge` avec
+la raison — **jamais approuvé par lecture du code**.
+
+```bash
+python ~/.claude/skills/digit-ai-page-html/scripts/render_page.py <fichier.html>        --widths 1920,1440,1024,768,390 --output json
+```
+
+Le thème sombre se mesure sur une copie dont `data-theme` vaut `dark` : sans ça,
+seul le thème clair est rendu et V2 ne dit rien du second.
 
 C11 et C12 sont **conditionnels** : hors cible mobile ou sans visuel généré, ils
 sont reportés `SANS OBJET` avec leur raison — jamais `PASS` par défaut.
@@ -41,7 +54,7 @@ puis déduit du dossier parent du script. **Racine non résolue ⇒ exit 2 et ve
 
 Ce que l'orchestrateur ne lance pas, et qui reste dû : `render_page.py` (V1–V7) et
 `oracle-a11y.py`. Il les déclare en `non_juge` — c'est au parcours de contrôle de
-les lancer.
+les lancer, sur les **deux** thèmes.
 
 Un oracle indisponible — runtime absent, Playwright manquant, quota épuisé — se
 déclare en `non_juge`. Il ne se contourne pas par une approbation sur lecture de code.
