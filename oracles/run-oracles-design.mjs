@@ -15,16 +15,28 @@
 //
 // Contrat : JSON sur stdout, exit 0 = PASS, 1 = FAIL, 2 = indéterminé.
 // Usage :
-//   node run-oracles-design.mjs <fichier.html> [--mobile] [--tokens t.css] [--json-only]
+//   node run-oracles-design.mjs <fichier.html> [--mobile] [--tokens t.css] [--json-only] [--rendu]
 //   node run-oracles-design.mjs --corpus <dossier-corpus>
+//
+// --rendu : détecte render_page.py (digit-ai-page-html) et oracle-a11y.py
+// (quality-oracles) aux chemins canoniques sous ~/.claude/skills/. Si les deux
+// scripts, un interpréteur Python et le module playwright sont disponibles,
+// les exécute sur une copie temporaire du HTML fourni (thème clair) ET sur
+// une copie temporaire avec data-theme="dark" injecté (thème sombre), puis
+// lance oracle-a11y.py sur l'original — jamais d'écriture à côté du fichier
+// cible. Sans --rendu, comportement strictement inchangé. Outillage manquant
+// ⇒ SKIP motivé dans les résultats, jamais une erreur.
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
+const rendu = args.includes('--rendu');
+const LARGEURS_RENDU = '1920,1440,1024,768,390'; // convention grille.md / criteres-sortie.md
 const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus');
@@ -77,6 +89,136 @@ function lancer(oracle, argv) {
   }
 }
 
+// ── --rendu : détection + exécution de render_page.py et oracle-a11y.py ────
+// Chemins canoniques, ceux que grille.md et criteres-sortie.md documentent :
+//   ~/.claude/skills/digit-ai-page-html/scripts/render_page.py
+//   ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py
+
+function detecterOutillageRendu() {
+  const home = os.homedir();
+  const renderPage = path.join(home, '.claude', 'skills', 'digit-ai-page-html', 'scripts', 'render_page.py');
+  const oracleA11y = path.join(home, '.claude', 'skills', 'quality-oracles', 'scripts', 'oracle-a11y.py');
+  const manques = [];
+  if (!fs.existsSync(renderPage)) manques.push(`render_page.py introuvable (${renderPage})`);
+  if (!fs.existsSync(oracleA11y)) manques.push(`oracle-a11y.py introuvable (${oracleA11y})`);
+
+  let python = null;
+  for (const candidat of ['python', 'python3']) {
+    const r = spawnSync(candidat, ['--version'], { encoding: 'utf8' });
+    if (!r.error && r.status === 0) { python = candidat; break; }
+  }
+  if (!python) manques.push('interpréteur python introuvable dans le PATH (python / python3)');
+
+  let playwrightOk = false;
+  if (python) {
+    const r = spawnSync(python, ['-c', 'import playwright'], { encoding: 'utf8' });
+    playwrightOk = !r.error && r.status === 0;
+    if (!playwrightOk) manques.push('module playwright non importable en Python (pip install playwright && playwright install chromium)');
+  }
+
+  return { ok: manques.length === 0, manques, python, renderPage, oracleA11y };
+}
+
+function injecterThemeSombre(html) {
+  if (/<html\b[^>]*\bdata-theme\s*=\s*"[^"]*"/i.test(html)) {
+    return html.replace(/(<html\b[^>]*\bdata-theme\s*=\s*")[^"]*(")/i, '$1dark$2');
+  }
+  if (/<html\b[^>]*>/i.test(html)) {
+    return html.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs} data-theme="dark">`);
+  }
+  return html; // pas de <html> détecté — copie renvoyée telle quelle
+}
+
+function nettoyerRendu(tmpHtml) {
+  const dir = path.dirname(tmpHtml);
+  const stem = path.basename(tmpHtml, path.extname(tmpHtml));
+  for (const f of fs.readdirSync(dir)) {
+    if (f === path.basename(tmpHtml) || f.startsWith(stem + '-w')) {
+      try { fs.unlinkSync(path.join(dir, f)); } catch { /* best-effort */ }
+    }
+  }
+}
+
+function lancerRenderPage(tmpHtml, etiquette, outillage) {
+  const r = spawnSync(outillage.python,
+    [outillage.renderPage, tmpHtml, '--widths', LARGEURS_RENDU, '--output', 'json'],
+    { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  if (r.error) {
+    return { oracle: `render_page(${etiquette})`, verdict: 'SKIP',
+      raison: 'exécution impossible : ' + r.error.message, findings: [], non_juge: [] };
+  }
+  let j;
+  try { j = JSON.parse(r.stdout.trim()); }
+  catch {
+    return { oracle: `render_page(${etiquette})`, verdict: 'SKIP',
+      raison: `sortie illisible (exit ${r.status}) : ${(r.stderr || '').slice(0, 300)}`, findings: [], non_juge: [] };
+  }
+
+  const findings = [];
+  const durs = { v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4' };
+  const avert = { v3_align: 'V3', v7_spacing: 'V7' };
+  for (const [largeur, bp] of Object.entries(j.breakpoints || {})) {
+    for (const [cle, regle] of Object.entries(durs))
+      for (const it of bp.issues[cle] || []) findings.push({ sev: 'bloquant', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+    for (const [cle, regle] of Object.entries(avert))
+      for (const it of bp.issues[cle] || []) findings.push({ sev: 'avertissement', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+    for (const it of bp.issues.unmeasured || []) findings.push({ sev: 'info', regle: '—', msg: `${largeur}px — ${it.what} — ${it.detail}` });
+  }
+  return {
+    oracle: `render_page(${etiquette})`, verdict: j.verdict, exit: r.status,
+    ecarts_durs: findings.filter(f => f.sev === 'bloquant').length,
+    avertissements: findings.filter(f => f.sev === 'avertissement').length,
+    findings,
+    non_juge: ['V5 croisements de flèches et V6 images déformées — inspection visuelle des PNG produits, non jugés ici'],
+  };
+}
+
+function lancerOracleA11y(cible, outillage) {
+  const r = spawnSync(outillage.python, [outillage.oracleA11y, cible], { encoding: 'utf8' });
+  if (r.error) {
+    return { oracle: 'oracle-a11y', verdict: 'SKIP',
+      raison: 'exécution impossible : ' + r.error.message, findings: [], non_juge: [] };
+  }
+  let j;
+  try { j = JSON.parse(r.stdout.trim()); }
+  catch {
+    return { oracle: 'oracle-a11y', verdict: 'SKIP',
+      raison: `sortie illisible (exit ${r.status}) : ${(r.stderr || '').slice(0, 300)}`, findings: [], non_juge: [] };
+  }
+  const findings = (j.findings || []).map(f => ({ sev: f.sev === 'warn' ? 'avertissement' : f.sev, regle: '—', msg: f.msg }));
+  return {
+    oracle: 'oracle-a11y', verdict: j.verdict, exit: r.status,
+    ecarts_durs: findings.filter(f => f.sev === 'bloquant').length,
+    avertissements: findings.filter(f => f.sev === 'avertissement').length,
+    findings, non_juge: j.non_juge || [],
+  };
+}
+
+function lancerRendu(cible) {
+  const outillage = detecterOutillageRendu();
+  if (!outillage.ok) {
+    return [{ oracle: 'rendu(render_page+a11y)', verdict: 'SKIP',
+      raison: `--rendu demandé mais outillage indisponible : ${outillage.manques.join(' ; ')}`,
+      findings: [], non_juge: [] }];
+  }
+  const html = fs.readFileSync(cible, 'utf8');
+  const base = `forge-design-rendu-${process.pid}-${Date.now()}`;
+  const tmpClair = path.join(os.tmpdir(), `${base}-clair.html`);
+  const tmpSombre = path.join(os.tmpdir(), `${base}-sombre.html`);
+  fs.writeFileSync(tmpClair, html, 'utf8');
+  fs.writeFileSync(tmpSombre, injecterThemeSombre(html), 'utf8');
+  const out = [];
+  try {
+    out.push(lancerRenderPage(tmpClair, 'clair', outillage));
+    out.push(lancerRenderPage(tmpSombre, 'sombre', outillage));
+  } finally {
+    nettoyerRendu(tmpClair);
+    nettoyerRendu(tmpSombre);
+  }
+  out.push(lancerOracleA11y(cible, outillage)); // structurel, non sensible au thème — sur l'original, lecture seule
+  return out;
+}
+
 // ── Mode corpus ────────────────────────────────────────────────────────────
 if (opt('--corpus')) {
   const r = lancer('oracle-corpus.mjs', [opt('--corpus')]);
@@ -107,12 +249,16 @@ else sansObjet.push('oracle-mobile : SANS OBJET — cible non mobile (ni --mobil
 if (aDesImages) resultats.push(lancer('oracle-images.mjs', [cible]));
 else sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
 
+if (rendu) resultats.push(...lancerRendu(cible));
+
 // ── Ce que cet orchestrateur ne couvre pas, et qui reste dû ────────────────
 const nonJuge = [
   ...new Set(resultats.flatMap(r => r.non_juge)),
   ...sansObjet,
-  'rendu réel (V1–V7) — render_page.py de digit-ai-page-html, 5 breakpoints × 2 thèmes : NON LANCÉ par cet orchestrateur',
-  'accessibilité structurelle — oracle-a11y.py de quality-oracles : NON LANCÉ par cet orchestrateur',
+  ...(rendu ? [] : [
+    'rendu réel (V1–V7) — render_page.py de digit-ai-page-html, 5 breakpoints × 2 thèmes : NON LANCÉ par cet orchestrateur',
+    'accessibilité structurelle — oracle-a11y.py de quality-oracles : NON LANCÉ par cet orchestrateur',
+  ]),
   'parcours de bout en bout (C13) — trace à produire à la main, voir references/criteres-sortie.md',
 ];
 

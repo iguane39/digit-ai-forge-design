@@ -45,16 +45,21 @@ en `SANS OBJET` ceux qui ne s'appliquent pas :
 
 ```bash
 python scripts/check_maquette.py <fichier.html>
-node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> [--mobile] [--tokens tokens.css]
+node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> [--mobile] [--tokens tokens.css] [--rendu]
 ```
 
 `FORGE_DESIGN_ROOT` est lu dans l'environnement, puis dans le `.env` de la forge,
 puis déduit du dossier parent du script. **Racine non résolue ⇒ exit 2 et verdict
 `SKIP`** : un contrôle qui ne trouve pas ses oracles ne se tait jamais.
 
-Ce que l'orchestrateur ne lance pas, et qui reste dû : `render_page.py` (V1–V7) et
-`oracle-a11y.py`. Il les déclare en `non_juge` — c'est au parcours de contrôle de
-les lancer, sur les **deux** thèmes.
+Sans `--rendu` : `render_page.py` (V1–V7) et `oracle-a11y.py` restent `non_juge` —
+c'est au parcours de contrôle de les lancer à la main, sur les **deux** thèmes.
+Avec `--rendu` : si l'outillage est détecté (Python, module `playwright`, les deux
+scripts aux chemins canoniques), l'orchestrateur les lance lui-même — `render_page.py`
+sur le fichier fourni et sur une copie générée avec `data-theme="dark"`, puis
+`oracle-a11y.py` — et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒
+`SKIP` motivé sur cette entrée, jamais une erreur ; les autres oracles continuent
+de rendre leur verdict normalement.
 
 Un oracle indisponible — runtime absent, Playwright manquant, quota épuisé — se
 déclare en `non_juge`. Il ne se contourne pas par une approbation sur lecture de code.

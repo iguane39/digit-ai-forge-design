@@ -60,6 +60,7 @@ Options de `run-oracles-design.mjs` :
 | `--json-only` | sortie JSON compacte sur stdout, sans les lignes de statut sur stderr |
 | `--racine <chemin>` | force la racine de forge, prioritaire sur `$FORGE_DESIGN_ROOT` et sur le `.env` |
 | `--corpus <dossier>` | bascule en mode corpus : lance uniquement `oracle-corpus` sur le dossier donné |
+| `--rendu` | si l'outillage est détecté (Python, `playwright`, `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`
 du `.env` voisin → dossier parent du script.
@@ -70,7 +71,8 @@ Contrat de sortie : **exit 0** = `PASS` (tous les oracles applicables verts) ·
 **exit 1** = `FAIL` (au moins un oracle en échec) · **exit 2** = indéterminé —
 `SKIP` (racine ou cible non résolue) ou un oracle non exécutable. Le JSON sur
 stdout porte toujours `verdict`, le détail par oracle, et `non_juge` : ce que
-l'orchestrateur ne couvre pas (rendu réel V1–V7, `oracle-a11y.py`, parcours C13
+l'orchestrateur ne couvre pas (rendu réel V1–V7 et `oracle-a11y.py` sans `--rendu`,
+parcours C13 dans tous les cas
 — voir [criteres-sortie.md](skills/ameliore-le-design/references/criteres-sortie.md)).
 
 | Oracle | Règles | Domaine |
