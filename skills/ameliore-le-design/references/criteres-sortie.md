@@ -17,6 +17,7 @@
 | C11 | Contrat d'usage tactile tenu (M1–M6) | `oracle-mobile` — **si cible mobile** | bloquant |
 | C12 | Visuels générés tracés et plafonnés (I1–I6) | `oracle-images` — **si images générées** | bloquant |
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
+| C15 | Un CTA = une cible : `href` réel, `data-action` ou `type=submit` ; même libellé même écran ⇒ même cible | `check_maquette.py` | bloquant |
 
 `check_maquette.py` juge ce qui est décidable sur le fichier. Ce qui exige un
 rendu réel est délégué à `render_page.py` (V1–V7), **installé le 04/08/2026** dans

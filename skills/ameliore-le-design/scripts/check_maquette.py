@@ -3,7 +3,8 @@
 
 Juge ce qui est decidable sur le fichier lui-meme : poids, autonomie reseau,
 bijection menu <-> ecrans, liens morts, bandeau de donnees de demonstration,
-presence des deux themes, respect du mouvement reduit, feuille d'impression.
+presence des deux themes, respect du mouvement reduit, feuille d'impression,
+cible explicite de chaque CTA (C15), favicon inline, absence de datepicker maison.
 
 Ce qui exige un rendu reel (debordements, chevauchements, contraste, clavier)
 est declare non_juge et delegue a render_page.py du skill digit-ai-page-html.
@@ -26,6 +27,8 @@ NON_JUGE = [
     "navigation clavier reelle - parcours a executer",
     "atteignabilite des etats vide/chargement/erreur - parcours a executer",
     "qualite de la direction visuelle - jugement humain",
+    "delimitation fiable des ecrans pour la coherence CTA (C15) - approximee a "
+    "l'echelle du fichier, a confirmer par revue humaine",
 ]
 
 
@@ -62,6 +65,59 @@ def routes_implementees(html):
     cles |= set(re.findall(r'\bid\s*=\s*["\']([A-Za-z0-9_\-/]+)["\']', html))
     cles |= set(re.findall(r'data-route\s*=\s*["\']#?([A-Za-z0-9_\-/]+)["\']', html))
     return cles
+
+
+def attributs(src_balise):
+    """Dict nom -> valeur des attributs `attr="valeur"` ou `attr='valeur'`."""
+    d = {}
+    for m in re.finditer(r"""([a-zA-Z_:][-\w:.]*)\s*=\s*(?:"([^"]*)"|'([^']*)')""", src_balise):
+        d[m.group(1).lower()] = m.group(2) if m.group(2) is not None else m.group(3)
+    return d
+
+
+def texte_visible(html_interne):
+    """Texte visible d'un element, tags internes retires, espaces normalises."""
+    return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html_interne)).strip()
+
+
+def elements_interactifs(html):
+    """(tag, attrs, disabled, texte, position) pour chaque <button> et <a>.
+
+    Regex non recursive : suffisant tant que <button>/<a> ne s'imbriquent pas les
+    uns dans les autres, ce qui est la convention du gabarit (contrat-technique.md).
+    """
+    out = []
+    for m in re.finditer(r"<(button|a)\b([^>]*)>(.*?)</\1>", html, re.I | re.S):
+        src_attrs = m.group(2)
+        out.append({
+            "tag": m.group(1).lower(),
+            "attrs": attributs(src_attrs),
+            "disabled": bool(re.search(r"\bdisabled\b", src_attrs, re.I)),
+            "texte": texte_visible(m.group(3)),
+            "pos": m.start(),
+        })
+    return out
+
+
+def cible_de(element):
+    """Cible explicite d'un element interactif (C15), ou None si absente.
+
+    Convention : data-action="<verbe-objet>" en premier (elle nomme l'action
+    independamment du routage), sinon un href reel (ni "#" seul, ni javascript:),
+    sinon type="submit" pour un bouton de formulaire.
+    """
+    if element["disabled"]:
+        return "disabled"
+    attrs = element["attrs"]
+    action = (attrs.get("data-action") or "").strip()
+    if action:
+        return "data-action:%s" % action
+    href = (attrs.get("href") or "").strip()
+    if href and href != "#" and not href.lower().startswith("javascript:"):
+        return "href:%s" % href
+    if element["tag"] == "button" and (attrs.get("type") or "").strip().lower() == "submit":
+        return "submit"
+    return None
 
 
 def controler(chemin, plafond_mo):
@@ -134,6 +190,80 @@ def controler(chemin, plafond_mo):
         findings.append({"critere": "C1", "gravite": "avertissement", "ou": "css",
                          "constat": "moins de 2 breakpoints detectes"})
 
+    # C15 - un CTA = une cible (RD-4, generalise)
+    elements = elements_interactifs(html)
+    sans_cible = [e for e in elements if cible_de(e) is None]
+    if sans_cible:
+        exemples = sorted({
+            "%s <%s>" % (e["texte"][:40] if e["texte"] else "(sans libelle)", e["tag"])
+            for e in sans_cible
+        })
+        findings.append({
+            "critere": "C15", "gravite": "bloquant", "ou": "cta",
+            "constat": "%d element(s) interactif(s) sans cible explicite "
+                       "(ni href reel, ni data-action, ni type=submit) : %s" % (
+                           len(sans_cible), ", ".join(exemples[:8])),
+        })
+
+    # Coherence "meme libelle => meme cible". Delimiter les ecrans exige un rendu
+    # reel (JS de routage non interprete ici) : approxime a l'echelle du fichier,
+    # donc en avertissement - une reutilisation legitime d'un libelle entre deux
+    # ecrans distincts s'y signalerait aussi, a trancher par revue humaine.
+    par_libelle = {}
+    for e in elements:
+        cible = cible_de(e)
+        if cible in (None, "disabled"):
+            continue
+        libelle = e["texte"].strip().lower()
+        if not libelle:
+            continue
+        par_libelle.setdefault(libelle, set()).add(cible)
+    incoherences = [
+        "« %s » -> %s" % (libelle, " / ".join(sorted(cibles)))
+        for libelle, cibles in par_libelle.items() if len(cibles) > 1
+    ]
+    if incoherences:
+        findings.append({
+            "critere": "C15", "gravite": "avertissement", "ou": "cta",
+            "constat": "libelle(s) identique(s) a cibles divergentes - verifier qu'il "
+                       "s'agit bien d'ecrans distincts, sinon incoherence a corriger : "
+                       "%s" % "; ".join(incoherences[:5]),
+        })
+
+    # RD-5 - favicon obligatoire, inline en data:
+    favicon = re.search(r'<link\b[^>]*\brel\s*=\s*["\'][^"\']*\bicon\b[^"\']*["\'][^>]*>', html, re.I)
+    if not favicon:
+        findings.append({
+            "critere": "C1", "gravite": "bloquant", "ou": "<head>",
+            "constat": "favicon absente - <link rel=\"icon\"> obligatoire, inline en data:",
+        })
+    else:
+        href_favicon = attributs(favicon.group(0)).get("href", "")
+        if not href_favicon.lower().startswith("data:"):
+            findings.append({
+                "critere": "C1", "gravite": "bloquant", "ou": "<head>",
+                "constat": "favicon non inline : href=%s (attendu data:...)" % href_favicon[:60],
+            })
+
+    # RD-5 - saisie de date : input type="date" natif, jamais de datepicker maison
+    if re.search(r"\b(datepicker|date-picker|flatpickr|pikaday|air-datepicker)\b", html, re.I):
+        findings.append({
+            "critere": "C1", "gravite": "bloquant", "ou": "saisie de date",
+            "constat": "datepicker maison detecte - input type=\"date\" natif obligatoire au MVP",
+        })
+    for m in re.finditer(r"<input\b([^>]*)>", html, re.I):
+        attrs_input = attributs(m.group(1))
+        type_input = (attrs_input.get("type") or "text").lower()
+        if type_input == "date":
+            continue
+        indices = " ".join(v for k, v in attrs_input.items() if k in ("id", "name", "placeholder", "aria-label") and v)
+        if re.search(r"\bdate\b", indices, re.I):
+            findings.append({
+                "critere": "C1", "gravite": "bloquant", "ou": "saisie de date",
+                "constat": "champ de date sans type=\"date\" natif (type=%s, indices=%s)" % (
+                    type_input, indices[:60]),
+            })
+
     bloquants = [f for f in findings if f["gravite"] == "bloquant"]
     return {
         "outil": "check_maquette",
@@ -145,6 +275,7 @@ def controler(chemin, plafond_mo):
             "routes_declarees": len(declarees),
             "ressources_externes": len(externes),
             "breakpoints": sorted(largeurs),
+            "cta_sans_cible": len(sans_cible),
         },
         "findings": findings,
         "non_juge": NON_JUGE,

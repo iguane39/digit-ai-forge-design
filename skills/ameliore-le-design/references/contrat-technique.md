@@ -14,7 +14,25 @@
 | Motion | build UMD autonome de Motion (79 ko, v12.23.12) inliné depuis `oracles/vendor/` ; `transform` et `opacity` seulement ; `prefers-reduced-motion` respecté ; ni rebond ni élastique |
 | Images | générées au build, embarquées en base64, ≤ `IMAGES_MAX_KO`, tracées au `manifeste-images` |
 | Cible mobile | châssis d'appareil, safe areas, cibles ≥ 44 px — voir `cadre-mobile.md` |
+| Favicon | `<link rel="icon">` obligatoire, `href` en `data:` uniquement — jamais absent, jamais chargé depuis le réseau |
+| Saisie de date | `<input type="date">` natif uniquement — aucun datepicker maison au MVP |
 | Impression | `@media print` fonctionnelle |
+
+## Favicon et saisie de date — promesses non négociables au MVP
+
+Retour de production RD-5 : ni favicon ni datepicker n'étaient au contrat, alors
+qu'aucun des deux n'était réellement optionnel — l'un se voit dans l'onglet dès le
+premier chargement, l'autre se remarque à la première saisie.
+
+- **Favicon** : `<link rel="icon" href="data:...">` inline, jamais un
+  `favicon.ico` chargé depuis un serveur. Un `data:,` minimal est acceptable si
+  l'identité graphique n'est pas encore tranchée — l'absence pure ne l'est jamais.
+- **Saisie de date** : `<input type="date">` natif exclusivement, au MVP — aucun
+  datepicker maison, aucune librairie de calendrier custom. Le natif est moins
+  personnalisable, mais il est correct hors connexion, accessible au clavier par
+  défaut, et gratuit sur le budget de poids ; un datepicker maison est un composant
+  entier à spécifier, construire et rendre accessible pour un gain cosmétique que
+  le MVP n'a pas à payer.
 
 ## Conséquences du zéro-CDN
 
