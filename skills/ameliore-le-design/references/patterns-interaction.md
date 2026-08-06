@@ -29,6 +29,16 @@ même `href` partout sur cet écran. Deux occurrences du même libellé avec des
 différentes sont soit une incohérence à corriger, soit deux actions distinctes qui
 doivent porter des libellés distincts — jamais les deux à la fois en silence.
 
+**Un seul CTA visible par écran** (RD-6, 2ᵉ inspection utilisateur du premier produit —
+rendre des doublons *fonctionnels* ne suffit pas, l'utilisateur les a re-signalés après le
+premier correctif) : l'action principale n'a qu'**une occurrence visible à la fois** par
+écran — dans l'état vide OU dans l'en-tête, jamais les deux ; le formulaire est replié par
+défaut et sa soumission n'apparaît qu'une fois le formulaire ouvert. Test-garde côté produit :
+au **texte visible rendu**, un libellé de CTA n'apparaît qu'une fois par écran
+(implémentation de référence : `backend/tests/test_exigences_interface.py` d'ASD Mail
+Manager). La visibilité étant un état dynamique, C15 reste un contrôle de cibles — ce
+test-garde est le contrôle de visibilité, à exiger au contrat du produit.
+
 **La maquette n'invente pas d'affordance sans destination.** Un élément qui a
 l'air cliquable sans écran, état ou réaction à montrer ne se construit pas comme
 interactif : il se construit `disabled` (état documenté ci-dessous) ou ne se

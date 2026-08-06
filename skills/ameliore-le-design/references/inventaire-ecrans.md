@@ -15,8 +15,9 @@ secteur et **l'hypothèse est nommée** dans la note de partis pris.
 | 5 | Catalogue produits + fiche détail | grille, facettes, fiche riche avec médias et actions |
 | 6 | Galerie média | au moins 3 dispositions : grille, mosaïque, table, plus une visionneuse |
 | 7 | Bibliothèque de composants | palette, typographie, états, graphiques, cartographie, import/export, glisser-déposer, arborescence, module 3D |
-| 8 | Onboarding | parcours guidé à bulles contextuelles, avec suivant, passer et rejouer |
+| 8 | Onboarding | **expérience dominante de première connexion** (RC-4, 2ᵉ inspection utilisateur) : panneau de bienvenue en tête de page, progression visible x/N, badge persistant tant que non complété, actions directes depuis le panneau, disparition à complétion — une carte repliable discrète n'est PAS un onboarding |
 | 9 | États système | vide, chargement, erreur, 404, accès refusé |
+| 10 | Aide utilisateur | **trois niveaux** (RD-7, 2ᵉ inspection utilisateur) : aide de page (rôle de l'écran, circuit, pièges), encarts d'aide sur chaque section non évidente, aide par champ — une page d'aide unique ne suffit pas (implémentation de référence : macros `aide_de_page`/`aide-encart` d'ASD Mail Manager v0.2.2) |
 
 ## Complémentaires
 
