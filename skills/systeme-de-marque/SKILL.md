@@ -1,13 +1,14 @@
 ---
 name: systeme-de-marque
 description: Verrouille l'identité visuelle et verbale d'une marque en artefacts exécutables — un tokens.css (couleurs OKLCH, échelle typographique, espacement 4pt, thèmes clair et sombre) et un MARQUE.md (voix, ton, vocabulaire, anti-références) — réutilisés ensuite par tous les livrables produits pour ce client. Use when / déclencher dès que l'utilisateur veut poser, extraire, figer ou documenter la charte d'un client, demande des tokens de design, une palette, un choix de polices ou une ligne éditoriale à partir d'un logo, d'un site, d'une charte PDF ou de trois mots de ton, ou veut que plusieurs livrables partagent la même identité. Ne pas déclencher pour appliquer la charte Digit-AI maison (→ digit-ai-page-html, digit-ai-pptx), pour arbitrer entre plusieurs directions artistiques concurrentes (→ studio-de-direction), ni pour construire une maquette (→ ameliore-le-design).
-version: 1.0.0
+version: 1.2.0
 ---
 
 # Système de marque
 
-Produit deux artefacts et rien d'autre : `tokens.css` (exécutable, vérifiable) et
-`MARQUE.md` (la voix). Tout le reste de la forge les consomme.
+Produit trois artefacts et rien d'autre : `tokens.css` (exécutable, vérifiable),
+`MARQUE.md` (la voix) et `DESIGN.md` (la charte consolidée, **dérivée** des deux premiers).
+Tout le reste de la forge les consomme.
 
 ## Ce que ce skill apporte en propre
 
@@ -26,8 +27,17 @@ des deux artefacts, et le fait que la sortie soit **jugée par oracle**, pas rel
 3. Proposition   → python corpus/recherche.py "<secteur> <cible> <ton>" --systeme-de-design
 4. Artefacts     → references/tokens.md + references/voix.md
 5. Contrôle      → node oracles/oracle-tokens.mjs <page-témoin.html> --tokens tokens.css
-6. Restitution   → les deux fichiers + ce qui a été supposé
+6. DESIGN.md     → node scripts/generer-design-md.mjs --tokens tokens.css --marque MARQUE.md
+                   [--nom <Produit>] --sortie DESIGN.md
+7. Restitution   → les trois fichiers + ce qui a été supposé
 ```
+
+`DESIGN.md` est une **vue dérivée** (scellée sha256, jamais éditée à la main — régénérer après
+toute évolution des tokens ou de la voix) au format `@google/design.md` : toutes les
+informations du site en un fichier — couleurs hex et contrastes **mesurés**, typographie,
+composants, espacement, rayons, principes, voix. C'est la couture vers forge-development :
+son gate design le linte (`conductor.gates.design_gate` → PASS vérifié). Le script refuse de
+générer une charte dont le contraste texte/fond est < 4.5:1 (exit 2).
 
 ## Deux modes, jamais mélangés
 
