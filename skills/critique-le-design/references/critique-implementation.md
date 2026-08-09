@@ -65,7 +65,7 @@ Ces écarts sont versés par l'orchestrateur au ledger du run (`type: retour`,
 run de version. Verdict Refondre ou ≥ 1 bloquant → retour à l'étape development (boucle bornée
 à 3, partagée avec l'étape tests).
 
-## Place dans le workflow (contrat steering)
+## Place dans le workflow (contrat pilot)
 
 Après les gates de development, **en parallèle de l'étape tests** — regards indépendants
 (la fonction pour tests, la forme pour ici). Le verdict entre au dossier de MEP.
