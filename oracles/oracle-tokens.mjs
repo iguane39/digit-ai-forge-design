@@ -115,8 +115,13 @@ for (const r of regles) {
 }
 
 // ── T4 · parité de thèmes ──────────────────────────────────────────────────
+// Le thème sombre est OPTIONNEL : la doctrine du socle (digit-ai-page-html) est le thème
+// clair, confirmée par décision humaine du 09/08 (« les fiches HTML doivent être en thème
+// clair »). Un livrable clair seul est conforme ; en revanche, dès qu'un bloc sombre est
+// déclaré, la parité complète et les contrastes des deux thèmes restent exigés — un sombre
+// partiel est pire qu'aucun sombre.
 if (tokens.sombre.size === 0) {
-  add('bloquant', 'T4', 'aucun thème sombre déclaré : le contrat exige clair ET sombre', file);
+  add('info', 'T4', 'thème clair seul — conforme à la doctrine du socle (sombre optionnel ; s\'il est déclaré, la parité redevient bloquante)', file);
 } else {
   const couleurClair = [...tokens.clair].filter(([, v]) => color(v) || /oklch\(/i.test(v)).map(([k]) => k);
   for (const k of couleurClair) {
