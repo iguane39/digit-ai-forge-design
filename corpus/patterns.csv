@@ -34,3 +34,5 @@ PT32;Barre d'outils avec compteur de résultats;app;rendre le filtrage tangible;
 PT33;Cartes de synthèse exécutive;doc;résumer avant le détail;rapport, audit, note de cadrage;pavé de texte sans hiérarchie ni points saillants;skill:digit-ai-page-html#composants;ok
 PT34;Recherche in-page insensible aux accents;app;retrouver vite dans un long document;catalogue, référentiel, glossaire;recherche sensible aux accents qui rate les mots accentués;skill:digit-ai-page-html#composants;ok
 PT35;État de vue dans l'URL;app;rendre un filtre partageable et rechargeable;filtres, onglets, tri;état perdu au rechargement et non partageable;skill:digit-ai-page-html#composants;ok
+PT36;Brief design en 4 entrées;doc;cadrer une génération sans design.md fleuve;lancement d'une page ou d'un livrable visuel;prompt fourre-tout sans garde-fous always ou never;skill:impeccable#shape;ok
+PT37;Squelette de chargement;app;réduire la latence perçue pendant le chargement;écran chargeant des données distantes;spinner unique ou page blanche pendant le chargement;skill:impeccable#optimize;ok
