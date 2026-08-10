@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion (R1–R7 toutes déclenchées)</title>
+<style>
+  /* R1 : transition non ciblée */
+  .card { transition: all 200ms ease-out; }
+
+  /* R2 : entrée depuis scale(0) + R3 : ease-in seul sur transition UI */
+  .modal { transform: scale(0); transition: transform 200ms ease-in; }
+
+  /* R4 : durée > 300 ms */
+  .panel { transition: opacity 500ms ease-out; }
+
+  /* R5 : élément ancré qui scale avec transform-origin center explicite */
+  .dropdown { transform: scale(0.95); transform-origin: center; transition: transform 180ms ease-out; }
+
+  /* R6 : propriété de layout animée (transition) */
+  .sidebar { transition: width 200ms ease-out; }
+
+  /* R6 : propriété de layout animée (@keyframes) */
+  @keyframes grandir {
+    from { height: 0; }
+    to { height: 240px; }
+  }
+
+  /* R7 : survol animé, aucune garde @media (hover: hover) dans la feuille */
+  .btn:hover { transform: translateY(-2px); }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge motion</h1>
+  <div class="card">carte</div>
+  <div class="modal">modale</div>
+  <div class="panel">panneau</div>
+  <div class="dropdown">menu déroulant</div>
+  <div class="sidebar">latéral</div>
+  <button class="btn">bouton</button>
+</body>
+</html>
