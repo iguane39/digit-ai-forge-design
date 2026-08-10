@@ -39,3 +39,7 @@ GL37;Couleur jamais seule porteuse de sens;a11y;tout code couleur doublé d'un l
 GL38;Solidarité des blocs à l'impression;print;break-inside avoid sur cartes et lignes de tableau;https://www.w3.org/TR/css-break-3/#break-within;ok
 GL39;Équivalent statique des tooltips en PDF;print;info portée par hover ou JS doublée en statique si cible PDF;skill:digit-ai-page-html#print;ok
 GL40;Dégradation gracieuse sans JavaScript;technique;contenu essentiel lisible JavaScript désactivé;skill:digit-ai-page-html#js;ok
+GL41;Bibliothèque de références curée;process;grouper les références par famille nommée, le vocabulaire avant le prompt;skill:impeccable#extract;ok
+GL42;Explorer en largeur avant de creuser;process;générer plusieurs variantes de direction comparées côte à côte avant d'affiner;skill:impeccable#shape;ok
+GL43;Juger sur rendu, jamais depuis le code;process;itérer visuellement, valider un design sur son rendu et non dans le terminal;skill:impeccable#live;ok
+GL44;S'inspirer d'une référence sans la copier;contenu;matcher le ressenti, jamais reproduire la mise en page source;skill:impeccable#adapt;ok
