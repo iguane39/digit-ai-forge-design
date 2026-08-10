@@ -34,3 +34,8 @@ GL32;Constance du vocabulaire d'action;contenu;le bouton Publier produit Publié
 GL33;Contenu des messages d'erreur;contenu;ce qui s'est passé et comment le réparer;https://www.nngroup.com/articles/error-message-guidelines/;ok
 GL34;Virtualisation des tables;perf;au-delà de 500 lignes;skill:ameliore-le-design#contrat-technique;ok
 GL35;Plafond de poids du livrable autonome;perf;<= 10 Mo, zéro requête réseau;skill:ameliore-le-design#regles-dures;ok
+GL36;Échappement des données injectées;securite;échapper < > & guillemets avant toute insertion via innerHTML;https://owasp.org/www-community/attacks/xss/;ok
+GL37;Couleur jamais seule porteuse de sens;a11y;tout code couleur doublé d'un libellé ou d'une icône;https://www.w3.org/TR/WCAG22/#use-of-color;ok
+GL38;Solidarité des blocs à l'impression;print;break-inside avoid sur cartes et lignes de tableau;https://www.w3.org/TR/css-break-3/#break-within;ok
+GL39;Équivalent statique des tooltips en PDF;print;info portée par hover ou JS doublée en statique si cible PDF;skill:digit-ai-page-html#print;ok
+GL40;Dégradation gracieuse sans JavaScript;technique;contenu essentiel lisible JavaScript désactivé;skill:digit-ai-page-html#js;ok

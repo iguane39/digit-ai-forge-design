@@ -25,3 +25,12 @@ PT23;Divulgation progressive;app;commencer simple, révéler à la demande;optio
 PT24;Séquence d'apparition orchestrée;landing;créer un moment mémorable;chargement de page;animations dispersées sur chaque élément;skill:impeccable#motion;ok
 PT25;Annulation plutôt que confirmation;app;fluidifier les actions réversibles;suppression réversible, envoi;boîte de confirmation sur chaque action anodine;https://www.nngroup.com/articles/confirmation-dialog/;ok
 PT26;Bibliothèque de composants vivante;app;prouver que le système tient;maquette de conviction, design system;composants montrés au repos seulement, sans leurs états;skill:ameliore-le-design#patterns-interaction;ok
+PT27;Grille de KPI en tête;doc;donner les chiffres-clés avant le détail;rapport, tableau de bord, audit;valeur sans libellé ni unité, ou sens porté par la seule couleur;skill:digit-ai-page-html#composants;ok
+PT28;Badge de statut à pastille et libellé;doc;coder un état de façon lisible et accessible;statut, criticité, verdict;pastille de couleur sans libellé texte;skill:digit-ai-page-html#composants;ok
+PT29;Barre de progression sur token;doc;visualiser un score ou un avancement;score, complétude, jauge;barre sur span inline invisible, ou largeur en px non responsive;skill:digit-ai-page-html#composants;ok
+PT30;Tableau repliable en cartes sur mobile;doc;garder un tableau lisible sur petit écran;tableau consulté en mobilité;défilement horizontal forcé sous 640px;skill:digit-ai-page-html#composants;ok
+PT31;Légende swatch et libellé;doc;expliciter un code couleur;graphique, carte de chaleur, statuts;swatch de couleur sans texte associé;skill:digit-ai-page-html#composants;ok
+PT32;Barre d'outils avec compteur de résultats;app;rendre le filtrage tangible;catalogue, référentiel parcouru;filtre sans retour du nombre de résultats;skill:digit-ai-page-html#composants;ok
+PT33;Cartes de synthèse exécutive;doc;résumer avant le détail;rapport, audit, note de cadrage;pavé de texte sans hiérarchie ni points saillants;skill:digit-ai-page-html#composants;ok
+PT34;Recherche in-page insensible aux accents;app;retrouver vite dans un long document;catalogue, référentiel, glossaire;recherche sensible aux accents qui rate les mots accentués;skill:digit-ai-page-html#composants;ok
+PT35;État de vue dans l'URL;app;rendre un filtre partageable et rechargeable;filtres, onglets, tri;état perdu au rechargement et non partageable;skill:digit-ai-page-html#composants;ok
