@@ -53,6 +53,12 @@ const CAS = [
     verte: [fx('corpus-verte')],
     rouge: [fx('corpus-rouge')],
   },
+  {
+    oracle: 'oracle-motion.mjs',
+    regles: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7'],
+    verte: [fx('motion-verte.html')],
+    rouge: [fx('motion-rouge.html')],
+  },
 ];
 
 function lancer(oracle, argv) {

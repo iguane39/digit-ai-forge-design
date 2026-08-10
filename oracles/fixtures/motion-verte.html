@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-motion (mouvement soigné)</title>
+<style>
+  /* Transitions ciblées, ease-out, sous 300 ms, transform/opacity uniquement */
+  .card { transition: opacity 200ms ease-out, transform 200ms ease-out; }
+
+  /* Entrée depuis un scale proche de 1, jamais 0 */
+  .modal { opacity: 0; transform: scale(0.96); }
+  .modal.ouverte { opacity: 1; transform: scale(1); transition: opacity 180ms ease-out, transform 180ms ease-out; }
+
+  /* Élément ancré : le mouvement naît du déclencheur */
+  .dropdown { transform: scale(0.97); transform-origin: top left; transition: transform 160ms ease-out, opacity 160ms ease-out; }
+
+  /* Survol animé protégé : ne colle pas sur tactile */
+  @media (hover: hover) {
+    .btn:hover { transform: translateY(-1px); }
+  }
+
+  /* Mouvement réduit respecté */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture verte motion</h1>
+  <div class="card">carte</div>
+  <div class="modal ouverte">modale</div>
+  <div class="dropdown">menu déroulant</div>
+  <button class="btn">bouton</button>
+</body>
+</html>
