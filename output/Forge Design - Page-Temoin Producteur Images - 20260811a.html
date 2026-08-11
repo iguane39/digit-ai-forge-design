@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Design — Page-Témoin du producteur d'images — 20260811a</title>
+<meta name="description" content="Banc d'exercice réel du producteur generer-images.mjs : trois visuels générés via Gemini, manifeste de génération complet, jugés par oracle-images I1-I6.">
+<meta name="color-scheme" content="light">
+<script type="application/json" id="manifeste-images">
+[
+  {"id": "hero", "modele": "", "prompt": "Vue plongeante d'un atelier de forge numérique : établi épuré, outils alignés, écran affichant un schéma de flux bleu sur fond clair, lumière douce de fin de matinée, style photographie éditoriale sobre, aucune personne, aucun texte lisible", "date": "", "genere": false},
+  {"id": "vignette-oracle", "modele": "", "prompt": "Illustration minimaliste à plat : une loupe posée sur un document quadrillé avec des coches vertes et une croix rouge, palette bleu #2563EB et gris ardoise sur fond blanc cassé, style flat design géométrique, aucun texte", "date": "", "genere": false},
+  {"id": "vignette-boucle", "modele": "", "prompt": "Illustration minimaliste à plat : trois flèches formant un cycle avec un compteur à trois crans dont le dernier est marqué d'une butée, palette bleu #2563EB et ambre sur fond blanc cassé, style flat design géométrique, aucun texte", "date": "", "genere": false}
+]
+</script>
+<style>
+:root{--blue:#2563EB;--bg:#FAFBFF;--surface:#FFFFFF;--ink:#0F172A;--muted:#64748B;--line:#E6EAF2;--r:12px;
+--head:"Roboto",system-ui,-apple-system,"Segoe UI",sans-serif;--sans:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;--mono:"JetBrains Mono",ui-monospace,"Consolas",monospace}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:16px}
+.wrap{max-width:min(92vw,1680px);margin:0 auto;padding:32px 24px 64px}
+.colonne{max-width:75ch;margin:0 auto}
+h1,h2{font-family:var(--head);font-weight:800;line-height:1.2}
+h1{font-size:1.6rem;margin:0 0 .2em} h2{font-size:1.15rem;font-weight:700;margin:1.4em 0 .4em}
+.meta{color:var(--muted);font-size:.85rem;overflow-wrap:anywhere}
+figure{margin:16px 0;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+figure img{max-width:100%;height:auto;border-radius:8px;display:block}
+figcaption{color:var(--muted);font-size:.85rem;margin-top:8px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+p{max-width:75ch}
+@media (max-width:640px){.wrap{padding:16px 12px 48px}.duo{grid-template-columns:1fr}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
+@page{margin:14mm}
+@media print{body{background:#fff}figure{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap"><div class="colonne">
+<header>
+<h1>Page-Témoin — producteur d'images de la forge design</h1>
+<p class="meta">Premier exercice réel du producteur <code>generer-images.mjs</code> (TF-0019/TF-0020, GO humain du 11/08/2026) : chaque visuel ci-dessous est généré par l'API Gemini, embarqué en <code>data:</code> URI, et tracé au manifeste de génération joint — le contrat exact que juge <code>oracle-images</code> (I1-I6).</p>
+</header>
+<main>
+<h2>Visuel principal</h2>
+<figure>
+<img data-image-id="hero" alt="Atelier de forge numérique : établi épuré et écran affichant un schéma de flux" src="">
+<figcaption>hero — généré au premier appel réel (levée de la dette R-D3).</figcaption>
+</figure>
+<h2>Vignettes</h2>
+<div class="duo">
+<figure>
+<img data-image-id="vignette-oracle" alt="Loupe sur un document quadrillé portant des coches et une croix — l'oracle juge" src="">
+<figcaption>vignette-oracle — le verdict exécuté.</figcaption>
+</figure>
+<figure>
+<img data-image-id="vignette-boucle" alt="Cycle de trois flèches avec butée au troisième cran — la boucle bornée" src="">
+<figcaption>vignette-boucle — trois itérations, jamais plus.</figcaption>
+</figure>
+</div>
+<p>La provenance de chaque image se lit dans le manifeste embarqué (identifiant, prompt, modèle réellement servi, date) : dans six mois, on saura encore exactement ce qui a été montré et comment il a été produit.</p>
+</main>
+<footer class="meta">Forge Design · Page-Témoin du 11/08/2026 · images : voir manifeste-images.</footer>
+</div></div>
+</body>
+</html>
