@@ -71,11 +71,55 @@ const aFaire = manifeste.filter((e) => (seulement ? seulement.has(e.id) : e.gene
 if (!aFaire.length) { console.log("rien à générer (aucune entrée genere:false" + (seulement ? " parmi --seulement" : "") + ")"); process.exit(0); }
 console.log(`${aFaire.length} image(s) à générer : ${aFaire.map((e) => e.id).join(", ")}`);
 
+// Optimisation (contrat-technique : « génération, OPTIMISATION, puis base64 ») — déléguée
+// à Pillow du poste : recompression JPEG progressive + plafond de largeur, qualité
+// descendante jusqu'à passer sous le plafond I2. Pillow absent → l'image reste telle
+// quelle et l'écart est DIT (I2 le jugera) — jamais un ✓ silencieux.
+import { spawnSync } from "node:child_process";
+function optimiser(b64, mime, cibleKo) {
+  const py = ["py", "-3"];
+  const script = [
+    "import sys, base64, io",
+    "from PIL import Image",
+    "brut = base64.b64decode(sys.stdin.buffer.read())",
+    "img = Image.open(io.BytesIO(brut)).convert('RGB')",
+    `cible = ${cibleKo} * 1024`,
+    "# double descente : qualité d'abord, puis LARGEUR — borne même le pire cas",
+    "# (une image incompressible à q55 finit par tenir en rétrécissant)",
+    "s = io.BytesIO()",
+    "for largeur in (1600, 1280, 1024, 800, 640):",
+    "    e = img if img.width <= largeur else img.resize((largeur, round(img.height * largeur / img.width)), Image.LANCZOS)",
+    "    fini = False",
+    "    for q in (85, 78, 70, 62, 55):",
+    "        s = io.BytesIO(); e.save(s, 'JPEG', quality=q, optimize=True, progressive=True)",
+    "        if s.tell() <= cible: fini = True; break",
+    "    if fini: break",
+    "sys.stdout.write(base64.b64encode(s.getvalue()).decode())",
+  ].join("\n");
+  for (const cmd of [py, ["python"]]) {
+    // stdin = le base64 TEXTE (le script décode lui-même) — lui passer les octets bruts
+    // ferait un double décodage, l'erreur qui a laissé passer 597 Ko au premier run.
+    const r = spawnSync(cmd[0], [...cmd.slice(1), "-c", script], {
+      input: Buffer.from(b64, "utf8"), encoding: "buffer", maxBuffer: 64 * 1024 * 1024,
+    });
+    if (r.status === 0 && r.stdout?.length) return { b64: r.stdout.toString("utf8").trim(), mime: "image/jpeg" };
+  }
+  return null;
+}
+
 try {
   const aujourdHui = new Date().toISOString().slice(0, 10);
   for (const entree of aFaire) {
-    const { modele, mime, b64 } = await generer(entree.prompt);
-    const ko = Math.round(Buffer.from(b64, "base64").length / 1024);
+    let { modele, mime, b64 } = await generer(entree.prompt);
+    let ko = Math.round(Buffer.from(b64, "base64").length / 1024);
+    if (ko > maxKo) {
+      const opt = optimiser(b64, mime, maxKo);
+      if (opt) {
+        const koOpt = Math.round(Buffer.from(opt.b64, "base64").length / 1024);
+        console.log(`  · ${entree.id} : optimisée ${ko} → ${koOpt} Ko (JPEG, ≤ 1600 px)`);
+        b64 = opt.b64; mime = opt.mime; ko = koOpt;
+      }
+    }
     if (ko > maxKo) console.log(`  ! ${entree.id} : ${ko} Ko > plafond ${maxKo} Ko (I2 la jugera majeure — resserrer le prompt ou le plafond)`);
     const re = new RegExp(`(<img[^>]*data-image-id="${entree.id}"[^>]*src=")[^"]*(")`);
     if (!re.test(html)) throw new Error(`aucun <img data-image-id="${entree.id}"> dans la page — le manifeste et la page divergent`);
