@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bastion — Posture de sécurité, Meunier Industries</title>
+<style>
+/* tokens-c.css inline (source de référence : tokens-c.css, valeurs identiques) */
+:root {
+  --fond: oklch(0.975 0.008 190);
+  --surface: oklch(0.95 0.012 190);
+  --trait: oklch(0.86 0.018 190);
+  --texte: oklch(0.24 0.020 195);
+  --texte-faible: oklch(0.47 0.020 195);
+  --accent: oklch(0.48 0.130 175);
+  --accent-fond: oklch(0.94 0.02 175);
+  --texte-succes: oklch(0.41 0.12 150);
+  --fond-succes: oklch(0.94 0.03 150);
+  --police-titre: "JetBrains Mono", ui-monospace, monospace;
+  --police-corps: "Source Sans 3", ui-sans-serif, sans-serif;
+  --police-mono: "JetBrains Mono", ui-monospace, monospace;
+  --texte-xs: 0.8rem; --texte-sm: 1rem; --texte-md: 1.25rem;
+  --texte-lg: 1.563rem; --texte-xl: 1.954rem; --texte-2xl: 2.442rem;
+  --espace-xs: 4px; --espace-sm: 8px; --espace-md: 16px;
+  --espace-lg: 24px; --espace-xl: 32px; --espace-2xl: 48px;
+  --rayon-sm: 2px; --rayon-md: 4px; --rayon-lg: 6px;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--fond); color: var(--texte);
+  font-family: var(--police-corps); font-size: var(--texte-sm); line-height: 1.5;
+  display: grid; grid-template-columns: 220px 1fr; min-height: 100vh;
+}
+aside {
+  background: var(--surface); border-right: 1px solid var(--trait);
+  padding: var(--espace-lg) var(--espace-md);
+}
+aside svg { display: block; margin-bottom: var(--espace-sm); }
+aside h1 { font-family: var(--police-titre); font-size: var(--texte-md); margin: 0 0 var(--espace-xs); }
+aside .sous-titre { font-size: var(--texte-xs); color: var(--texte-faible); margin: 0 0 var(--espace-lg); }
+aside .pill {
+  font-family: var(--police-mono); font-size: var(--texte-xs);
+  background: var(--fond-succes); color: var(--texte-succes);
+  padding: var(--espace-xs) var(--espace-sm); border-radius: var(--rayon-sm); display: inline-block;
+}
+main { padding: var(--espace-xl); }
+.grille-kpi { display: grid; grid-template-columns: 1fr; gap: var(--espace-sm); max-width: 320px; margin-bottom: var(--espace-xl); }
+.kpi { border: 1px solid var(--trait); border-radius: var(--rayon-md); padding: var(--espace-sm) var(--espace-md); display: flex; justify-content: space-between; align-items: baseline; }
+.kpi .libelle { font-size: var(--texte-xs); color: var(--texte-faible); }
+.kpi .valeur { font-family: var(--police-titre); font-size: var(--texte-lg); }
+h2 { font-family: var(--police-titre); font-size: var(--texte-md); margin: 0 0 var(--espace-md); }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: var(--espace-xs) var(--espace-sm); border-bottom: 1px solid var(--trait); font-size: var(--texte-xs); }
+th { color: var(--texte-faible); font-family: var(--police-mono); text-transform: uppercase; letter-spacing: 0.04em; }
+td.mono, th.mono { font-family: var(--police-mono); }
+.sev-haute { color: var(--accent); font-weight: 700; }
+
+/* Reflow en cartes sous 480px (oracle-mobile M4 : jamais de défilement horizontal forcé) */
+@media (max-width: 480px) {
+  body { display: block; }
+  aside { border-right: none; border-bottom: 1px solid var(--trait); }
+  thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  table, tbody, tr, td { display: block; width: auto; }
+  tr { border-bottom: none; border: 1px solid var(--trait); border-radius: var(--rayon-md); padding: var(--espace-sm); margin-bottom: var(--espace-sm); }
+  td { border-bottom: none; padding: var(--espace-xs) 0; display: flex; justify-content: space-between; gap: var(--espace-sm); }
+  td::before { content: attr(data-label); font-family: var(--police-mono); font-size: var(--texte-xs); color: var(--texte-faible); text-transform: uppercase; letter-spacing: 0.03em; }
+}
+</style>
+</head>
+<body>
+<aside>
+  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" aria-hidden="true">
+    <path d="M12 2l8 3v6c0 5-3.5 8.5-8 11-4.5-2.5-8-6-8-11V5l8-3z"/>
+  </svg>
+  <h1>Bastion</h1>
+  <p class="sous-titre">Meunier Industries<br>posture de sécurité — dossier hebdomadaire</p>
+  <span class="pill">0 alerte critique</span>
+</aside>
+<main>
+  <div class="grille-kpi">
+    <div class="kpi"><span class="libelle">Score de posture</span><span class="valeur">78/100</span></div>
+    <div class="kpi"><span class="libelle">Incidents actifs</span><span class="valeur">2</span></div>
+    <div class="kpi"><span class="libelle">Temps de réponse moyen</span><span class="valeur">14 min</span></div>
+  </div>
+  <h2>Journal des incidents</h2>
+  <table>
+    <thead><tr><th class="mono">Horodatage</th><th class="mono">Hôte</th><th class="mono">CVE</th><th>Sévérité</th><th>Statut</th></tr></thead>
+    <tbody>
+      <tr><td class="mono" data-label="Horodatage">08-12 03:14</td><td class="mono" data-label="Hôte">srv-fab-02</td><td class="mono" data-label="CVE">CVE-2026-4471</td><td class="sev-haute" data-label="Sévérité">Haute</td><td data-label="Statut">En cours</td></tr>
+      <tr><td class="mono" data-label="Horodatage">08-11 22:02</td><td class="mono" data-label="Hôte">10.4.2.18</td><td class="mono" data-label="CVE">CVE-2026-3390</td><td data-label="Sévérité">Moyenne</td><td data-label="Statut">Résolu</td></tr>
+      <tr><td class="mono" data-label="Horodatage">08-11 09:47</td><td class="mono" data-label="Hôte">poste-compta-3</td><td class="mono" data-label="CVE">—</td><td data-label="Sévérité">Faible</td><td data-label="Statut">Résolu</td></tr>
+    </tbody>
+  </table>
+</main>
+</body>
+</html>

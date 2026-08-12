@@ -1,0 +1,32 @@
+/* tokens-c.css — direction « Bastion » (registre cabinet-conseil, froid neutre
+ * mais structure éditoriale — troisième pôle sur l'axe Température, distinct
+ * des deux premiers par la structure et la typographie).
+ * Studio de direction TF-0102 — cas synthétique Meunier Industries. */
+:root {
+  /* Couleurs — OKLCH, hue 190-195 (bleu-vert neutre, distinct de A à 95°+) */
+  --fond: oklch(0.975 0.008 190);
+  --surface: oklch(0.95 0.012 190);
+  --trait: oklch(0.86 0.018 190);
+  --texte: oklch(0.24 0.020 195);
+  --texte-faible: oklch(0.47 0.020 195);
+  --accent: oklch(0.48 0.130 175);
+  --accent-fond: oklch(0.94 0.02 175);
+  --texte-succes: oklch(0.41 0.12 150);
+  --fond-succes: oklch(0.94 0.03 150);
+
+  /* Typographie — titre en mono display (registre « cabinet qui documente ») */
+  --police-titre: "JetBrains Mono", ui-monospace, monospace;
+  --police-corps: "Source Sans 3", ui-sans-serif, sans-serif;
+  --police-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Échelle typographique — ratio 1.25, confortable (entre A compact et B aéré) */
+  --texte-xs: 0.8rem; --texte-sm: 1rem; --texte-md: 1.25rem;
+  --texte-lg: 1.563rem; --texte-xl: 1.954rem; --texte-2xl: 2.442rem;
+
+  /* Espacement — pas de 4px */
+  --espace-xs: 4px; --espace-sm: 8px; --espace-md: 16px;
+  --espace-lg: 24px; --espace-xl: 32px; --espace-2xl: 48px;
+
+  /* Rayons — crisp, éditoriaux */
+  --rayon-sm: 2px; --rayon-md: 4px; --rayon-lg: 6px;
+}
