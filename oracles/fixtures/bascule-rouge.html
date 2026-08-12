@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<!-- FIXTURE ROUGE — oracle-bascule (forge-design), TF-0133, « toggle mort ».
+     Différence UNIQUE avec bascule-verte.html : la ligne
+     bouton.addEventListener('click', ...) a été retirée du script de câblage final.
+     Le bouton existe, en zone d'en-tête (B-T1 doit PASS), la fonction appliquer()
+     mute encore data-theme et écrit dans localStorage mais N'EST JAMAIS INVOQUÉE :
+     aucun écouteur de clic n'est attaché au bouton. C'est une bascule morte au sens
+     de la loi transverse n° 1 — cliquer ne fait rien. Cette fixture doit FAIL
+     précisément sur B-T2, et sur B-T2 seulement (B-T1, B-T3, B-T4 restent verts :
+     le bouton est bien placé, la persistance est déclarée dans le code même si
+     inatteignable, et la palette sombre reste dérivée sans changement). La rouge du
+     pilot (bascule-rouge-contraste.html) teste le contraste, pas le câblage — elle
+     ne sert pas cette preuve-ci. -->
+<html lang="fr">
+<head>
+<script>
+(function () {
+  var stocke = localStorage.getItem('digitai-theme');
+  var theme = stocke || (window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digit-AI — Page-témoin bascule thème sombre (rouge, toggle mort) · Forge Design</title>
+  <meta name="description" content="Fixture rouge oracle-bascule : bouton présent, aucun écouteur de clic attaché — bascule morte, doit échouer sur B-T2.">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3C/svg%3E">
+
+  <style>
+    :root {
+      --blue: #2563EB;
+      --bg: #FAFBFF;
+      --surface: #FFFFFF;
+      --card: #FFFFFF;
+      --ink: #0F172A;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --line: #E6EAF2;
+      --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8;
+      --teal:  #0E9488; --teal-fill:  #EFFDFB; --teal-line:  #C7F0EA;
+      --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD;
+      --r: 12px; --r-sm: 8px;
+      --w: min(92vw, 1000px);
+      --head: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, "Consolas", monospace;
+      --annee-ref: "2026";
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #0B1220; --surface: #121B2E; --card: #121B2E;
+      --ink: #EEF2F8; --muted: #A9B4C4; --faint: #7C8AA0; --line: #263248;
+      --blue: #7DA2F5;
+      --amber: #FBBF6D; --amber-fill: #2B2210; --amber-line: #4A3A18;
+      --teal:  #5FE6D6; --teal-fill:  #0E2A27; --teal-line:  #164E48;
+      --green: #7BE0A0; --green-fill: #0F2A1B; --green-line: #1C4A30;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+      line-height: 1.55; font-size: 16px; transition: background-color .15s, color .15s; }
+    .wrap { max-width: var(--w); margin: 0 auto; padding: 32px 24px 64px; }
+
+    h1, h2, h3 { font-family: var(--head); font-weight: 800; color: var(--ink); line-height: 1.2; }
+    h1 { font-size: 1.9rem; margin: 0 0 .25em; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin: 1.6em 0 .5em; }
+    p { margin: 0 0 1em; }
+    code { font-family: var(--mono); font-size: .9em; }
+
+    header.doc { display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; border-bottom: 2px solid var(--blue); padding-bottom: 16px; margin-bottom: 24px; }
+    .eyebrow { color: var(--muted); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .4em; }
+
+    .theme-toggle { appearance: none; border: 1px solid var(--line); background: var(--surface);
+      color: var(--ink); border-radius: 999px; width: 36px; height: 36px; flex: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .theme-toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .theme-toggle .icon-sun { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
+
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+      padding: 20px 24px; margin: 16px 0; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 12px 0; padding: 0; list-style: none; }
+    .leg-item { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: .85rem; }
+    .leg-swatch { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--line); }
+
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    caption { text-align: left; color: var(--muted); font-size: .85rem; padding: 6px 0; }
+    thead th { background: var(--surface); text-align: left; font-family: var(--head);
+      font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--line); padding: 10px 12px; }
+    tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+
+    footer.doc { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: .85rem; }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 24px 16px 48px; }
+      h1 { font-size: 1.5rem; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+
+    @page { size: A4; margin: 18mm 16mm; }
+    @media print {
+      :root, :root[data-theme="dark"] {
+        --bg:#FFFFFF; --surface:#FFFFFF; --card:#FFFFFF; --ink:#0F172A;
+        --muted:#64748B; --faint:#94A3B8; --line:#E6EAF2; --blue:#2563EB;
+        --amber:#D97706; --amber-fill:#FFFBEB; --amber-line:#FDE9C8;
+        --teal:#0E9488;  --teal-fill:#EFFDFB;  --teal-line:#C7F0EA;
+        --green:#15803D; --green-fill:#F2FCF5; --green-line:#CFEEDD;
+      }
+      .theme-toggle { display: none; }
+      .wrap { max-width: none; padding: 0; }
+      .card { break-inside: avoid; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc">
+      <div>
+        <p class="eyebrow">Digit-AI · Forge Design · Fixture oracle-bascule (rouge)</p>
+        <h1>Bascule thème sombre — bouton mort</h1>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button"
+              aria-label="Bascule thème sombre" aria-pressed="false">
+        <svg class="icon-moon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+        </svg>
+        <svg class="icon-sun" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="4.5"/>
+          <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"
+                stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <main>
+      <section aria-labelledby="p-h">
+        <h2 id="p-h">Défaut mesuré par cette fixture</h2>
+        <p>Le bouton est présent, en zone d'en-tête, et la fonction qui basculerait le
+          thème existe toujours dans le script — mais elle n'est jamais appelée : aucun
+          <code>addEventListener('click', …)</code> n'est attaché au bouton. Cliquer ne
+          produit aucun effet observable (loi transverse n° 1).</p>
+        <div class="card">
+          <p>Ce défaut est invisible à l'œil sur une capture statique : le bouton a
+            l'air normal. Seule une analyse du câblage (ou un clic réel) le révèle.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="leg-h">
+        <h2 id="leg-h">Accents sémantiques (dérivés, jamais en dur)</h2>
+        <ul class="legend">
+          <li class="leg-item"><span class="leg-swatch" style="background:var(--green-fill);border-color:var(--green-line)"></span> Succès</li>
+          <li class="leg-item"><span class="leg-swatch" style="background:var(--amber-fill);border-color:var(--amber-line)"></span> Alerte</li>
+          <li class="leg-item"><span class="leg-swatch" style="background:var(--teal-fill);border-color:var(--teal-line)"></span> Info</li>
+        </ul>
+      </section>
+
+      <section aria-labelledby="tab-h">
+        <h2 id="tab-h">Tokens dérivés (palette inchangée, conforme)</h2>
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table>
+            <caption>Chaque token clair a sa contrepartie sombre — une source, deux projections.</caption>
+            <thead>
+              <tr><th scope="col">Rôle</th><th scope="col">Clair</th><th scope="col">Sombre</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fond</td><td>#FAFBFF</td><td>#0B1220</td></tr>
+              <tr><td>Texte principal</td><td>#0F172A</td><td>#EEF2F8</td></tr>
+              <tr><td>Texte secondaire</td><td>#64748B</td><td>#A9B4C4</td></tr>
+              <tr><td>Filet</td><td>#E6EAF2</td><td>#263248</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="doc">
+      Digit-AI — Forge Design · Fixture oracle-bascule rouge (toggle mort) · 2026
+    </footer>
+  </div>
+
+  <!-- Câblage RETIRÉ délibérément : appliquer() existe mais n'est invoquée par rien.
+       aucun bouton.addEventListener('click', ...) — c'est le seul écart avec la
+       fixture verte. -->
+  <script>
+    (function () {
+      var bouton = document.getElementById('theme-toggle');
+      var racine = document.documentElement;
+      function appliquer(theme) {
+        racine.setAttribute('data-theme', theme);
+        localStorage.setItem('digitai-theme', theme);
+        bouton.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+      }
+      bouton.setAttribute('aria-pressed', racine.getAttribute('data-theme') === 'dark' ? 'true' : 'false');
+    })();
+  </script>
+</body>
+</html>

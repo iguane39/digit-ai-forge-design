@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<!-- FIXTURE ROUGE — R-30, contraste sombre insuffisant.
+     Différence UNIQUE avec la fixture verte : le token --muted du thème sombre est
+     trop proche de --bg (voir bloc :root[data-theme="dark"] ci-dessous). Le toggle
+     reste câblé (il ne s'agit pas d'une bascule morte) : cliquer fonctionne, mais la
+     PALETTE sombre elle-même ne tient pas l'AA — c'est ce défaut que doit mesurer
+     render_page.py (V2 contraste).
+     Cette fixture démarre volontairement en sombre (data-theme="dark" figé sur <html>,
+     pas d'init par localStorage/prefers-color-scheme) : render_page.py ne simule aucun
+     clic, c'est la seule façon de soumettre l'état sombre à son oracle de rendu
+     statique. Le pattern livrable normatif (S-G1, BEST-PRACTICES-HTML.md) reste clair
+     par défaut — ce figeage est propre à la fixture, jamais au pattern. -->
+<html lang="fr" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digit-AI — Page-témoin bascule thème sombre (rouge) · Forge Pilot</title>
+  <meta name="description" content="Fixture rouge R-30 : palette sombre à contraste insuffisant (--muted trop proche de --bg) — doit échouer sur V2 de render_page.py.">
+  <meta name="theme-color" content="#2563EB">
+  <meta name="color-scheme" content="light dark">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3C/svg%3E">
+
+  <style>
+    :root {
+      --blue: #2563EB;
+      --bg: #FAFBFF;
+      --surface: #FFFFFF;
+      --card: #FFFFFF;
+      --ink: #0F172A;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --line: #E6EAF2;
+      --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8;
+      --teal:  #0E9488; --teal-fill:  #EFFDFB; --teal-line:  #C7F0EA;
+      --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD;
+      --r: 12px; --r-sm: 8px;
+      --w: min(92vw, 1000px);
+      --head: "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, "Consolas", monospace;
+      --annee-ref: "2026";
+    }
+
+    /* DÉFAUT DÉLIBÉRÉ : --muted du thème sombre (#2E3A52) est trop proche de --bg
+       (#0B1220) — ratio très inférieur à 4.5:1. Seul token modifié par rapport à la
+       fixture verte : tout le reste de la palette sombre est identique et conforme. */
+    :root[data-theme="dark"] {
+      --bg: #0B1220; --surface: #121B2E; --card: #121B2E;
+      --ink: #EEF2F8; --muted: #2E3A52; --faint: #7C8AA0; --line: #263248;
+      --blue: #7DA2F5;
+      --amber: #FBBF6D; --amber-fill: #2B2210; --amber-line: #4A3A18;
+      --teal:  #5FE6D6; --teal-fill:  #0E2A27; --teal-line:  #164E48;
+      --green: #7BE0A0; --green-fill: #0F2A1B; --green-line: #1C4A30;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans);
+      line-height: 1.55; font-size: 16px; }
+    .wrap { max-width: var(--w); margin: 0 auto; padding: 32px 24px 64px; }
+
+    h1, h2, h3 { font-family: var(--head); font-weight: 800; color: var(--ink); line-height: 1.2; }
+    h1 { font-size: 1.9rem; margin: 0 0 .25em; }
+    h2 { font-size: 1.3rem; font-weight: 700; margin: 1.6em 0 .5em; }
+    p { margin: 0 0 1em; }
+    code { font-family: var(--mono); font-size: .9em; }
+
+    header.doc { display: flex; align-items: flex-start; justify-content: space-between;
+      gap: 16px; border-bottom: 2px solid var(--blue); padding-bottom: 16px; margin-bottom: 24px; }
+    .eyebrow { color: var(--muted); font-size: .8rem; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 .4em; }
+
+    .theme-toggle { appearance: none; border: 1px solid var(--line); background: var(--surface);
+      color: var(--ink); border-radius: 999px; width: 36px; height: 36px; flex: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .theme-toggle:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+    .theme-toggle .icon-sun { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
+
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r);
+      padding: 20px 24px; margin: 16px 0; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    caption { text-align: left; color: var(--muted); font-size: .85rem; padding: 6px 0; }
+    thead th { background: var(--surface); text-align: left; font-family: var(--head);
+      font-weight: 700; color: var(--ink); border-bottom: 2px solid var(--line); padding: 10px 12px; }
+    tbody td { padding: 10px 12px; border-bottom: 1px solid var(--line); }
+
+    footer.doc { margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--line);
+      color: var(--muted); font-size: .85rem; }
+
+    @media (max-width: 640px) {
+      .wrap { padding: 24px 16px 48px; }
+      h1 { font-size: 1.5rem; }
+    }
+
+    @page { size: A4; margin: 18mm 16mm; }
+    @media print {
+      :root, :root[data-theme="dark"] {
+        --bg:#FFFFFF; --surface:#FFFFFF; --card:#FFFFFF; --ink:#0F172A;
+        --muted:#64748B; --faint:#94A3B8; --line:#E6EAF2; --blue:#2563EB;
+        --amber:#D97706; --amber-fill:#FFFBEB; --amber-line:#FDE9C8;
+        --teal:#0E9488;  --teal-fill:#EFFDFB;  --teal-line:#C7F0EA;
+        --green:#15803D; --green-fill:#F2FCF5; --green-line:#CFEEDD;
+      }
+      .theme-toggle { display: none; }
+      .wrap { max-width: none; padding: 0; }
+      .card { break-inside: avoid; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc">
+      <div>
+        <p class="eyebrow">Digit-AI · Forge Pilot · Fixture R-30 (rouge)</p>
+        <h1>Bascule thème sombre — contraste insuffisant</h1>
+      </div>
+      <button id="theme-toggle" class="theme-toggle" type="button"
+              aria-label="Bascule thème sombre" aria-pressed="true">
+        <svg class="icon-moon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+        </svg>
+        <svg class="icon-sun" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="4.5"/>
+          <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"
+                stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <main>
+      <section aria-labelledby="p-h">
+        <h2 id="p-h">Défaut mesuré par cette fixture</h2>
+        <p>Le bouton bascule bien le thème (il n'est pas mort) et le choix serait persisté.
+          Le défaut est ailleurs : le token <code>--muted</code> du thème sombre est trop
+          proche du fond sombre pour tenir l'AA. Tout texte porté par <code>--muted</code>
+          sur <code>--bg</code> — cet aperçu, les légendes de tableau, le pied de page —
+          échoue en contraste.</p>
+        <div class="card">
+          <p>Cette carte reste lisible : son texte est en <code>--ink</code>, non affecté.
+            Le défaut est localisé au token <code>--muted</code> uniquement.</p>
+        </div>
+      </section>
+
+      <section aria-labelledby="tab-h">
+        <h2 id="tab-h">Tokens dérivés (un seul altéré)</h2>
+        <div class="card" style="padding:0;overflow-x:auto">
+          <table>
+            <caption>Légende en --muted — texte de cette légende lui-même sous le seuil AA.</caption>
+            <thead>
+              <tr><th scope="col">Rôle</th><th scope="col">Clair</th><th scope="col">Sombre (altéré)</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Fond</td><td>#FAFBFF</td><td>#0B1220</td></tr>
+              <tr><td>Texte principal</td><td>#0F172A</td><td>#EEF2F8</td></tr>
+              <tr><td>Texte secondaire</td><td>#64748B</td><td>#2E3A52 (défaut)</td></tr>
+              <tr><td>Filet</td><td>#E6EAF2</td><td>#263248</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <footer class="doc">
+      Digit-AI — Forge Pilot · Fixture R-30 rouge · 2026
+    </footer>
+  </div>
+
+  <script>
+    (function () {
+      var bouton = document.getElementById('theme-toggle');
+      var racine = document.documentElement;
+      function appliquer(theme) {
+        racine.setAttribute('data-theme', theme);
+        localStorage.setItem('digitai-theme', theme);
+        bouton.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+      }
+      bouton.addEventListener('click', function () {
+        appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- FIXTURE ROUGE — oracle-bascule, règle B-T1 seule.
+     Différence UNIQUE avec bascule-verte.html : le bouton .theme-toggle a été retiré
+     du DOM (le header ne contient plus que le titre). Le script référence encore
+     'theme-toggle' mais getElementById renverrait null à l'exécution — sans
+     importance ici : l'oracle analyse le texte, pas le runtime, et son diagnostic
+     porte sur l'absence du bouton lui-même (B-T1), pas sur ce qui s'ensuivrait. -->
+<html lang="fr">
+<head>
+<script>
+(function () {
+  var stocke = localStorage.getItem('digitai-theme');
+  var theme = stocke || (window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
+  <meta charset="UTF-8">
+  <title>Digit-AI — Fixture oracle-bascule (rouge, B-T1 — bouton absent)</title>
+  <style>
+    :root {
+      --bg: #FAFBFF; --ink: #0F172A; --muted: #64748B; --surface: #FFFFFF; --line: #E6EAF2;
+    }
+    :root[data-theme="dark"] {
+      --bg: #0B1220; --ink: #EEF2F8; --muted: #A9B4C4; --surface: #121B2E; --line: #263248;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: sans-serif; }
+    header.doc { padding: 16px; border-bottom: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header class="doc">
+    <h1>Fixture B-T1 — aucun bouton de bascule dans le document</h1>
+  </header>
+  <main><p>Le header ne contient aucun élément .theme-toggle ni [data-theme-toggle].</p></main>
+  <script>
+    (function () {
+      var bouton = document.getElementById('theme-toggle');
+      var racine = document.documentElement;
+      function appliquer(theme) {
+        racine.setAttribute('data-theme', theme);
+        localStorage.setItem('digitai-theme', theme);
+      }
+      if (bouton) bouton.addEventListener('click', function () {
+        appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+    })();
+  </script>
+</body>
+</html>

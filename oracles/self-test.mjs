@@ -65,6 +65,40 @@ const CAS = [
     verte: [fx('dtcg-verte.tokens.json'), fx('dtcg-verte.css')],
     rouge: [fx('dtcg-rouge.tokens.json'), fx('dtcg-rouge.css')],
   },
+  {
+    // TF-0133 (aval R-30) : bouton présent mais aucun écouteur de clic attaché —
+    // bascule morte (loi n° 1). Seule B-T2 est délibérément cassée dans cette
+    // fixture ; B-T1, B-T3, B-T4 y restent verts (voir le commentaire en tête de
+    // bascule-rouge.html — c'est la fixture demandée par le mandat TF-0133).
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T2'],
+    verte: [fx('bascule-verte.html')],
+    rouge: [fx('bascule-rouge.html')],
+  },
+  {
+    // Preuve dédiée B-T1 (loi du gabarit : une règle sans fixture rouge n'est pas
+    // prouvée) : bouton de bascule absent du DOM, tout le reste conforme.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T1'],
+    verte: [fx('bascule-verte.html')],
+    rouge: [fx('bascule-rouge-bt1.html')],
+  },
+  {
+    // Preuve dédiée B-T3 : câblage et palette conformes, aucune trace de
+    // localStorage nulle part — persistance jamais déclarée.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T3'],
+    verte: [fx('bascule-verte.html')],
+    rouge: [fx('bascule-rouge-bt3.html')],
+  },
+  {
+    // Preuve dédiée B-T4 : bouton câblé et persisté, mais aucun bloc
+    // [data-theme="dark"] — la bascule ne change jamais rien visuellement.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T4'],
+    verte: [fx('bascule-verte.html')],
+    rouge: [fx('bascule-rouge-bt4.html')],
+  },
 ];
 
 function lancer(oracle, argv) {

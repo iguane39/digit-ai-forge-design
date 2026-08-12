@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<!-- FIXTURE ROUGE — oracle-bascule, règle B-T4 seule.
+     Différence UNIQUE avec bascule-verte.html : le bloc :root[data-theme="dark"] a
+     été retiré entièrement — aucune palette sombre n'est déclarée nulle part. Le
+     bouton est présent, en en-tête, câblé, et la persistance est déclarée : B-T1,
+     B-T2 et B-T3 restent verts. Seule la dérivation de palette manque. -->
+<html lang="fr">
+<head>
+<script>
+(function () {
+  var stocke = localStorage.getItem('digitai-theme');
+  var theme = stocke || (window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
+  <meta charset="UTF-8">
+  <title>Digit-AI — Fixture oracle-bascule (rouge, B-T4 — palette sombre absente)</title>
+  <style>
+    :root {
+      --bg: #FAFBFF; --ink: #0F172A; --muted: #64748B; --surface: #FFFFFF; --line: #E6EAF2;
+    }
+    /* pas de bloc :root[data-theme="dark"] : le sombre n'a jamais été projeté */
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: sans-serif; }
+    header.doc { display: flex; justify-content: space-between; padding: 16px; border-bottom: 1px solid var(--line); }
+    .theme-toggle { border: 1px solid var(--line); background: var(--surface); color: var(--ink);
+      border-radius: 999px; width: 32px; height: 32px; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <header class="doc">
+    <h1>Fixture B-T4 — aucune palette sombre déclarée</h1>
+    <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Bascule thème sombre"></button>
+  </header>
+  <main><p>Basculer sur data-theme="dark" ne change visuellement rien : aucun token n'est redéfini.</p></main>
+  <script>
+    (function () {
+      var bouton = document.getElementById('theme-toggle');
+      var racine = document.documentElement;
+      function appliquer(theme) {
+        racine.setAttribute('data-theme', theme);
+        localStorage.setItem('digitai-theme', theme);
+      }
+      bouton.addEventListener('click', function () {
+        appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+    })();
+  </script>
+</body>
+</html>
