@@ -19,6 +19,7 @@ ni passation développeur. Conception complète : [conception-forge-design.md](c
 | **Améliorer le design (maquette)** | obtenir une maquette HTML autonome de mon interface | `skills\ameliore-le-design (méthode, mode degrade)` | prouvé (experimental) |
 | **Critiquer le design (amont et aval)** | faire critiquer une maquette ou juger le produit rendu contre sa promesse design | `skills\critique-le-design (méthode) ; mode aval : revue graphique d'implémentation (ETAPES-RUN §5 bis)` | déclaré (experimental) |
 | **Valider le design (oracles)** | vérifier mécaniquement charte, tokens, mobile, images et corpus | `node oracles\run-oracles-design.mjs <html> [--mobile] [--tokens t.css] [--json-only]` | prouvé (production) |
+| **Régression visuelle (baseline)** | comparer le rendu courant d'une page à une capture approuvée versionnée | `node oracles\oracle-baseline.mjs <html> --slug <nom> [--approuver]` — voir `baseline/README.md` | prouvé (v0, un slug réel) |
 | **Générer les visuels** | produire les images et visuels réels de mes maquettes | `producteur d'images (Gemini) — spécifié chez design, exercé via le pilot` | prouvé (experimental) |
 
 Le catalogue consolidé des dix forges vit chez le pilot :
@@ -29,6 +30,7 @@ Le catalogue consolidé des dix forges vit chez le pilot :
 ```
 corpus/            matière indexée, recherche BM25 hors ligne
 oracles/           les juges exécutés + leurs fixtures + le self-test
+baseline/          captures approuvées de régression visuelle, versionnées (TF-0102)
 skills/            les quatre verbes
 dist/              les skills empaquetés, installables
 demo/              run de validation : template, build, maquette, restitution
@@ -69,6 +71,9 @@ node oracles/run-oracles-design.mjs <page.html> \
 node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode corpus (oracle-corpus seul)
 
 node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # sync DTCG → CSS
+
+node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
+node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 ```
 
 Options de `run-oracles-design.mjs` :
