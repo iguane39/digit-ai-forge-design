@@ -60,6 +60,13 @@ couvrir l'inventaire complet, et `criteres-sortie.md` l'exige déjà.
 
 **K. `studio-de-direction` jamais exécuté en parallèle.**
 → **Reco : premier run en dégradé mono-agent, consigné comme tel.**
+→ **Fait (TF-0102, 12/08/2026) : premier run réel en dégradé mono-agent** —
+`demo/studio-de-direction/` (BRIEF.md, 3 directions tokens+écran signature,
+DIRECTION.md). Test de divergence réelle 4/4, rubrique R1-R6 passée sur oracles
+exécutés (`oracle-slop`, `oracle-tokens`, `render_page` 5×2, `oracle-a11y` —
+tous PASS après un correctif de reflow mobile trouvé par l'exécution). Le
+parallélisme réel (plusieurs agents, `forge-agents`) reste dû — non fait ici,
+contrainte d'écriture de la campagne à un seul dépôt.
 
 ## Croissance
 

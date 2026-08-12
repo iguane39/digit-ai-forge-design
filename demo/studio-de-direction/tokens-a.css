@@ -1,0 +1,30 @@
+/* tokens-a.css — direction « Sentinelle » (pôle froid/technique de l'axe Température).
+ * Studio de direction TF-0102 — cas synthétique Meunier Industries. */
+:root {
+  /* Couleurs — OKLCH, hue 235 (bleu froid) */
+  --fond: oklch(0.98 0.006 235);
+  --surface: oklch(0.955 0.010 235);
+  --trait: oklch(0.86 0.016 235);
+  --texte: oklch(0.22 0.030 235);
+  --texte-faible: oklch(0.47 0.030 235);
+  --accent: oklch(0.50 0.160 235);
+  --accent-fond: oklch(0.94 0.02 235);
+  --texte-succes: oklch(0.42 0.13 150);
+  --fond-succes: oklch(0.94 0.03 150);
+
+  /* Typographie — grotesque condensé (registre « poste opérateur ») */
+  --police-titre: "Archivo Expanded", ui-sans-serif, sans-serif;
+  --police-corps: "Public Sans", ui-sans-serif, sans-serif;
+  --police-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Échelle typographique — ratio 1.25, compacte (densité) */
+  --texte-xs: 0.64rem; --texte-sm: 0.8rem; --texte-md: 1rem;
+  --texte-lg: 1.25rem; --texte-xl: 1.563rem; --texte-2xl: 1.954rem;
+
+  /* Espacement — pas de 4px */
+  --espace-xs: 4px; --espace-sm: 8px; --espace-md: 16px;
+  --espace-lg: 24px; --espace-xl: 32px; --espace-2xl: 48px;
+
+  /* Rayons — nets, techniques */
+  --rayon-sm: 4px; --rayon-md: 6px; --rayon-lg: 8px;
+}

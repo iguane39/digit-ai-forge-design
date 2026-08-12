@@ -1,0 +1,30 @@
+/* tokens-b.css — direction « Vigie » (pôle chaud/humain de l'axe Température).
+ * Studio de direction TF-0102 — cas synthétique Meunier Industries. */
+:root {
+  /* Couleurs — OKLCH, hue 45-60 (ambre chaud) */
+  --fond: oklch(0.975 0.012 60);
+  --surface: oklch(0.95 0.020 55);
+  --trait: oklch(0.87 0.028 55);
+  --texte: oklch(0.26 0.030 45);
+  --texte-faible: oklch(0.48 0.030 45);
+  --accent: oklch(0.48 0.150 40);
+  --accent-fond: oklch(0.93 0.04 55);
+  --texte-succes: oklch(0.40 0.12 145);
+  --fond-succes: oklch(0.93 0.04 145);
+
+  /* Typographie — slab serif humaine (registre « service qui rassure ») */
+  --police-titre: "Bitter", ui-serif, serif;
+  --police-corps: "Karla", ui-sans-serif, sans-serif;
+  --police-mono: "Fira Code", ui-monospace, monospace;
+
+  /* Échelle typographique — ratio 1.333, généreuse (densité aérée) */
+  --texte-xs: 0.75rem; --texte-sm: 1rem; --texte-md: 1.333rem;
+  --texte-lg: 1.777rem; --texte-xl: 2.369rem; --texte-2xl: 3.158rem;
+
+  /* Espacement — pas de 4px (mêmes valeurs, usage plus généreux dans la mise en page) */
+  --espace-xs: 4px; --espace-sm: 8px; --espace-md: 16px;
+  --espace-lg: 24px; --espace-xl: 32px; --espace-2xl: 48px;
+
+  /* Rayons — doux, accueillants */
+  --rayon-sm: 10px; --rayon-md: 16px; --rayon-lg: 24px;
+}
