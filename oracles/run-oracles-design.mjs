@@ -33,6 +33,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { detecterOutillageRendu } from './lib/rendu.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -94,31 +95,7 @@ function lancer(oracle, argv) {
 // Chemins canoniques, ceux que grille.md et criteres-sortie.md documentent :
 //   ~/.claude/skills/digit-ai-page-html/scripts/render_page.py
 //   ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py
-
-function detecterOutillageRendu() {
-  const home = os.homedir();
-  const renderPage = path.join(home, '.claude', 'skills', 'digit-ai-page-html', 'scripts', 'render_page.py');
-  const oracleA11y = path.join(home, '.claude', 'skills', 'quality-oracles', 'scripts', 'oracle-a11y.py');
-  const manques = [];
-  if (!fs.existsSync(renderPage)) manques.push(`render_page.py introuvable (${renderPage})`);
-  if (!fs.existsSync(oracleA11y)) manques.push(`oracle-a11y.py introuvable (${oracleA11y})`);
-
-  let python = null;
-  for (const candidat of ['python', 'python3']) {
-    const r = spawnSync(candidat, ['--version'], { encoding: 'utf8' });
-    if (!r.error && r.status === 0) { python = candidat; break; }
-  }
-  if (!python) manques.push('interpréteur python introuvable dans le PATH (python / python3)');
-
-  let playwrightOk = false;
-  if (python) {
-    const r = spawnSync(python, ['-c', 'import playwright'], { encoding: 'utf8' });
-    playwrightOk = !r.error && r.status === 0;
-    if (!playwrightOk) manques.push('module playwright non importable en Python (pip install playwright && playwright install chromium)');
-  }
-
-  return { ok: manques.length === 0, manques, python, renderPage, oracleA11y };
-}
+// Détection mutualisée dans lib/rendu.mjs (réutilisée par oracle-baseline.mjs).
 
 function injecterThemeSombre(html) {
   if (/<html\b[^>]*\bdata-theme\s*=\s*"[^"]*"/i.test(html)) {
