@@ -17,6 +17,7 @@
 // Usage :
 //   node run-oracles-design.mjs <fichier.html> [--mobile] [--tokens t.css] [--json-only] [--rendu]
 //   node run-oracles-design.mjs --corpus <dossier-corpus>
+//   node run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>
 //
 // --rendu : détecte render_page.py (digit-ai-page-html) et oracle-a11y.py
 // (quality-oracles) aux chemins canoniques sous ~/.claude/skills/. Si les deux
@@ -224,6 +225,16 @@ if (opt('--corpus')) {
   const r = lancer('oracle-corpus.mjs', [opt('--corpus')]);
   const code = r.verdict === 'PASS' ? 0 : r.verdict === 'FAIL' ? 1 : 2;
   if (!jsonOnly) process.stderr.write(`${r.verdict} — corpus\n`);
+  sortir(r.verdict, [r], r.non_juge, code);
+}
+
+// ── Mode dtcg : synchronisation source .tokens.json → tokens.css dérivé ────
+if (opt('--dtcg')) {
+  const dtcgSource = opt('--dtcg');
+  const dtcgDerive = args[args.indexOf('--dtcg') + 2];
+  const r = lancer('oracle-dtcg.mjs', [dtcgSource, dtcgDerive || '']);
+  const code = r.verdict === 'PASS' ? 0 : r.verdict === 'FAIL' ? 1 : 2;
+  if (!jsonOnly) process.stderr.write(`${r.verdict} — dtcg (${dtcgSource} → ${dtcgDerive})\n`);
   sortir(r.verdict, [r], r.non_juge, code);
 }
 

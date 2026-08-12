@@ -1,0 +1,26 @@
+{
+  "$description": "Fixture rouge — trois défauts volontaires, un par règle D1/D2/D3.",
+  "couleur": {
+    "clair": {
+      "bg":   { "$type": "color", "$value": "#FAFBFF" },
+      "ink":  { "$value": "#0F172A" }
+    },
+    "sombre": {
+      "bg":   { "$type": "color", "$value": "#0E1219" },
+      "ink":  { "$type": "color", "$value": "#ECEFF6" }
+    }
+  },
+  "typographie": {
+    "head": { "$type": "fontFamily", "$value": ["Roboto", "system-ui", "sans-serif"] }
+  },
+  "rayon": {
+    "r": { "$type": "dimension", "$value": "12px" }
+  },
+  "espacement": {
+    "espace-xs": { "$type": "dimension", "$value": "4px" }
+  },
+  "alias": {
+    "texte":  { "$value": "{couleur.clair.ink}" },
+    "accent": { "$value": "{couleur.clair.introuvable}" }
+  }
+}

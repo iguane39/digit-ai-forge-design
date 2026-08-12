@@ -1,0 +1,4 @@
+/* fixture rouge — dérivé volontairement non pertinent : la source associée ne
+   régénère plus (alias cassé), donc ce fichier ne peut de toute façon pas être
+   vérifié comme synchronisé. Voir dtcg-rouge.tokens.json. */
+:root { --bg: #000000; }

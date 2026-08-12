@@ -96,6 +96,23 @@ Un chroma de 0.005 à 0.01 vers la hue de marque suffit à créer la cohésion e
 couleur d'accent et les surfaces. La hue vient de **cette** marque, pas d'une
 formule « chaud = accueillant, froid = technique ».
 
+## Source DTCG (optionnel, recommandé)
+
+`tokens.css` peut être **dérivé** d'une source `.tokens.json` au format W3C DTCG
+(stable 2025.10) plutôt qu'écrit à la main — c'est le pattern du mode `digit-ai`
+depuis TF-0102 : voir `corpus/tokens-digit-ai.tokens.json` pour un exemple complet
+(groupes `couleur.clair` / `couleur.sombre`, `typographie`, `rayon`, `espacement`,
+`alias`) et `scripts/generer-tokens-css.mjs` pour la transformation (zéro
+dépendance npm — pas de Style Dictionary, juste ce qu'il faut pour ce contrat).
+Intérêt : un seul endroit à éditer, et l'ouverture vers Figma Variables / autres
+plateformes sans ressaisie. `oracles/oracle-dtcg.mjs` (règles D1–D3) vérifie que
+le `tokens.css` livré est bien la régénération exacte de sa source — un tokens.css
+retouché à la main après génération est détecté, jamais silencieux.
+
+Pour un livrable `client`, ce pattern reste **optionnel** en V0 : écrire directement
+`tokens.css` selon la structure ci-dessus est toujours conforme. Migrer un client
+vers la source DTCG est un reste consigné, pas une obligation de ce skill.
+
 ## Page témoin
 
 `tokens.css` s'accompagne d'une page témoin qui consomme chaque token au moins une
