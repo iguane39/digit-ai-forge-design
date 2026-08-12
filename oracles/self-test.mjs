@@ -59,6 +59,12 @@ const CAS = [
     verte: [fx('motion-verte.html')],
     rouge: [fx('motion-rouge.html')],
   },
+  {
+    oracle: 'oracle-dtcg.mjs',
+    regles: ['D1', 'D2', 'D3'],
+    verte: [fx('dtcg-verte.tokens.json'), fx('dtcg-verte.css')],
+    rouge: [fx('dtcg-rouge.tokens.json'), fx('dtcg-rouge.css')],
+  },
 ];
 
 function lancer(oracle, argv) {

@@ -67,6 +67,8 @@ node oracles/run-oracles-design.mjs <page.html> \
   [--mobile] [--tokens tokens.css] [--json-only] [--racine <chemin>]   # point d'entrée unique
 
 node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode corpus (oracle-corpus seul)
+
+node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # sync DTCG → CSS
 ```
 
 Options de `run-oracles-design.mjs` :
@@ -78,6 +80,7 @@ Options de `run-oracles-design.mjs` :
 | `--json-only` | sortie JSON compacte sur stdout, sans les lignes de statut sur stderr |
 | `--racine <chemin>` | force la racine de forge, prioritaire sur `$FORGE_DESIGN_ROOT` et sur le `.env` |
 | `--corpus <dossier>` | bascule en mode corpus : lance uniquement `oracle-corpus` sur le dossier donné |
+| `--dtcg <source.tokens.json> <tokens.css>` | bascule en mode pipeline de tokens : lance uniquement `oracle-dtcg`, qui régénère le CSS depuis la source DTCG et le compare au fichier livré |
 | `--rendu` | si l'outillage est détecté (Python, `playwright`, `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`
@@ -100,6 +103,7 @@ parcours C13 dans tous les cas
 | `oracle-mobile` | M1–M7 | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite |
 | `oracle-images` | I1–I6 | alt, plafonds, zéro réseau, manifeste de génération |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
+| `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et

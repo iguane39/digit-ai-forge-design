@@ -1,0 +1,68 @@
+{
+  "$description": "tokens-digit-ai — mode « digit-ai » de systeme-de-marque. SOURCE au format W3C DTCG (stable 2025.10, https://www.designtokens.org/tr/drafts/format/). corpus/tokens-digit-ai.css est un DÉRIVÉ, régénéré par scripts/generer-tokens-css.mjs — ne pas éditer ce .css à la main, éditer ce .json puis régénérer.\nValeurs canoniques extraites de digit-ai-page-html/assets/boilerplate.html le 04/08/2026. La charte fait foi : ces valeurs ne sont pas retouchées ici.\nDEUX CONFLITS CONNUS AVEC LES ORACLES DE LA FORGE — déclarés, non masqués :\n 1. oracle-slop S4 se déclenche sur --card et --surface (#FFFFFF, blanc pur). La règle S4 vient d'impeccable (« pure black/white never appears in nature »). La charte Digit-AI la contredit frontalement. Arbitrage : sur un livrable Digit-AI, la charte gagne et le finding S4 est accepté comme exception déclarée dans la restitution. Sur un livrable client, le mode « client » s'applique et la question ne se pose pas.\n 2. La charte Digit-AI est light-theme only. oracle-tokens T4 exige la parité clair/sombre. Le bloc sombre ci-dessous est une EXTENSION de la forge, dérivée par recalcul de contraste — il ne figure dans aucune charte officielle. À faire valider avant tout usage client.",
+  "couleur": {
+    "clair": {
+      "bg":         { "$type": "color", "$value": "#FAFBFF" },
+      "card":       { "$type": "color", "$value": "#FFFFFF" },
+      "surface":    { "$type": "color", "$value": "#FFFFFF" },
+      "ink":        { "$type": "color", "$value": "#0F172A" },
+      "muted":      { "$type": "color", "$value": "#64748B" },
+      "faint":      { "$type": "color", "$value": "#94A3B8" },
+      "line":       { "$type": "color", "$value": "#E6EAF2" },
+      "blue":       { "$type": "color", "$value": "#2563EB" },
+      "green":      { "$type": "color", "$value": "#15803D" },
+      "green-fill": { "$type": "color", "$value": "#F2FCF5" },
+      "green-line": { "$type": "color", "$value": "#CFEEDD" },
+      "amber":      { "$type": "color", "$value": "#D97706" },
+      "amber-fill": { "$type": "color", "$value": "#FFFBEB" },
+      "amber-line": { "$type": "color", "$value": "#FDE9C8" },
+      "teal":       { "$type": "color", "$value": "#0E9488" },
+      "teal-fill":  { "$type": "color", "$value": "#EFFDFB" },
+      "teal-line":  { "$type": "color", "$value": "#C7F0EA" }
+    },
+    "sombre": {
+      "bg":         { "$type": "color", "$value": "#0E1219" },
+      "card":       { "$type": "color", "$value": "#171C25" },
+      "surface":    { "$type": "color", "$value": "#171C25" },
+      "ink":        { "$type": "color", "$value": "#ECEFF6" },
+      "muted":      { "$type": "color", "$value": "#A6B0C2" },
+      "faint":      { "$type": "color", "$value": "#7C879A" },
+      "line":       { "$type": "color", "$value": "#2A3140" },
+      "blue":       { "$type": "color", "$value": "#6FA0FF" },
+      "green":      { "$type": "color", "$value": "#5FCB86" },
+      "green-fill": { "$type": "color", "$value": "#12261A" },
+      "green-line": { "$type": "color", "$value": "#24422F" },
+      "amber":      { "$type": "color", "$value": "#F0AE4E" },
+      "amber-fill": { "$type": "color", "$value": "#2A1F0E" },
+      "amber-line": { "$type": "color", "$value": "#46351A" },
+      "teal":       { "$type": "color", "$value": "#4FC9BC" },
+      "teal-fill":  { "$type": "color", "$value": "#0C2624" },
+      "teal-line":  { "$type": "color", "$value": "#1B403C" }
+    }
+  },
+  "typographie": {
+    "head": { "$type": "fontFamily", "$value": ["Roboto", "system-ui", "-apple-system", "Segoe UI", "sans-serif"] },
+    "sans": { "$type": "fontFamily", "$value": ["DM Sans", "system-ui", "-apple-system", "Segoe UI", "sans-serif"] },
+    "mono": { "$type": "fontFamily", "$value": ["JetBrains Mono", "ui-monospace", "Consolas", "monospace"] }
+  },
+  "rayon": {
+    "r":    { "$type": "dimension", "$value": "12px" },
+    "r-sm": { "$type": "dimension", "$value": "8px" }
+  },
+  "espacement": {
+    "espace-xs":  { "$type": "dimension", "$value": "4px" },
+    "espace-sm":  { "$type": "dimension", "$value": "8px" },
+    "espace-md":  { "$type": "dimension", "$value": "16px" },
+    "espace-lg":  { "$type": "dimension", "$value": "24px" },
+    "espace-xl":  { "$type": "dimension", "$value": "32px" },
+    "espace-2xl": { "$type": "dimension", "$value": "48px" }
+  },
+  "alias": {
+    "fond":           { "$value": "{couleur.clair.bg}" },
+    "surface-carte":  { "$value": "{couleur.clair.card}" },
+    "texte":          { "$value": "{couleur.clair.ink}" },
+    "texte-faible":   { "$value": "{couleur.clair.muted}" },
+    "trait":          { "$value": "{couleur.clair.line}" },
+    "accent":         { "$value": "{couleur.clair.blue}" }
+  }
+}
