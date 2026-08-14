@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-taste (accent unique, filets sobres, un seul système)</title>
+<style>
+  /* Neutres teintés : saturation sous le seuil d'accent, donc hors TA1/TA2 */
+  :root {
+    --fond: #fafaf8;
+    --texte: #2b2b2e;
+    --texte-doux: #6b6b70;
+    --filet: #e4e4e1;
+
+    /* UNE seule famille d'accent (vert ~150°), saturation ~41 % < 80 % */
+    --accent: #2f6f4f;
+    --accent-fonce: #255840;
+  }
+
+  body { background: var(--fond); color: var(--texte); }
+  a { color: var(--accent); }
+  .cta { background: var(--accent); color: var(--fond); }
+  .cta:hover { background: var(--accent-fonce); }
+
+  /* Couleurs de STATUT : jeu sémantique fermé, exclu du décompte d'accent —
+     une couleur = un sens. Les compter ferait échouer toute page outillée. */
+  --couleur-succes: #1f7a3d;
+  .badge-erreur { background: #b3261e; }
+  .badge-alerte { background: #a86a00; }
+
+  /* TA3 : UN seul filet par ligne, jamais haut ET bas */
+  .spec-row { border-bottom: 1px solid var(--filet); }
+  .spec-row:last-child { border-bottom: 0; }
+  li { border-bottom: 1px solid var(--filet); }
+
+  /* Filet haut réservé au GROUPE, pas répété sur chaque ligne */
+  .spec-groupe { border-top: 1px solid var(--filet); }
+</style>
+</head>
+<body>
+  <!-- TA4 : un seul système de design nommé (GOV.UK), c'est autorisé -->
+  <div class="govuk-grid-row">
+    <h1 class="govuk-heading-l">Fixture verte taste</h1>
+    <a class="cta govuk-button" href="#suite">Continuer</a>
+  </div>
+
+  <div class="spec-groupe">
+    <div class="spec-row">Largeur <span>1 200 mm</span></div>
+    <div class="spec-row">Hauteur <span>740 mm</span></div>
+    <div class="spec-row">Masse <span>18,4 kg</span></div>
+  </div>
+
+  <ul>
+    <li>Premier point</li>
+    <li>Deuxième point</li>
+  </ul>
+</body>
+</html>

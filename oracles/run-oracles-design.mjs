@@ -232,6 +232,7 @@ resultats.push(lancer('oracle-slop.mjs', [cible]));
 resultats.push(lancer('oracle-tokens.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));
 resultats.push(lancer('oracle-motion.mjs', [cible]));
 resultats.push(lancer('oracle-bascule.mjs', [cible]));
+resultats.push(lancer('oracle-taste.mjs', [cible]));
 
 if (estMobile) resultats.push(lancer('oracle-mobile.mjs', [cible]));
 else sansObjet.push('oracle-mobile : SANS OBJET — cible non mobile (ni --mobile, ni marqueur de châssis détecté)');

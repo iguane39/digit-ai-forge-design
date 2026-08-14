@@ -99,6 +99,16 @@ const CAS = [
     verte: [fx('bascule-verte.html')],
     rouge: [fx('bascule-rouge-bt4.html')],
   },
+  {
+    // TF-0199 : règles extraites du skill tiers taste-skill (MIT, consulté le
+    // 14/08/2026) — seules celles qui sont mécaniquement vérifiables. Les deux
+    // prescriptions de rendu (hero dans la fenêtre, nav sur une ligne) restent
+    // des points de revue de lecture, jamais des contrôles qui mentiraient.
+    oracle: 'oracle-taste.mjs',
+    regles: ['TA1', 'TA2', 'TA3', 'TA4'],
+    verte: [fx('taste-verte.html')],
+    rouge: [fx('taste-rouge.html')],
+  },
 ];
 
 function lancer(oracle, argv) {

@@ -5,6 +5,7 @@
 ```bash
 node oracles/oracle-slop.mjs    <cible.html>
 node oracles/oracle-tokens.mjs  <cible.html> [--tokens tokens.css]
+node oracles/oracle-taste.mjs   <cible.html>          # TA1–TA4
 node oracles/oracle-mobile.mjs  <cible.html>          # si cible mobile
 node oracles/oracle-images.mjs  <cible.html>          # si visuels générés
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
@@ -72,6 +73,23 @@ Un red flag se **nomme**, il ne s'absorbe pas dans une moyenne.
 Le verdict est calculé, pas ressenti. Si le calcul donne Refondre et que
 l'impression dit Livrer, c'est le calcul qui gagne — ou la grille est fausse, et
 c'est elle qu'il faut corriger, pas le verdict.
+
+## Points de revue de lecture — aucun oracle ne les tranche
+
+Deux exigences importées du skill tiers `taste-skill` (MIT, consulté le 14/08/2026)
+ne sont **pas** mécanisables : elles exigent une mesure de rendu et l'identification
+d'une zone, que seule la lecture apporte. Elles se vérifient à l'œil, capture à
+l'appui, au premier écran de bureau — et se **citent** au rapport comme constats,
+au même titre qu'un verdict d'oracle :
+
+| Point | À vérifier |
+|---|---|
+| **R1 — hero dans la fenêtre initiale** | titre ≤ 2 lignes · sous-texte ≤ 20 mots et ≤ 4 lignes · action principale visible sans défiler · pas de marge haute excessive |
+| **R2 — navigation sur une ligne au bureau** | aucun retour à la ligne · hauteur ≤ 80 px · aucun libellé de bouton replié |
+
+Détail, citations amont et règles écartées : `oracles/regles-importees-taste-skill.md`.
+Les avertissements TA1 (familles d'accent) et TA2 (saturation) d'`oracle-taste` sont
+des **mesures**, pas des verdicts : ils appellent une lecture, ils ne la remplacent pas.
 
 ## Ce que la grille ne juge pas
 
