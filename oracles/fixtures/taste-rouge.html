@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-taste (TA1, TA2, TA3, TA4 toutes déclenchées)</title>
+<style>
+  :root {
+    --fond: #fbfbf9;
+    --texte: #2b2b2e;
+    --filet: #d8d8d4;
+  }
+
+  body { background: var(--fond); color: var(--texte); }
+
+  /* TA1 : trois familles de teintes d'accent sur la même page —
+     bleu ~210°, orange ~20°, violet ~285°. L'accent devait être verrouillé. */
+  .cta-primaire { background: #3377cc; }        /* ~210°, s ~60 % */
+  .cta-secondaire { color: #cc6622; }           /* ~20°,  s ~70 % */
+
+  /* TA2 : accent survolté — saturation ~92 %, au-dessus de la borne de 80 % */
+  .tag-nouveaute { background: #9b0aeb; }        /* ~285°, s ~92 % */
+
+  /* TA3 : filet haut ET bas sur chaque ligne de la table de specs */
+  .spec-row {
+    border-top: 1px solid var(--filet);
+    border-bottom: 1px solid var(--filet);
+  }
+</style>
+</head>
+<body>
+  <!-- TA4 : deux systèmes de design nommés cohabitent dans le même arbre —
+       GOV.UK Frontend et USWDS. Un seul système par projet. -->
+  <div class="govuk-grid-row">
+    <h1 class="govuk-heading-l">Fixture rouge taste</h1>
+    <a class="cta-primaire govuk-button" href="#a">Commencer</a>
+    <a class="cta-secondaire usa-button" href="#b">En savoir plus</a>
+    <p class="usa-alert usa-alert--info">Encart repris d'un autre système.</p>
+    <span class="tag-nouveaute">Nouveau</span>
+  </div>
+
+  <div class="spec-groupe">
+    <div class="spec-row">Largeur <span>1 200 mm</span></div>
+    <div class="spec-row">Hauteur <span>740 mm</span></div>
+    <div class="spec-row">Masse <span>18,4 kg</span></div>
+  </div>
+</body>
+</html>
