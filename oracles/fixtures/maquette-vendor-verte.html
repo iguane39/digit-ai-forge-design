@@ -1,0 +1,65 @@
+<!doctype html>
+<!--
+  Fixture VERTE de check_maquette (TF-0275).
+
+  Maquette conforme qui embarque une bibliotheque vendoree MINIFIEE — ici un
+  extrait reel de oracles/vendor/motion-12.23.12.umd.js. Ce code contient la
+  sequence « e<a||void 0!==l&&e>l » : lue comme du balisage, elle ouvre une
+  fausse balise ancre qui avale tout le document jusqu'a la premiere fermeture
+  d'ancre reelle, ce qui faussait C2 (routes) et declenchait C15 (CTA sans
+  cible) sur une page parfaitement saine. Le script porte aussi un
+  « href="#etat-interne" » qui n'est pas une route de navigation.
+
+  Attendu : PASS, exit 0 — aucun finding bloquant.
+-->
+<html lang="fr" data-theme="clair">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Maquette de demonstration — vendor minifie</title>
+  <link rel="icon" href="data:image/x-icon;base64,AAABAAEAEBAAAAEAIABoBAAAFgAAACgAAAA=">
+  <style>
+    :root { --fond: #ffffff; --texte: #1a1a1a; }
+    [data-theme="sombre"] { --fond: #101010; --texte: #f2f2f2; }
+    @media (prefers-color-scheme: dark) { :root { --fond: #101010; --texte: #f2f2f2; } }
+    body { background: var(--fond); color: var(--texte); margin: 0; }
+    @media (max-width: 1024px) { main { padding: 16px; } }
+    @media (max-width: 768px) { main { padding: 8px; } }
+    @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+    @media print { nav { display: none; } }
+  </style>
+</head>
+<body>
+  <p role="note">Donnees de demonstration — contenu non contractuel.</p>
+
+  <nav>
+    <a href="#accueil" data-action="aller-accueil">Accueil</a>
+    <a href="#suivi" data-action="aller-suivi">Suivi</a>
+  </nav>
+
+  <main>
+    <section id="accueil">
+      <h1>Accueil</h1>
+      <button type="submit">Valider</button>
+      <a href="#suivi" data-action="aller-suivi">Voir le suivi</a>
+    </section>
+    <section id="suivi">
+      <h2>Suivi</h2>
+      <label for="d">Date de releve</label>
+      <input id="d" type="date" name="date-releve">
+      <button data-action="exporter-suivi">Exporter</button>
+    </section>
+  </main>
+
+  <script>
+  /* Extrait minifie de motion-12.23.12.umd.js (MIT) — vendore par la forge. */
+  !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).Motion={})}(this,(function(t){"use strict";const e=t=>1e3*t,n=t=>t/1e3;function o(t,e,n){return Math.min(Math.max(n,t),e)}const s=(t,e,n)=>-n*t+n*e+t;function r(t,e){const n=t[t.length-1];for(let o=1;o<=e;o++){const r=s(0,1,o/e);t.push(s(n,1,r))}}const i=t=>Array.isArray(t)&&"number"==typeof t[0];function a(t){const e={};return t.split(";").forEach((t=>{const[n,o]=t.split(":");n&&o&&(e[n.trim()]=o.trim())})),e}const l=t=>t&&t.setAttribute&&t.setAttribute("href","#etat-interne");function c(t,a,l,u,d,g,f,p,_){const y=t=>-f*Math.exp(-t/u),v=t=>g+y(t),w=t=>{const e=y(t),n=v(t);d.done=Math.abs(e)<=p,d.value=d.done?g:n};let b,T;const x=t=>{var e;(e=d.value,void 0!==a&&e<a||void 0!==l&&e>l)&&(b=t,T=c(d.value,_))};return x(0),{calculatedDuration:null,next:t=>(w(t),x(t),d)}}t.animate=function(t,e,n){return{t:t,e:e,n:n}},t.inView=function(t,e){return function(){}},t.scroll=function(t){return function(){}},Object.defineProperty(t,"__esModule",{value:!0})}));
+  </script>
+
+  <script>
+    // Gabarit ecrit a la main : ce balisage-la reste scanne (il produit du DOM reel).
+    const rendreCarte = (n) => `<article class="carte"><a href="#suivi" data-action="aller-suivi">${n}</a></article>`;
+    document.querySelector('[data-theme]');
+  </script>
+</body>
+</html>
