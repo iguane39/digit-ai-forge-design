@@ -132,15 +132,52 @@ function lancerRenderPage(tmpHtml, etiquette, outillage) {
       raison: `sortie illisible (exit ${r.status}) : ${(r.stderr || '').slice(0, 300)}`, findings: [], non_juge: [] };
   }
 
+  // Propagation des issues[] de render_page vers findings[] (TF-0278). Deux
+  // familles de constats bloquants manquaient à cette table — l2_width et
+  // l2_gouttiere, pourtant comptés dans le « blocking » de render_page.py : un
+  // rendu FAIL sur « L2 accroche bridée 0.47 » remontait ici en FAIL avec un
+  // findings[] VIDE, et le détail n'était visible qu'en relançant render_page.py
+  // à la main. Un agrégateur qui perd le motif du refus ne rapporte rien.
   const findings = [];
-  const durs = { v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4' };
+  const durs = { v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4', l2_width: 'L2', l2_gouttiere: 'L2' };
   const avert = { v3_align: 'V3', v7_spacing: 'V7' };
+  const info = { unmeasured: '—' };
+  const connues = new Set([...Object.keys(durs), ...Object.keys(avert), ...Object.keys(info)]);
+  const inconnues = new Set();
   for (const [largeur, bp] of Object.entries(j.breakpoints || {})) {
+    const issues = bp.issues || {};
     for (const [cle, regle] of Object.entries(durs))
-      for (const it of bp.issues[cle] || []) findings.push({ sev: 'bloquant', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+      for (const it of issues[cle] || []) findings.push({ sev: 'bloquant', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
     for (const [cle, regle] of Object.entries(avert))
-      for (const it of bp.issues[cle] || []) findings.push({ sev: 'avertissement', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
-    for (const it of bp.issues.unmeasured || []) findings.push({ sev: 'info', regle: '—', msg: `${largeur}px — ${it.what} — ${it.detail}` });
+      for (const it of issues[cle] || []) findings.push({ sev: 'avertissement', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+    for (const [cle, regle] of Object.entries(info))
+      for (const it of issues[cle] || []) findings.push({ sev: 'info', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+    // Une famille de constats que cette table ne connaît pas ne se perd pas en
+    // silence : elle remonte, nommée, plutôt que d'être oubliée à la prochaine
+    // montée de version de render_page.py.
+    for (const [cle, liste] of Object.entries(issues)) {
+      if (connues.has(cle) || !Array.isArray(liste) || !liste.length) continue;
+      inconnues.add(cle);
+      for (const it of liste) findings.push({ sev: 'avertissement', regle: `render_page:${cle}`, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+    }
+  }
+  // Filet de cohérence : un FAIL sans aucun constat dur propagé serait
+  // exactement le défaut que ce correctif ferme. Le dire plutôt que le taire.
+  if (j.verdict === 'FAIL' && !findings.some(f => f.sev === 'bloquant')) {
+    findings.push({ sev: 'bloquant', regle: '—',
+      msg: `render_page rend FAIL sans constat bloquant propageable — relancer render_page.py sur ${path.basename(tmpHtml)} pour le détail` });
+  }
+  if (inconnues.size) {
+    return {
+      oracle: `render_page(${etiquette})`, verdict: j.verdict, exit: r.status,
+      ecarts_durs: findings.filter(f => f.sev === 'bloquant').length,
+      avertissements: findings.filter(f => f.sev === 'avertissement').length,
+      findings,
+      non_juge: [
+        'V5 croisements de flèches et V6 images déformées — inspection visuelle des PNG produits, non jugés ici',
+        `familles de constats inconnues de cet agrégateur, remontées en avertissement faute de sévérité déclarée : ${[...inconnues].join(', ')}`,
+      ],
+    };
   }
   return {
     oracle: `render_page(${etiquette})`, verdict: j.verdict, exit: r.status,
