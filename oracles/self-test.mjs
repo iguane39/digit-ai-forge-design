@@ -199,6 +199,19 @@ const CAS = [
     verte: [fx('rendu-l2-verte.html'), '--rendu'],
     rouge: [fx('rendu-l2-rouge.html'), '--rendu'],
   },
+  {
+    // TF-0286 : le geste « avant / après » d'un correctif ad hoc. Les deux
+    // fixtures ne diffèrent que par la taille du titre du bandeau (24 → 34px) :
+    // à 390px il repasse à la ligne et le rendu s'allonge de 174px. Sens
+    // « avant → après » : RC-1 refuse. Sens inverse : PASS — ce qui est réparé
+    // ne pèse jamais au débit, sinon l'outil punirait les corrections.
+    rendu: true,
+    oracle: 'rendu-comparatif.mjs',
+    regles: ['RC-1'],
+    contrat: ['outil', 'avant', 'apres', 'zone', 'verdict', 'findings', 'non_juge'],
+    verte: ['--avant', fx('comparatif-apres.html'), '--apres', fx('comparatif-avant.html')],
+    rouge: ['--avant', fx('comparatif-avant.html'), '--apres', fx('comparatif-apres.html')],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();

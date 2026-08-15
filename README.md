@@ -22,6 +22,7 @@ ni passation développeur. Conception complète : [conception-forge-design.md](c
 | **Générer les visuels** | produire les images et visuels réels de mes maquettes | `producteur d'images (Gemini) — spécifié chez design, exercé via le pilot` | prouvé (experimental) |
 | **Tokens DTCG (source → dérivé)** | faire des tokens une source W3C interopérable, jamais éditée en CSS | `node scripts\generer-tokens-css.mjs · node oracles\oracle-dtcg.mjs <tokens.json> <css>` | prouvé (experimental) |
 | **Baseline de régression visuelle** | détecter toute régression visuelle contre une référence approuvée versionnée | `node oracles\oracle-baseline.mjs [approuver|juger]` | prouvé (experimental) |
+| **Rendu comparatif d'un correctif** | voir en une commande ce qu'un correctif ad hoc a changé au rendu, avant/après, et refuser mécaniquement ce qu'il a cassé | `node oracles\rendu-comparatif.mjs --avant <fichier\|url> --apres <fichier\|url> [--zone <sélecteur>]` | prouvé (experimental) |
 
 Le catalogue consolidé des dix forges vit chez le pilot :
 [digit-ai-forge-pilot/catalogues/CATALOGUES.md](https://github.com/iguane39/digit-ai-forge-pilot/blob/main/catalogues/CATALOGUES.md).
@@ -75,7 +76,32 @@ node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # 
 
 node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
+
+node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url> \
+  [--zone <sélecteur>] [--largeurs 1920,1440,1024,768,390] [--sortie <dossier>] \
+  [--etats-ouverts] [--json-only]                             # avant/après d'un correctif ad hoc
 ```
+
+### `rendu-comparatif.mjs` — le geste « avant / après » d'un correctif
+
+Un correctif posé hors run se vérifiait à l'œil, page fermée, sur un seul écran.
+Cette commande capture les **deux** versions sur N largeurs × 2 thèmes en
+réutilisant `render_page.py` (jamais une capture maison : outillage absent ⇒
+`SKIP` motivé, exit 2), pose les captures côte à côte dans une page de
+comparaison, et signale les constats **nouveaux** — présents après, absents
+avant. Ce que le correctif **répare** est compté et affiché, jamais porté au débit.
+
+| Constat | Sévérité | Ce qu'il dit |
+|---|---|---|
+| `V1` `V4` `V2` `L2` | bloquant | débordement, chevauchement, contraste ou largeur de texte que la version « après » introduit |
+| `RC-1` | bloquant (avertissement si `--zone`) | le rendu s'allonge à largeur constante : trace mécanique d'un retour à la ligne nouveau |
+| `RC-2` | info | part de pixels qui bougent à hauteur identique — de combien le correctif a débordé de sa zone |
+| `V3` `V7` | avertissement | alignement et espacement nouveaux |
+
+`--zone <sélecteur>` filtre sur l'étiquette produite par `render_page.py` (tag,
+`#id` ou **première** classe) : une zone désignée par une classe secondaire n'est
+pas reconnue, et c'est dit au `non_juge`. Verdict machine : `0` aucun constat dur
+nouveau · `1` régression de rendu · `2` indéterminé.
 
 Options de `run-oracles-design.mjs` :
 
