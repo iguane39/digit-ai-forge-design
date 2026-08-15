@@ -17,7 +17,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse, contrast } from "../../../oracles/lib/color.mjs";
+import { parse, contrast } from "./lib/color.mjs";
 
 const arg = (n, def) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : def; };
 const tokensPath = arg("--tokens"), marquePath = arg("--marque"), sortie = arg("--sortie");
