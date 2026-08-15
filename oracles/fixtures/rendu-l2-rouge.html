@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — propagation des issues de render_page</title>
+<!--
+  TF-0278. Page identique a rendu-l2-verte.html a une chose pres : l'accroche et
+  le corps portent un max-width tres inferieur a la largeur disponible, ce que
+  render_page.py compte en l2_width (bloquant).
+
+  L'agregateur run-oracles-design rapportait ce FAIL avec un findings[] VIDE :
+  le motif du refus (« largeur 260px pour 1856px disponibles, ratio 0.14 »)
+  n'etait lisible qu'en relancant render_page.py a la main.
+
+  Attendu, agregateur avec --rendu : FAIL, exit 1, et les constats L2 detailles
+  presents dans les findings[] des deux rendus (clair et sombre).
+-->
+<style>
+  :root {
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  [data-theme="dark"] {
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; max-width: 240px; }
+  .corps, .note { max-width: 260px; }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .note { color: var(--texte-secondaire); }
+  @media (max-width: 768px) { body { padding: 16px; } }
+  @media (max-width: 390px) { body { padding: 8px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, bridee a deux cent quarante pixels alors que la page en offre bien davantage.</h1>
+  <p class="corps">Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est tres inferieure a celle que la page lui laisse : le rapport tombe sous le seuil.</p>
+  <p class="note">Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le constat ne tienne pas a un cas unique.</p>
+  <script>
+    const bouton = document.querySelector('.theme-toggle');
+    const appliquer = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      bouton.setAttribute('aria-pressed', String(t === 'dark'));
+      localStorage.setItem('theme', t);
+    };
+    appliquer(localStorage.getItem('theme') || 'light');
+    bouton.addEventListener('click', () => {
+      appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

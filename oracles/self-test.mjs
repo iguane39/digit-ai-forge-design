@@ -9,6 +9,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { detecterOutillageRendu } from './lib/rendu.mjs';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
 const fx = f => path.join(ici, 'fixtures', f);
@@ -20,6 +21,8 @@ const CONTRAT_MJS = ['oracle', 'domaine', 'artefact', 'verdict', 'findings', 'no
 // contrat de sortie nomme l'outil et le fichier, et ses findings portent un
 // « critere » là où les oracles portent une « regle ».
 const CONTRAT_PY = ['outil', 'fichier', 'verdict', 'findings', 'non_juge'];
+// run-oracles-design agrège : ses constats vivent dans oracles[].findings.
+const CONTRAT_AGREGATEUR = ['orchestrateur', 'racine', 'artefact', 'verdict', 'oracles', 'non_juge'];
 
 function pythonDisponible() {
   for (const candidat of ['python', 'python3']) {
@@ -180,7 +183,25 @@ const CAS = [
     verte: [fx('maquette-vendor-verte.html')],
     rouge: [fx('maquette-cta-rouge.html')],
   },
+  {
+    // TF-0278 : l'agrégateur perdait les issues[] de render_page. Sa table de
+    // sévérités ignorait l2_width et l2_gouttiere, pourtant comptés dans le
+    // « blocking » de render_page.py — un FAIL sur « L2 accroche bridée 0.47 »
+    // remontait avec un findings[] VIDE, et le détail n'était visible qu'en
+    // relançant render_page.py à la main. Les deux fixtures ne diffèrent que par
+    // un max-width : la rouge bride le corps à 260px sur 1856px disponibles.
+    // Dépend de l'outillage de rendu externe — saut motivé s'il manque.
+    rendu: true,
+    oracle: 'run-oracles-design.mjs',
+    regles: ['L2'],
+    contrat: CONTRAT_AGREGATEUR,
+    findingsDe: j => (j.oracles || []).flatMap(o => o.findings || []),
+    verte: [fx('rendu-l2-verte.html'), '--rendu'],
+    rouge: [fx('rendu-l2-rouge.html'), '--rendu'],
+  },
 ];
+
+const OUTILLAGE_RENDU = detecterOutillageRendu();
 
 function lancer(cas, argv) {
   const bin = cas.python ? PYTHON : process.execPath;
@@ -201,6 +222,12 @@ const sautes = [];
 for (const cas of CAS) {
   console.log(`\n${cas.oracle}`);
 
+  if (cas.rendu && !OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+    sautes.push(cas.oracle);
+    continue;
+  }
+
   if (cas.python && !PYTHON) {
     // Même doctrine que self-test-baseline : un poste sans Python ne fait pas
     // échouer une garantie que rien de son ressort n'a cassé — mais le saut se dit.
@@ -218,7 +245,8 @@ for (const cas of CAS) {
   ligne(r.json?.verdict === 'FAIL', `rouge · verdict FAIL (obtenu ${r.json?.verdict})`);
 
   const cleRegle = cas.cleRegle || 'regle';
-  const vues = new Set((r.json?.findings || []).map(f => f[cleRegle]));
+  const findings = cas.findingsDe ? cas.findingsDe(r.json || {}) : (r.json?.findings || []);
+  const vues = new Set(findings.map(f => f[cleRegle]));
   const manquantes = cas.regles.filter(x => !vues.has(x));
   ligne(manquantes.length === 0, `rouge · ${cas.regles.length} règles déclenchées${manquantes.length ? ' — manquantes : ' + manquantes.join(', ') : ''}`);
 
@@ -228,7 +256,7 @@ for (const cas of CAS) {
   ligne(Array.isArray(r.json?.non_juge) && r.json.non_juge.length > 0, 'non_juge déclaré et non vide');
 }
 
-const joues = CAS.filter(c => !(c.python && !PYTHON));
+const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
     + (sautes.length ? ` ${sautes.length} saut(s) motivé(s) : ${sautes.join(', ')}.` : '')
