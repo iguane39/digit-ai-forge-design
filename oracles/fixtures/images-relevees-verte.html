@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-images, photos relevees</title>
+<!--
+  TF-0277. Photos reelles reprises sur mandat du proprietaire : prompt et modele
+  n'ont pas d'objet. Le manifeste declare « genere »: false et rend compte
+  autrement — source et date de relevé. L'exigence de tracabilite ne disparait
+  pas, elle change d'objet.
+
+  L'entree « schema » reste generee : les deux regimes cohabitent dans un meme
+  manifeste, et le regime genere est toujours juge comme avant.
+
+  Attendu : PASS, exit 0.
+-->
+<script type="application/json" id="manifeste-images">
+[
+  {"id": "vitrine", "genere": false, "source": "photothèque du propriétaire, mandat écrit du 12/08/2026", "date": "2026-08-12"},
+  {"id": "equipe", "genere": false, "source": "reportage interne fourni par le client (fichier equipe-2026.jpg)", "date": "2026-08-13"},
+  {"id": "schema", "genere": true, "modele": "gemini-3.1-flash-image", "prompt": "schema de flux, trait fin, monochrome", "date": "2026-08-13"}
+]
+</script>
+</head>
+<body>
+  <img data-image-id="vitrine" alt="Devanture du magasin, rideau leve" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <img data-image-id="equipe" alt="L'equipe devant le comptoir d'accueil" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <img data-image-id="schema" alt="" role="presentation" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <p>Visuels releves et generes — voir le manifeste joint a la restitution.</p>
+</body>
+</html>
