@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T5 par co-occurrence</title>
+<!--
+  TF-0276. Palette conforme à references/tokens.md du skill systeme-de-marque :
+  états sémantiques préfixés texte- / fond-, plus un --texte-sur-accent qui n'est
+  posé QUE sur --accent.
+
+  Le produit cartésien texte-* × fond-* croisait --texte-sur-accent (#ffffff) avec
+  --fond (#ffffff) et --fond-erreur, et sortait ces paires en FAIL 1.0:1 alors
+  qu'aucune règle ne les pose l'une sur l'autre — l'oracle contredisait la
+  convention que sa propre forge recommande.
+
+  Attendu : PASS, exit 0. Les paires jamais posées sont énumérées au non_juge,
+  jamais approuvées en silence.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-erreur: #fde8e6;
+    --fond-succes: #e6f4ea;
+    --texte: #1b1f26;
+    --texte-erreur: #8a1c10;
+    --texte-succes: #14532d;
+    --texte-sur-accent: #ffffff;   /* jamais posé sur --fond : ce n'est pas un défaut */
+    --accent: #7a1f12;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .bouton { background: var(--accent); color: var(--texte-sur-accent); padding: 8px 16px; }
+  .alerte { background: var(--fond-erreur); color: var(--texte-erreur); padding: 12px; }
+  .succes { background: var(--fond-succes); color: var(--texte-succes); padding: 12px; }
+</style>
+</head>
+<body>
+  <h1>Suivi des demandes</h1>
+  <p class="alerte">Deux demandes sont en retard.</p>
+  <p class="succes">Douze demandes traitées.</p>
+  <button class="bouton" type="submit">Relancer</button>
+</body>
+</html>

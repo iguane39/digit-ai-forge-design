@@ -52,6 +52,19 @@ const CAS = [
     rouge: [fx('tokens-rouge.html')],
   },
   {
+    // TF-0276 : preuve dédiée du PÉRIMÈTRE de T5. Le produit cartésien
+    // texte-* × fond-* sortait --texte-sur-accent en FAIL 1.0:1 sur --fond —
+    // une paire qu'aucune règle ne pose — tout en restant AVEUGLE à la vraie
+    // paire (--texte-sur-accent sur --accent). Les deux fixtures ne diffèrent
+    // que par la valeur de --accent : la verte le garde sombre (le blanc y
+    // tient), la rouge le passe en teinte claire (1.54:1). Le seuil de 4.5:1
+    // est intact ; seul l'appariement a changé.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-t5-verte.html')],
+    rouge: [fx('tokens-t5-rouge.html')],
+  },
+  {
     oracle: 'oracle-mobile.mjs',
     regles: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'],
     verte: [fx('mobile-verte.html')],
