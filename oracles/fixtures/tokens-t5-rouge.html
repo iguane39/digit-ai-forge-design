@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — oracle-tokens T5 par co-occurrence</title>
+<!--
+  TF-0276. Même palette que tokens-t5-verte.html, à une couleur près : --accent
+  est passé en teinte claire. Le bouton pose donc RÉELLEMENT --texte-sur-accent
+  (#ffffff) sur --accent (#f0c8b4) — la paire existe, elle est sous 4.5:1, et T5
+  doit continuer de la refuser. La preuve que corriger le périmètre n'a pas
+  desserré le seuil.
+
+  Attendu : FAIL, exit 1 — T5 déclenché sur la paire posée par la même règle.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-erreur: #fde8e6;
+    --fond-succes: #e6f4ea;
+    --texte: #1b1f26;
+    --texte-erreur: #8a1c10;
+    --texte-succes: #14532d;
+    --texte-sur-accent: #ffffff;
+    --accent: #f0c8b4;             /* accent clair : le blanc n'y tient plus */
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .bouton { background: var(--accent); color: var(--texte-sur-accent); padding: 8px 16px; }
+  .alerte { background: var(--fond-erreur); color: var(--texte-erreur); padding: 12px; }
+  .succes { background: var(--fond-succes); color: var(--texte-succes); padding: 12px; }
+</style>
+</head>
+<body>
+  <h1>Suivi des demandes</h1>
+  <p class="alerte">Deux demandes sont en retard.</p>
+  <p class="succes">Douze demandes traitées.</p>
+  <button class="bouton" type="submit">Relancer</button>
+</body>
+</html>
