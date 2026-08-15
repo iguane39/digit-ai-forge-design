@@ -22,6 +22,9 @@ import sys
 PLAFOND_MO_DEFAUT = 10.0
 
 NON_JUGE = [
+    "balisage porte par un script MINIFIE (bibliotheque vendoree) - decape avant "
+    "scan de balisage (C2/C15) : un gabarit livre minifie echappe donc a ces deux "
+    "criteres, a couvrir par render_page.py sur le rendu reel",
     "debordements et chevauchements (V1/V4) - deleguer a render_page.py",
     "contraste WCAG mesure (V2) - deleguer a render_page.py sur les deux themes",
     "navigation clavier reelle - parcours a executer",
@@ -35,6 +38,49 @@ NON_JUGE = [
 def lire(chemin):
     with open(chemin, "r", encoding="utf-8", errors="replace") as f:
         return f.read()
+
+
+# Une balise fermante d'element de contenu : signe qu'un script porte un gabarit
+# HTML reel, et non du code que le scan de balisage lirait de travers.
+BALISE_FERMANTE = re.compile(
+    r"</(a|button|div|section|nav|ul|ol|li|p|span|header|footer|main|article|form|label)\s*>", re.I)
+
+
+def est_minifie(source):
+    """Source livree minifiee : au moins une ligne demesuree."""
+    return any(len(ligne) > 500 for ligne in source.splitlines())
+
+
+def decaper_hors_dom(html):
+    """HTML reduit a ce qui produit vraiment du DOM : commentaires retires, et
+    contenu des <script> non porteurs de balisage neutralise.
+
+    Le balisage se scanne sur le DOM ecrit, pas sur le code. Une bibliotheque
+    minifiee vendoree contient des sequences comme « e<a||void 0!==l&&e> » : lues
+    comme du balisage, elles ouvrent une fausse ancre qui avale le document
+    jusqu'a la premiere fermeture reelle - C15 se declenche a tort et C2 voit des
+    routes qui n'en sont pas (TF-0275, coute sur le run digit-desk.fr).
+
+    Le contenu d'un script n'est conserve que s'il porte une balise fermante de
+    contenu ET n'est pas minifie : un gabarit JS ecrit a la main produit du DOM
+    reel et doit rester juge (loi n. 1), une source minifiee ne le peut pas.
+
+    Un commentaire HTML n'est pas du DOM non plus et produit exactement le meme
+    faux positif : il est neutralise au meme titre.
+
+    Les sauts de ligne sont conserves pour ne pas decaler les reperes de position.
+    """
+    blancs = lambda s: re.sub(r"[^\n]", " ", s)
+
+    def neutraliser(m):
+        ouvrante, contenu, fermante = m.group(1), m.group(2), m.group(3)
+        if BALISE_FERMANTE.search(contenu) and not est_minifie(contenu):
+            return m.group(0)
+        return ouvrante + blancs(contenu) + fermante
+
+    sans_commentaires = re.sub(r"<!--.*?-->", lambda m: blancs(m.group(0)), html, flags=re.S)
+    return re.sub(r"(<script\b[^>]*>)(.*?)(</script\s*>)", neutraliser, sans_commentaires,
+                  flags=re.I | re.S)
 
 
 def ressources_externes(html):
@@ -123,6 +169,10 @@ def cible_de(element):
 def controler(chemin, plafond_mo):
     findings = []
     html = lire(chemin)
+    # Scan de balisage (C2 declare, C15) : sur le DOM ecrit, scripts decapes.
+    # Tout le reste (routage JS, bascule de theme, media queries) continue de se
+    # juger sur la source complete.
+    balisage = decaper_hors_dom(html)
 
     # C3a - poids
     taille_mo = os.path.getsize(chemin) / (1024 * 1024)
@@ -141,7 +191,7 @@ def controler(chemin, plafond_mo):
         })
 
     # C2 - bijection menu <-> ecrans
-    declarees, implementees = routes_declarees(html), routes_implementees(html)
+    declarees, implementees = routes_declarees(balisage), routes_implementees(html)
     orphelines = [r for r in declarees if r not in implementees]
     if orphelines:
         findings.append({
@@ -191,7 +241,7 @@ def controler(chemin, plafond_mo):
                          "constat": "moins de 2 breakpoints detectes"})
 
     # C15 - un CTA = une cible (RD-4, generalise)
-    elements = elements_interactifs(html)
+    elements = elements_interactifs(balisage)
     sans_cible = [e for e in elements if cible_de(e) is None]
     if sans_cible:
         exemples = sorted({
