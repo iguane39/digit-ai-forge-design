@@ -35,3 +35,19 @@ export function detecterOutillageRendu() {
 
   return { ok: manques.length === 0, manques, python, renderPage, oracleA11y };
 }
+
+/**
+ * Copie du HTML forcée en thème sombre — `data-theme="dark"` sur <html>, posé ou
+ * réécrit. Mutualisée ici (TF-0286) : run-oracles-design et rendu-comparatif
+ * doivent capturer le sombre exactement de la même façon, sinon deux rendus
+ * « sombres » différents finiraient par se contredire.
+ */
+export function injecterThemeSombre(html) {
+  if (/<html\b[^>]*\bdata-theme\s*=\s*"[^"]*"/i.test(html)) {
+    return html.replace(/(<html\b[^>]*\bdata-theme\s*=\s*")[^"]*(")/i, '$1dark$2');
+  }
+  if (/<html\b[^>]*>/i.test(html)) {
+    return html.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs} data-theme="dark">`);
+  }
+  return html; // pas de <html> détecté — copie renvoyée telle quelle
+}

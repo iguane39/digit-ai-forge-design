@@ -33,7 +33,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { detecterOutillageRendu } from './lib/rendu.mjs';
+import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -96,16 +96,6 @@ function lancer(oracle, argv) {
 //   ~/.claude/skills/digit-ai-page-html/scripts/render_page.py
 //   ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py
 // Détection mutualisée dans lib/rendu.mjs (réutilisée par oracle-baseline.mjs).
-
-function injecterThemeSombre(html) {
-  if (/<html\b[^>]*\bdata-theme\s*=\s*"[^"]*"/i.test(html)) {
-    return html.replace(/(<html\b[^>]*\bdata-theme\s*=\s*")[^"]*(")/i, '$1dark$2');
-  }
-  if (/<html\b[^>]*>/i.test(html)) {
-    return html.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs} data-theme="dark">`);
-  }
-  return html; // pas de <html> détecté — copie renvoyée telle quelle
-}
 
 function nettoyerRendu(tmpHtml) {
   const dir = path.dirname(tmpHtml);

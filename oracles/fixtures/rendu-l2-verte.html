@@ -49,7 +49,7 @@
       bouton.setAttribute('aria-pressed', String(t === 'dark'));
       localStorage.setItem('theme', t);
     };
-    appliquer(localStorage.getItem('theme') || 'light');
+    appliquer(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'light');
     bouton.addEventListener('click', () => {
       appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     });

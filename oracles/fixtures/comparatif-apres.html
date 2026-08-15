@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page legacy — apres correctif</title>
+<!--
+  TF-0286. Etat APRES : le titre du bandeau passe de 24 a 34px. A 390px il repasse
+  a la ligne et le rendu s'allonge de 174px — exactement le defaut qu'un correctif
+  pose a l'oeil sur un seul ecran laisse filer. RC-1 le refuse (fixture rouge du
+  sens « avant -> apres ») ; le sens inverse, lui, PASSE : ce qui est repare ne
+  pese jamais au debit.
+-->
+
+<style>
+  :root { --fond: #fbf9f5; --texte: #1d2126; --accent: #7a1f12; --trait: #d8d2c6; }
+  [data-theme="dark"] { --fond: #14171c; --texte: #ecf0f4; --accent: #e6a179; --trait: #333a45; }
+  body { background: var(--fond); color: var(--texte); font: 16px/1.6 Georgia, serif; margin: 0; padding: 32px; }
+  .bandeau { background: var(--accent); color: var(--fond); padding: 16px; }
+  .bandeau h1 { font-size: 34px; margin: 0; }
+  .carte { border: 1px solid var(--trait); padding: 16px; margin-top: 16px; }
+  p { margin: 0 0 16px; }
+</style>
+</head>
+<body>
+  <div class="bandeau"><h1>Tableau de bord des interventions</h1></div>
+  <div class="carte">
+    <p>Ce paragraphe de contenu compte plus de cent vingt caracteres afin d'entrer dans le perimetre des mesures de lisibilite du rendu et de peser sur la hauteur de la page.</p>
+    <p>Deuxieme paragraphe, de longueur comparable, pour que la page depasse la hauteur de la fenetre et que la capture pleine page mesure quelque chose de reel.</p>
+    <p>Troisieme paragraphe, encore aussi long, parce qu'une page courte tiendrait dans la fenetre et masquerait tout allongement du rendu.</p>
+    <p>Quatrieme paragraphe, meme longueur, meme role : donner de la hauteur au document afin que la comparaison avant/apres porte sur une vraie page.</p>
+    <p>Cinquieme paragraphe, toujours aussi long, pour depasser confortablement la hauteur de fenetre par defaut du moteur de rendu.</p>
+    <p>Sixieme paragraphe, de meme facture, afin que la page defile et que la capture pleine page soit plus haute que la fenetre.</p>
+    <p>Septieme paragraphe, dernier de la serie, pour clore un contenu suffisamment long a toutes les largeurs de rendu mesurees.</p>
+  </div>
+</body>
+</html>
