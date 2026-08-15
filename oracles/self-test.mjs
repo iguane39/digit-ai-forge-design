@@ -12,6 +12,23 @@ import { fileURLToPath } from 'node:url';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
 const fx = f => path.join(ici, 'fixtures', f);
+const skill = f => path.join(ici, '..', 'skills', 'ameliore-le-design', 'scripts', f);
+
+// Contrat JSON par défaut : celui des oracles .mjs de la forge.
+const CONTRAT_MJS = ['oracle', 'domaine', 'artefact', 'verdict', 'findings', 'non_juge'];
+// check_maquette.py est un contrôle de parcours, pas un oracle de domaine : son
+// contrat de sortie nomme l'outil et le fichier, et ses findings portent un
+// « critere » là où les oracles portent une « regle ».
+const CONTRAT_PY = ['outil', 'fichier', 'verdict', 'findings', 'non_juge'];
+
+function pythonDisponible() {
+  for (const candidat of ['python', 'python3']) {
+    const r = spawnSync(candidat, ['--version'], { encoding: 'utf8' });
+    if (!r.error && r.status === 0) return candidat;
+  }
+  return null;
+}
+const PYTHON = pythonDisponible();
 
 const CAS = [
   {
@@ -119,10 +136,31 @@ const CAS = [
     verte: [fx('taste-verte.html')],
     rouge: [fx('taste-rouge.html')],
   },
+  {
+    // TF-0275 : le scan de balisage de check_maquette lisait le JS inline. Une
+    // bibliothèque minifiée vendorée (Motion) porte « e<a||void 0!==l&&e> », lu
+    // comme une ancre ouvrante qui avale le document — C15 se déclenchait et C2
+    // voyait des routes fantômes sur une page saine. La fixture verte embarque
+    // cette source minifiée ET un gabarit JS écrit à la main (qui, lui, reste
+    // jugé) ; la rouge porte la même source et deux vrais CTA sans cible plus
+    // une route orpheline — la règle sait toujours refuser.
+    python: true,
+    oracle: 'check_maquette.py',
+    script: skill('check_maquette.py'),
+    regles: ['C2', 'C15'],
+    cleRegle: 'critere',
+    contrat: CONTRAT_PY,
+    verte: [fx('maquette-vendor-verte.html')],
+    rouge: [fx('maquette-cta-rouge.html')],
+  },
 ];
 
-function lancer(oracle, argv) {
-  const r = spawnSync(process.execPath, [path.join(ici, oracle), ...argv, '--json-only'], { encoding: 'utf8' });
+function lancer(cas, argv) {
+  const bin = cas.python ? PYTHON : process.execPath;
+  const script = cas.script || path.join(ici, cas.oracle);
+  const r = spawnSync(bin, [script, ...argv, '--json-only'], {
+    encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' },
+  });
   let json = null;
   try { json = JSON.parse(r.stdout.trim()); } catch { /* sortie illisible */ }
   return { code: r.status, json, brut: r.stdout };
@@ -131,28 +169,41 @@ function lancer(oracle, argv) {
 let echecs = 0;
 const ligne = (ok, txt) => { console.log(`${ok ? '  ok  ' : ' ÉCHEC'} ${txt}`); if (!ok) echecs++; };
 
+const sautes = [];
+
 for (const cas of CAS) {
   console.log(`\n${cas.oracle}`);
 
-  const v = lancer(cas.oracle, cas.verte);
+  if (cas.python && !PYTHON) {
+    // Même doctrine que self-test-baseline : un poste sans Python ne fait pas
+    // échouer une garantie que rien de son ressort n'a cassé — mais le saut se dit.
+    console.log('  SKIP  interpréteur python introuvable dans le PATH (python / python3)');
+    sautes.push(cas.oracle);
+    continue;
+  }
+
+  const v = lancer(cas, cas.verte);
   ligne(v.code === 0, `verte · exit 0 (obtenu ${v.code})`);
   ligne(v.json?.verdict === 'PASS', `verte · verdict PASS (obtenu ${v.json?.verdict})`);
 
-  const r = lancer(cas.oracle, cas.rouge);
+  const r = lancer(cas, cas.rouge);
   ligne(r.code === 1, `rouge · exit 1 (obtenu ${r.code})`);
   ligne(r.json?.verdict === 'FAIL', `rouge · verdict FAIL (obtenu ${r.json?.verdict})`);
 
-  const vues = new Set((r.json?.findings || []).map(f => f.regle));
+  const cleRegle = cas.cleRegle || 'regle';
+  const vues = new Set((r.json?.findings || []).map(f => f[cleRegle]));
   const manquantes = cas.regles.filter(x => !vues.has(x));
   ligne(manquantes.length === 0, `rouge · ${cas.regles.length} règles déclenchées${manquantes.length ? ' — manquantes : ' + manquantes.join(', ') : ''}`);
 
-  const contrat = ['oracle', 'domaine', 'artefact', 'verdict', 'findings', 'non_juge'];
+  const contrat = cas.contrat || CONTRAT_MJS;
   const absents = contrat.filter(k => !(k in (r.json || {})));
   ligne(absents.length === 0, `contrat JSON complet${absents.length ? ' — champs absents : ' + absents.join(', ') : ''}`);
   ligne(Array.isArray(r.json?.non_juge) && r.json.non_juge.length > 0, 'non_juge déclaré et non vide');
 }
 
+const joues = CAS.filter(c => !(c.python && !PYTHON));
 console.log(echecs === 0
-  ? `\nTout vert — ${CAS.length} oracles, ${CAS.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
+  ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
+    + (sautes.length ? ` ${sautes.length} saut(s) motivé(s) : ${sautes.join(', ')}.` : '')
   : `\n${echecs} vérification(s) en échec.`);
 process.exit(echecs === 0 ? 0 : 1);
