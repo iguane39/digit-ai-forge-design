@@ -8,6 +8,7 @@ node oracles/oracle-tokens.mjs  <cible.html> [--tokens tokens.css]
 node oracles/oracle-taste.mjs   <cible.html>          # TA1–TA4
 node oracles/oracle-mobile.mjs  <cible.html>          # si cible mobile
 node oracles/oracle-images.mjs  <cible.html>          # si visuels générés
+node oracles/oracle-restitution.mjs <cible.html>      # si data-restitution (RL, TF-0235)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
 python <…>/render_page.py <cible.html>                # V1–V7, 5 breakpoints × 2 thèmes
 ```
@@ -36,15 +37,21 @@ ligne, valeur mesurée. Une dimension sans constat est `non_juge`, pas 3/5.
 
 | Dimension | Poids | Pourquoi |
 |---|---|---|
-| D1 Intention | 20 % | c'est ce qui distingue un design d'un gabarit |
-| D2 Système | 15 % | sans tokens, rien ne survit à la deuxième page |
+| D1 Intention | 15 % | c'est ce qui distingue un design d'un gabarit |
+| D2 Système | 10 % | sans tokens, rien ne survit à la deuxième page |
 | D3 Hiérarchie | 15 % | le premier défaut perçu par un utilisateur |
 | D4 Accessibilité | 20 % | plancher légal et éthique, non négociable |
 | D5 Adaptation | 10 % | pondération réduite hors cible mobile |
 | D6 Interaction | 10 % | ce qu'une capture ne montre jamais |
 | D7 Contenu | 10 % | le plus sous-traité, le plus visible à l'usage |
+| D8 Lecture de données | 10 % | un chiffre sans lecture n'informe pas — REFERENTIEL-RESTITUTION.md (TF-0235) |
 
 Hors cible mobile, D5 est neutralisé et son poids est réparti sur D1 et D4.
+Hors restitution (aucun `data-restitution` et aucune donnée chiffrée structurée),
+D8 est neutralisé et son poids est réparti sur D1 et D7 — les poids redeviennent
+ceux d'avant TF-0235. Sur une restitution, D8 s'instruit avec
+`oracle-restitution` (RL-1/3/4/9/10) et les points de revue RL-2/6/7
+(chapeaux de vues, effet des interactions, texte ancré constat → impact → action).
 
 ## Red flags — bloquants, indépendants du score
 

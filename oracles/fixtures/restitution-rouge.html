@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Fixture rouge — restitution non conforme</title></head>
+<body data-restitution="rapport">
+<!-- Fixture ROUGE oracle-restitution : déclenche RL-1 (pas de verdict, 1 seul KPI,
+     1 seule entrée de navigation), RL-3 (KPI sans définition ni repère), RL-4
+     (figure graphique sans figcaption), RL-9 (aucun chemin de lecteur), RL-10
+     (aucun manifeste d'écarts). -->
+<nav><a href="#v1" data-vue="v1">Rapport</a></nav>
+<section id="v1">
+  <article class="kpi">
+    <span class="k-valeur">42</span>
+  </article>
+  <figure class="graphe">
+    <svg viewBox="0 0 100 10" role="img" aria-label="quarante-deux"><rect x="0" y="0" width="42" height="10"/></svg>
+  </figure>
+  <p>Beaucoup de texte qui n'explique ni le chiffre, ni ce qu'il faut en faire.</p>
+</section>
+</body>
+</html>

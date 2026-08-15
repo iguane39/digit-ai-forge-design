@@ -116,3 +116,14 @@ manque : les règles S1–S10 sont autoportantes.
   réelle. Revue humaine obligatoire, déclarée par `oracle-images`.
 - **Gestes tactiles réels** et **taille effective après cascade** — parcours à exécuter,
   déclarés par `oracle-mobile`.
+
+## Entrée du 15/08/2026 — oracle-restitution (TF-0235)
+
+**INJECTÉE le 15/08/2026** (mandat « committe et implémente tout »), registre global
+v2.10.0 → v2.11.0, sauvegardes `registre-oracles.{json,md}.avant-restitution`.
+Déclenchement par contenu : `content_patterns = ["data-restitution"]` — et l'oracle
+lui-même rend SKIP motivé sans cette déclaration, jamais un verdict par défaut.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Restitution lisible : la page se conçoit pour ses lecteurs | `oracles/oracle-restitution.mjs <page.html>` — RL-1 vue d'ensemble, RL-3 KPI complets, RL-4 question des graphiques, RL-9 chemins de lecteurs, RL-10 manifeste d'écarts (référentiel : `REFERENTIEL-RESTITUTION.md`) | cli | ✅ |

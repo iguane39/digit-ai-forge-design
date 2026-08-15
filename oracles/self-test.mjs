@@ -100,6 +100,16 @@ const CAS = [
     rouge: [fx('bascule-rouge-bt4.html')],
   },
   {
+    // TF-0235 (campagne pilot du 15/08) : restitution lisible — une page déclarée
+    // data-restitution porte verdict, KPIs complets, questions de graphiques,
+    // chemins de lecteurs et manifeste d'écarts. RL-2/5/6/7/8 déclarées non jugées
+    // (socle L7, composant filtres G1-G6, rendu, revue D8, iso-contenu de campagne).
+    oracle: 'oracle-restitution.mjs',
+    regles: ['RL-1', 'RL-3', 'RL-4', 'RL-9', 'RL-10'],
+    verte: [fx('restitution-verte.html')],
+    rouge: [fx('restitution-rouge.html')],
+  },
+  {
     // TF-0199 : règles extraites du skill tiers taste-skill (MIT, consulté le
     // 14/08/2026) — seules celles qui sont mécaniquement vérifiables. Les deux
     // prescriptions de rendu (hero dans la fenêtre, nav sur une ligne) restent
