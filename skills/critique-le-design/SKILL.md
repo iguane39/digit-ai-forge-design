@@ -1,7 +1,7 @@
 ---
 name: critique-le-design
-description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en sept dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
-version: 1.1.0
+description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en huit dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
+version: 1.2.0
 ---
 
 # Critique le design
@@ -13,10 +13,10 @@ corrections priorisées, le commanditaire décide.
 
 Loi de qualité et registre → `quality-oracles`.
 Règles de design → `impeccable`.
-Détection déterministe → `oracle-slop`, `oracle-tokens`, `oracle-mobile`, `oracle-images`.
+Détection déterministe → `oracle-slop`, `oracle-tokens`, `oracle-mobile`, `oracle-images`, `oracle-restitution`.
 Rendu réel → `render_page.py` (`digit-ai-page-html`).
 
-Reste en propre : la grille en sept dimensions, la règle de verdict, et la grammaire
+Reste en propre : la grille en huit dimensions, la règle de verdict, et la grammaire
 de restitution — score, red flags, top 5 en avant/après.
 
 ## Quick start
@@ -24,7 +24,7 @@ de restitution — score, red flags, top 5 en avant/après.
 ```
 1. Cadrage      → cible (web|mobile), thèmes disponibles, tokens fournis ou non
 2. Oracles      → references/grille.md §Enchaînement — TOUS lancés avant toute lecture
-3. Notation     → references/grille.md, 7 dimensions /5
+3. Notation     → references/grille.md, 8 dimensions /5 (D8 seulement si restitution)
 4. Red flags    → un seul suffit à plafonner le verdict
 5. Restitution  → references/restitution.md
 ```

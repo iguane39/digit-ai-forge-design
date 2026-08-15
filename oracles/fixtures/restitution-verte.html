@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head><meta charset="utf-8"><title>Fixture verte — restitution conforme</title></head>
+<body data-restitution="rapport">
+<!-- Fixture VERTE oracle-restitution : RL-1, RL-3, RL-4, RL-9, RL-10 tous tenus. -->
+<nav aria-label="Sommaire">
+  <a href="#v1" data-vue="v1">1 · Synthèse</a>
+  <a href="#v2" data-vue="v2">2 · Détail</a>
+</nav>
+<section id="v1">
+  <div class="verdict"><p>Le périmètre est conforme : deux écarts mineurs, corrigés au fil du run.</p></div>
+  <article class="kpi">
+    <span class="k-valeur">12 / 14</span>
+    <span class="kpi-d">Contrôles passés sur l'ensemble du périmètre.</span>
+    <span class="k-repere">Les 2 contrôles restants sont bloqués par la dette d'instrumentation, détaillée en vue 2.</span>
+  </article>
+  <article class="kpi">
+    <span class="k-valeur">3 j</span>
+    <span class="kpi-d">Délai moyen de correction constaté sur la période.</span>
+    <span class="k-repere">Sous le seuil de 5 jours fixé par le contrat de service — aucune action requise.</span>
+  </article>
+  <article class="kpi">
+    <span class="k-valeur">0</span>
+    <span class="kpi-d">Régressions détectées depuis la dernière campagne.</span>
+    <span class="k-repere">Zéro mesuré sur 14 contrôles rejoués — la base de comparaison est la campagne du mois précédent.</span>
+  </article>
+  <figure class="graphe">
+    <figcaption>Comment les contrôles se répartissent-ils ?</figcaption>
+    <svg viewBox="0 0 100 10" role="img" aria-label="12 contrôles passés sur 14"><rect x="0" y="0" width="86" height="10"/></svg>
+  </figure>
+  <div class="chemins">
+    <div class="chemin"><b>Commanditaire</b> Restez sur cette vue.</div>
+    <div class="chemin"><b>Opérateur</b> Passez à la vue 2 pour la file de travail.</div>
+  </div>
+</section>
+<section id="v2"><p>Détail des contrôles.</p></section>
+<footer class="ecarts">
+  <h2>Manifeste d'écarts</h2>
+  <ul><li>Aucun écart aux règles RL sur cette page.</li></ul>
+</footer>
+</body>
+</html>

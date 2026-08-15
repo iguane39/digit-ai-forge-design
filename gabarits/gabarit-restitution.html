@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gabarit de restitution lisible</title>
+<!-- Gabarit REFERENTIEL-RESTITUTION.md (TF-0235). À consommer par les forges
+     productrices : remplacer les contenus d'exemple, conserver le contrat de
+     marquage (data-restitution, .verdict, .kpi/.k-valeur/.kpi-d/.k-repere,
+     [data-vue], figcaption interrogative, .chemins/.chemin, .ecarts).
+     Contrôle : node oracles/oracle-restitution.mjs <page.html> -->
+<style>
+  :root{
+    --bg:#F6F8FB; --surface:#FDFDFF; --ink:#1E293B; --ink-2:#55627A; --ink-3:#667082;
+    --ligne:#E3E8F0; --accent:#2563EB; --accent-pale:#EFF4FE;
+    --alerte:#B45309; --alerte-soft:#FEF3E2; --r:12px;
+    --font-titres:"Roboto","Segoe UI",system-ui,sans-serif;
+    --font-corps:"DM Sans","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 var(--font-corps)}
+  h1,h2,h3{font-family:var(--font-titres);line-height:1.25;margin:0}
+  a{color:var(--accent)}
+  .page{max-width:min(92vw,1120px);margin:0 auto;padding:24px 0 60px}
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  header.bandeau{margin-bottom:16px}
+  .bandeau .meta{color:var(--ink-2);font-size:.85rem}
+  nav.vues{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;border-bottom:1px solid var(--ligne);padding-bottom:12px}
+  nav.vues a{display:inline-flex;flex-direction:column;justify-content:center;min-height:44px;
+    border:1px solid var(--ligne);background:var(--surface);color:var(--ink-2);border-radius:16px;
+    padding:4px 16px;font:600 .86rem/1.3 var(--font-corps);text-decoration:none}
+  nav.vues a .toc-d{font-size:.72rem;font-weight:500;color:var(--ink-2)}
+  nav.vues a[aria-selected="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+  nav.vues a[aria-selected="true"] .toc-d{color:var(--surface)}
+  section.vue{display:none}
+  section.vue.active{display:block}
+  .objectif{color:var(--ink-2);font-size:.95rem;margin:4px 0 20px}
+  .verdict{background:var(--surface);border:1px solid var(--ligne);border-radius:var(--r);padding:16px;margin-bottom:16px}
+  .verdict p{margin:0}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:20px}
+  .kpi{background:var(--surface);border:1px solid var(--ligne);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:8px}
+  .kpi .k-label{font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .kpi .k-valeur{font-family:var(--font-titres);font-size:1.9rem;font-weight:700;line-height:1.1}
+  .kpi .kpi-d{font-size:.82rem;color:var(--ink-2)}
+  .kpi .k-repere{font-size:.82rem;background:var(--accent-pale);border-radius:8px;padding:8px}
+  figure.graphe{background:var(--surface);border:1px solid var(--ligne);border-radius:var(--r);padding:16px;margin:0 0 20px}
+  figure.graphe figcaption{font-weight:700;margin-bottom:8px}
+  figure.graphe svg{width:100%;height:auto}
+  .chemins{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+  .chemin{font-size:.88rem;padding:12px;background:var(--accent-pale);border-radius:8px}
+  .chemin b{display:block}
+  footer.ecarts{margin-top:32px;border-top:1px solid var(--ligne);padding-top:16px;font-size:.82rem;color:var(--ink-2)}
+  footer.ecarts h2{font-size:.9rem;color:var(--ink);margin-bottom:8px}
+  footer.ecarts ul{margin:0;padding-left:20px}
+  @media (orientation: landscape) and (max-height:520px){ .page{padding-top:12px} }
+  @media (prefers-reduced-motion: reduce){ *,*::before,*::after{transition:none !important;animation:none !important} }
+  @media print{
+    body{background:var(--surface)}
+    nav.vues{display:none}
+    section.vue{display:block !important;break-inside:avoid-page;margin-bottom:16px}
+    a{color:var(--ink);text-decoration:none}
+  }
+</style>
+</head>
+<body data-restitution="rapport">
+<div class="page">
+
+<header class="bandeau">
+  <h1>Restitution — objet du rapport</h1>
+  <span class="meta">gabarit d'exemple — remplacer par l'objet, la période et les sources réels</span>
+</header>
+
+<nav class="vues" role="tablist" aria-label="Sommaire">
+  <a href="#v1" role="tab" aria-selected="true" data-vue="v1">1 · Synthèse<span class="toc-d">l'état et les gestes qui comptent</span></a>
+  <a href="#v2" role="tab" aria-selected="false" data-vue="v2">2 · Détail<span class="toc-d">constats, preuves et actions</span></a>
+  <a href="#v3" role="tab" aria-selected="false" data-vue="v3">3 · Méthode<span class="toc-d">barèmes, limites, traçabilité</span></a>
+</nav>
+
+<main>
+<section class="vue active" id="v1">
+  <h2 class="sr-only">Synthèse</h2>
+  <p class="objectif ch-apprend">Ce que cette vue vous apprend : l'état du périmètre restitué, ce qu'il change pour vous, et par quoi commencer.</p>
+
+  <div class="verdict">
+    <p><b>Verdict d'exemple :</b> le périmètre est conforme, deux contrôles restent bloqués
+    par la dette d'instrumentation — le détail vit en vue 2.</p>
+  </div>
+
+  <div class="kpis">
+    <article class="kpi">
+      <span class="k-label">Contrôles passés</span>
+      <span class="k-valeur" aria-describedby="gr1">12 <small>/ 14</small></span>
+      <span class="kpi-d">Contrôles rejoués avec succès sur le périmètre de la période.</span>
+      <span class="k-repere" id="gr1">Les 2 restants sont bloqués par la dette d'instrumentation — voir la vue 3 pour ce que le rapport ne peut pas dire.</span>
+      <a class="k-action" href="#v2" data-va="v2">→ Le détail des contrôles (vue 2)</a>
+    </article>
+    <article class="kpi">
+      <span class="k-label">Délai de correction</span>
+      <span class="k-valeur">3 <small>jours</small></span>
+      <span class="kpi-d">Délai moyen constaté entre détection et correction sur la période.</span>
+      <span class="k-repere">Sous le seuil contractuel de 5 jours — aucune action requise sur ce point.</span>
+    </article>
+    <article class="kpi">
+      <span class="k-label">Régressions</span>
+      <span class="k-valeur">0</span>
+      <span class="kpi-d">Régressions détectées depuis la campagne précédente.</span>
+      <span class="k-repere">Zéro mesuré sur 14 contrôles rejoués — base de comparaison : campagne précédente.</span>
+    </article>
+  </div>
+
+  <figure class="graphe">
+    <figcaption>Comment les contrôles se répartissent-ils ?</figcaption>
+    <svg viewBox="0 0 100 8" role="img" aria-label="12 contrôles passés sur 14, soit 86 pour cent" style="background:var(--ligne);border-radius:4px">
+      <rect x="0" y="0" width="86" height="8" rx="2" fill="var(--accent)"/>
+    </svg>
+  </figure>
+
+  <div class="chemins">
+    <div class="chemin"><b>Commanditaire</b> Restez sur cette vue, puis décidez sur le verdict et les repères des chiffres.</div>
+    <div class="chemin"><b>Metteur en œuvre</b> Passez à la <a href="#v2" data-va="v2">vue 2 · Détail des constats</a> pour la file de travail ordonnée.</div>
+    <div class="chemin"><b>Expert</b> D'abord la <a href="#v3" data-va="v3">vue 3 · Méthode et limites</a> : barèmes, et ce que le rapport ne peut pas dire.</div>
+  </div>
+</section>
+
+<section class="vue" id="v2">
+  <h2 class="sr-only">Détail</h2>
+  <p class="objectif ch-apprend">Ce que cette vue vous apprend : chaque constat avec sa donnée, ce qu'il change, et l'action qui y répond — au pattern constat, impact, action.</p>
+  <p>Contenu à produire par la forge consommatrice. Tout tableau de 10 lignes ou plus
+  porte tri, filtres combinables et — au-delà de 50 lignes — recherche
+  (composant filtres-tableau de forge-organization, règles G1-G6).</p>
+</section>
+
+<section class="vue" id="v3">
+  <h2 class="sr-only">Méthode</h2>
+  <p class="objectif ch-apprend">Ce que cette vue vous apprend : comment ce rapport juge — barèmes et formules — et ce qu'il ne peut pas dire, dette d'instrumentation comprise.</p>
+  <p>Le contenu générique (barèmes, définitions, limites) vit ici une seule fois ;
+  le reste du rapport y renvoie (règle RL-7).</p>
+</section>
+</main>
+
+<footer class="ecarts">
+  <h2>Manifeste d'écarts (règle RL-10)</h2>
+  <ul><li>Gabarit d'exemple : aucun écart aux règles RL — les contenus sont des exemples à remplacer.</li></ul>
+</footer>
+
+</div>
+<script>
+(function(){
+  "use strict";
+  var onglets = document.querySelectorAll("nav.vues a");
+  function montre(id){
+    document.querySelectorAll("section.vue").forEach(function(s){ s.classList.toggle("active", s.id === id); });
+    onglets.forEach(function(b){ b.setAttribute("aria-selected", String(b.dataset.vue === id)); });
+    if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+  }
+  onglets.forEach(function(b){ b.addEventListener("click", function(e){ e.preventDefault(); montre(b.dataset.vue); }); });
+  document.querySelectorAll("[data-va]").forEach(function(a){
+    a.addEventListener("click", function(e){ e.preventDefault(); montre(a.dataset.va); });
+  });
+  if (/^#v[1-3]$/.test(location.hash)) montre(location.hash.slice(1));
+})();
+</script>
+</body>
+</html>
