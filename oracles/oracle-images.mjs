@@ -6,14 +6,23 @@
 //   I2  chaque image embarquée respecte le plafond unitaire (IMAGES_MAX_KO)
 //   I3  le fichier respecte le plafond global de 10 Mo
 //   I4  aucune image chargée depuis le réseau — contrat zéro-CDN
-//   I5  toute image embarquée est tracée dans le manifeste de génération
-//   I6  chaque entrée du manifeste porte prompt, modèle et date
+//   I5  toute image embarquée est tracée dans le manifeste de traçabilité
+//   I6  chaque entrée du manifeste porte de quoi remonter à l'origine de l'image :
+//       générée (défaut) → prompt, modèle et date ; relevée → source et date de relevé
 //
 // Manifeste attendu dans le fichier :
 //   <script type="application/json" id="manifeste-images">
-//     [{"id":"hero","modele":"gemini-3.1-flash-image","prompt":"…","date":"2026-08-04","genere":true}]
+//     [{"id":"hero","modele":"gemini-3.1-flash-image","prompt":"…","date":"2026-08-04","genere":true},
+//      {"id":"vitrine","genere":false,"source":"photothèque du propriétaire, mandat du 12/08/2026","date":"2026-08-12"}]
 //   </script>
 // et chaque <img> embarquée porte data-image-id="hero".
+//
+// « genere »: false — TF-0277. Pour une photo réelle reprise sur mandat, prompt et
+// modèle n'ont pas d'objet : les exiger fait remplir le manifeste de « aucun », ce
+// qui détruit l'information au lieu de la tracer (18 déclarations sur le run
+// digit-desk.fr). L'exigence de traçabilité ne disparaît pas, elle CHANGE D'OBJET :
+// d'où vient l'image (source) et quand elle a été relevée (date). L'absence du champ
+// vaut « générée » : un manifeste antérieur reste jugé exactement comme avant.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-images.mjs <fichier.html> [--env .env] [--max-ko N] [--max-mo N] [--json-only]
@@ -79,15 +88,28 @@ const parId = new Map();
 if (Array.isArray(manifeste)) for (const e of manifeste) if (e && e.id) parId.set(String(e.id), e);
 
 // ── I6 · complétude des entrées ────────────────────────────────────────────
+let relevees = 0;
 for (const [id, e] of parId) {
-  for (const champ of ['prompt', 'modele', 'date']) {
+  if ('genere' in e && typeof e.genere !== 'boolean') {
+    add('majeur', 'I6', `entrée « ${id} » : « genere » vaut ${JSON.stringify(e.genere)} — booléen attendu (true = générée, false = relevée)`, 'manifeste-images');
+  }
+  const relevee = e.genere === false;
+  if (relevee) relevees++;
+  // Générée : prompt + modèle + date. Relevée : source + date de relevé.
+  const requis = relevee ? ['source', 'date'] : ['prompt', 'modele', 'date'];
+  for (const champ of requis) {
     if (!e[champ] || String(e[champ]).trim() === '') {
-      add('majeur', 'I6', `entrée « ${id} » du manifeste sans ${champ}`, 'manifeste-images');
+      add('majeur', 'I6', relevee
+        ? `entrée « ${id} » déclarée « genere »: false et sans ${champ} — une image relevée doit sa traçabilité à sa source et à sa date de relevé`
+        : `entrée « ${id} » du manifeste sans ${champ}`, 'manifeste-images');
     }
   }
   if (e.date && !/^\d{4}-\d{2}-\d{2}$/.test(String(e.date))) {
     add('majeur', 'I6', `entrée « ${id} » : date « ${e.date} » hors format AAAA-MM-JJ`, 'manifeste-images');
   }
+}
+if (relevees > 0) {
+  NJ.push(`I6 : ${relevees} image(s) déclarée(s) « genere »: false — la réalité du mandat de reprise, les droits attachés à la source et l'exactitude de la date de relevé sont hors de portée d'un contrôle de fichier : revue humaine`);
 }
 
 // ── I1, I2, I4, I5 · balayage des images ───────────────────────────────────

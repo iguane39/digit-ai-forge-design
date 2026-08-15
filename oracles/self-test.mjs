@@ -78,6 +78,20 @@ const CAS = [
     rouge: [fx('images-rouge.html'), '--max-ko', '1', '--max-mo', '0.001'],
   },
   {
+    // TF-0277 : I5/I6 supposaient toute image générée. Pour des photos réelles
+    // reprises sur mandat, prompt et modèle n'ont pas d'objet — le manifeste du
+    // run digit-desk.fr a été rempli de 18 « aucun », ce qui détruit
+    // l'information au lieu de la tracer. « genere »: false dispense de prompt
+    // et modèle AU PROFIT de source + date de relevé. La fixture rouge prouve
+    // que ce n'est pas une porte de sortie : relevée sans source, relevée sans
+    // date, source vide, générée sans prompt, et drapeau mal typé (chaîne
+    // "false") qui ne dispense de rien.
+    oracle: 'oracle-images.mjs',
+    regles: ['I6'],
+    verte: [fx('images-relevees-verte.html')],
+    rouge: [fx('images-relevees-rouge.html')],
+  },
+  {
     oracle: 'oracle-corpus.mjs',
     regles: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
     verte: [fx('corpus-verte')],

@@ -12,7 +12,7 @@
 | Remplissage | aucune colonne vide latérale, aucun vide vertical > 1 écran, largeur de ligne de texte ~70ch |
 | Mobile / tables | reflow en cartes obligatoire sous 768 px |
 | Motion | build UMD autonome de Motion (79 ko, v12.23.12) inliné depuis `oracles/vendor/` ; `transform` et `opacity` seulement ; `prefers-reduced-motion` respecté ; ni rebond ni élastique |
-| Images | générées au build, embarquées en base64, ≤ `IMAGES_MAX_KO`, tracées au `manifeste-images` |
+| Images | embarquées en base64, ≤ `IMAGES_MAX_KO`, tracées au `manifeste-images` : générées au build (`genere: true` — prompt, modèle, date) ou relevées sur mandat (`genere: false` — source, date de relevé) |
 | Cible mobile | châssis d'appareil, safe areas, cibles ≥ 44 px — voir `cadre-mobile.md` |
 | Favicon | `<link rel="icon">` obligatoire, `href` en `data:` uniquement — jamais absent, jamais chargé depuis le réseau |
 | Saisie de date | `<input type="date">` natif uniquement — aucun datepicker maison au MVP |

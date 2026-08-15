@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — oracle-images, photos relevees sans source</title>
+<!--
+  TF-0277. La preuve que « genere »: false n'est pas une porte de sortie :
+    - « vitrine » : relevee, SANS source  -> I6
+    - « equipe »  : relevee, SANS date de relevé -> I6
+    - « affiche » : relevee, source vide  -> I6
+    - « schema »  : generee, SANS prompt  -> I6, exactement comme avant
+    - « plan »    : « genere » vaut la chaine "false" et non un booleen -> I6
+
+  Attendu : FAIL, exit 1 — I6 declenche sur chacune de ces entrees.
+-->
+<script type="application/json" id="manifeste-images">
+[
+  {"id": "vitrine", "genere": false, "date": "2026-08-12"},
+  {"id": "equipe", "genere": false, "source": "photothèque du propriétaire"},
+  {"id": "affiche", "genere": false, "source": "   ", "date": "2026-08-12"},
+  {"id": "schema", "genere": true, "modele": "gemini-3.1-flash-image", "date": "2026-08-13"},
+  {"id": "plan", "genere": "false", "source": "releve cadastral", "date": "2026-08-13"}
+]
+</script>
+</head>
+<body>
+  <img data-image-id="vitrine" alt="Devanture du magasin, rideau leve" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <img data-image-id="equipe" alt="L'equipe devant le comptoir d'accueil" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <img data-image-id="affiche" alt="Affiche de la campagne en vitrine" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <img data-image-id="schema" alt="" role="presentation" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <img data-image-id="plan" alt="Plan de masse du site" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==">
+  <p>Visuels releves — voir le manifeste joint a la restitution.</p>
+</body>
+</html>
