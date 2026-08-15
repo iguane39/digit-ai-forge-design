@@ -66,10 +66,12 @@ l'auteur, pas au livrable. `prefers-reduced-motion` traité, `transform` et
 volumineuses, mais tout écran chiffré porte un bandeau permanent « Données de
 démonstration — non contractuelles ». Aucun montant ni tarif inventé : placeholder.
 
-**Aucun visuel généré non déclaré.** Images produites via Gemini au build, en
-base64, plafonnées par `.env`, tracées dans un `<script id="manifeste-images">`
-portant prompt, modèle et date. Aucun visage, lieu ou logo réel fabriqué et
-présenté comme authentique.
+**Aucun visuel non déclaré.** Images en base64, plafonnées par `.env`, tracées
+dans un `<script id="manifeste-images">`. Générées via Gemini au build : `genere:
+true`, prompt, modèle et date. Reprises telles quelles sur mandat du propriétaire
+(photos réelles) : `genere: false`, **source et date de relevé** — prompt et
+modèle n'ont alors pas d'objet et ne se remplissent pas de « aucun ». Aucun
+visage, lieu ou logo réel fabriqué et présenté comme authentique.
 
 **Secteur, cible et job de l'écran sont établis avant le premier choix visuel.**
 S'ils ne se déduisent pas de l'entrant, ils sont demandés. Jamais supposés en
