@@ -6,12 +6,20 @@
 //   T2  aucune famille de police littérale hors des blocs de tokens
 //   T3  espacements en px multiples de 4 (échelle 4pt)
 //   T4  parité de thèmes : tout token défini en clair l'est aussi en sombre
-//   T5  contraste ≥ 4.5:1 sur les paires texte/surface résolvables, par thème
+//   T5  contraste ≥ 4.5:1 sur les paires réellement posées l'une sur l'autre, par thème
 //   T6  chroma réduit aux extrêmes de luminosité (tokens OKLCH)
 //
-// Convention de nommage requise par T5 — c'est une précondition, pas une devinette :
-//   un token de texte contient texte, text, fg, encre ou ink dans son nom ;
-//   un token de surface contient fond, bg, surface, papier ou canvas.
+// Appariement de T5 — par CO-OCCURRENCE CSS, pas par nommage (TF-0276) :
+//   une règle qui pose color:var(--t) et background:var(--f) déclare la paire (t, f) ;
+//   une règle qui n'en pose qu'un est appariée à l'AMBIANCE (le color / background
+//   posé sur :root, html, body ou *), ce qui couvre l'héritage courant.
+//   Échappatoire explicite pour ce que le CSS ne dit pas :
+//     :root { --paires-contraste: --texte-sur-accent sur --accent, --encre sur --fond; }
+// Une paire jamais posée n'est PAS jugée : elle est déclarée au non_juge. Le produit
+// cartésien texte-* × fond-* sortait --texte-sur-accent en FAIL 1.0:1 sur --fond alors
+// qu'il n'y est jamais posé — l'oracle contredisait references/tokens.md de sa forge.
+// La convention de nommage (texte|text|fg|encre|ink × fond|bg|surface|papier|canvas)
+// ne sert plus qu'à ÉNUMÉRER les paires non jugées, jamais à en fabriquer.
 // Aucune paire résolvable ⇒ T5 déclaré non jugé, jamais approuvé par défaut.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
@@ -132,40 +140,124 @@ if (tokens.sombre.size === 0) {
   }
 }
 
-// ── T5 · contraste des paires résolvables ──────────────────────────────────
+// ── T5 · contraste des paires réellement posées l'une sur l'autre ──────────
 const EST_TEXTE = /(^|-)(texte|text|fg|encre|ink)(-|$)/i;
 const EST_SURFACE = /(^|-)(fond|bg|surface|papier|canvas)(-|$)/i;
+const PROP_TEXTE = /(^|[;{\s])color\s*:\s*([^;]+)/gi;
+const PROP_FOND = /(^|[;{\s])background(?:-color)?\s*:\s*([^;]+)/gi;
+// Sélecteur d'ambiance : ce qui habille la page et dont tout le reste hérite.
+const EST_AMBIANCE = s => s.split(',').some(x => /^\s*(:root|html|body|\*)\s*$/i.test(x));
+const varsDe = val => [...val.matchAll(/var\(\s*(--[\w-]+)/g)].map(m => m[1]);
+
+// 1. Relevé des poses : ce que chaque règle met en texte et en fond.
+const poses = [];
+const ambiance = { texte: new Set(), fond: new Set() };
+// Aucune règle n'est écartée ici : une déclaration de token (« --fond: #fff »)
+// ne matche pas ces propriétés, tandis qu'un « :root { color: var(--texte) } »
+// ou un « [data-theme="dark"] .bouton { … } » posent bel et bien des couleurs.
+for (const r of regles) {
+  const t = [], f = [];
+  let m;
+  PROP_TEXTE.lastIndex = 0;
+  while ((m = PROP_TEXTE.exec(r.body))) t.push(...varsDe(m[2]));
+  PROP_FOND.lastIndex = 0;
+  while ((m = PROP_FOND.exec(r.body))) f.push(...varsDe(m[2]));
+  if (!t.length && !f.length) continue;
+  if (EST_AMBIANCE(r.selector)) { for (const x of t) ambiance.texte.add(x); for (const x of f) ambiance.fond.add(x); }
+  poses.push({ sel: r.selector, t, f });
+}
+
+// 2. Héritage : une règle qui ne pose qu'une des deux couleurs complète l'autre
+// par son ANCÊTRE le plus proche dans le CSS (préfixe de sélecteur), et à défaut
+// par l'ambiance. Sans cet étage, un « .toc-d { color: var(--surface) } » niché
+// dans un onglet à fond accentué serait jugé contre le fond de page : une paire
+// qui n'existe nulle part, exactement le défaut que ce chantier corrige.
+const morceaux = s => s.split(',').map(x => x.trim()).filter(Boolean);
+const estAncetre = (a, d) => d.length > a.length && d.startsWith(a) && /[\s>+~]/.test(d[a.length]);
+function heriter(selecteur, sources, defaut, quoi) {
+  let meilleur = null;
+  for (const p of morceaux(selecteur)) {
+    for (const s of sources) {
+      for (const a of morceaux(s.sel)) {
+        if (estAncetre(a, p) && (!meilleur || a.length > meilleur.taille)) meilleur = { taille: a.length, vals: s.vals };
+      }
+    }
+  }
+  return meilleur
+    ? { vals: meilleur.vals, origine: `${quoi} hérité de l'ancêtre CSS` }
+    : { vals: defaut, origine: `${quoi} hérité de l'ambiance` };
+}
+const sourcesFond = poses.filter(p => p.f.length).map(p => ({ sel: p.sel, vals: p.f }));
+const sourcesTexte = poses.filter(p => p.t.length).map(p => ({ sel: p.sel, vals: p.t }));
+
+// 3. Paires : co-occurrence dans la même règle, ou complétée par l'héritage.
+const paires = new Map(); // "t|f" -> origine lisible
+const noter = (t, f, origine) => { if (t !== f && !paires.has(t + '|' + f)) paires.set(t + '|' + f, origine); };
+for (const p of poses) {
+  let textes = p.t, fonds = p.f, origine = 'posés par la même règle';
+  if (!textes.length) { const h = heriter(p.sel, sourcesTexte, [...ambiance.texte], 'texte'); textes = h.vals; origine = h.origine; }
+  if (!fonds.length) { const h = heriter(p.sel, sourcesFond, [...ambiance.fond], 'fond'); fonds = h.vals; origine = h.origine; }
+  for (const a of textes) for (const b of fonds) noter(a, b, origine);
+}
+
+// 4. Paires déclarées à la main — pour ce que le CSS du fichier ne dit pas.
+for (const table of [tokens.clair, tokens.sombre]) {
+  const v = table.get('--paires-contraste');
+  if (!v) continue;
+  for (const morceau of v.split(',')) {
+    const m = /(--[\w-]+)\s+sur\s+(--[\w-]+)/i.exec(morceau);
+    if (m) noter(m[1], m[2], 'déclarée par --paires-contraste');
+    else add('avertissement', 'T5', `--paires-contraste : « ${morceau.trim().slice(0, 50)} » illisible (forme attendue : --texte sur --fond)`, 'bloc de tokens');
+  }
+}
+
 let pairesTestees = 0;
 let pairesComposees = 0;
 // Une couleur semi-transparente se compose avec ce qu'il y a derrière : son
 // contraste n'est pas décidable sur le seul fichier. La déclarer, ne pas
 // l'inventer — c'est render_page.py V2 qui mesure le rendu composé.
-const opaque = ([, v]) => { const c = color(v); return c && c.a === 1; };
 for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
-  const textes = [...table].filter(([k, v]) => EST_TEXTE.test(k) && color(v));
-  const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && color(v));
-  pairesComposees += textes.filter(t => !opaque(t)).length * surfaces.length
-    + surfaces.filter(s => !opaque(s)).length * textes.filter(opaque).length;
-  for (const [kt, vt] of textes.filter(opaque)) {
-    for (const [ks, vs] of surfaces.filter(opaque)) {
-      pairesTestees++;
-      const ratio = contrast(color(vt), color(vs));
-      if (ratio < 4.5) {
-        add('majeur', 'T5', `contraste ${ratio.toFixed(2)}:1 < 4.5:1 — ${kt} (${vt}) sur ${ks} (${vs}), thème ${theme}`, `thème ${theme}`);
-      }
+  for (const [cle, origine] of paires) {
+    const [kt, ks] = cle.split('|');
+    const vt = table.get(kt), vs = table.get(ks);
+    if (vt === undefined || vs === undefined) continue; // paire absente de ce thème
+    const ct = color(vt), cs = color(vs);
+    if (!ct || !cs) continue;
+    if (ct.a !== 1 || cs.a !== 1) { pairesComposees++; continue; }
+    pairesTestees++;
+    const ratio = contrast(ct, cs);
+    if (ratio < 4.5) {
+      add('majeur', 'T5', `contraste ${ratio.toFixed(2)}:1 < 4.5:1 — ${kt} (${vt}) sur ${ks} (${vs}), thème ${theme} [${origine}]`, `thème ${theme}`);
     }
   }
 }
 if (pairesTestees === 0) {
   // Un PASS silencieux alors qu'aucun contraste n'a été mesuré est le pire des
   // verdicts : il se lit comme « contraste vérifié ». Le rendre visible.
-  add('avertissement', 'T5', 'aucune paire texte/surface résolvable : AUCUN contraste n\'a été mesuré. Renommer selon la convention (texte|text|fg|encre|ink × fond|bg|surface|papier|canvas) ou mesurer par render_page.py V2',
-    'convention de nommage des tokens');
-  NJ.push('T5 : contraste non mesuré faute de paire résolvable — le PASS de cet oracle ne vaut pas validation du contraste');
+  add('avertissement', 'T5', 'aucune paire texte/fond posée par le CSS : AUCUN contraste n\'a été mesuré. Poser les couleurs par var(--token), déclarer les paires par --paires-contraste, ou mesurer par render_page.py V2',
+    'CSS du document');
+  NJ.push('T5 : contraste non mesuré faute de paire posée — le PASS de cet oracle ne vaut pas validation du contraste');
 }
 if (pairesComposees > 0) {
   NJ.push(`T5 : ${pairesComposees} paire(s) écartée(s) car un token est semi-transparent — contraste composé indécidable sur le fichier, à mesurer par render_page.py V2`);
 }
+// Ce que la co-occurrence n'a PAS jugé : les tokens nommés selon la convention
+// que rien ne pose l'un sur l'autre. Les taire ferait lire le PASS comme
+// « toutes les combinaisons sont sûres » — elles ne sont simplement pas posées.
+{
+  const jamais = [];
+  for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
+    const textes = [...table].filter(([k, v]) => EST_TEXTE.test(k) && color(v)).map(([k]) => k);
+    const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && color(v)).map(([k]) => k);
+    for (const kt of textes) for (const ks of surfaces) {
+      if (kt !== ks && !paires.has(kt + '|' + ks)) jamais.push(`${kt} sur ${ks} (${theme})`);
+    }
+  }
+  if (jamais.length) {
+    NJ.push(`T5 : ${jamais.length} paire(s) texte/fond nommée(s) selon la convention mais jamais posée(s) l'une sur l'autre — non jugée(s) : ${jamais.slice(0, 8).join(', ')}${jamais.length > 8 ? ', …' : ''}. Les déclarer par --paires-contraste si elles se rencontrent au rendu.`);
+  }
+}
+NJ.push('T5 : l\'héritage est approché par le préfixe de sélecteur puis par l\'ambiance (:root, html, body, *) — un texte dont le conteneur réel n\'est pas un ancêtre de sélecteur (composition à l\'exécution, portail, classe posée en JS) est jugé contre le fond ambiant, pas contre le sien');
 NJ.push('contraste des couleurs composées (color-mix, superpositions) — déléguer à render_page.py V2 sur les deux thèmes');
 NJ.push('adéquation de la palette et de la voix à la marque — arbitrage commanditaire');
 
