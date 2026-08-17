@@ -12,6 +12,12 @@
  *         [--nom <Produit>] --sortie <DESIGN.md>
  * Sortie : DESIGN.md scellé (sha256 des sources). Exit 0 = généré, 1 = entrée invalide,
  *          2 = contraste texte/fond < 4.5 (on ne génère pas une charte inaccessible).
+ *
+ * TF-0321 : la charte porte aussi une section « Mouvement » — quoi animer, quoi ne jamais
+ * animer, et la révocation prefers-reduced-motion. Ses valeurs sont LUES dans les tokens
+ * de mouvement ; un token absent est annoncé absent, jamais remplacé par une valeur que la
+ * marque n'a pas fixée. C'est le pendant prescriptif d'oracle-motion, qui jugeait le
+ * mouvement sans que rien en amont ne le prescrive.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -89,6 +95,33 @@ const rounded = {
   pill: 999,
 };
 
+// ---- mouvement : durées par taille de geste, easings, seuils (TF-0321) ---------------------
+// LU dans tokens.css, jamais inventé ici. Un token absent se DIT absent : la charte annonce
+// alors ce qui reste à prescrire, plutôt que d'inscrire une valeur que la marque n'a pas
+// fixée — c'est exactement le défaut que cette section ferme (l'oracle jugeait le mouvement,
+// rien ne le prescrivait). Le plafond n'est pas rejugé ici : oracle-motion R9 en est le seul
+// arbitre, un second seuil écrit à cet endroit serait un second arbitre.
+const GESTES = [
+  ["dur-etat", "état d'un contrôle", "survol, focus, appui"],
+  ["dur-local", "élément local", "puce, infobulle, badge"],
+  ["dur-ancre", "surface ancrée à son déclencheur", "menu, popover, liste déroulante"],
+  ["dur-surface", "surface plein écran", "modale, tiroir, feuille"],
+];
+const COURBES = [
+  ["ease-apparition", "apparition et réponse d'interface (le défaut)"],
+  ["ease-disparition", "sorties **seulement** — une accélération ailleurs paraît fausse"],
+  ["ease-deplacement", "élément qui se déplace sans naître ni disparaître"],
+];
+const mouvement = {
+  gestes: GESTES.map(([v, role, ex]) => ({ v, role, ex, valeur: varDe(v) })),
+  courbes: COURBES.map(([v, role]) => ({ v, role, valeur: varDe(v) })),
+  plafond: varDe("dur-plafond"),
+  echelle: varDe("echelle-entree"),
+};
+const mouvementPrescrit = mouvement.gestes.some((g) => g.valeur) || mouvement.courbes.some((c) => c.valeur);
+const ligneToken = (nom, valeur, suffixe) =>
+  valeur ? `- \`--${nom}\` : \`${valeur}\` — ${suffixe}` : `- \`--${nom}\` : **non prescrit** — ${suffixe}`;
+
 // ---- extraits de MARQUE.md : principes et voix (cités, jamais inventés) --------------------
 const section = (titre) => {
   const m = marque.match(new RegExp(`^##\\s+${titre}[^\\n]*\\n([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, "mi"));
@@ -97,6 +130,65 @@ const section = (titre) => {
 const principes = section("(?:Direction|Essence|Parti[s]? pris|Principes)") ||
   "La référence spécifique prime sur l'adjectif : valeurs exactes, sobriété, accessibilité AA par défaut.";
 const voix = section("Voix");
+
+// La section vient APRÈS les sections canoniques du format et AVANT « Voix » : le gate
+// design de forge-development linte `section-order` sur les sections qu'il connaît, et
+// « Voix » démontre déjà qu'une section supplémentaire placée en fin est tolérée.
+const sectionMouvement = `
+## Mouvement
+
+${mouvementPrescrit
+  ? `Durées par **taille de geste** — jamais une durée unique partout, et jamais au-delà du
+plafond \`--dur-plafond\`${mouvement.plafond ? ` (\`${mouvement.plafond}\`)` : ""} : au-delà, l'interface paraît lente.`
+  : `⚠ \`tokens.css\` ne prescrit **aucun** token de mouvement. Cette charte ne peut donc pas
+dire quelle durée ni quelle courbe écrire, alors que \`oracle-motion\` refusera les mauvaises :
+le mouvement serait jugé sur des valeurs que la marque n'a pas fixées. À prescrire dans
+\`tokens.css\` (contrat : \`references/tokens.md\`, section « Mouvement ») avant livraison.`}
+
+${mouvement.gestes.map((g) => ligneToken(g.v, g.valeur, `${g.role} (${g.ex})`)).join("\n")}
+
+Courbes, nommées par la phase qu'elles servent :
+
+${mouvement.courbes.map((c) => ligneToken(c.v, c.valeur, c.role)).join("\n")}
+
+Un élément qui apparaît naît à ${mouvement.echelle ? `\`--echelle-entree\` (\`${mouvement.echelle}\`)` : "`--echelle-entree` (**non prescrit**)"}, jamais de \`scale(0)\` : un
+élément qui naît de rien paraît artificiel.
+
+### Ce qui s'anime
+
+\`transform\` et \`opacity\`, et rien d'autre : ce sont les deux seules propriétés qu'un
+navigateur compose sans recalculer la mise en page à chaque image.
+
+### Ce qui ne s'anime jamais
+
+- \`width\`, \`height\`, \`top\`, \`left\`, \`margin\`, \`padding\`, \`inset\` — reflow à chaque image ;
+- \`transition: all\` — transition non ciblée : coût caché, et surprise au moindre ajout
+  de propriété sur le sélecteur ;
+- une apparition depuis \`scale(0)\` — partir de \`--echelle-entree\` ;
+- un survol animé sans garde \`@media (hover: hover)\` — sur tactile, l'état de survol
+  « colle » après le tap ;
+- une surface ancrée dont le mouvement part du centre — \`transform-origin\` se pose du
+  côté du déclencheur, le mouvement naît de ce qui l'a provoqué.
+
+### Révocation du mouvement
+
+\`prefers-reduced-motion: reduce\` n'est pas une option ajoutée après coup : c'est la sortie
+de secours de tout ce qui précède. Toute feuille qui déclare du mouvement porte
+
+\`\`\`css
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+  }
+}
+\`\`\`
+
+et ce bloc doit **neutraliser vraiment** — un \`@media\` présent mais sans effet est une
+affordance non câblée, donc un défaut. Contrôles exécutés : \`oracle-motion\` R10
+(révocation), R8 (les durées passent par les tokens, pas par des littéraux), R9 (aucun
+token au-delà du plafond, aucune courbe à dépassement), R1–R7 (craft du geste).
+`;
 
 const sha = (p) => createHash("sha256").update(readFileSync(p)).digest("hex");
 const yaml = (o, indent = "  ") => Object.entries(o).map(([k, v]) => `${indent}${k}: ${typeof v === "string" ? `"${v}"` : v}`).join("\n");
@@ -160,11 +252,12 @@ d'état. Toute saisie de date utilise \`input type="date"\` natif (contrat techn
 
 Échelle sur base 4 px : xs ${spacing.xs} · sm ${spacing.sm} · md ${spacing.md} · lg ${spacing.lg} · xl ${spacing.xl}.
 Rayons : sm ${rounded.sm} · card ${rounded.card} · pill ${rounded.pill}.
-${voix ? `
+${sectionMouvement}${voix ? `
 ## Voix
 
 ${voix}
 ` : ""}`;
 
 writeFileSync(sortie, doc);
-console.log(`DESIGN.md généré : ${sortie} (contraste texte ${rTexte.toFixed(2)}:1, primaire ${rPrimaire.toFixed(2)}:1)`);
+console.log(`DESIGN.md généré : ${sortie} (contraste texte ${rTexte.toFixed(2)}:1, primaire ${rPrimaire.toFixed(2)}:1`
+  + `, mouvement ${mouvementPrescrit ? "prescrit" : "NON PRESCRIT — à poser dans tokens.css"})`);
