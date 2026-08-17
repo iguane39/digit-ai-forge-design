@@ -8,6 +8,7 @@
  * DEUX CONFLITS CONNUS AVEC LES ORACLES DE LA FORGE — déclarés, non masqués :
  *  1. oracle-slop S4 se déclenche sur --card et --surface (#FFFFFF, blanc pur). La règle S4 vient d'impeccable (« pure black/white never appears in nature »). La charte Digit-AI la contredit frontalement. Arbitrage : sur un livrable Digit-AI, la charte gagne et le finding S4 est accepté comme exception déclarée dans la restitution. Sur un livrable client, le mode « client » s'applique et la question ne se pose pas.
  *  2. La charte Digit-AI est light-theme only. oracle-tokens T4 exige la parité clair/sombre. Le bloc sombre ci-dessous est une EXTENSION de la forge, dérivée par recalcul de contraste — il ne figure dans aucune charte officielle. À faire valider avant tout usage client.
+ * MOUVEMENT (TF-0321) : le groupe « mouvement » PRESCRIT ce que oracles/oracle-motion.mjs juge. Ses valeurs sont dérivées des règles R1-R7, pas choisies : le plafond de 300 ms est celui de R4, l'échelle d'entrée de 0.96 est la fourchette 0.95-0.97 de R2, les trois courbes décélèrent sans dépassement (R3, et slop S8 sur le rebond déguisé). Prescription et jugement partagent donc le même seuil ; changer l'un sans l'autre est un défaut, pas un réglage. Le mouvement ne dépend pas du thème : un seul jeu, aucun jumeau sombre (T4 ne porte que sur la couleur).
  */
 
 :root {
@@ -54,6 +55,17 @@
   --espace-lg: 24px;
   --espace-xl: 32px;
   --espace-2xl: 48px;
+
+  /* --- Mouvement : durées par taille de geste, easings nommés, seuils (oracle-motion R4/R8/R9) --- */
+  --dur-etat: 120ms;
+  --dur-local: 160ms;
+  --dur-ancre: 200ms;
+  --dur-surface: 280ms;
+  --dur-plafond: 300ms;
+  --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-disparition: cubic-bezier(0.4, 0, 1, 1);
+  --ease-deplacement: cubic-bezier(0.4, 0, 0.2, 1);
+  --echelle-entree: 0.96;
 }
 
 /* --- Thème sombre, dérivé --- */

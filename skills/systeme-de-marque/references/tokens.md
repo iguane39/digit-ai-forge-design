@@ -27,6 +27,20 @@
 
   /* Rayons — variés, jamais une valeur unique partout */
   --rayon-sm: 2px; --rayon-md: 6px; --rayon-lg: 12px;
+
+  /* Mouvement — une durée par TAILLE DE GESTE, jamais une durée unique.
+     Le mouvement ne dépend pas du thème : un seul jeu, pas de jumeau sombre. */
+  --dur-etat: 120ms;      /* état d'un contrôle : survol, focus, appui */
+  --dur-local: 160ms;     /* élément local : puce, infobulle, badge */
+  --dur-ancre: 200ms;     /* surface ancrée à son déclencheur : menu, popover */
+  --dur-surface: 280ms;   /* surface plein écran : modale, tiroir, feuille */
+  --dur-plafond: 300ms;   /* seuil, pas un geste — au-delà, l'UI paraît lente */
+
+  --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);  /* décélère : le défaut */
+  --ease-disparition: cubic-bezier(0.4, 0, 1, 1);    /* accélère : sorties SEULEMENT */
+  --ease-deplacement: cubic-bezier(0.4, 0, 0.2, 1);  /* symétrique : se déplace sans naître */
+
+  --echelle-entree: 0.96; /* d'où naît un élément — jamais scale(0) */
 }
 
 @media (prefers-color-scheme: dark) { :root { /* mêmes noms, autres valeurs */ } }
@@ -44,6 +58,10 @@
 | Échelle d'espacement | multiples de 4 | T3 |
 | Tracking optique | ~-0.02em sur le display, ~0 sur le corps | corpus GL49 (apple-design) |
 | Aucune valeur en dur hors `:root` | 0 couleur, 0 police littérale | T1, T2 |
+| Durée de transition | ≤ `--dur-plafond` (300 ms) — pour le token **et** pour la feuille | `oracle-motion` R9, R4 |
+| Durée consommée | par `var(--dur-*)`, jamais un littéral | R8 |
+| Courbe d'easing | aucun dépassement (y hors [0,1] = rebond déguisé) | R9, `oracle-slop` S8 |
+| Révocation du mouvement | bloc `prefers-reduced-motion: reduce` qui neutralise vraiment | R10 |
 
 ## Nommage — c'est une précondition, pas une préférence
 
@@ -90,6 +108,37 @@ sans police (T2 sans objet), sans espacement (T3 sans objet), définie des deux
 côtés clair/sombre si utilisée (T4), chroma à modérer aux luminosités extrêmes
 comme tout token de couleur (T6).
 
+## Mouvement — prescrire ce que l'oracle juge déjà
+
+Les neuf tokens de mouvement ne sont pas un choix de goût : chacun est la **face
+prescriptive** d'une règle que `oracle-motion` sait déjà refuser. La forge jugeait le
+mouvement sans jamais le prescrire — une maquette était donc notée sur des valeurs que la
+marque n'avait pas fixées (TF-0321).
+
+| Token | Règle qui le juge | Ce que la règle refuse |
+|---|---|---|
+| `--dur-*`, plafonnés par `--dur-plafond` | R4, R9 | une transition au-delà de 300 ms |
+| `--ease-apparition` (défaut) | R3 | `ease-in` seul : l'UI doit répondre vite puis se poser |
+| `--ease-disparition` | R3 | l'accélération employée ailleurs qu'en sortie |
+| `--echelle-entree: 0.96` | R2 | `scale(0)` : un élément qui naît de rien |
+
+Trois conséquences pour l'auteur du `tokens.css` :
+
+1. **Une durée par taille de geste, pas une durée unique.** Un survol à 280 ms est mou, un
+   tiroir à 120 ms est un saut. Une valeur unique partout est le même défaut qu'un rayon
+   unique partout (S9).
+2. **La feuille consomme les tokens.** `transition: opacity var(--dur-ancre)
+   var(--ease-apparition)` — un littéral `200ms` alors que les tokens existent est un
+   contournement de la prescription, et R8 le dit.
+3. **La courbe canonique est déjà dans la forge.** `cubic-bezier(0.16, 1, 0.3, 1)` est celle
+   qu'`oracles/vendor/README.md` documente pour `Motion`. Elle n'est pas rejouée ici : un
+   troisième jeu de valeurs serait un troisième arbitre.
+
+Ce que ces tokens ne couvrent pas, et qui reste dû : la **finalité** de chaque animation
+(pourquoi ce geste bouge) et sa cohésion avec la personnalité du composant restent des
+jugements, déclarés `non_juge` par `oracle-motion`. Un token ne dispense pas de la question
+« ce mouvement sert à quoi ».
+
 ## Teinter les neutres
 
 Un chroma de 0.005 à 0.01 vers la hue de marque suffit à créer la cohésion entre la
@@ -117,10 +166,12 @@ vers la source DTCG est un reste consigné, pas une obligation de ce skill.
 
 `tokens.css` s'accompagne d'une page témoin qui consomme chaque token au moins une
 fois : titres, corps, texte faible, surface, trait, accent, état de focus, état
-d'erreur, table, formulaire. C'est elle qu'on passe à l'oracle.
+d'erreur, table, formulaire, **et au moins une transition par taille de geste**.
+C'est elle qu'on passe aux oracles.
 
 ```bash
 node oracles/oracle-tokens.mjs temoin.html --tokens tokens.css
+node oracles/oracle-motion.mjs temoin.html
 ```
 
 Sans page témoin, `tokens.css` n'est pas vérifiable : un token jamais consommé peut

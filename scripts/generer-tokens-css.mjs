@@ -59,6 +59,11 @@ function pileDePolices(valeur) {
 
 function valeurCss(noeud) {
   if (noeud.$type === 'fontFamily') return pileDePolices(noeud.$value);
+  if (noeud.$type === 'cubicBezier') {
+    const p = noeud.$value;
+    if (!Array.isArray(p) || p.length !== 4) throw new Error('token cubicBezier attend quatre nombres');
+    return `cubic-bezier(${p.join(', ')})`;
+  }
   return String(noeud.$value);
 }
 
@@ -72,7 +77,10 @@ function blocCouleurs(groupe, indent = '  ') {
 /**
  * Transforme un document DTCG (déjà parsé) en tokens.css.
  * Contrat de groupes attendu (voir corpus/tokens-digit-ai.tokens.json) :
- *   couleur.clair, couleur.sombre, typographie, rayon, espacement, alias.
+ *   couleur.clair, couleur.sombre, typographie, rayon, espacement, mouvement, alias.
+ * `mouvement` est émis SEULEMENT s'il est présent dans la source : une source
+ * antérieure à TF-0321 se régénère donc à l'octet près, et oracle-dtcg D3 ne
+ * requalifie aucun tokens.css existant.
  * Un alias { "$value": "{couleur.clair.bg}" } devient `var(--bg)` : le dernier
  * segment du chemin porte le nom de la custom property, quel que soit le thème
  * référencé dans la source — la résolution réelle se fait au runtime CSS via
@@ -88,6 +96,7 @@ export function genererCss(dtcg) {
   const typo = dtcg.typographie || {};
   const rayon = dtcg.rayon || {};
   const espacement = dtcg.espacement || {};
+  const mouvement = dtcg.mouvement || {};
   const alias = dtcg.alias || {};
 
   const lignesAlias = Object.entries(alias).map(([nom, noeud]) => {
@@ -101,6 +110,15 @@ export function genererCss(dtcg) {
   const lignesTypo = Object.entries(typo).map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n');
   const lignesRayon = Object.entries(rayon).map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n');
   const lignesEspace = Object.entries(espacement).map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n');
+
+  // Le mouvement se prescrit là où il se juge : ce bloc est ce que oracle-motion
+  // R4/R8/R9 lisent pour résoudre les durées d'une feuille (TF-0321). Groupe absent
+  // ⇒ bloc absent, à l'octet près : la sortie d'une source antérieure ne bouge pas.
+  const blocMouvement = Object.keys(mouvement).filter(k => !k.startsWith('$')).length
+    ? `\n  /* --- Mouvement : durées par taille de geste, easings nommés, seuils (oracle-motion R4/R8/R9) --- */\n`
+      + Object.entries(mouvement).filter(([k]) => !k.startsWith('$'))
+        .map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n') + '\n'
+    : '';
 
   const sombreUneLigle = Object.entries(sombre).filter(([k]) => !k.startsWith('$'))
     .map(([nom, noeud]) => `--${nom}: ${valeurCss(noeud)};`).join(' ');
@@ -130,7 +148,7 @@ ${lignesAlias}
 
   /* --- Échelle d'espacement 4pt (oracle-tokens T3) --- */
 ${lignesEspace}
-}
+${blocMouvement}}
 
 /* --- Thème sombre, dérivé --- */
 @media (prefers-color-scheme: dark) {
