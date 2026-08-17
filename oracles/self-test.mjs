@@ -101,10 +101,39 @@ const CAS = [
     rouge: [fx('corpus-rouge')],
   },
   {
+    // La fixture verte ne se contente plus d'éviter les sept refus : elle CONSOMME
+    // les tokens de mouvement du systeme-de-marque (TF-0321), donc elle prouve aussi
+    // que R4 sait résoudre var(--dur-…) — sans quoi prescrire proprement suffisait à
+    // rendre la règle aveugle. La rouge n'a aucune révocation : R10 s'y ajoute, et R8
+    // y prouve sa SECONDE branche — aucun token de mouvement déclaré, donc la feuille
+    // est signalée comme non prescrite au lieu d'être refusée (durcir ici aurait
+    // requalifié tout l'existant au lieu de le faire progresser).
     oracle: 'oracle-motion.mjs',
-    regles: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7'],
+    regles: ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R10'],
     verte: [fx('motion-verte.html')],
     rouge: [fx('motion-rouge.html')],
+  },
+  {
+    // TF-0321 : preuve dédiée du CÂBLAGE prescription ↔ jugement. La forge jugeait le
+    // mouvement (R1-R7, sept règles négatives) sans jamais le prescrire — la maquette
+    // était notée sur des valeurs que la marque n'avait pas fixées. Le craft du geste
+    // est irréprochable dans cette fixture ; seule la prescription est fautive :
+    // R9 sur un token à 500 ms et sur une courbe à dépassement, R8 sur une durée en
+    // dur alors que les tokens existent, R4 sur la durée résolue depuis le token.
+    oracle: 'oracle-motion.mjs',
+    regles: ['R4', 'R8', 'R9'],
+    verte: [fx('motion-verte.html')],
+    rouge: [fx('motion-prescription-rouge.html')],
+  },
+  {
+    // TF-0321 : preuve dédiée de la SECONDE branche de R10 — le bloc de révocation
+    // existe (un grep le trouve, et c'est exactement ce que check_maquette C4 faisait
+    // en avertissement) mais il ne neutralise aucun mouvement. Une révocation non
+    // câblée n'existe pas (loi n° 1).
+    oracle: 'oracle-motion.mjs',
+    regles: ['R10'],
+    verte: [fx('motion-verte.html')],
+    rouge: [fx('motion-revocation-rouge.html')],
   },
   {
     oracle: 'oracle-dtcg.mjs',

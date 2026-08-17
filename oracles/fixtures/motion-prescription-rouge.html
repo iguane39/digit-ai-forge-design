@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion R4/R8/R9 (prescription contournée et hors barème)</title>
+<style>
+  /* Preuve dédiée du CÂBLAGE prescription ↔ jugement (TF-0321). Le craft du geste
+     (R1, R2, R3, R5, R6, R7) est ici IRRÉPROCHABLE et la révocation est effective :
+     seule la prescription est fautive, pour que l'attribution soit sans ambiguïté. */
+  :root {
+    --dur-etat: 120ms;
+    --dur-local: 160ms;
+    --dur-ancre: 200ms;
+
+    /* R9 : la marque prescrirait 500 ms, exactement ce que R4 refuse à la feuille */
+    --dur-surface: 500ms;
+
+    --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* R9 : courbe à dépassement (y1 = 1.56) — rebond déguisé, prescrit cette fois */
+    --ease-rebond: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+    --echelle-entree: 0.96;
+  }
+
+  /* R4 : la durée est écrite proprement, en var() — et vaut tout de même 500 ms.
+     Sans résolution des tokens, la règle serait aveugle ici. */
+  .modal { opacity: 0; transform: scale(var(--echelle-entree)); }
+  .modal.ouverte { opacity: 1; transform: scale(1); transition: opacity var(--dur-surface) var(--ease-apparition); }
+
+  /* R8 : durée en dur alors que la feuille prescrit quatre tokens de durée.
+     240 ms tient sous le plafond : c'est bien le contournement qui est en cause,
+     pas la valeur. */
+  .card { transition: opacity 240ms var(--ease-apparition); }
+
+  /* Blocs sains : rien d'autre ne doit se déclencher */
+  .dropdown { transform: scale(var(--echelle-entree)); transform-origin: top left; transition: transform var(--dur-ancre) var(--ease-apparition); }
+  @media (hover: hover) {
+    .btn:hover { transform: translateY(-1px); transition: transform var(--dur-etat) var(--ease-apparition); }
+  }
+
+  /* Révocation présente et effective : R10 doit rester muet */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge — prescription de mouvement</h1>
+  <div class="card">carte</div>
+  <div class="modal ouverte">modale</div>
+  <div class="dropdown">menu déroulant</div>
+  <button class="btn">bouton</button>
+</body>
+</html>
