@@ -25,7 +25,7 @@ ni passation développeur. Conception complète : [conception-forge-design.md](c
 | **Rendu comparatif d'un correctif** | voir en une commande ce qu'un correctif ad hoc a changé au rendu, avant/après, et refuser mécaniquement ce qu'il a cassé | `node oracles\rendu-comparatif.mjs --avant <fichier\|url> --apres <fichier\|url> [--zone <sélecteur>]` | prouvé (experimental) |
 
 Le catalogue consolidé des dix forges vit chez le pilot :
-[digit-ai-forge-pilot/catalogues/CATALOGUES.md](https://github.com/iguane39/digit-ai-forge-pilot/blob/main/catalogues/CATALOGUES.md).
+[digit-ai-factory/catalogues/CATALOGUES.md](https://github.com/iguane39/digit-ai-factory/blob/main/catalogues/CATALOGUES.md).
 
 ## Structure
 
