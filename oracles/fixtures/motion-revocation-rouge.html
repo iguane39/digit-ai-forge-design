@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion R10 (révocation déclarée sans effet)</title>
+<style>
+  /* Preuve dédiée de la SECONDE branche de R10 : le bloc de révocation existe — un
+     grep « prefers-reduced-motion » le trouve, et c'est précisément ce que faisait
+     check_maquette C4 en avertissement — mais il ne neutralise AUCUN mouvement. Une
+     révocation non câblée n'existe pas (loi n° 1). Tout le reste de la feuille est
+     conforme : le craft du geste et la prescription sont irréprochables ici, pour que
+     R10 soit seule en cause. */
+  :root {
+    --dur-etat: 120ms;
+    --dur-ancre: 200ms;
+    --dur-surface: 280ms;
+    --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);
+    --echelle-entree: 0.96;
+  }
+
+  .card { transition: opacity var(--dur-ancre) var(--ease-apparition), transform var(--dur-ancre) var(--ease-apparition); }
+  .modal { opacity: 0; transform: scale(var(--echelle-entree)); }
+  .modal.ouverte { opacity: 1; transform: scale(1); transition: opacity var(--dur-surface) var(--ease-apparition); }
+  .dropdown { transform: scale(var(--echelle-entree)); transform-origin: top left; transition: transform var(--dur-ancre) var(--ease-apparition); }
+  @media (hover: hover) {
+    .btn:hover { transform: translateY(-1px); transition: transform var(--dur-etat) var(--ease-apparition); }
+  }
+
+  /* R10 : le bloc est là, il ne coupe rien. Aucune durée ramenée à ~0, aucune
+     transition ni animation neutralisée — seulement un défilement rendu instantané,
+     un demi-geste qui laisse passer tout le mouvement ci-dessus. */
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .parallaxe { background-attachment: scroll; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge — révocation du mouvement</h1>
+  <div class="card">carte</div>
+  <div class="modal ouverte">modale</div>
+  <div class="dropdown">menu déroulant</div>
+  <button class="btn">bouton</button>
+</body>
+</html>

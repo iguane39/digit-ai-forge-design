@@ -11,7 +11,9 @@
 | Breakpoints | 390 / 768 / 1024 / 1440 / 1920 px, portrait et paysage |
 | Remplissage | aucune colonne vide latérale, aucun vide vertical > 1 écran, largeur de ligne de texte ~70ch |
 | Mobile / tables | reflow en cartes obligatoire sous 768 px |
-| Motion | build UMD autonome de Motion (79 ko, v12.23.12) inliné depuis `oracles/vendor/` ; `transform` et `opacity` seulement ; `prefers-reduced-motion` respecté ; ni rebond ni élastique |
+| Motion | build UMD autonome de Motion (79 ko, v12.23.12) inliné depuis `oracles/vendor/` ; `transform` et `opacity` seulement ; ni rebond ni élastique |
+| Mouvement — durées | tokens `--dur-*` du système de marque, consommés par `var()` ; jamais un littéral, jamais au-delà de `--dur-plafond` (300 ms) — `oracle-motion` R4, R8, R9 |
+| Mouvement — révocation | bloc `@media (prefers-reduced-motion: reduce)` qui **neutralise vraiment** (durées à ~0, ou `transition`/`animation: none`) — **bloquant**, R10, repris en C4 par délégation |
 | Images | embarquées en base64, ≤ `IMAGES_MAX_KO`, tracées au `manifeste-images` : générées au build (`genere: true` — prompt, modèle, date) ou relevées sur mandat (`genere: false` — source, date de relevé) |
 | Cible mobile | châssis d'appareil, safe areas, cibles ≥ 44 px — voir `cadre-mobile.md` |
 | Favicon | `<link rel="icon">` obligatoire, `href` en `data:` uniquement — jamais absent, jamais chargé depuis le réseau |

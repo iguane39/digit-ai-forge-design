@@ -17,9 +17,14 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 
 PLAFOND_MO_DEFAUT = 10.0
+
+# oracles/oracle-motion.mjs, depuis skills/ameliore-le-design/scripts/
+ORACLE_MOTION = os.path.normpath(os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "..", "..", "oracles", "oracle-motion.mjs"))
 
 NON_JUGE = [
     "balisage porte par un script MINIFIE (bibliotheque vendoree) - decape avant "
@@ -32,6 +37,12 @@ NON_JUGE = [
     "qualite de la direction visuelle - jugement humain",
     "delimitation fiable des ecrans pour la coherence CTA (C15) - approximee a "
     "l'echelle du fichier, a confirmer par revue humaine",
+    "revocation du mouvement (C4) - DELEGUEE a oracles/oracle-motion.mjs R10, qui la "
+    "juge en regle bloquante avec ses fixtures : ce controle n'entretient pas un "
+    "second avis divergent (TF-0321)",
+    "craft du geste, bareme des tokens de mouvement et durees ecrites en dur "
+    "(oracle-motion R1-R9) - juges par cet oracle, non repris ici : seule la "
+    "question de la revocation remonte en C4",
 ]
 
 
@@ -166,6 +177,50 @@ def cible_de(element):
     return None
 
 
+def revocation_du_mouvement(chemin):
+    """C4 mouvement reduit : DELEGUE a oracle-motion R10 (TF-0321).
+
+    Le controle local etait un `grep prefers-reduced-motion` en avertissement. Deux
+    defauts : il validait un bloc qui ne neutralise rien (une revocation non cablee),
+    et il ne bloquait jamais. Plutot que d'entretenir un troisieme controle divergent
+    (oracle-motion R10, oracle-mobile M6, celui-ci), la question est posee a l'oracle
+    qui la juge, avec ses fixtures a double sens, et son verdict est repris en
+    BLOQUANT sous le critere C4.
+
+    Seule R10 est reprise : les neuf autres regles d'oracle-motion sont juges de
+    plein droit dans run-oracles-design, et les remonter ici elargirait ce controle
+    de parcours a un domaine qui n'est pas le sien.
+
+    Retourne (findings, motif_non_juge). Node absent ou sortie illisible => aucun
+    finding et un motif declare : un controle qui ne peut pas s'executer le dit, il
+    ne rend pas PASS par defaut.
+    """
+    if not os.path.exists(ORACLE_MOTION):
+        return [], ("revocation du mouvement (C4) - oracle-motion introuvable a %s : "
+                    "NON JUGEE, ni refusee ni validee" % ORACLE_MOTION)
+    try:
+        r = subprocess.run([  # noqa: S603 - chemin resolu, pas d'entree utilisateur
+            "node", ORACLE_MOTION, chemin, "--json-only"],
+            capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.SubprocessError) as e:
+        return [], ("revocation du mouvement (C4) - oracle-motion non executable "
+                    "(%s : %s) : NON JUGEE" % (type(e).__name__, e))
+    try:
+        sortie = json.loads((r.stdout or "").strip())
+    except ValueError:
+        return [], ("revocation du mouvement (C4) - sortie d'oracle-motion illisible "
+                    "(exit %s) : NON JUGEE" % r.returncode)
+    findings = []
+    for f in sortie.get("findings") or []:
+        if f.get("regle") != "R10":
+            continue
+        findings.append({
+            "critere": "C4", "gravite": "bloquant", "ou": f.get("where") or "motion",
+            "constat": "%s [oracle-motion R10]" % f.get("msg", "revocation du mouvement refusee"),
+        })
+    return findings, None
+
+
 def controler(chemin, plafond_mo):
     findings = []
     html = lire(chemin)
@@ -221,9 +276,10 @@ def controler(chemin, plafond_mo):
         })
 
     # Plancher d'accessibilite decidable statiquement
-    if not re.search(r"prefers-reduced-motion", html):
-        findings.append({"critere": "C4", "gravite": "avertissement", "ou": "motion",
-                         "constat": "prefers-reduced-motion absent"})
+    # C4 mouvement reduit : plus de grep local, l'oracle qui juge le mouvement tranche.
+    findings_motion, motif_motion = revocation_du_mouvement(chemin)
+    findings.extend(findings_motion)
+    non_juge = (NON_JUGE + [motif_motion]) if motif_motion else NON_JUGE
     if not re.search(r"@media\s+print", html):
         findings.append({"critere": "C1", "gravite": "avertissement", "ou": "print",
                          "constat": "feuille @media print absente"})
@@ -328,7 +384,7 @@ def controler(chemin, plafond_mo):
             "cta_sans_cible": len(sans_cible),
         },
         "findings": findings,
-        "non_juge": NON_JUGE,
+        "non_juge": non_juge,
     }
 
 

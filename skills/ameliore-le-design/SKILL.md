@@ -1,7 +1,7 @@
 ---
 name: ameliore-le-design
 description: Transforme une idée, une spécification, un design ou un produit web existant — URL, screenshot, fichier — en maquette navigable : redesign intégral et parcours d'écrans simulés (landing, connexion, tableau de bord, CRUD, catalogue, galerie, onboarding), cible web ou mobile, en un seul fichier HTML autonome, thèmes clair et sombre, zéro réseau. Deux fidélités, wireframe ou maquette. Use when / déclencher dès que l'utilisateur veut refondre, relooker, moderniser ou repenser le design d'un site ou d'une application, demande une maquette, un prototype cliquable ou une proposition visuelle à partir d'une URL, d'un screenshot ou d'un simple brief, ou veut montrer à un client ce que son produit pourrait devenir. Ne pas déclencher pour une page chartée Digit-AI (→ digit-ai-page-html), une fiche ou un schéma (→ digit-ai-fiches-html), poser les tokens (→ systeme-de-marque), arbitrer entre directions (→ studio-de-direction), ni auditer une appli en production (→ audite-et-corrige-l-appli).
-version: 2.0.0
+version: 2.1.0
 ---
 
 # Améliore le design
@@ -59,8 +59,14 @@ maison, 3D pré-calculée, polices en base64. Plafond : 10 Mo.
 
 **Le mouvement passe par Motion vendoré.** Build UMD autonome (79 ko, v12.23.12)
 inliné depuis `oracles/vendor/` — jamais `cdn.jsdelivr.net`. L'AI Kit sert à
-l'auteur, pas au livrable. `prefers-reduced-motion` traité, `transform` et
-`opacity` seulement.
+l'auteur, pas au livrable. `transform` et `opacity` seulement.
+
+**Le mouvement se prescrit avant de s'écrire.** Durées et courbes viennent des tokens
+`--dur-*` / `--ease-*` du système de marque, consommés par `var()` : une durée en dur
+alors que les tokens existent est refusée (`oracle-motion` R8), comme un token au-delà
+du plafond de 300 ms (R9). La révocation `prefers-reduced-motion` doit **neutraliser
+vraiment** — un `@media` présent mais sans effet est **bloquant** (R10, repris en C4
+par `check_maquette.py`, qui délègue au lieu de grepper).
 
 **Aucune donnée inventée non signalée.** Données de démonstration cohérentes et
 volumineuses, mais tout écran chiffré porte un bandeau permanent « Données de
