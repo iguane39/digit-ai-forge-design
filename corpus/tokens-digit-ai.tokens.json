@@ -1,5 +1,5 @@
 {
-  "$description": "tokens-digit-ai — mode « digit-ai » de systeme-de-marque. SOURCE au format W3C DTCG (stable 2025.10, https://www.designtokens.org/tr/drafts/format/). corpus/tokens-digit-ai.css est un DÉRIVÉ, régénéré par scripts/generer-tokens-css.mjs — ne pas éditer ce .css à la main, éditer ce .json puis régénérer.\nValeurs canoniques extraites de digit-ai-page-html/assets/boilerplate.html le 04/08/2026. La charte fait foi : ces valeurs ne sont pas retouchées ici.\nDEUX CONFLITS CONNUS AVEC LES ORACLES DE LA FORGE — déclarés, non masqués :\n 1. oracle-slop S4 se déclenche sur --card et --surface (#FFFFFF, blanc pur). La règle S4 vient d'impeccable (« pure black/white never appears in nature »). La charte Digit-AI la contredit frontalement. Arbitrage : sur un livrable Digit-AI, la charte gagne et le finding S4 est accepté comme exception déclarée dans la restitution. Sur un livrable client, le mode « client » s'applique et la question ne se pose pas.\n 2. La charte Digit-AI est light-theme only. oracle-tokens T4 exige la parité clair/sombre. Le bloc sombre ci-dessous est une EXTENSION de la forge, dérivée par recalcul de contraste — il ne figure dans aucune charte officielle. À faire valider avant tout usage client.",
+  "$description": "tokens-digit-ai — mode « digit-ai » de systeme-de-marque. SOURCE au format W3C DTCG (stable 2025.10, https://www.designtokens.org/tr/drafts/format/). corpus/tokens-digit-ai.css est un DÉRIVÉ, régénéré par scripts/generer-tokens-css.mjs — ne pas éditer ce .css à la main, éditer ce .json puis régénérer.\nValeurs canoniques extraites de digit-ai-page-html/assets/boilerplate.html le 04/08/2026. La charte fait foi : ces valeurs ne sont pas retouchées ici.\nDEUX CONFLITS CONNUS AVEC LES ORACLES DE LA FORGE — déclarés, non masqués :\n 1. oracle-slop S4 se déclenche sur --card et --surface (#FFFFFF, blanc pur). La règle S4 vient d'impeccable (« pure black/white never appears in nature »). La charte Digit-AI la contredit frontalement. Arbitrage : sur un livrable Digit-AI, la charte gagne et le finding S4 est accepté comme exception déclarée dans la restitution. Sur un livrable client, le mode « client » s'applique et la question ne se pose pas.\n 2. La charte Digit-AI est light-theme only. oracle-tokens T4 exige la parité clair/sombre. Le bloc sombre ci-dessous est une EXTENSION de la forge, dérivée par recalcul de contraste — il ne figure dans aucune charte officielle. À faire valider avant tout usage client.\nMOUVEMENT (TF-0321) : le groupe « mouvement » PRESCRIT ce que oracles/oracle-motion.mjs juge. Ses valeurs sont dérivées des règles R1-R7, pas choisies : le plafond de 300 ms est celui de R4, l'échelle d'entrée de 0.96 est la fourchette 0.95-0.97 de R2, les trois courbes décélèrent sans dépassement (R3, et slop S8 sur le rebond déguisé). Prescription et jugement partagent donc le même seuil ; changer l'un sans l'autre est un défaut, pas un réglage. Le mouvement ne dépend pas du thème : un seul jeu, aucun jumeau sombre (T4 ne porte que sur la couleur).",
   "couleur": {
     "clair": {
       "bg":         { "$type": "color", "$value": "#FAFBFF" },
@@ -56,6 +56,17 @@
     "espace-lg":  { "$type": "dimension", "$value": "24px" },
     "espace-xl":  { "$type": "dimension", "$value": "32px" },
     "espace-2xl": { "$type": "dimension", "$value": "48px" }
+  },
+  "mouvement": {
+    "dur-etat":         { "$type": "duration", "$value": "120ms" },
+    "dur-local":        { "$type": "duration", "$value": "160ms" },
+    "dur-ancre":        { "$type": "duration", "$value": "200ms" },
+    "dur-surface":      { "$type": "duration", "$value": "280ms" },
+    "dur-plafond":      { "$type": "duration", "$value": "300ms" },
+    "ease-apparition":  { "$type": "cubicBezier", "$value": [0.16, 1, 0.3, 1] },
+    "ease-disparition": { "$type": "cubicBezier", "$value": [0.4, 0, 1, 1] },
+    "ease-deplacement": { "$type": "cubicBezier", "$value": [0.4, 0, 0.2, 1] },
+    "echelle-entree":   { "$type": "number", "$value": 0.96 }
   },
   "alias": {
     "fond":           { "$value": "{couleur.clair.bg}" },

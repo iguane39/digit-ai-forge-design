@@ -1,7 +1,7 @@
 ---
 name: systeme-de-marque
-description: Verrouille l'identité visuelle et verbale d'une marque en artefacts exécutables — un tokens.css (couleurs OKLCH, échelle typographique, espacement 4pt, thèmes clair et sombre) et un MARQUE.md (voix, ton, vocabulaire, anti-références) — réutilisés ensuite par tous les livrables produits pour ce client. Use when / déclencher dès que l'utilisateur veut poser, extraire, figer ou documenter la charte d'un client, demande des tokens de design, une palette, un choix de polices ou une ligne éditoriale à partir d'un logo, d'un site, d'une charte PDF ou de trois mots de ton, ou veut que plusieurs livrables partagent la même identité. Ne pas déclencher pour appliquer la charte Digit-AI maison (→ digit-ai-page-html, digit-ai-pptx), pour arbitrer entre plusieurs directions artistiques concurrentes (→ studio-de-direction), ni pour construire une maquette (→ ameliore-le-design).
-version: 1.2.0
+description: Verrouille l'identité visuelle et verbale d'une marque en artefacts exécutables — un tokens.css (couleurs OKLCH, échelle typographique, espacement 4pt, mouvement — durées et easings, thèmes clair et sombre) et un MARQUE.md (voix, ton, vocabulaire, anti-références) — réutilisés ensuite par tous les livrables produits pour ce client. Use when / déclencher dès que l'utilisateur veut poser, extraire, figer ou documenter la charte d'un client, demande des tokens de design, une palette, un choix de polices ou une ligne éditoriale à partir d'un logo, d'un site, d'une charte PDF ou de trois mots de ton, ou veut que plusieurs livrables partagent la même identité. Ne pas déclencher pour appliquer la charte Digit-AI maison (→ digit-ai-page-html, digit-ai-pptx), pour arbitrer entre plusieurs directions artistiques concurrentes (→ studio-de-direction), ni pour construire une maquette (→ ameliore-le-design).
+version: 1.3.0
 ---
 
 # Système de marque
@@ -27,6 +27,7 @@ des deux artefacts, et le fait que la sortie soit **jugée par oracle**, pas rel
 3. Proposition   → python corpus/recherche.py "<secteur> <cible> <ton>" --systeme-de-design
 4. Artefacts     → references/tokens.md + references/voix.md
 5. Contrôle      → node oracles/oracle-tokens.mjs <page-témoin.html> --tokens tokens.css
+                   node oracles/oracle-motion.mjs <page-témoin.html>  (mouvement prescrit)
 6. DESIGN.md     → node scripts/generer-design-md.mjs --tokens tokens.css --marque MARQUE.md
                    [--nom <Produit>] --sortie DESIGN.md
 7. Restitution   → les trois fichiers + ce qui a été supposé
@@ -73,6 +74,12 @@ dessous de L = 0.15, un chroma supérieur à 0.10 rend criard. Vérifié par
 **Aucune police de la liste réflexe.** Les 22 familles bannies par `impeccable`
 sont refusées à l'entrée, y compris si le client les demande — auquel cas on le dit
 et on propose l'équivalent le plus proche hors liste, sans trancher à sa place.
+
+**Aucun mouvement sans token.** Les durées et les courbes se prescrivent dans
+`tokens.css` (`--dur-*`, `--ease-*`, `--echelle-entree`) et la feuille les consomme
+par `var()`. Une durée écrite en dur alors que les tokens existent est un
+contournement, pas un raccourci : `oracle-motion` R8 le refuse, et R9 refuse un token
+au-delà du plafond de 300 ms. Le mouvement n'a pas de jumeau sombre — un seul jeu.
 
 **Aucun ✓ sans exécution.** `oracle-tokens` tourne sur une page témoin avant toute
 restitution, et son verdict est reporté tel quel, `non_juge` compris.
