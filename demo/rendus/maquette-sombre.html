@@ -145,6 +145,10 @@ code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
   border-radius: var(--rayon-md);
   color: var(--texte-principal); text-decoration: none;
 }
+.rail-entete { display: flex; align-items: center; justify-content: space-between;
+  gap: var(--espace-sm); flex-wrap: wrap; margin-bottom: var(--espace-md); }
+.rail-entete .marque { margin: 0; }
+
 @media (hover: hover) and (pointer: fine) {
   .rail nav a:hover { background: var(--fond-creux); }
 }
@@ -321,7 +325,12 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
 
 <div class="enveloppe">
   <aside class="rail">
-    <div class="marque">Bailleur — Interventions</div>
+    <header class="rail-entete">
+      <div class="marque">Bailleur — Interventions</div>
+      <button class="btn btn-discret theme-toggle" id="bascule-theme" type="button"
+              data-theme-toggle aria-pressed="false"
+              aria-label="Basculer le thème (auto, clair, sombre)">Thème : auto</button>
+    </header>
     <nav aria-label="Navigation principale">
       <a href="#tableau-de-bord" data-nav="tableau-de-bord">Tableau de bord</a>
       <a href="#demandes" data-nav="demandes">Demandes</a>
@@ -332,9 +341,6 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
     </nav>
     <p>
       <button class="btn btn-discret" id="bascule-densite" type="button">Densité : confortable</button>
-    </p>
-    <p>
-      <button class="btn btn-discret" id="bascule-theme" type="button">Thème : auto</button>
     </p>
   </aside>
 
@@ -630,6 +636,36 @@ document.addEventListener("input", (e) => {
   if (e.target.id === "recherche") { ETAT.filtre = e.target.value; rendre(); document.getElementById("recherche").focus(); }
 });
 
+function appliquerTheme(theme, bouton) {
+  document.documentElement.setAttribute("data-theme", theme);
+  // TF-0361 — le choix SURVIT au rechargement. Une bascule qui oublie fait re-choisir le
+  // lecteur à chaque page : le geste existe, le réglage non.
+  try { localStorage.setItem("digitai-theme", theme); } catch (err) { /* stockage refusé */ }
+  const cible = bouton || document.getElementById("bascule-theme");
+  if (cible) {
+    cible.textContent = "Thème : " + theme;
+    cible.setAttribute("aria-pressed", theme === "dark" ? "true" : "false");
+  }
+}
+
+(function () {
+  let stocke = null;
+  try { stocke = localStorage.getItem("digitai-theme"); } catch (err) { /* stockage refusé */ }
+  if (stocke) appliquerTheme(stocke);
+
+  // TF-0361 — écouteur attaché à CE bouton, pas seulement délégué sur `document`. La
+  // délégation marche, mais elle rend le câblage indémontrable : ni un lecteur ni un oracle
+  // ne peut répondre « ce bouton est-il câblé ? » sans dérouler tout le gestionnaire global.
+  const bouton = document.getElementById("bascule-theme");
+  if (bouton) {
+    bouton.addEventListener("click", function () {
+      const ordre = ["auto", "light", "dark"];
+      const courant = document.documentElement.getAttribute("data-theme");
+      appliquerTheme(ordre[(ordre.indexOf(courant) + 1) % 3], bouton);
+    });
+  }
+})();
+
 document.addEventListener("click", (e) => {
   const tri = e.target.closest("[data-tri]");
   if (tri) {
@@ -647,12 +683,6 @@ document.addEventListener("click", (e) => {
     if (a === "feuille-ouvrir") { ETAT.feuilleOuverte = true; rendre(); }
     if (a === "feuille-fermer") { ETAT.feuilleOuverte = false; rendre(); }
     return;
-  }
-  if (e.target.id === "bascule-theme") {
-    const ordre = ["auto", "light", "dark"];
-    const suivant = ordre[(ordre.indexOf(document.documentElement.getAttribute("data-theme")) + 1) % 3];
-    document.documentElement.setAttribute("data-theme", suivant);
-    e.target.textContent = "Thème : " + suivant;
   }
   if (e.target.id === "bascule-densite") {
     ETAT.densite = ETAT.densite === "compact" ? "confortable" : "compact";
