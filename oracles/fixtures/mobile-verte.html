@@ -19,7 +19,8 @@
 
   .ecran { min-height: 100dvh; }
 
-  .carte { transition: transform .28s cubic-bezier(.16, 1, .3, 1); }
+  :root { --dur-normale: 280ms; --ease-sortie: cubic-bezier(.16, 1, .3, 1); }
+  .carte { transition: transform var(--dur-normale) var(--ease-sortie); }
 
   /* reflow des tables en cartes sous 768 px */
   @media (max-width: 768px) {

@@ -40,13 +40,22 @@ la mention « 2,3 ko » a été corrigée dans le contrat technique, où elle é
   const { animate, scroll, inView } = Motion;
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     animate('.carte', { opacity: [0, 1], transform: ['translateY(8px)', 'none'] },
-            { duration: 0.4, easing: [0.16, 1, 0.3, 1] });
+            { duration: 0.24, easing: [0.16, 1, 0.3, 1] });
   }
 </script>
 ```
 
 Jamais de `<script src="https://cdn.jsdelivr.net/...">` dans le livrable :
 `check_maquette.py` refuse toute URL absolue chargée.
+
+**La durée de l'exemple tient sous le plafond de la forge — 300 ms** (`PLAFOND_MS` de
+`oracles/oracle-motion.mjs`, la même valeur que `--dur-plafond` de `systeme-de-marque`).
+L'exemple portait `duration: 0.4` : 400 ms, au-dessus du plafond que R4 et R9 opposent à
+toute feuille de style. Et il y échappait doublement — `oracle-motion` ne juge que le CSS,
+les durées passées à `animate()` sont déclarées non jugées. Un exemple non jugé qui enseigne
+exactement ce que l'oracle refuse est pire qu'une règle absente : il fabrique la dérive avec
+l'autorité de la documentation. **Ce que la forge ne peut pas mesurer, elle doit au moins
+l'écrire juste.** (TF-0335, 18/08/2026)
 
 ### Vérifier l'empreinte
 

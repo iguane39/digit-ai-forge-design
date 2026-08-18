@@ -1,5 +1,6 @@
 {
   "file": "demo\\rendus\\maquette-sombre.html",
+  "png_dir": "demo\\rendus",
   "breakpoints": {
     "1920": {
       "png": "demo\\rendus\\maquette-sombre-w1920.png",
@@ -8,7 +9,14 @@
         "v2_contrast": [],
         "v3_align": [],
         "v4_overlap": [],
-        "v7_spacing": [],
+        "v7_spacing": [
+          {
+            "what": "3×section dans main#contenu-principal « Tableau de bord Semaine du 28 juillet au… »",
+            "detail": "espaces de 32 / 24px"
+          }
+        ],
+        "l2_width": [],
+        "l2_gouttiere": [],
         "unmeasured": []
       },
       "blocking": 0
@@ -20,7 +28,14 @@
         "v2_contrast": [],
         "v3_align": [],
         "v4_overlap": [],
-        "v7_spacing": [],
+        "v7_spacing": [
+          {
+            "what": "3×section dans main#contenu-principal « Tableau de bord Semaine du 28 juillet au… »",
+            "detail": "espaces de 32 / 24px"
+          }
+        ],
+        "l2_width": [],
+        "l2_gouttiere": [],
         "unmeasured": []
       },
       "blocking": 0
@@ -32,7 +47,14 @@
         "v2_contrast": [],
         "v3_align": [],
         "v4_overlap": [],
-        "v7_spacing": [],
+        "v7_spacing": [
+          {
+            "what": "3×section dans main#contenu-principal « Tableau de bord Semaine du 28 juillet au… »",
+            "detail": "espaces de 32 / 24px"
+          }
+        ],
+        "l2_width": [],
+        "l2_gouttiere": [],
         "unmeasured": []
       },
       "blocking": 0
@@ -46,10 +68,12 @@
         "v4_overlap": [],
         "v7_spacing": [
           {
-            "what": "3×span dans div.kpi « Délai moyen de prise en charge4,2 j−0,6 … »",
-            "detail": "écarts de 47 / 67px"
+            "what": "3×section dans main#contenu-principal « Tableau de bord Semaine du 28 juillet au… »",
+            "detail": "espaces de 32 / 24px"
           }
         ],
+        "l2_width": [],
+        "l2_gouttiere": [],
         "unmeasured": []
       },
       "blocking": 0
@@ -61,7 +85,14 @@
         "v2_contrast": [],
         "v3_align": [],
         "v4_overlap": [],
-        "v7_spacing": [],
+        "v7_spacing": [
+          {
+            "what": "3×section dans main#contenu-principal « Tableau de bord Semaine du 28 juillet au… »",
+            "detail": "espaces de 32 / 24px"
+          }
+        ],
+        "l2_width": [],
+        "l2_gouttiere": [],
         "unmeasured": []
       },
       "blocking": 0

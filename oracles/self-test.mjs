@@ -298,6 +298,19 @@ for (const cas of CAS) {
   ligne(Array.isArray(r.json?.non_juge) && r.json.non_juge.length > 0, 'non_juge déclaré et non vide');
 }
 
+// TF-0335 — le générateur de DESIGN.md n'est pas un oracle (il ne rend pas de verdict), mais
+// c'est un exécutable de ce dépôt, et le seul qui n'avait aucun verrou. Sa régression ne se
+// serait vue qu'en AVAL, chez forge-development, sur un produit réel. Il est donc joué ici :
+// un contrôle que rien ne lance n'est pas un garde-fou.
+{
+  console.log(String.fromCharCode(10) + 'skills/systeme-de-marque/scripts/generer-design-md.mjs');
+  const r = spawnSync(process.execPath,
+    [path.join(ici, '..', 'skills', 'systeme-de-marque', 'scripts', 'self-test.mjs')],
+    { encoding: 'utf8' });
+  const derniere = ((r.stdout || '').trim().split(String.fromCharCode(10)).pop() || '').trim();
+  ligne(r.status === 0, `self-test du générateur · exit 0 (obtenu ${r.status}) — ${derniere}`);
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
