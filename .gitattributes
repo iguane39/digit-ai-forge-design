@@ -1,0 +1,8 @@
+# Le bundle Motion vendoré est vérifié par EMPREINTE sha256 au build
+# (`demo/build.mjs`, `oracles/vendor/README.md`). Une conversion de fin de ligne
+# à la sortie de git change son sha et fait ÉCHOUER le build : constaté le
+# 18/08/2026 sur poste Windows — `core.autocrlf` avait transformé l'unique `\n`
+# du fichier en `\r\n`, sha obtenu df0ca73… au lieu de cbaccc5c…, et la forge ne
+# savait plus reconstruire sa propre démo. Un artefact jugé à l'octet près se
+# déclare binaire, sinon son empreinte ne veut rien dire.
+oracles/vendor/*.js -text

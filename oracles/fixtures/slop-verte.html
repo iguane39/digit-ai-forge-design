@@ -11,6 +11,11 @@
     --surface: #e9e5dc;
     --trait: #cfc9bd;
     --signal: #8a4b2a;
+    /* TF-0335 — cette fixture est VERTE pour oracle-slop, et elle doit l être aussi seule
+       sous oracle-motion : une fixture verte qui échoue à un autre oracle du même dépôt
+       est du bruit de fond, la maladie que TF-0228 a coûté cher à éteindre. */
+    --dur-normale: 280ms;
+    --ease-sortie: cubic-bezier(.16, 1, .3, 1);
   }
   body {
     font-family: "Source Serif 4", Georgia, serif;
@@ -29,7 +34,12 @@
   .bouton { border-radius: 2px; }
 
   /* décélération exponentielle, sans dépassement */
-  .carte { transition: transform .28s cubic-bezier(.16, 1, .3, 1); }
+  .carte { transition: transform var(--dur-normale) var(--ease-sortie); }
+
+  /* R10 — la révocation, trois lignes, WCAG 2.2 SC 2.3.3. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  }
 </style>
 </head>
 <body>
