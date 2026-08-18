@@ -39,6 +39,10 @@
 
   --rayon-sm: 2px; --rayon-md: 6px; --rayon-lg: 14px;
   --densite: 12px;
+  /* Mouvement — PRESCRIT, jamais improvise (TF-0321) : la duree vit dans un token,
+     sous le plafond de 300 ms que R4/R9 opposent a la feuille comme au bareme. */
+  --dur-rapide: 120ms; --dur-normale: 180ms;
+  --ease-sortie: cubic-bezier(.16, 1, .3, 1);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -141,7 +145,9 @@ code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
   border-radius: var(--rayon-md);
   color: var(--texte-principal); text-decoration: none;
 }
-.rail nav a:hover { background: var(--fond-creux); }
+@media (hover: hover) and (pointer: fine) {
+  .rail nav a:hover { background: var(--fond-creux); }
+}
 .rail nav a[aria-current="page"] { background: var(--accent); color: var(--accent-contraste); }
 .contenu { padding: var(--espace-xl); min-width: 0; }
 .entete-page { display: flex; flex-wrap: wrap; gap: var(--espace-md); align-items: baseline; margin-bottom: var(--espace-xl); }
@@ -155,9 +161,13 @@ code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
   border: 1px solid var(--accent); border-radius: var(--rayon-md);
   background: var(--accent); color: var(--accent-contraste);
   font: inherit; font-size: var(--texte-sm); cursor: pointer;
-  transition: transform .18s cubic-bezier(.16, 1, .3, 1);
+  transition: transform var(--dur-normale) var(--ease-sortie);
 }
-.btn:hover { transform: translateY(-1px); }
+/* R7 — sur tactile, l etat hover COLLE apres le tap : une animation de survol se garde.
+   `:active`, lui, n est pas un survol et reste hors du garde. */
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { transform: translateY(-1px); }
+}
 .btn:active { transform: translateY(0); }
 .btn[disabled] { opacity: .5; cursor: not-allowed; }
 .btn-fantome { background: transparent; color: var(--accent); }
@@ -203,7 +213,9 @@ caption { text-align: left; color: var(--texte-faible); padding-bottom: var(--es
 th, td { text-align: left; padding: var(--densite) var(--espace-md); border-bottom: 1px solid var(--trait); }
 thead th { background: var(--fond-creux); font-weight: 600; vertical-align: top; }
 thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-height: 44px; }
-tbody tr:hover { background: var(--fond-creux); }
+@media (hover: hover) and (pointer: fine) {
+  tbody tr:hover { background: var(--fond-creux); }
+}
 .tri { background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 0; min-height: 44px; }
 .rang-tri { color: var(--texte-faible); font-size: var(--texte-xs); }
 
