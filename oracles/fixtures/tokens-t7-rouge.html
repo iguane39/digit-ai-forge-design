@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T7 contraste non textuel</title>
+<!--
+  TF-0409, option O4. T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11) des traits
+  d'interface posés sur leur surface : bordure, contour. Seuil 3:1, pas 4.5:1.
+
+  Deux frontières sont DÉCLARÉES nécessaires par --paires-interface — l'auteur prend la
+  responsabilité de dire qu'elles identifient un composant, donc T7 les juge DUREMENT :
+    --trait-champ sur --fond      : #595f6b sur #ffffff → 5.92:1
+    --trait-actif sur --fond-carte : #2b5fd9 sur #f2f4f8 → 4.63:1
+
+  Le --trait-decor, lui, n'est pas déclaré : il reste mesuré et signalé en avertissement,
+  son rôle non jugé. C'est la différence exacte entre les deux fixtures.
+
+  Seule différence avec la fixture verte : --trait-champ passe de #595f6b (5.92:1) à #dfe2e7
+  (1.20:1). La frontière reste DÉCLARÉE nécessaire — c'est la déclaration qui rend l'écart
+  DUR, et le seuil de 3:1 est intact.
+
+  Attendu : FAIL, exit 1, sur T7 et sur lui seul.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #f2f4f8;
+    --texte: #1b1f26;
+    --trait-champ: #dfe2e7;
+    --trait-actif: #2b5fd9;
+    --trait-decor: #e8eaee;
+    --police-corps: "Source Serif 4", Georgia, serif;
+    --paires-interface: --trait-champ sur --fond, --trait-actif sur --fond-carte;
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .champ { background: var(--fond); color: var(--texte); border: 1px solid var(--trait-champ); padding: 8px; }
+  .carte { background: var(--fond-carte); color: var(--texte); border: 2px solid var(--trait-actif); padding: 16px; }
+  .filet { border-top: 1px solid var(--trait-decor); }
+</style>
+</head>
+<body>
+  <h1>Demande d'intervention</h1>
+  <div class="carte">
+    <label for="objet">Objet</label>
+    <input class="champ" id="objet" type="text">
+  </div>
+  <hr class="filet">
+</body>
+</html>

@@ -73,6 +73,38 @@ const TOKENS_CONTRASTE_FAIBLE = TOKENS_COMPLET.replace("--texte: #171a21;", "--t
 
 const TOKENS_SANS_ACCENT = TOKENS_COMPLET.replace(/\s*--accent: #8a4b2a;\n/, "\n");
 
+// --- TF-0409 : les fixtures d'accessibilité. Chacune ne diffère du cas vert que par LA
+// valeur fautive — c'est ce qui prouve que le refus porte sur elle et sur rien d'autre.
+
+// Un thème sombre déclaré et illisible : jusqu'ici jamais lu par le générateur.
+const BLOC_SOMBRE_OK = `
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #d59a6e;
+    --texte: #eef0f4;
+    --texte-faible: #b6bcc6;
+    --fond: #171a21;
+    --surface: #21252d;
+  }
+}
+`;
+const TOKENS_SOMBRE_OK = TOKENS_COMPLET + BLOC_SOMBRE_OK;
+// … le même sombre, texte gris moyen sur fond sombre : 2.5:1 environ.
+const TOKENS_SOMBRE_FAIBLE = TOKENS_COMPLET + BLOC_SOMBRE_OK.replace("--texte: #eef0f4;", "--texte: #5a606a;");
+// Sombre déclaré par la seule bascule explicite : c'est aussi un thème sombre livré.
+const TOKENS_SOMBRE_BASCULE_FAIBLE = TOKENS_COMPLET
+  + ':root[data-theme="dark"] { --texte: #5a606a; --fond: #171a21; --surface: #21252d; --accent: #d59a6e; }\n';
+
+// Accent pâle : le texte reste lisible (T5 vert), mais l'ÉLÉMENT D'INTERFACE tombe sous 3:1.
+const TOKENS_ACCENT_PALE = TOKENS_COMPLET.replace("--accent: #8a4b2a;", "--accent: #e0c3ae;");
+
+// Focus prescrit, et prescrit trop pâle : l'anneau existe et ne se voit pas.
+const TOKENS_AVEC_FOCUS = TOKENS_COMPLET.replace(
+  "--accent: #8a4b2a;",
+  "--accent: #8a4b2a;\n  --focus-anneau: #8a4b2a;\n  --focus-decalage: 2px;",
+);
+const TOKENS_FOCUS_PALE = TOKENS_AVEC_FOCUS.replace("--focus-anneau: #8a4b2a;", "--focus-anneau: #e6d8cd;");
+
 const MARQUE = `# Marque — Atelier Ferrand
 
 ## Direction
@@ -141,6 +173,30 @@ try {
     "le générateur a écrit une valeur que la marque n'a pas fixée",
   );
 
+  // --- 3 bis · accessibilité PRESCRITE, jamais affirmée (TF-0409, option O4 RGAA) ------------
+  console.log("\nfocus : prescrit et mesuré, ou limite écrite — jamais affirmé sans token");
+  ok(
+    "sans token de focus, la charte n'AFFIRME plus « États focus visibles au clavier »",
+    !doc.includes("États focus visibles au clavier"),
+    "le générateur affirme une accessibilité que la marque n'a pas fixée",
+  );
+  ok("… elle écrit la limite et cite RGAA 10.7", doc.includes("aucun** token de focus") && doc.includes("RGAA 10.7"));
+
+  const tokensFocus = ecrire("tokens-focus.css", TOKENS_AVEC_FOCUS);
+  const sortieFocus = join(atelier, "DESIGN-focus.md");
+  const rf = lancer(["--tokens", tokensFocus, "--marque", marque, "--sortie", sortieFocus]);
+  ok("focus prescrit et contrasté → exit 0", rf.status === 0, `obtenu ${rf.status} · ${rf.stderr.trim()}`);
+  const docFocus = existsSync(sortieFocus) ? readFileSync(sortieFocus, "utf8") : "";
+  ok("… l'anneau est publié avec son ratio mesuré", /anneau `--focus-anneau` \(#8a4b2a\), mesuré\n5\.96:1/.test(docFocus));
+  ok("… et la feuille est invitée à CONSOMMER les tokens", docFocus.includes("outline-offset: var(--focus-decalage)"));
+
+  const tokensSombreOk = ecrire("tokens-sombre-ok.css", TOKENS_SOMBRE_OK);
+  const sortieSombreOk = join(atelier, "DESIGN-sombre.md");
+  const rso = lancer(["--tokens", tokensSombreOk, "--marque", marque, "--sortie", sortieSombreOk]);
+  ok("thème sombre conforme → exit 0", rso.status === 0, `obtenu ${rso.status} · ${rso.stderr.trim()}`);
+  ok("… et le ratio du thème sombre est MESURÉ, pas supposé",
+    readFileSync(sortieSombreOk, "utf8").includes("Thème sombre mesuré lui aussi"));
+
   // --- 4 · les refus. Un générateur se juge sur ce qu'il refuse d'écrire ---------------------
   console.log("\nles refus");
   const tokensFaibles = ecrire("tokens-contraste.css", TOKENS_CONTRASTE_FAIBLE);
@@ -149,6 +205,38 @@ try {
   ok("contraste < 4.5:1 → exit 2", rc.status === 2, `obtenu ${rc.status}`);
   ok("… et RIEN n'est écrit : une charte inaccessible ne se livre pas", !existsSync(sortieFaible));
   ok("… le motif nomme le ratio mesuré", /contraste texte\/fond \d+\.\d+:1/.test(rc.stderr));
+
+  // TF-0409 · le sombre était un angle mort complet : jamais lu, donc jamais refusé.
+  const tokensSombreFaible = ecrire("tokens-sombre-faible.css", TOKENS_SOMBRE_FAIBLE);
+  const sortieSombreFaible = join(atelier, "DESIGN-sombre-inaccessible.md");
+  const rs = lancer(["--tokens", tokensSombreFaible, "--marque", marque, "--sortie", sortieSombreFaible]);
+  ok("thème sombre sous 4.5:1 → exit 2", rs.status === 2, `obtenu ${rs.status}`);
+  ok("… et RIEN n'est écrit : un thème illisible sur deux suffit à refuser", !existsSync(sortieSombreFaible));
+  ok("… le motif nomme le thème ET le ratio", /contraste texte\/fond du thème sombre \d+\.\d+:1/.test(rs.stderr));
+
+  const tokensBascule = ecrire("tokens-sombre-bascule.css", TOKENS_SOMBRE_BASCULE_FAIBLE);
+  const sortieBascule = join(atelier, "DESIGN-bascule.md");
+  const rb = lancer(["--tokens", tokensBascule, "--marque", marque, "--sortie", sortieBascule]);
+  ok("sombre déclaré par la seule bascule [data-theme=dark] → refusé aussi", rb.status === 2, `obtenu ${rb.status}`);
+  ok("… et RIEN n'est écrit", !existsSync(sortieBascule));
+
+  // TF-0409 · le ratio de l'accent était publié SANS seuil opposé : un chiffre, aucun refus.
+  const tokensAccentPale = ecrire("tokens-accent-pale.css", TOKENS_ACCENT_PALE);
+  const sortieAccentPale = join(atelier, "DESIGN-accent-pale.md");
+  const rap = lancer(["--tokens", tokensAccentPale, "--marque", marque, "--sortie", sortieAccentPale]);
+  ok("accent sous 3:1 (élément d'interface) → exit 2", rap.status === 2, `obtenu ${rap.status}`);
+  ok("… et RIEN n'est écrit", !existsSync(sortieAccentPale));
+  ok("… le motif nomme le ratio et le critère", /contraste accent\/fond \d+\.\d+:1 < 3:1/.test(rap.stderr)
+    && rap.stderr.includes("1.4.11"));
+
+  // TF-0409 · un anneau prescrit mais invisible est pire qu'un anneau absent : la charte
+  // l'aurait publié comme une garantie.
+  const tokensFocusPale = ecrire("tokens-focus-pale.css", TOKENS_FOCUS_PALE);
+  const sortieFocusPale = join(atelier, "DESIGN-focus-pale.md");
+  const rfp = lancer(["--tokens", tokensFocusPale, "--marque", marque, "--sortie", sortieFocusPale]);
+  ok("anneau de focus sous 3:1 → exit 2", rfp.status === 2, `obtenu ${rfp.status}`);
+  ok("… et RIEN n'est écrit", !existsSync(sortieFocusPale));
+  ok("… le motif nomme le ratio de l'anneau", /contraste anneau de focus\/fond \d+\.\d+:1 < 3:1/.test(rfp.stderr));
 
   const tokensSansAccent = ecrire("tokens-sans-accent.css", TOKENS_SANS_ACCENT);
   const sortieSansAccent = join(atelier, "DESIGN-sans-accent.md");

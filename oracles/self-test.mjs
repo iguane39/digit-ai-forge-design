@@ -68,6 +68,29 @@ const CAS = [
     rouge: [fx('tokens-t5-rouge.html')],
   },
   {
+    // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
+    // sous 3:1 est mesuré et signalé ; il ne devient un écart DUR que si l'auteur DÉCLARE la
+    // frontière nécessaire par --paires-interface — WCAG n'exige 3:1 que des frontières qui
+    // identifient un composant ou son état, et aucune lecture de CSS ne distingue une bordure
+    // décorative d'une frontière nécessaire. Les deux fixtures ne diffèrent que par la valeur
+    // de --trait-champ (5.92:1 → 1.20:1), la déclaration étant identique.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T7'],
+    verte: [fx('tokens-t7-verte.html')],
+    rouge: [fx('tokens-t7-rouge.html')],
+  },
+  {
+    // TF-0409, O4 : T8 refuse DEUX choses — poser un focus sans le prescrire, et prescrire un
+    // anneau qu'on ne voit pas. La rouge porte les trois branches : focus improvisé (un token
+    // qui n'est pas un token de focus), anneau sous 3:1 sur chaque surface du thème, et
+    // --focus-decalage nul. Ce qu'elle NE fait pas : réclamer des tokens de focus à un fichier
+    // qui n'en pose aucun — mettre en échec tout l'existant ferait désactiver la règle.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-verte.html')],
+    rouge: [fx('tokens-t8-rouge.html')],
+  },
+  {
     oracle: 'oracle-mobile.mjs',
     regles: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'],
     verte: [fx('mobile-verte.html')],

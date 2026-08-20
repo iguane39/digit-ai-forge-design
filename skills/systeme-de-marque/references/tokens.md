@@ -11,6 +11,12 @@
   --texte: oklch(0.22 0.020 45);
   --texte-faible: oklch(0.45 0.020 45);
   --accent: oklch(0.52 0.140 45);
+  --accent-contraste: oklch(0.98 0.004 45); /* texte posé SUR --accent — ≥ 4.5:1 contre lui */
+
+  /* Focus — un anneau, sa couleur et son écart. Prescrit parce qu'il est jugé :
+     RGAA 10.7 / WCAG 2.4.7 (focus visible), 1.4.11 (contraste non textuel). */
+  --focus-anneau: oklch(0.52 0.140 45);   /* ≥ 3:1 contre --fond ET contre --surface */
+  --focus-decalage: 2px;                  /* écart élément ↔ anneau — ≥ 2px, jamais 0 */
 
   /* Typographie — deux rôles minimum, trois si des données sont affichées */
   --police-titre: "…", ui-sans-serif, sans-serif;
@@ -53,6 +59,10 @@
 | Règle | Seuil | Vérifié par |
 |---|---|---|
 | Contraste du texte courant sur sa surface | ≥ 4.5:1, sur les **deux** thèmes | `oracle-tokens` T5 |
+| Contraste du texte posé sur l'accent (`--accent-contraste` sur `--accent`) | ≥ 4.5:1, sur les **deux** thèmes | T5 (paire posée par le gabarit) |
+| Contraste non textuel des paires d'interface posées (accent sur fond) | ≥ 3:1, sur les **deux** thèmes | T7 |
+| Anneau de focus prescrit, et contrasté contre `--fond` | tokens présents · ≥ 3:1 | T8 |
+| Écart de l'anneau de focus (`--focus-decalage`) | ≥ 2px | T8 |
 | Chroma aux extrêmes de luminosité | ≤ 0.10 si L ≥ 0.85 ou L ≤ 0.15 | T6 |
 | Parité des thèmes | tout token de couleur existe des deux côtés | T4 |
 | Échelle d'espacement | multiples de 4 | T3 |
@@ -138,6 +148,45 @@ Ce que ces tokens ne couvrent pas, et qui reste dû : la **finalité** de chaque
 (pourquoi ce geste bouge) et sa cohésion avec la personnalité du composant restent des
 jugements, déclarés `non_juge` par `oracle-motion`. Un token ne dispense pas de la question
 « ce mouvement sert à quoi ».
+
+## Focus et contraste non textuel — prescrire ce que le gabarit consomme déjà
+
+Même défaut que pour le mouvement, un cran plus grave parce qu'il porte sur l'accessibilité :
+le gabarit `demo/maquette.template.html` posait déjà `outline: 3px solid var(--accent)`,
+`outline-offset: 2px` et un `--accent-contraste` **que ce contrat ne nommait pas** ; le
+`DESIGN.md` généré affirmait « États focus visibles au clavier » sans qu'aucun token ne le
+fixe ni qu'aucune règle ne le vérifie. Une affordance consommée sans être prescrite est une
+valeur improvisée par chaque auteur — et un texte de charte qui affirme plus que ce que la
+marque a fixé (TF-0409, option O4 de l'étude RGAA).
+
+Les trois tokens ci-dessus sont la **face prescriptive** de règles qui refusent :
+
+| Token | Règle qui le juge | Ce que la règle refuse |
+|---|---|---|
+| `--focus-anneau` | T8 · RGAA 10.7, WCAG 2.4.7 | l'absence de tout token de focus : le focus visible jugé sans être prescrit |
+| `--focus-anneau` contre `--fond` | T8 · WCAG 1.4.11 (AA) | un anneau sous 3:1 — visible pour l'auteur, invisible pour l'utilisateur |
+| `--focus-decalage` | T8 · WCAG 2.4.13 (forme) | un anneau collé au contrôle, indiscernable de sa bordure (≥ 2px) |
+| `--accent`, `--trait` posés en interface | T7 · WCAG 1.4.11, corpus GL03 | un élément d'interface sous 3:1 contre sa surface |
+| `--accent-contraste` sur `--accent` | T5 (paire posée) | du blanc sur un accent clair — le cas que T5 a déjà su refuser |
+
+Trois conséquences pour l'auteur du `tokens.css` :
+
+1. **Jumeau sombre exigé pour `--focus-anneau` et `--accent-contraste`.** Ce sont des tokens
+   de couleur : T4 les réclame des deux côtés, et T8 mesure l'anneau **par thème**. Un anneau
+   qui tient 4:1 en clair peut tomber à 1.6:1 sur un fond sombre.
+2. **`--focus-decalage` n'a pas de jumeau** — c'est une dimension, pas une couleur, comme les
+   tokens de mouvement.
+3. **La feuille consomme les tokens** : `outline: 3px solid var(--focus-anneau)` et
+   `outline-offset: var(--focus-decalage)`. Un `outline-offset: 2px` littéral alors que le
+   token existe est le même contournement que le `200ms` en dur que R8 refuse.
+
+Ce que ces tokens ne couvrent pas, et qui reste dû : T7 mesure les paires d'interface, il ne
+sait pas **quel rôle** joue un trait — un séparateur décoratif n'est pas soumis à 3:1, une
+bordure qui identifie à elle seule un champ de saisie l'est (WCAG 1.4.11 exempte le
+décoratif). Cette distinction se lit sur le rendu, pas dans la feuille : T7 mesure ces paires
+et les signale en avertissement, en le déclarant `non_juge` plutôt qu'en refusant à tort.
+De même, un anneau *rendu* peut être masqué par un en-tête collant (WCAG 2.4.11) : c'est
+`render_page.py` V2 et la revue humaine qui le voient, pas un token.
 
 ## Teinter les neutres
 
