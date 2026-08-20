@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T8 focus prescrit et contrasté</title>
+<!--
+  TF-0409, option O4. Le fait qui fait naître T8 : le gabarit de maquette posait déjà
+  `outline: 3px solid var(--accent)` et `outline-offset: 2px`, le DESIGN.md généré affirmait
+  « états focus visibles au clavier », et le contrat de tokens ne nommait AUCUN token de
+  focus. Une affordance consommée sans être prescrite est une valeur improvisée.
+
+  Ce que cette fixture démontre, et qui doit rester VERT :
+    · --focus-anneau et --focus-decalage sont PRESCRITS au bloc de tokens ;
+    · la règle :focus-visible les CONSOMME (elle ne réinvente pas une couleur) ;
+    · l'anneau tient ≥ 3:1 contre CHAQUE surface, dans les DEUX thèmes —
+      clair  : #1f4fd8 sur #ffffff → 6.31:1 · sur #eef1f6 → 5.55:1
+      sombre : #7ea8ff sur #12151b → 7.15:1 · sur #1c2029 → 6.28:1 ;
+    · --focus-decalage vaut 2px : l'anneau ne colle pas au contrôle.
+
+  Attendu : PASS, exit 0.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --focus-anneau: #1f4fd8;
+    --focus-decalage: 2px;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #12151b;
+      --fond-carte: #1c2029;
+      --texte: #eef1f6;
+      --focus-anneau: #7ea8ff;
+      --focus-decalage: 2px;
+    }
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .bouton:focus-visible,
+  .champ:focus-visible {
+    outline: 3px solid var(--focus-anneau);
+    outline-offset: var(--focus-decalage);
+  }
+</style>
+</head>
+<body>
+  <h1>Demande d'intervention</h1>
+  <div class="carte">
+    <label for="objet">Objet</label>
+    <input class="champ" id="objet" type="text">
+    <button class="bouton" type="submit">Envoyer</button>
+  </div>
+</body>
+</html>

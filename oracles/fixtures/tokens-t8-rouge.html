@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T8 focus posé sans être prescrit</title>
+<!--
+  TF-0409, option O4. Le défaut RÉEL, reproduit tel qu'il a été observé sur le gabarit de
+  maquette : la page DESSINE un anneau de focus, et aucun token ne le prescrit.
+
+  Trois écarts durs, indépendants, pour que la fixture prouve les trois branches de T8 :
+    1. `.bouton:focus-visible` pose `outline: 3px solid var(--trait-decor)` — un token qui n'est pas
+       un token de FOCUS : le focus est POSÉ sans être PRESCRIT ;
+    2. `--focus-anneau: #e3e7ee` est bien déclaré, mais il tient 1.15:1 sur --fond et
+       1.09:1 sur --fond-carte : visible pour l'auteur, invisible pour l'utilisateur ;
+    3. `--focus-decalage: 0` colle l'anneau au contrôle, indiscernable de sa bordure.
+
+  Attendu : FAIL, exit 1, sur T8.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --focus-anneau: #e3e7ee;
+    --focus-decalage: 0px;
+    --trait-decor: #d9dde4;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #12151b;
+      --fond-carte: #1c2029;
+      --texte: #eef1f6;
+      --focus-anneau: #e3e7ee;
+      --focus-decalage: 0px;
+      --trait-decor: #2a2f3a;
+    }
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .bouton:focus-visible {
+    outline: 3px solid var(--trait-decor);
+    outline-offset: 2px;
+  }
+</style>
+</head>
+<body>
+  <h1>Demande d'intervention</h1>
+  <div class="carte">
+    <button class="bouton" type="submit">Envoyer</button>
+  </div>
+</body>
+</html>

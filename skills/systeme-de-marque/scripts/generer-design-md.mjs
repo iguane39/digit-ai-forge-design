@@ -11,13 +11,27 @@
  * Usage : node generer-design-md.mjs --tokens <tokens.css> --marque <MARQUE.md>
  *         [--nom <Produit>] --sortie <DESIGN.md>
  * Sortie : DESIGN.md scellé (sha256 des sources). Exit 0 = généré, 1 = entrée invalide,
- *          2 = contraste texte/fond < 4.5 (on ne génère pas une charte inaccessible).
+ *          2 = seuil d'accessibilité non tenu (texte/fond < 4.5:1 sur l'un des deux thèmes,
+ *          accent/fond < 3:1, anneau de focus < 3:1) : on ne génère pas une charte
+ *          inaccessible, et on n'en génère pas une version amputée non plus.
  *
  * TF-0321 : la charte porte aussi une section « Mouvement » — quoi animer, quoi ne jamais
  * animer, et la révocation prefers-reduced-motion. Ses valeurs sont LUES dans les tokens
  * de mouvement ; un token absent est annoncé absent, jamais remplacé par une valeur que la
  * marque n'a pas fixée. C'est le pendant prescriptif d'oracle-motion, qui jugeait le
  * mouvement sans que rien en amont ne le prescrive.
+ *
+ * TF-0409 (option O4 de l'étude RGAA) : le verrou de contraste ne portait que sur le bloc
+ * :root clair, ignorait le thème sombre, calculait le ratio de l'accent SANS lui opposer
+ * de seuil, et écrivait « États focus visibles au clavier » même quand aucun token de focus
+ * n'existait — une charte qui affirmait plus que ce que la marque avait fixé. Désormais :
+ *   · texte/fond ≥ 4.5:1 sur les DEUX thèmes (WCAG 1.4.3) ;
+ *   · accent/fond ≥ 3:1, élément d'interface (WCAG 1.4.11, corpus GL03) ;
+ *   · anneau de focus ≥ 3:1 contre le fond quand il est prescrit (WCAG 1.4.11) ;
+ *   · focus absent ⇒ la charte écrit la LIMITE (RGAA 10.7), jamais l'affirmation.
+ * Le thème sombre est résolu comme le fait la cascade CSS : un token non redéfini dans le
+ * bloc sombre garde sa valeur claire — c'est la couleur réellement rendue, donc la seule
+ * qu'il soit honnête de mesurer.
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
@@ -37,7 +51,21 @@ const nom = arg("--nom", (marque.match(/^#\s+(?:Marque\s*[—-]\s*)?(.+)$/m) || 
 
 // ---- tokens : couleurs du bloc :root (thème clair = référence de la charte) ----------------
 const bloc = (css.match(/:root\s*{([^}]*)}/) || [, ""])[1];
-const varDe = (nomVar) => (bloc.match(new RegExp(`--${nomVar}\\s*:\\s*([^;]+);`)) || [, null])[1]?.trim();
+const varDans = (source, nomVar) =>
+  (source.match(new RegExp(`--${nomVar}\\s*:\\s*([^;]+);`)) || [, null])[1]?.trim();
+const varDe = (nomVar) => varDans(bloc, nomVar);
+
+// Thème sombre : @media (prefers-color-scheme: dark) { :root { … } } ET/OU la bascule
+// explicite :root[data-theme="dark"]. Les deux formes cohabitent dans le contrat de tokens ;
+// une charte dont le sombre n'est déclaré que par la bascule reste un thème sombre livré.
+const blocsSombres = [
+  ...css.matchAll(/@media[^{]*prefers-color-scheme\s*:\s*dark[^{]*{\s*:root\s*{([^}]*)}/gi),
+  ...css.matchAll(/:root\s*\[\s*data-theme\s*=\s*["']?dark["']?\s*\]\s*{([^}]*)}/gi),
+].map((m) => m[1]);
+const themeSombre = blocsSombres.length > 0;
+const blocSombre = blocsSombres.join("\n");
+// Cascade CSS : un token que le bloc sombre ne redéfinit pas garde sa valeur claire.
+const varSombre = (nomVar) => varDans(blocSombre, nomVar) ?? varDe(nomVar);
 const enHex = (valeur, ou) => {
   if (!valeur) return null;
   const c = parse(valeur);
@@ -62,13 +90,64 @@ if (!couleurs.primary || !couleurs.ink || !couleurs.surface) {
 }
 
 // ---- contraste réel (le gate contrast-ratio ne pardonne pas — on vérifie AVANT d'écrire) ---
+// Un refus n'écrit RIEN : une charte inaccessible ne se livre pas, même incomplète.
 const ratio = (a, b) => contrast(parse(a), parse(b));
+const refus = (message) => { console.error(`${message} — charte inaccessible, non générée`); process.exit(2); };
+
 const rTexte = ratio(couleurs.ink, couleurs.surface);
-if (rTexte < 4.5) {
-  console.error(`contraste texte/fond ${rTexte.toFixed(2)}:1 < 4.5 — charte inaccessible, non générée`);
-  process.exit(2);
+if (rTexte < 4.5) refus(`contraste texte/fond ${rTexte.toFixed(2)}:1 < 4.5`);
+
+// Thème sombre : jusqu'ici JAMAIS lu. Une charte pouvait donc se livrer « conforme AA »
+// avec un thème sombre illisible, que seul oracle-tokens T5 attrapait — plus tard, chez
+// une autre forge, sur un produit réel (WCAG 1.4.3 vaut par thème rendu).
+const sombre = themeSombre
+  ? {
+    ink: enHex(varSombre("texte"), "--texte (thème sombre)"),
+    surface: enHex(varSombre("fond"), "--fond (thème sombre)"),
+    primary: enHex(varSombre("accent"), "--accent (thème sombre)"),
+  }
+  : null;
+const rTexteSombre = sombre && sombre.ink && sombre.surface ? ratio(sombre.ink, sombre.surface) : null;
+if (rTexteSombre !== null && rTexteSombre < 4.5) {
+  refus(`contraste texte/fond du thème sombre ${rTexteSombre.toFixed(2)}:1 < 4.5`);
 }
+
+// L'accent porte les actions : c'est un ÉLÉMENT D'INTERFACE, seuil 3:1 (WCAG 1.4.11,
+// corpus GL03). Le ratio était calculé puis publié sans qu'aucun seuil ne lui soit opposé :
+// la charte annonçait un chiffre, elle n'en refusait aucun.
 const rPrimaire = ratio(couleurs.primary, couleurs.surface);
+if (rPrimaire < 3) {
+  refus(`contraste accent/fond ${rPrimaire.toFixed(2)}:1 < 3:1 (élément d'interface, WCAG 1.4.11 / GL03)`);
+}
+const rPrimaireSombre = sombre && sombre.primary && sombre.surface ? ratio(sombre.primary, sombre.surface) : null;
+if (rPrimaireSombre !== null && rPrimaireSombre < 3) {
+  refus(`contraste accent/fond du thème sombre ${rPrimaireSombre.toFixed(2)}:1 < 3:1 (élément d'interface, WCAG 1.4.11 / GL03)`);
+}
+
+// ---- focus : prescrit ou DIT absent, jamais affirmé (RGAA 10.7 / WCAG 2.4.7) --------------
+// La section « Composants » écrivait « États focus visibles au clavier » quelle que soit la
+// palette : une affirmation d'accessibilité que rien ne fondait. Le token existe ⇒ on le
+// mesure (≥ 3:1 contre le fond, WCAG 1.4.11) ; il n'existe pas ⇒ la charte écrit la limite.
+const focus = {
+  anneau: varDe("focus-anneau"),
+  decalage: varDe("focus-decalage"),
+  anneauSombre: themeSombre ? varSombre("focus-anneau") : null,
+};
+focus.prescrit = Boolean(focus.anneau);
+if (focus.prescrit) {
+  focus.hex = enHex(focus.anneau, "--focus-anneau");
+  focus.ratio = ratio(focus.hex, couleurs.surface);
+  if (focus.ratio < 3) {
+    refus(`contraste anneau de focus/fond ${focus.ratio.toFixed(2)}:1 < 3:1 (WCAG 1.4.11 — un anneau invisible n'est pas un focus visible)`);
+  }
+  if (sombre && sombre.surface && focus.anneauSombre) {
+    focus.hexSombre = enHex(focus.anneauSombre, "--focus-anneau (thème sombre)");
+    focus.ratioSombre = ratio(focus.hexSombre, sombre.surface);
+    if (focus.ratioSombre < 3) {
+      refus(`contraste anneau de focus/fond du thème sombre ${focus.ratioSombre.toFixed(2)}:1 < 3:1 (WCAG 1.4.11)`);
+    }
+  }
+}
 
 // ---- typographie : premier nom de chaque pile (3 rôles du contrat tokens.md) ---------------
 const police = (nomVar) => {
@@ -223,7 +302,12 @@ ${principes}
 
 Le \`primary\` (${couleurs.primary}) porte les actions. Le texte \`ink\` (${couleurs.ink}) sur
 \`surface\` (${couleurs.surface}) offre un ratio de contraste mesuré de ${rTexte.toFixed(2)}:1,
-conforme WCAG 2.2 AA. Ratio \`primary\`/\`surface\` : ${rPrimaire.toFixed(2)}:1.${couleurs.danger ? `
+conforme au critère WCAG 2.2 1.4.3 (AA). Ratio \`primary\`/\`surface\` : ${rPrimaire.toFixed(2)}:1 —
+seuil 3:1 des éléments d'interface (WCAG 1.4.11) tenu.${rTexteSombre !== null ? `
+Thème sombre mesuré lui aussi : \`ink\` (${sombre.ink}) sur \`surface\` (${sombre.surface}) à
+${rTexteSombre.toFixed(2)}:1${rPrimaireSombre !== null ? `, \`primary\` (${sombre.primary}) à ${rPrimaireSombre.toFixed(2)}:1` : ""}.` : `
+Aucun bloc de thème sombre n'est déclaré dans \`tokens.css\` : cette charte ne parle que du
+thème clair, et rien n'a été mesuré sur un autre.`}${couleurs.danger ? `
 Les états sémantiques \`danger\` (${couleurs.danger})${couleurs.success ? ` et \`success\` (${couleurs.success})` : ""} sont dérivés des tokens d'état.` : ""}
 
 ## Typographie
@@ -235,8 +319,17 @@ Titres en **${typo.heading}**, corps en **${typo.body}**, code et données en **
 
 ### button-primary
 
-Fond \`primary\`, texte \`surface\` — contraste mesuré ${rPrimaire.toFixed(2)}:1. États focus
-visibles au clavier (anneau sur \`primary\`).
+Fond \`primary\`, texte \`surface\` — contraste mesuré ${rPrimaire.toFixed(2)}:1.
+${focus.prescrit
+  ? `États focus visibles au clavier : anneau \`--focus-anneau\` (${focus.hex}), mesuré
+${focus.ratio.toFixed(2)}:1 contre \`surface\`${focus.ratioSombre !== undefined ? ` et ${focus.ratioSombre.toFixed(2)}:1 en thème sombre` : ""} — seuil 3:1
+(WCAG 1.4.11), écart au contrôle ${focus.decalage ? `\`--focus-decalage\` (\`${focus.decalage}\`)` : "**non prescrit** (\`--focus-decalage\` absent : le contrat exige ≥ 2px)"}. Consommer les tokens :
+\`outline: 3px solid var(--focus-anneau); outline-offset: var(--focus-decalage);\`.`
+  : `⚠ \`tokens.css\` ne prescrit **aucun** token de focus (\`--focus-anneau\`,
+\`--focus-decalage\`). Cette charte ne peut donc pas dire à quoi ressemble l'état focus, alors
+que RGAA 10.7 / WCAG 2.4.7 (AA) l'exigent visible et que \`oracle-tokens\` T8 le refuse : elle
+ne l'affirme pas. À prescrire dans \`tokens.css\` (contrat : \`references/tokens.md\`, section
+« Focus et contraste non textuel ») avant livraison.`}
 
 ### card
 
@@ -259,5 +352,8 @@ ${voix}
 ` : ""}`;
 
 writeFileSync(sortie, doc);
-console.log(`DESIGN.md généré : ${sortie} (contraste texte ${rTexte.toFixed(2)}:1, primaire ${rPrimaire.toFixed(2)}:1`
+console.log(`DESIGN.md généré : ${sortie} (contraste texte ${rTexte.toFixed(2)}:1`
+  + `${rTexteSombre !== null ? ` / sombre ${rTexteSombre.toFixed(2)}:1` : " / pas de thème sombre"}`
+  + `, primaire ${rPrimaire.toFixed(2)}:1`
+  + `, focus ${focus.prescrit ? `${focus.ratio.toFixed(2)}:1` : "NON PRESCRIT — à poser dans tokens.css (RGAA 10.7)"}`
   + `, mouvement ${mouvementPrescrit ? "prescrit" : "NON PRESCRIT — à poser dans tokens.css"})`);

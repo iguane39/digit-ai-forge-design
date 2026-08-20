@@ -19,6 +19,10 @@
   --trait: oklch(0.87 0.012 250);
   --accent: oklch(0.48 0.150 250);
   --accent-contraste: oklch(0.99 0.004 250);
+  /* Focus PRESCRIT (TF-0409, O4) : l anneau et son ecart sont des tokens, pas une valeur
+     improvisee dans une regle. Juges par oracle-tokens T8 — 3:1 contre chaque surface. */
+  --focus-anneau: oklch(0.48 0.150 250);
+  --focus-decalage: 2px;
   --alerte: oklch(0.50 0.140 30);
   --alerte-fond: oklch(0.94 0.020 30);
   --succes: oklch(0.48 0.110 150);
@@ -55,6 +59,8 @@
     --trait: oklch(0.33 0.018 250);
     --accent: oklch(0.72 0.130 250);
     --accent-contraste: oklch(0.16 0.010 250);
+    --focus-anneau: oklch(0.72 0.130 250);
+    --focus-decalage: 2px;
     --alerte: oklch(0.75 0.130 30);
     --alerte-fond: oklch(0.27 0.030 30);
     --succes: oklch(0.75 0.100 150);
@@ -70,6 +76,7 @@
   --fond-creux: oklch(0.26 0.016 250); --texte-principal: oklch(0.96 0.006 250);
   --texte-faible: oklch(0.76 0.012 250); --trait: oklch(0.33 0.018 250);
   --accent: oklch(0.72 0.130 250); --accent-contraste: oklch(0.16 0.010 250);
+  --focus-anneau: oklch(0.72 0.130 250); --focus-decalage: 2px;
   --alerte: oklch(0.75 0.130 30); --alerte-fond: oklch(0.27 0.030 30);
   --succes: oklch(0.75 0.100 150); --succes-fond: oklch(0.26 0.028 150);
   --ombre: 0 2px 8px oklch(0.10 0.010 250 / 0.50);
@@ -82,6 +89,7 @@
   --fond-creux: oklch(0.92 0.012 250); --texte-principal: oklch(0.23 0.018 250);
   --texte-faible: oklch(0.46 0.018 250); --trait: oklch(0.87 0.012 250);
   --accent: oklch(0.48 0.150 250); --accent-contraste: oklch(0.99 0.004 250);
+  --focus-anneau: oklch(0.48 0.150 250); --focus-decalage: 2px;
   --alerte: oklch(0.50 0.140 30); --alerte-fond: oklch(0.94 0.020 30);
   --succes: oklch(0.48 0.110 150); --succes-fond: oklch(0.94 0.020 150);
   --ombre: 0 2px 8px oklch(0.23 0.018 250 / 0.10);
@@ -108,8 +116,8 @@ a { color: var(--accent); }
 code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
 
 :where(a, button, input, select, summary, [tabindex]):focus-visible {
-  outline: 3px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--focus-anneau);
+  outline-offset: var(--focus-decalage);
   border-radius: var(--rayon-sm);
 }
 .evitement {
