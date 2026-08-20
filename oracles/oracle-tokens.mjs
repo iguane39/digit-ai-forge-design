@@ -1,13 +1,24 @@
 #!/usr/bin/env node
 // oracle-tokens — Domaine « Système de marque : traçabilité des tokens » (déterministe).
 //
-// Règles T1–T6. Ce que l'oracle exige :
+// Règles T0–T8. Ce que l'oracle exige :
+//   T0  au moins un bloc de tokens exploitable (sinon rien n'est jugeable)
 //   T1  aucune couleur littérale hors des blocs qui définissent les tokens
 //   T2  aucune famille de police littérale hors des blocs de tokens
 //   T3  espacements en px multiples de 4 (échelle 4pt)
 //   T4  parité de thèmes : tout token défini en clair l'est aussi en sombre
 //   T5  contraste ≥ 4.5:1 sur les paires réellement posées l'une sur l'autre, par thème
 //   T6  chroma réduit aux extrêmes de luminosité (tokens OKLCH)
+//   T7  contraste NON TEXTUEL ≥ 3:1 des paires d'interface posées (WCAG 1.4.11, GL03)
+//   T8  focus PRESCRIT et contrasté : --focus-anneau / --focus-decalage existent,
+//       l'anneau tient ≥ 3:1 contre les surfaces de la page (RGAA 10.7, WCAG 2.4.7)
+//
+// T7 et T8 (TF-0409, option O4 de l'étude RGAA) réutilisent l'appariement de T5 : mêmes
+// poses relevées dans le CSS, même héritage, même échappatoire déclarative — seul le seuil
+// et la nature de la paire changent. T7 se garde de juger ce qu'il ne peut pas qualifier :
+// WCAG 1.4.11 n'exige 3:1 que des frontières NÉCESSAIRES à identifier un composant, jamais
+// d'un séparateur décoratif ; un trait sous 3:1 est donc mesuré, signalé, et son rôle
+// déclaré non jugé — pas refusé à tort.
 //
 // Appariement de T5 — par CO-OCCURRENCE CSS, pas par nommage (TF-0276) :
 //   une règle qui pose color:var(--t) et background:var(--f) déclare la paire (t, f) ;
@@ -260,6 +271,158 @@ if (pairesComposees > 0) {
 NJ.push('T5 : l\'héritage est approché par le préfixe de sélecteur puis par l\'ambiance (:root, html, body, *) — un texte dont le conteneur réel n\'est pas un ancêtre de sélecteur (composition à l\'exécution, portail, classe posée en JS) est jugé contre le fond ambiant, pas contre le sien');
 NJ.push('contraste des couleurs composées (color-mix, superpositions) — déléguer à render_page.py V2 sur les deux thèmes');
 NJ.push('adéquation de la palette et de la voix à la marque — arbitrage commanditaire');
+
+// ── T7 · contraste NON TEXTUEL des paires d'interface posées (WCAG 1.4.11) ─
+// Même appareil que T5 — poses relevées dans le CSS, héritage du fond, échappatoire
+// déclarative — seuls le seuil (3:1) et la nature de la paire changent : un TRAIT
+// (bordure, contour) sur sa surface, pas un texte sur son fond.
+//
+// Ce que T7 se garde de faire. WCAG 1.4.11 n'exige 3:1 que des frontières NÉCESSAIRES à
+// identifier un composant ou son état ; un séparateur décoratif n'est pas concerné, et
+// aucune analyse de CSS ne distingue les deux. Un trait sous 3:1 est donc MESURÉ et
+// SIGNALÉ (avertissement), son rôle déclaré non jugé — refuser à tort ferait désactiver la
+// règle, la taire ferait lire le PASS comme « contrastes d'interface vérifiés ».
+// L'auteur qui SAIT qu'une frontière est nécessaire la déclare par `--paires-interface`
+// (même forme que `--paires-contraste`) : elle devient alors un écart DUR.
+const PROP_TRAIT = /(^|[;{\s])(?:border(?:-[a-z]+)?-color|border(?:-[a-z]+)?|outline(?:-color)?)\s*:\s*([^;]+)/gi;
+const traits = [];
+for (const r of regles) {
+  const t = [];
+  let m;
+  PROP_TRAIT.lastIndex = 0;
+  while ((m = PROP_TRAIT.exec(r.body))) t.push(...varsDe(m[2]));
+  if (!t.length) continue;
+  const f = [];
+  PROP_FOND.lastIndex = 0;
+  let mf;
+  while ((mf = PROP_FOND.exec(r.body))) f.push(...varsDe(mf[2]));
+  let fonds = f, origine = 'trait et fond posés par la même règle';
+  if (!fonds.length) { const h = heriter(r.selector, sourcesFond, [...ambiance.fond], 'fond'); fonds = h.vals; origine = h.origine; }
+  for (const a of t) for (const b of fonds) if (a !== b) traits.push({ trait: a, fond: b, origine });
+}
+
+// Frontières DÉCLARÉES nécessaires : l'auteur prend la responsabilité, la règle durcit.
+const interfaceDeclaree = new Set();
+for (const table of [tokens.clair, tokens.sombre]) {
+  const v = table.get('--paires-interface');
+  if (!v) continue;
+  for (const morceau of v.split(',')) {
+    const m = /(--[\w-]+)\s+sur\s+(--[\w-]+)/i.exec(morceau);
+    if (m) { interfaceDeclaree.add(m[1] + '|' + m[2]); traits.push({ trait: m[1], fond: m[2], origine: 'déclarée par --paires-interface' }); }
+    else add('avertissement', 'T7', `--paires-interface : « ${morceau.trim().slice(0, 50)} » illisible (forme attendue : --trait sur --fond)`, 'bloc de tokens');
+  }
+}
+
+let traitsTestes = 0, traitsSousSeuil = 0;
+const vus7 = new Set();
+for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
+  for (const { trait, fond, origine } of traits) {
+    const cle = `${trait}|${fond}|${theme}`;
+    if (vus7.has(cle)) continue;
+    vus7.add(cle);
+    const vt = table.get(trait), vf = table.get(fond);
+    if (vt === undefined || vf === undefined) continue;
+    const ct = color(vt), cf = color(vf);
+    if (!ct || !cf || ct.a !== 1 || cf.a !== 1) continue;
+    traitsTestes++;
+    const ratio = contrast(ct, cf);
+    if (ratio >= 3) continue;
+    traitsSousSeuil++;
+    const dure = interfaceDeclaree.has(trait + '|' + fond);
+    add(dure ? 'majeur' : 'avertissement', 'T7',
+      `contraste non textuel ${ratio.toFixed(2)}:1 < 3:1 — ${trait} (${vt}) sur ${fond} (${vf}), thème ${theme} [${origine}]` +
+      (dure ? ' — frontière DÉCLARÉE nécessaire par --paires-interface' : ' — si cette frontière identifie un composant ou son état, la déclarer par --paires-interface : WCAG 1.4.11 l\'exige alors à 3:1'),
+      `thème ${theme}`);
+  }
+}
+if (traitsTestes === 0) {
+  NJ.push('T7 : aucun trait d\'interface (bordure, contour) posé par var(--token) — AUCUN contraste non textuel n\'a été mesuré ; le PASS ne vaut pas validation de WCAG 1.4.11');
+} else if (traitsSousSeuil > 0) {
+  NJ.push(`T7 : ${traitsSousSeuil} trait(s) sous 3:1 mesuré(s) et signalé(s) — leur RÔLE (frontière nécessaire ou séparateur décoratif) n'est pas jugeable depuis le CSS, seule la déclaration --paires-interface le tranche`);
+}
+
+// ── T8 · focus PRESCRIT et contrasté (RGAA 10.7, WCAG 2.4.7 et 1.4.11) ─────
+// Le fait qui la fait naître (TF-0409, O4) : le gabarit posait déjà
+// `outline: 3px solid var(--accent)` et `outline-offset: 2px`, le DESIGN.md généré affirmait
+// « états focus visibles au clavier », et le contrat de tokens ne nommait AUCUN token de
+// focus. Une affordance consommée sans être prescrite est une valeur improvisée par chaque
+// auteur, et une charte qui affirme plus que ce que la marque a fixé.
+//
+// Ce que T8 refuse, et ce qu'il ne fait pas : il ne réclame pas des tokens de focus à un
+// fichier qui ne pose aucun focus — sans quoi il mettrait en échec tout l'existant du parc
+// (R-33 bis) et se ferait désactiver. Il refuse DEUX choses : poser un focus sans le
+// prescrire, et prescrire un anneau qu'on ne voit pas.
+const REGLE_FOCUS = /:focus(-visible|-within)?\b/i;
+const PROP_ANNEAU = /(^|[;{\s])(?:outline(?:-color)?|box-shadow|border(?:-color)?)\s*:\s*([^;]+)/gi;
+const PROP_DECALAGE = /(^|[;{\s])outline-offset\s*:\s*([^;]+)/gi;
+
+const anneau = ['--focus-anneau', '--focus-ring', '--anneau-focus'];
+const decalage = ['--focus-decalage', '--focus-offset', '--focus-ecart'];
+const trouve = (table, noms) => noms.map(n => [n, table.get(n)]).find(([, v]) => v !== undefined);
+const tokenAnneau = trouve(tokens.clair, anneau) || trouve(tokens.sombre, anneau);
+const tokenDecalage = trouve(tokens.clair, decalage) || trouve(tokens.sombre, decalage);
+
+const reglesFocus = regles.filter(r => REGLE_FOCUS.test(r.selector));
+let focusImprovise = 0;
+for (const r of reglesFocus) {
+  const vals = [];
+  let m;
+  PROP_ANNEAU.lastIndex = 0;
+  while ((m = PROP_ANNEAU.exec(r.body))) vals.push(m[2]);
+  if (!vals.length) continue;
+  const tokensPoses = vals.flatMap(varsDe);
+  if (tokensPoses.some(t => anneau.includes(t))) continue; // prescrit : rien à dire
+  focusImprovise++;
+  add('majeur', 'T8',
+    `focus POSÉ sans être PRESCRIT — « ${r.selector.trim().slice(0, 60)} » dessine un anneau ` +
+    `(${vals[0].trim().slice(0, 40)}) qui ne vient d'aucun token de focus. Une affordance consommée ` +
+    'sans être prescrite est une valeur improvisée par chaque auteur : poser --focus-anneau et ' +
+    '--focus-decalage au bloc de tokens, et les consommer ici (RGAA 10.7, WCAG 2.4.7)',
+    r.selector.trim().slice(0, 60));
+}
+
+if (tokenAnneau) {
+  // Prescrit : alors il se voit. 3:1 contre CHAQUE surface du thème — un anneau qui tient
+  // 4:1 sur le fond de page peut tomber à 1.6:1 sur une carte sombre.
+  for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
+    const va = table.get(tokenAnneau[0]);
+    if (va === undefined) continue; // parité : c'est T4 qui la réclame
+    const ca = color(va);
+    if (!ca || ca.a !== 1) { NJ.push(`T8 : ${tokenAnneau[0]} semi-transparent ou illisible en thème ${theme} — contraste de l'anneau non décidable sur le fichier`); continue; }
+    const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && color(v) && color(v).a === 1);
+    if (!surfaces.length) { NJ.push(`T8 : aucune surface nommée en thème ${theme} — l'anneau de focus n'a été confronté à rien`); continue; }
+    for (const [ks, vs] of surfaces) {
+      const ratio = contrast(ca, color(vs));
+      if (ratio >= 3) continue;
+      add('majeur', 'T8',
+        `anneau de focus ${ratio.toFixed(2)}:1 < 3:1 — ${tokenAnneau[0]} (${va}) sur ${ks} (${vs}), thème ${theme} : ` +
+        'visible pour l\'auteur, invisible pour l\'utilisateur au clavier (WCAG 1.4.11, RGAA 10.7)',
+        `thème ${theme}`);
+    }
+  }
+  if (!tokenDecalage) {
+    add('majeur', 'T8',
+      `${tokenAnneau[0]} est prescrit mais aucun écart ne l'est — poser --focus-decalage (≥ 2px) : ` +
+      'un anneau collé au contrôle est indiscernable de sa bordure',
+      'bloc de tokens');
+  } else {
+    const px = /(-?[\d.]+)\s*px/.exec(String(tokenDecalage[1]));
+    if (!px) NJ.push(`T8 : ${tokenDecalage[0]} = « ${tokenDecalage[1]} » n'est pas en px — écart non mesuré`);
+    else if (parseFloat(px[1]) < 2) {
+      add('majeur', 'T8',
+        `${tokenDecalage[0]} = ${tokenDecalage[1]} < 2px — un anneau collé au contrôle est indiscernable de sa bordure (WCAG 2.4.13)`,
+        'bloc de tokens');
+    }
+  }
+} else if (!focusImprovise) {
+  // Ni tokens, ni focus posé : rien à refuser, mais le silence serait un faux vert.
+  add('avertissement', 'T8',
+    'aucun token de focus prescrit (--focus-anneau / --focus-decalage) et aucun style de focus posé — ' +
+    'l\'accessibilité au clavier n\'est ni fixée par la marque ni mesurée ici (RGAA 10.7)',
+    'bloc de tokens');
+  NJ.push('T8 : focus ni prescrit ni posé — le PASS ne vaut pas validation du focus visible ; la mesure sur le rendu relève de render_page.py et du pan clavier de forge-tests');
+}
+NJ.push('T8 : la VISIBILITÉ réelle de l\'anneau au rendu (épaisseur, recouvrement par un parent en overflow, ordre de tabulation) n\'est pas jugeable depuis le CSS — elle relève du pan clavier de forge-tests (TF-0409, O3)');
 
 // ── T6 · chroma aux extrêmes de luminosité ─────────────────────────────────
 for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
