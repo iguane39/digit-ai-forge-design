@@ -238,7 +238,17 @@ for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]
     pairesTestees++;
     const ratio = contrast(ct, cs);
     if (ratio < 4.5) {
-      add('majeur', 'T5', `contraste ${ratio.toFixed(2)}:1 < 4.5:1 — ${kt} (${vt}) sur ${ks} (${vs}), thème ${theme} [${origine}]`, `thème ${theme}`);
+      // TF-0427 (lot Hoopiz 20260820a, 21/08) : une paire dont le texte est HÉRITÉ DE L'AMBIANCE
+      // n'est pas forcément réalisée — une barre de répartition posée sur --blue ne porte aucun
+      // texte, et le produit cartésien la jugeait « --ink sur --blue » en majeur. Statiquement
+      // indécidable : AVERTISSEMENT nommé, la mesure de vérité est render_page.py V2 (texte réel
+      // sur fond calculé). Une paire posée par la même règle, héritée d'un ancêtre ou déclarée
+      // reste un majeur : là, le texte existe.
+      const presumee = /hérité de l'ambiance/.test(origine);
+      add(presumee ? 'avertissement' : 'majeur', 'T5',
+        `contraste ${ratio.toFixed(2)}:1 < 4.5:1 — ${kt} (${vt}) sur ${ks} (${vs}), thème ${theme} [${origine}]` +
+        (presumee ? ' — paire PRÉSUMÉE (texte hérité, peut-être jamais posé sur ce fond) : mesurer au rendu (render_page.py V2) ou déclarer la paire réelle par --paires-contraste' : ''),
+        `thème ${theme}`);
     }
   }
 }

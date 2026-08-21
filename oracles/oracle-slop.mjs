@@ -123,9 +123,20 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 // « pure black/white never appears in nature » — toujours teinter.
 {
   const vus = new Set();
+  // TF-0426 (lot Hoopiz 20260820a, 21/08) : la charte Digit-AI PRESCRIT `--surface: #FFFFFF`.
+  // S4 le signalait à chaque page conforme — un échec permanent n'est plus lu (« écart
+  // documenté, charte prime », deux fois le même jour). Liste FERMÉE d'exemption : les valeurs
+  // pures déclarées comme TOKENS (`--x: …`) dans :root / html / [data-theme] — ce que la charte
+  // impose, pas ce qu'un composant pose à la main. `color: #000` dans `.x` reste un majeur.
+  const exemptes = new Set();
+  for (const r of regles) {
+    if (!/(^|,)\s*(:root|html|\[data-theme[^\]]*\])\s*(,|$)/i.test(r.selector)) continue;
+    for (const m of r.body.matchAll(/--[\w-]+\s*:\s*([^;]+)/g)) for (const c of findColors(m[1])) exemptes.add(c.raw.toLowerCase());
+  }
   for (const c of findColors(cssText)) {
     if (c.a < 1) continue; // ombres et voiles : hors règle
     const pur = (c.r === 0 && c.g === 0 && c.b === 0) || (c.r === 255 && c.g === 255 && c.b === 255);
+    if (pur && exemptes.has(c.raw.toLowerCase())) { vus.add(c.raw); continue; } // valeur de token de charte
     if (pur && !vus.has(c.raw)) {
       vus.add(c.raw);
       add('majeur', 'S4', `couleur pure « ${c.raw} » : teinter vers la hue de marque`, 'feuille de style');
@@ -179,8 +190,21 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 {
   const emoji = /\p{Extended_Pictographic}/u;
   const vus = new Set();
+  // TF-0436 (lot Hoopiz 20260820b, 21/08) : un oracle de forme ne juge pas un texte que le
+  // livrable n'a pas ÉCRIT. Le contenu CITÉ — <pre>, <code>, <blockquote>, [data-cite] (sources
+  // embarquées, extraits de correspondance) — est exclu de l'analyse « interface » : corriger
+  // un « ↔ » dans une décision citée reviendrait à falsifier la citation.
+  const CITES = new Set(['pre', 'code', 'blockquote']);
+  const exclus = new Set();
+  for (const a of ARBRES) {
+    for (const el of elements(a.r)) {
+      if (CITES.has(el.tag) || (el.attrs && Object.prototype.hasOwnProperty.call(el.attrs, 'data-cite')))
+        for (const t of visibleText(el)) exclus.add(t);
+    }
+  }
   for (const a of ARBRES) {
     for (const t of visibleText(a.r)) {
+      if (exclus.has(t)) continue;
       if (!emoji.test(t.text)) continue;
       for (const ch of [...t.text]) {
         if (!emoji.test(ch) || vus.has(ch)) continue;

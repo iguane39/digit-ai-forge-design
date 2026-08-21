@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>T5 — paire héritée de l'ambiance (TF-0427)</title>
+<style>
+  /* Fixture VERTE de T5 (TF-0427) : la barre de répartition pose un FOND (--accent) et aucun
+     texte — la seule paire que le CSS peut dériver est « --texte hérité de l'ambiance » sur
+     --accent, contraste 1.9:1. Avant : majeur (FAIL) sur une paire que personne ne voit. Après :
+     AVERTISSEMENT nommé — la vérité est au rendu (V2). La paire réelle du bouton reste jugée. */
+  :root {
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --accent: #60A5FA;
+    --texte-sur-accent: #0B1F3A;
+    --paires-contraste: --texte sur --fond, --texte-sur-accent sur --accent;
+    --police: system-ui, sans-serif;
+    --focus-anneau: 2px solid var(--texte-sur-accent);
+    --focus-decalage: 2px;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); }
+  .bouton:focus-visible { outline: var(--focus-anneau); outline-offset: var(--focus-decalage); }
+  .barre { background: var(--accent); height: 8px; border-radius: 4px; }
+  .bouton { background: var(--accent); color: var(--texte-sur-accent); padding: 8px 16px; }
+</style></head>
+<body>
+  <h1>Répartition</h1>
+  <div class="barre" role="img" aria-label="62 %"></div>
+  <button class="bouton">Filtrer</button>
+</body></html>
