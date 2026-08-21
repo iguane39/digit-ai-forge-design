@@ -68,6 +68,16 @@ const CAS = [
     rouge: [fx('tokens-t5-rouge.html')],
   },
   {
+    // TF-0427 (lot Client-B, 21/08) : une paire dont le texte est HÉRITÉ DE L'AMBIANCE (barre de
+    // répartition sur --accent, sans texte) est un AVERTISSEMENT, plus un majeur — la vérité
+    // est au rendu (V2). La verte porte cette paire présumée (1.9:1) et doit PASSER ; la rouge
+    // reste celle de TF-0276 : une paire POSÉE par la même règle sous 4.5:1 échoue toujours.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-t5-herite.html')],
+    rouge: [fx('tokens-t5-rouge.html')],
+  },
+  {
     // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
     // sous 3:1 est mesuré et signalé ; il ne devient un écart DUR que si l'auteur DÉCLARE la
     // frontière nécessaire par --paires-interface — WCAG n'exige 3:1 que des frontières qui
