@@ -11,6 +11,10 @@
     --surface: #e9e5dc;
     --trait: #cfc9bd;
     --signal: #8a4b2a;
+    /* TF-0426 — une valeur PURE déclarée comme token de charte (ici le blanc de surface que
+       la charte Digit-AI prescrit) est exemptée de S4 : la charte prime, et l'exemption est
+       une liste fermée (les tokens), pas un laissez-passer. Un #000 posé dans .x reste un majeur. */
+    --blanc-charte: #FFFFFF;
     /* TF-0335 — cette fixture est VERTE pour oracle-slop, et elle doit l être aussi seule
        sous oracle-motion : une fixture verte qui échoue à un autre oracle du même dépôt
        est du bruit de fond, la maladie que TF-0228 a coûté cher à éteindre. */
@@ -65,5 +69,11 @@
     </svg>
     <figcaption>Volume traité par semaine.</figcaption>
   </figure>
+  <!-- TF-0436 — contenu CITÉ : un pictogramme dans une source embarquée verbatim n'est pas de
+       l'interface ; S6 doit rester muet ici (et le juger serait falsifier la citation). -->
+  <details><summary>Source citée : registre des décisions</summary>
+    <pre data-cite>D-12 — mapping contexte↔provider : conservé tel quel, ↔ compris.</pre>
+    <blockquote>« Le symbole ☑ figure dans le document d'origine. »</blockquote>
+  </details>
 </body>
 </html>
