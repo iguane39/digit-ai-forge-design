@@ -79,7 +79,10 @@ const regles = cssRulesDeep(cssText);
 // ── M3 · safe areas ────────────────────────────────────────────────────────
 {
   const barreFixe = regles.some(r =>
-    /position\s*:\s*(fixed|sticky)/.test(r.body) && /(^|[;{\s])(bottom|top)\s*:\s*0/.test(r.body));
+    // Garde de chiffre (TF-0438, 21/08) : `: 0` nu matchait AUSSI « bottom: 0.5rem » — une
+    // barre qui ne colle pas au bord était comptée comme collée, et M3 réclamait une safe-area
+    // sans motif. `\b` n'aurait pas suffi (frontière entre « 0 » et « . ») : il faut la garde.
+    /position\s*:\s*(fixed|sticky)/.test(r.body) && /(^|[;{\s])(bottom|top)\s*:\s*0(?![0-9.])/.test(r.body));
   const safe = /env\(\s*safe-area-inset-/.test(cssText);
   const viewportFit = elements(root, 'meta').some(m =>
     (m.attrs.name || '').toLowerCase() === 'viewport' && /viewport-fit\s*=\s*cover/i.test(m.attrs.content || ''));
