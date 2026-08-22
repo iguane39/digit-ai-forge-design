@@ -296,7 +296,11 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
   .contenu { padding: var(--espace-md); }
 
   /* reflow des tables en cartes — jamais de colonne masquée */
-  table, tbody, tr, td { display: block; width: 100%; }
+  /* TF-0499 (22/08/2026) : `table` ne passe JAMAIS en display:block — une <caption> dont le
+     tableau parent est en block recoit une boite de tableau anonyme reduite au contenu, et le
+     texte tombe en colonne d'un mot. Mesure : 70 x 192 px contre 366 x 42 px une fois aligne.
+     Cette maquette PORTE une <caption>, le defaut y etait donc actif. */
+  tr, td { display: block; width: 100%; }
   thead { position: absolute; left: -9999px; }
   tr { border: 1px solid var(--trait); border-radius: var(--rayon-md); margin-bottom: var(--espace-md); padding: var(--espace-sm); }
   td { border-bottom: 0; display: flex; justify-content: space-between; gap: var(--espace-md); padding: var(--espace-sm); }
