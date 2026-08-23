@@ -7,7 +7,7 @@
 //
 //   node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url>
 //        [--zone <sélecteur>] [--largeurs 1920,1440,1024,768,390]
-//        [--sortie <dossier>] [--etats-ouverts] [--json-only]
+//        [--sortie <dossier>] [--etats-ouverts] [--matrice-etats] [--json-only]
 //
 // Ce qu'il fait, mécaniquement :
 //   1. capture les DEUX versions sur N largeurs × 2 thèmes (clair et sombre),
@@ -40,6 +40,9 @@ const args = process.argv.slice(2);
 const opt = (n, d = null) => { const i = args.indexOf(n); return i === -1 ? d : args[i + 1]; };
 const jsonOnly = args.includes('--json-only');
 const etatsOuverts = args.includes('--etats-ouverts');
+// TF-0493 : la matrice d'etats se propage telle quelle a render_page. Les DEUX rendus (avant et
+// apres) la jouent, sinon la comparaison porterait sur deux etats differents.
+const matriceEtats = args.includes('--matrice-etats');
 const avantArg = opt('--avant');
 const apresArg = opt('--apres');
 const zone = opt('--zone');
@@ -60,6 +63,9 @@ const FAMILLES = {
   l2_conteneur: { regle: 'L2', sev: 'bloquant', quoi: 'conteneur de lecture calé à gauche' },
   l2_filet: { regle: 'L2', sev: 'bloquant', quoi: 'texte écrasé en filet' },
   l2_freres: { regle: 'L2', sev: 'avertissement', quoi: 'alignement entre frères empilés' },
+  // TF-0493 : un état vide qui ne se déclare pas. Aucune autre famille ne parle de ce silence —
+  // la page est géométriquement irréprochable dans cet état, elle ne dit simplement plus rien.
+  etat_muet: { regle: 'É3', sev: 'bloquant', quoi: 'état vide MUET (loi n° 3)' },
   v3_align: { regle: 'V3', sev: 'avertissement', quoi: 'alignement' },
   v7_spacing: { regle: 'V7', sev: 'avertissement', quoi: 'espacement' },
   unmeasured: { regle: '—', sev: 'info', quoi: 'non mesurable' },
@@ -129,6 +135,7 @@ function lancerRenderPage(html, etiquette) {
   fs.writeFileSync(fichier, html, 'utf8');
   const argv = [outillage.renderPage, fichier, '--widths', largeurs, '--output', 'json', '--out', dossier];
   if (etatsOuverts) argv.push('--etats-ouverts');
+  if (matriceEtats) argv.push('--matrice-etats');
   const r = spawnSync(outillage.python, argv, { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   try { return JSON.parse(r.stdout.trim()); }
   catch {
@@ -190,6 +197,36 @@ for (const [theme, transformer] of THEMES) {
         add(meta.sev, meta.regle, `NOUVEAU ${meta.quoi} — ${it.what} — ${it.detail}`, `${largeur}px, thème ${theme}`);
       }
     }
+    // TF-0493 · les ÉTATS, comparés comme le repos. Sans cette boucle, la matrice tournerait
+    // dans les deux rendus et l'outil n'en dirait rien : les constats vivent sous `etats`, pas
+    // sous `issues`. Un contrôle qu'on lance et qu'on ne lit pas est plus coûteux qu'absent —
+    // il donne la conscience tranquille sans la preuve.
+    const etatsA = a.etats || {}, etatsB = b.etats || {};
+    for (const [nomEtat, eb] of Object.entries(etatsB)) {
+      if (!eb.applique) {
+        NJ.push(`état « ${nomEtat} » NON JOUÉ à ${largeur}px (${theme}) : ${eb.motif || ''}`);
+        continue;
+      }
+      const ea = etatsA[nomEtat];
+      if (!ea || !ea.applique) {
+        NJ.push(`état « ${nomEtat} » joué APRÈS et pas AVANT à ${largeur}px — non comparé (le composant n'existait pas encore)`);
+        continue;
+      }
+      const vusEtatAvant = new Set();
+      for (const [famille, liste] of Object.entries(ea.issues || {}))
+        for (const it of liste || []) vusEtatAvant.add(cle(famille, it));
+      for (const [famille, liste] of Object.entries(eb.issues || {})) {
+        const meta = FAMILLES[famille] || { regle: `render_page:${famille}`, sev: 'avertissement', quoi: famille };
+        for (const it of liste || []) {
+          if (vusEtatAvant.has(cle(famille, it))) continue;
+          if (!dansLaZone(it.what)) continue;
+          mesures.nouveaux++;
+          add(meta.sev, meta.regle, `NOUVEAU ${meta.quoi} dans l'état « ${nomEtat} » — ${it.what} — ${it.detail}`,
+            `${largeur}px, thème ${theme}, état ${nomEtat}`);
+        }
+      }
+    }
+
     // Ce que le correctif a réparé : compté, jamais porté au débit.
     const vusApres = new Set();
     for (const [famille, liste] of Object.entries(b.issues || {}))

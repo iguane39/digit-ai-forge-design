@@ -18,6 +18,10 @@ Ce mode ferme ce trou.
 
 ## Entrées (doubles — c'est la nouveauté)
 
+Ce mode compare toujours DEUX choses : ce qui avait été promis et ce qui a été construit. Le
+tableau ci-dessous dit, pour chaque nature d'entrée, où lire la promesse et où lire le constat —
+sans les deux colonnes, il n'y a pas d'écart à relever, seulement une opinion.
+
 | Référence (la promesse) | Implémentation (le constat) |
 |---|---|
 | `forge\etapes\design\tokens.css` du run | le CSS réellement servi par le produit |
@@ -42,7 +46,15 @@ déclare — jamais de conformité jugée sans référentiel.
 4. **Rendu réel** : `run-oracles-design.mjs <page> --rendu --tokens <tokens-reference>` sur les
    pages clés du produit (ou `render_page.py` contre l'instance servie), **deux thèmes**, tous
    breakpoints — V1 débordements, V2 contraste, V4 chevauchements, a11y.
-5. **Voix** : libellés, messages d'erreur et états vides confrontés à `MARQUE.md` (registre,
+5. **États, pas seulement le repos** (TF-0493) : `render_page.py <page> --matrice-etats` sur
+   toute page portant un composant interactif. Cinq états mesurés ET capturés : tout déplié,
+   filtre ouvert sur la **première** puis la **dernière** colonne, filtre ne laissant aucune
+   ligne, recherche sans correspondance. *Mesure qui l'impose* : deux défauts trouvés par un
+   client sur un seul livrable — un panneau qui crée un ascenseur horizontal à l'ouverture, et un
+   bouton « Aucun » qui détruit l'affichage sans un mot — tous deux reproductibles en deux clics,
+   tous deux absents du rendu au repos. Un état vide qui ne se déclare pas est **bloquant**
+   (`etat_muet`) ; un état dont le déclencheur est absent est **NON JOUÉ**, jamais vert.
+6. **Voix** : libellés, messages d'erreur et états vides confrontés à `MARQUE.md` (registre,
    vocabulaire, anti-références). Dérive de ton = écart mineur nommé.
 
 ## Restitution — des retours, pas une revue
