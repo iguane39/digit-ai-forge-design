@@ -47,6 +47,20 @@ const CAS = [
     rouge: [fx('liste-demande-rouge.md')],
   },
   {
+    // TF-0483 (23/08) — LA BARRE EST DEHORS. Une direction artistique a passé TOUS les oracles de
+    // cette forge au vert et a été rejetée EN BLOC par le commanditaire : « ça ne présente rien et
+    // ça ne donne pas du tout envie ». Un tour complet conception+design perdu. Les oracles jugent
+    // la discipline INTERNE ; aucun ne peut dire « ce n'est pas désirable pour la cible ». Cet
+    // oracle ne juge pas le beau non plus : il exige que l'ENTRANT EXISTE (relevé daté, sourcé,
+    // tranché) et que le GATE HUMAIN ait eu lieu SUR CAPTURES — le commanditaire arbitre des
+    // images, pas une description. La rouge est le relevé tel qu'il se fait sans exigence : trois
+    // noms sans ce qu'on en retient, rien d'écarté, un arbitrage décrit au lieu d'être soumis.
+    oracle: 'oracle-barre-externe.mjs',
+    regles: ['B2', 'B3', 'B4'],
+    verte: [fx('barre-externe-verte.md')],
+    rouge: [fx('barre-externe-rouge.md')],
+  },
+  {
     oracle: 'oracle-slop.mjs',
     regles: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'],
     verte: [fx('slop-verte.html')],
