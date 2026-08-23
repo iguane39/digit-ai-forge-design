@@ -48,28 +48,31 @@ const apresArg = opt('--apres');
 const zone = opt('--zone');
 const largeurs = opt('--largeurs', '1920,1440,1024,768,390');
 
-// Familles de constats de render_page.py, et ce qu'elles pèsent ici.
-const FAMILLES = {
-  v1_overflow: { regle: 'V1', sev: 'bloquant', quoi: 'débordement' },
-  v2_contrast: { regle: 'V2', sev: 'bloquant', quoi: 'contraste' },
-  v4_overlap: { regle: 'V4', sev: 'bloquant', quoi: 'chevauchement' },
-  l2_width: { regle: 'L2', sev: 'bloquant', quoi: 'largeur de texte bridée' },
-  l2_gouttiere: { regle: 'L2', sev: 'bloquant', quoi: 'gouttière d\'étiquettes' },
-  // TF-0491 (23/08) : trois familles nées après cette table y manquaient. Le repli existait
-  // — une famille inconnue est reportée en `avertissement` — donc rien ne se perdait, mais
-  // `l2_conteneur` et `l2_filet`, BLOQUANTS chez render_page, arrivaient ici en simple
-  // avertissement. Une dérive de sévérité est plus sournoise qu'une perte : le constat est
-  // là, et il ne pèse plus rien.
-  l2_conteneur: { regle: 'L2', sev: 'bloquant', quoi: 'conteneur de lecture calé à gauche' },
-  l2_filet: { regle: 'L2', sev: 'bloquant', quoi: 'texte écrasé en filet' },
-  l2_freres: { regle: 'L2', sev: 'avertissement', quoi: 'alignement entre frères empilés' },
-  // TF-0493 : un état vide qui ne se déclare pas. Aucune autre famille ne parle de ce silence —
-  // la page est géométriquement irréprochable dans cet état, elle ne dit simplement plus rien.
-  etat_muet: { regle: 'É3', sev: 'bloquant', quoi: 'état vide MUET (loi n° 3)' },
-  v3_align: { regle: 'V3', sev: 'avertissement', quoi: 'alignement' },
-  v7_spacing: { regle: 'V7', sev: 'avertissement', quoi: 'espacement' },
-  unmeasured: { regle: '—', sev: 'info', quoi: 'non mesurable' },
-};
+// LES FAMILLES ET LEUR POIDS SONT LUS DANS LE SOCLE (choix humain du 23/08/2026, option
+// « source unique »). Cette table était tenue ICI, en copie — et c'est ici que la dérive a été
+// payée : trois familles nées après elle n'y figuraient pas, dont DEUX bloquantes chez render_page
+// qui arrivaient en simple avertissement. Le constat était là, visible, et ne pesait plus rien
+// dans le verdict. Une double vérité ne se corrige pas, elle se supprime.
+//
+// Le repli reste, et il n'est pas une paresse : une famille inconnue du socle — parce qu'il est
+// plus vieux que l'appelant — est rapportée en avertissement au lieu d'être perdue.
+function famillesDuSocle() {
+  const r = spawnSync(outillage.python, [outillage.renderPage, '--familles'], { encoding: 'utf8' });
+  try {
+    const lu = JSON.parse((r.stdout || '').trim());
+    if (lu.schema !== 'digit-ai/familles-mesure@1') return null;
+    const table = {};
+    for (const [cle, v] of Object.entries(lu.familles)) {
+      // La règle de l'appelant : le poids vient du socle, le libellé aussi, et le code de règle se
+      // dérive du nom de la famille (V1, V2, L2…) comme il l'a toujours fait.
+      const regle = /^v(\d+)/.exec(cle) ? `V${/^v(\d+)/.exec(cle)[1]}`
+        : cle.startsWith('l2_') ? 'L2' : cle === 'etat_muet' ? 'É3' : '—';
+      table[cle] = { regle, sev: v.severite === 'bloquant' ? 'bloquant'
+        : v.severite === 'avertissement' ? 'avertissement' : 'info', quoi: v.libelle };
+    }
+    return table;
+  } catch { return null; }
+}
 
 const NJ = [
   'ce que la page raconte : le correctif est jugé sur ses effets de rendu, jamais sur sa justesse fonctionnelle ou éditoriale',
@@ -103,6 +106,16 @@ if (!outillage.ok) {
 }
 
 // ── Matérialisation des deux côtés ─────────────────────────────────────────
+const FAMILLES = famillesDuSocle();
+if (!FAMILLES) {
+  // Sans la table du socle, on ne recopie pas une liste : on le dit. Recréer la copie serait
+  // recréer exactement le défaut que ce changement supprime.
+  NJ.push('table des familles non publiée par le socle (`render_page.py --familles`) : les poids '
+    + 'ne sont pas connus, donc aucun constat ne peut être pesé — un poids deviné serait pire '
+    + "qu'un SKIP");
+  sortir('SKIP', 2);
+}
+
 const base = path.join(os.tmpdir(), `rendu-comparatif-${process.pid}-${Date.now()}`);
 const sortieArg = opt('--sortie');
 const dossierRapport = sortieArg || path.join(base, 'rapport');
