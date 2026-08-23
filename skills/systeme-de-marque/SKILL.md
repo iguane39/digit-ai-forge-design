@@ -22,6 +22,8 @@ des deux artefacts, et le fait que la sortie soit **jugée par oracle**, pas rel
 ## Quick start
 
 ```
+0. Barre externe → references/barre-externe.md  (AVANT toute proposition)
+                   node oracles/oracle-barre-externe.mjs BARRE-EXTERNE.md
 1. Mode          → client (défaut) ou digit-ai
 2. Extraction    → references/extraction.md
 3. Proposition   → python corpus/recherche.py "<secteur> <cible> <ton>" --systeme-de-design
@@ -40,7 +42,39 @@ composants, espacement, rayons, principes, voix. C'est la couture vers forge-dev
 son gate design le linte (`conductor.gates.design_gate` → PASS vérifié). Le script refuse de
 générer une charte dont le contraste texte/fond est < 4.5:1 (exit 2).
 
+## Étape 0 — la barre est DEHORS (TF-0483)
+
+**Ce que ça a coûté de ne pas l'avoir.** Une première direction artistique a passé **tous** les
+oracles de cette forge **au vert** et a été **rejetée en bloc** par le commanditaire : « ça ne
+présente rien et ça ne donne pas du tout envie ». La sortie de crise a consisté exactement en
+l'entrant qui manquait — un relevé de dix sites reconnus du même domaine, trois directions neuves,
+puis un arbitrage humain sur captures. **Un tour complet conception+design perdu.**
+
+**Pourquoi aucun oracle ne pouvait le voir**, et ce n'est pas un défaut d'oracle : ils jugent la
+discipline **interne** — tokens, filets, accent, mouvement, bascule, mobile — et ils le font bien.
+Aucun ne peut dire « ce n'est pas désirable pour la cible ». Il n'existait dans toute la forge
+aucune notion de barre externe, de référence du domaine, ni d'état de l'art.
+
+**Deux artefacts, aucun jugement automatique de goût.**
+
+1. **Le relevé** `BARRE-EXTERNE.md` : au moins cinq références du domaine du produit, **datées**,
+   chacune avec **sa source** et **ce qu'on en retient** — puis ce qui est **écarté**, avec son
+   motif. Un relevé qui ne dit pas ce qu'il refuse n'a rien tranché : il a admiré.
+2. **Le gate humain sur captures**, avant de développer la direction retenue : *le commanditaire
+   arbitre des IMAGES, pas une description.* C'est mot pour mot ce qui a manqué — une direction
+   décrite au vert, refusée dès qu'elle a été vue.
+
+**Contrôlé** : `node oracles\oracle-barre-externe.mjs BARRE-EXTERNE.md [--minimum 5]` — B1 daté ·
+B2 N références sourcées ET exploitées · B3 écarts motivés · B4 arbitrage humain déclaré sur
+captures. **L'oracle ne juge jamais le beau** : présence et complétude, comme la forge le fait déjà
+pour la voix (« la justesse d'une voix n'est pas décidable par script ; ce qui EST vérifiable, c'est
+la constance »). Ce qu'il ne juge pas est écrit à son `non_juge`, y compris la représentativité du
+panel et l'atteinte de la barre.
+
 ## Deux modes, jamais mélangés
+
+Le mode se déclare avant le premier choix visuel, et il décide de tout le reste : à qui appartient
+l'identité produite.
 
 | Mode | Quand | Ce qui est produit |
 |---|---|---|
@@ -86,8 +120,12 @@ restitution, et son verdict est reporté tel quel, `non_juge` compris.
 
 ## Références
 
+Chaque fichier a son moment : les lire dans l'ordre du quick start évite de refaire un choix déjà
+tranché ailleurs.
+
 | Fichier | À lire quand |
 |---|---|
+| `references/barre-externe.md` | AVANT toute proposition — l'étape 0 |
 | `references/extraction.md` | au démarrage, pour tout entrant de marque |
 | `references/tokens.md` | avant d'écrire la première ligne de CSS |
 | `references/voix.md` | pour la partie verbale, souvent bâclée |
