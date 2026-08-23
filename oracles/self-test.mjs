@@ -35,6 +35,18 @@ const PYTHON = pythonDisponible();
 
 const CAS = [
   {
+    // TF-0494 (22/08) — sur DIX-SEPT points de correction recus en une fois, seize ont ete traites ;
+    // le dix-septieme n'a ete decouvert que parce que le client l'a redemande. Le skill decrivait la
+    // boucle de controle du LIVRABLE, jamais le suivi de ce qui avait ete DEMANDE. La rouge porte les
+    // trois defauts a la fois : un compte annonce qui ne colle pas (D2, le defaut du 22/08 en une
+    // soustraction), une preuve creuse (D3), une ligne sans preuve (D1). La verte porte en plus un
+    // point NON TRAITE et declare — un reste honnete n'est pas un defaut, un reste muet en est un.
+    oracle: 'oracle-liste-demande.mjs',
+    regles: ['D1', 'D2', 'D3'],
+    verte: [fx('liste-demande-verte.md')],
+    rouge: [fx('liste-demande-rouge.md')],
+  },
+  {
     oracle: 'oracle-slop.mjs',
     regles: ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'],
     verte: [fx('slop-verte.html')],
