@@ -39,6 +39,31 @@ approuvée par défaut.
 C'est la différence entre cet audit et une relecture : la relecture produit un avis,
 l'audit produit un relevé opposable.
 
+## Règle cardinale, second volet — ce qui a été DEMANDÉ (TF-0494, 22/08/2026)
+
+**Aucun constat sans preuve** dit comment juger le livrable. Il ne dit rien de ce qui avait été
+demandé, et ce sont deux choses différentes : *un livrable peut passer tous ses oracles et rater
+un point sur dix-sept*, parce qu'aucun oracle ne sait ce qui avait été demandé.
+
+*Fait fondateur.* Sur **dix-sept points de correction reçus en une fois**, seize ont été traités.
+Le dix-septième n'a été découvert que parce que **le client l'a redemandé**, avec un « Pourquoi ? ».
+
+**Dès que la demande compte plus d'un point, la revue porte sa liste de contrôle** — un tableau
+*point demandé / correction apportée / preuve*, rempli **avant remise**. Le point se cite dans les
+**mots du demandeur**, jamais reformulé : une reformulation est déjà une interprétation, et c'est
+en reformulant qu'on perd le point qu'on n'a pas compris.
+
+**Un point sans preuve est un point non traité.** Un point légitimement écarté n'est pas interdit —
+ce qui est interdit, c'est qu'il DISPARAISSE : il porte `NON TRAITÉ — <motif>`. Même doctrine que
+le bloc « non traité » d'une restitution : *un reste sans motif est un silence*.
+
+Gabarit et bornes : `references/liste-de-controle-demande.md`. **Contrôle exécuté** :
+`node oracles\oracle-liste-demande.mjs <REVUE.md>` — D1 une ligne sans preuve ni motif · D2 le
+compte annoncé ne colle pas au nombre de lignes (*le défaut du 22/08 en une soustraction*) ·
+D3 une preuve qui n'en est pas une (« vérifié », « fait », « ok » seuls). Sans section, l'oracle
+rend **SANS OBJET** : tous les livrables ne répondent pas à une demande à points, et en inventer
+une serait pire.
+
 ## Deux modes
 
 | Mode | Sortie | Quand |
