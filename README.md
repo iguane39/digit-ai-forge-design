@@ -80,6 +80,9 @@ node oracles/self-test-baseline.mjs                           # verrou dédié (
 node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url> \
   [--zone <sélecteur>] [--largeurs 1920,1440,1024,768,390] [--sortie <dossier>] \
   [--etats-ouverts] [--json-only]                             # avant/après d'un correctif ad hoc
+# états d'échec (TF-0493) : render_page.py <page> --matrice-etats — cinq états mesurés ET
+# capturés (dont filtre sans résultat et recherche sans correspondance). Un état vide muet est
+# bloquant ; un état sans déclencheur est déclaré NON JOUÉ.
 ```
 
 ### `rendu-comparatif.mjs` — le geste « avant / après » d'un correctif
