@@ -47,6 +47,22 @@ const CAS = [
     rouge: [fx('liste-demande-rouge.md')],
   },
   {
+    // TF-0578 (25/08) — LA PAGE DIT-ELLE LA MEME CHOSE QUE L'OFFRE ? Une une promettait « votre
+    // produit, LIVRE avec ses preuves » quand les six services du MEME RUN disaient « vos equipes
+    // executent les oracles SANS NOUS ». Aucun oracle ne l'a vu : tous jugent la page ISOLEMENT.
+    // Celui-ci lit un SECOND artefact et compare QUI TRAVAILLE — le sujet du verbe d'action, pas
+    // la simple presence d'un pronom. « Votre produit, LIVRE » contient « votre » et pourtant le
+    // client n'y fait rien : il possede, c'est le fournisseur qui livre.
+    oracle: 'oracle-coherence-promesse.mjs',
+    // P3 SEULE au harnais, et le motif compte : P1 (cadrage sans promesse) et P2 (page sans
+    // titre) sont des CONDITIONS D'ENTREE, pas des defauts cumulables — P1 empeche meme P3
+    // d'etre evaluee. Une rouge qui les declencherait toutes n'existe pas. Elles sont jouees
+    // par le `--self-test` de l'oracle, qui porte 7 cas dont ces deux bornes.
+    regles: ['P3'],
+    verte: [fx('promesse-page-verte.html'), '--cadrage', fx('promesse-cadrage.md')],
+    rouge: [fx('promesse-page-rouge.html'), '--cadrage', fx('promesse-cadrage.md')],
+  },
+  {
     // TF-0483 (23/08) — LA BARRE EST DEHORS. Une direction artistique a passé TOUS les oracles de
     // cette forge au vert et a été rejetée EN BLOC par le commanditaire : « ça ne présente rien et
     // ça ne donne pas du tout envie ». Un tour complet conception+design perdu. Les oracles jugent
