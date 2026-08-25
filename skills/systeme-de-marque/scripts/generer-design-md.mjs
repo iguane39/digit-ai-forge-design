@@ -269,7 +269,14 @@ affordance non câblée, donc un défaut. Contrôles exécutés : \`oracle-motio
 token au-delà du plafond, aucune courbe à dépassement), R1–R7 (craft du geste).
 `;
 
-const sha = (p) => createHash("sha256").update(readFileSync(p)).digest("hex");
+// TF-0615 (convention pilot, references\EMPREINTES.md) : les fins de ligne sont NORMALISEES
+// avant hachage. `tokens.css` et `MARQUE.md` sont deux fichiers TEXTE : avec core.autocrlf, git
+// les repose en CRLF sur un poste et en LF sur un autre sans qu'un octet de contenu ait bouge,
+// et le sceau inscrit dans DESIGN.md differait alors selon le poste qui l'a genere — donc un
+// DESIGN.md declare perime a chaque aller-retour, sans qu'aucune source ait change. La classe
+// a ete payee CINQ fois dans l'ecosysteme (TF-0072, TF-0253, TF-0359, TF-0474, TF-0615), et la
+// premiere fois c'etait deja pour un sceau de grille. La regle E4 d'oracle-empreintes la tient.
+const sha = (p) => createHash("sha256").update(readFileSync(p, "utf8").split("\r\n").join("\n")).digest("hex");
 const yaml = (o, indent = "  ") => Object.entries(o).map(([k, v]) => `${indent}${k}: ${typeof v === "string" ? `"${v}"` : v}`).join("\n");
 
 const doc = `---
