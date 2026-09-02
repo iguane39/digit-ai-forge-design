@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — le panneau vit dans un gabarit JS</title>
+<!-- Même verrou que saisie-runtime-rouge.html, côté panneau de tâche. Le DOM statique ne
+     porte AUCUN panneau : la liste et l'encart replié à deux branches sont produits par
+     render(). Un oracle qui ne lit que le DOM statique rendrait PASS sur l'écran exact que
+     l'utilisateur a mal compris en production. PA1 (aucun sélecteur qui pose le choix), PA3
+     (les deux branches rendues en même temps) et PA5 (tâche à branches en <details> sous la
+     liste qu'elle alimente) doivent se déclencher dans le gabarit. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<script>
+  function ecranStockages() {
+    return `
+      <section id="stockages" data-ecran="stockages">
+        <h1>Stockages connectés</h1>
+        <table>
+          <thead><tr><th>Nom</th><th>Mode</th></tr></thead>
+          <tbody><tr><td>Archives 2025</td><td>OAuth</td></tr></tbody>
+        </table>
+        <details data-panneau-tache="connexion-stockage">
+          <summary>Connecter un stockage</summary>
+          <div data-branche="oauth">
+            <label for="cle-application">Clé d'application</label>
+            <input type="text" id="cle-application" name="cle_application">
+            <label for="secret-application">Secret d'application</label>
+            <input type="password" id="secret-application" name="secret_application">
+          </div>
+          <div data-branche="jeton">
+            <label for="jeton-direct">Jeton d'accès</label>
+            <input type="password" id="jeton-direct" name="jeton_direct">
+          </div>
+          <button type="submit">Connecter</button>
+        </details>
+      </section>`;
+  }
+  document.getElementById('app').innerHTML = ecranStockages();
+</script>
+</body>
+</html>

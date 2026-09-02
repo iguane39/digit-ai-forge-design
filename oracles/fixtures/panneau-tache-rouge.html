@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — l'écran de connexion tel qu'il a été livré</title>
+<!-- TF-0707 + TF-0708 : l'écran de connexion d'un stockage, tel qu'il a été mal compris
+     par son destinataire. Les six règles s'y déclenchent :
+       PA1  deux branches exclusives (oauth, jeton) et aucun sélecteur qui les commande ;
+       PA2  second panneau : le sélecteur de branche est placé APRÈS les champs ;
+       PA3  les deux branches rendues simultanément, aucune n'est masquée ;
+       PA4  la clé d'application demandée DEUX FOIS dans la même branche ;
+       PA5  tâche à branches en <details> replié, sous la liste qu'elle alimente ;
+       PA6  panneau adressable déclaré sur une route que rien ne pointe. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+
+<section id="stockages" data-ecran="stockages">
+  <h1>Stockages connectés</h1>
+
+  <table>
+    <thead><tr><th>Nom</th><th>Mode</th><th>État</th></tr></thead>
+    <tbody>
+      <tr><td>Archives 2025</td><td>OAuth</td><td>Actif</td></tr>
+    </tbody>
+  </table>
+
+  <!-- L'encart replié toujours présent en bas de la page qui liste déjà les connexions. -->
+  <details data-panneau-tache="connexion-stockage">
+    <summary>Connecter un stockage</summary>
+
+    <div data-branche="oauth">
+      <p>
+        <label for="cle-application">Clé d'application</label>
+        <input type="text" id="cle-application" name="cle_application">
+      </p>
+      <p>
+        <label for="secret-application">Secret d'application</label>
+        <input type="password" id="secret-application" name="secret_application">
+      </p>
+      <p>
+        <label for="cle-application-bis">Clé d'application</label>
+        <input type="text" id="cle-application-bis" name="cle_application">
+      </p>
+      <p>
+        <label for="code-autorisation">Code d'autorisation</label>
+        <input type="text" id="code-autorisation" name="code_autorisation">
+      </p>
+    </div>
+
+    <div data-branche="jeton">
+      <p>
+        <label for="jeton-direct">Jeton d'accès</label>
+        <input type="password" id="jeton-direct" name="jeton_direct">
+      </p>
+    </div>
+
+    <button type="submit">Connecter un stockage</button>
+  </details>
+</section>
+
+<section id="import-nouveau">
+  <h1>Importer une source</h1>
+
+  <!-- Le choix se pose au milieu du formulaire, une fois tous les champs déjà affichés. -->
+  <form data-panneau-tache="import-source" data-route="#import-nouveau">
+    <div data-branche="fichier">
+      <p>
+        <label for="fichier-source">Fichier à importer</label>
+        <input type="text" id="fichier-source" name="fichier_source">
+      </p>
+    </div>
+
+    <div data-branche="flux">
+      <p>
+        <label for="flux-source">Adresse du flux</label>
+        <input type="url" id="flux-source" name="flux_source">
+      </p>
+    </div>
+
+    <fieldset data-commande-branches>
+      <legend>Type de source</legend>
+      <label><input type="radio" name="type-source" value="fichier"> Fichier</label>
+      <label><input type="radio" name="type-source" value="flux"> Flux</label>
+    </fieldset>
+
+    <button type="submit">Importer</button>
+  </form>
+</section>
+
+</body>
+</html>
