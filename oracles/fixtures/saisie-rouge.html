@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — l'écran de génération tel qu'il a été livré</title>
+<!-- TF-0736 + TF-0739 : l'écran mesuré « câblé » par la campagne v0.4.0 (interface
+     233/235) et pourtant mal utilisable. Les six règles s'y déclenchent :
+       SA1  « date_export » demandée en type=text, « telephone » aussi ;
+       SA2  les deux champs de période rendus vides, sans valeur proposée ;
+       SA3  « jusquau » sans min ni max — une date future passe ;
+       SA4  l'aide promet « la période part de la dernière lecture » et « jusqu'à
+            aujourd'hui » sans qu'aucun attribut ne le tienne ;
+       SA5  aucun geste global : seule l'icône de vingt pixels ouvre le sélecteur ;
+       SA6  « rappel » en readonly pour forcer le sélecteur, et un keydown qui
+            appelle preventDefault(). -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+  .aide { color: #4a5160; font-size: .875rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Générer un relevé</h1>
+
+  <form id="periode">
+    <p>
+      <label for="depuis">Depuis le</label>
+      <input type="date" id="depuis" name="depuis" aria-describedby="aide-depuis">
+      <small class="aide" id="aide-depuis">Par défaut, la période part de la dernière position de lecture.</small>
+    </p>
+
+    <p>
+      <label for="jusquau">Jusqu'au</label>
+      <input type="date" id="jusquau" name="jusquau" aria-describedby="aide-jusquau">
+      <small class="aide" id="aide-jusquau">Jusqu'à aujourd'hui au plus tard : aucune date future n'est acceptée.</small>
+    </p>
+
+    <p>
+      <label for="date_export">Date d'export</label>
+      <input type="text" id="date_export" name="date_export" placeholder="JJ/MM/AAAA">
+    </p>
+
+    <p>
+      <label for="telephone">Téléphone du contact</label>
+      <input type="text" id="telephone" name="telephone">
+    </p>
+
+    <p>
+      <label for="rappel">Date de rappel</label>
+      <input type="date" id="rappel" name="rappel" value="2026-09-10" min="2026-09-02" max="2026-12-31" readonly>
+    </p>
+
+    <button type="submit">Générer</button>
+  </form>
+
+  <p class="aide">Dernière position de lecture connue : 14/08/2026 — reportez-la vous-même dans le champ ci-dessus.</p>
+</main>
+
+<script>
+  // Aucun appel à showPicker : la cible de geste utile se réduit à l'icône native.
+  // Et ce keydown confisque la frappe pour « éviter les saisies libres ».
+  document.getElementById('periode').addEventListener('keydown', function (ev) {
+    ev.preventDefault();
+  });
+</script>
+</body>
+</html>

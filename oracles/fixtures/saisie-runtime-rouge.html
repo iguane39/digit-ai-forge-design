@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — les champs vivent dans un gabarit JS</title>
+<!-- Verrou du faux négatif que ce dépôt a déjà payé une fois sur oracle-slop : le contrat
+     technique impose un rendu DYNAMIQUE (données en constante JS, écrans rendus par des
+     fonctions pures). Un formulaire de maquette n'existe donc PAS dans le DOM statique — il
+     vit dans un littéral de gabarit. Un oracle aveugle au runtime rendrait PASS sur ce fichier
+     alors qu'il porte exactement les mêmes défauts que saisie-rouge.html.
+     Ici le DOM statique est vide de tout champ ; tout est dans render(). -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+<main id="app"></main>
+
+<script>
+  function ecranGeneration() {
+    return `
+      <h1>Générer un relevé</h1>
+      <form>
+        <p>
+          <label for="depuis">Depuis le</label>
+          <input type="date" id="depuis" name="depuis">
+        </p>
+        <p>
+          <label for="jusquau">Jusqu'au</label>
+          <input type="date" id="jusquau" name="jusquau">
+        </p>
+        <p>
+          <label for="date_export">Date d'export</label>
+          <input type="text" id="date_export" name="date_export" placeholder="JJ/MM/AAAA">
+        </p>
+        <button type="submit">Générer</button>
+      </form>`;
+  }
+  document.getElementById('app').innerHTML = ecranGeneration();
+</script>
+</body>
+</html>
