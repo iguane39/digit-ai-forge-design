@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — champs typés, proposés, bornés, atteignables</title>
+<!-- TF-0736 + TF-0739 : l'écran de génération tel qu'il aurait dû être livré.
+     Les deux champs de période sont TYPÉS (type=date natif), PROPOSÉS (valeur posée
+     par le JS depuis la dernière position de lecture, sinon trois mois), BORNÉS
+     (max = aujourd'hui sur les deux, min sur la fin), et ATTEIGNABLES (un geste
+     global ouvre le sélecteur depuis n'importe quel point du champ, garde
+     disabled/readOnly, try/catch, clavier intact).
+     Le port, l'e-mail et l'URL portent leur type natif : SA1 n'a rien à dire.
+     Un avertissement SA3 subsiste volontairement sur « Depuis le » (max seul) :
+     il prouve que le palier non bloquant existe et qu'il ne fait pas rougir une
+     fixture verte — une borne basse n'a pas de sens sur un début de période. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+  .aide { color: #4a5160; font-size: .875rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Générer un relevé</h1>
+
+  <form id="periode">
+    <p>
+      <label for="depuis">Depuis le</label>
+      <input type="date" id="depuis" name="depuis" max="2026-09-02" aria-describedby="aide-depuis">
+      <small class="aide" id="aide-depuis">Par défaut, la période part de la dernière position de lecture.</small>
+    </p>
+
+    <p>
+      <label for="jusquau">Jusqu'au</label>
+      <input type="date" id="jusquau" name="jusquau" min="2020-01-01" max="2026-09-02" aria-describedby="aide-jusquau">
+      <small class="aide" id="aide-jusquau">Jusqu'à aujourd'hui au plus tard : aucune date future n'est acceptée.</small>
+    </p>
+
+    <p>
+      <label for="port">Port du serveur</label>
+      <input type="number" id="port" name="port" value="993" min="1" max="65535">
+    </p>
+
+    <p>
+      <label for="courriel">Courriel de destination</label>
+      <input type="email" id="courriel" name="courriel" placeholder="prenom.nom@exemple.fr">
+    </p>
+
+    <p>
+      <label for="lien-source">Lien de la source</label>
+      <input type="url" id="lien-source" name="lien-source">
+    </p>
+
+    <p>
+      <label for="reference">Référence interne</label>
+      <!-- Format libre assumé : aucun type natif ne correspond, et rien ne le prétend. -->
+      <input type="text" id="reference" name="reference" maxlength="24">
+    </p>
+
+    <p>
+      <label for="rappel">Date de rappel</label>
+      <input type="date" id="rappel" name="rappel"
+             data-vide-motive="aucun rappel par défaut : un rappel non demandé ne se planifie pas"
+             data-borne-motive="un rappel peut viser n'importe quelle date, passée pour retrouver un envoi, future pour le programmer">
+    </p>
+
+    <button type="submit">Générer</button>
+  </form>
+</main>
+
+<script>
+  // PROPOSÉ — la meilleure hypothèse du système, jamais un champ vide.
+  var DERNIERE_LECTURE = '2026-08-14';
+  function isoIlYaTroisMois() {
+    var d = new Date('2026-09-02T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() - 3);
+    return d.toISOString().slice(0, 10);
+  }
+  document.getElementById('depuis').value = DERNIERE_LECTURE || isoIlYaTroisMois();
+  document.getElementById('jusquau').value = '2026-09-02';
+
+  // ATTEIGNABLE — huit lignes qui valent pour tous les écrans porteurs de dates :
+  // un clic n'importe où sur le champ ouvre le sélecteur, jamais la seule icône.
+  document.addEventListener('click', function (ev) {
+    var champ = ev.target.closest ? ev.target.closest('input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"]') : null;
+    if (!champ) return;
+    if (champ.disabled || champ.readOnly) return;   // garde : un champ inactif n'ouvre rien
+    try { champ.showPicker(); } catch (e) { /* navigateur qui refuse le geste : silence, la saisie clavier reste */ }
+  });
+</script>
+</body>
+</html>
