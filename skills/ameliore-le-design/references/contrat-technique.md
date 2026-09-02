@@ -18,6 +18,9 @@
 | Cible mobile | châssis d'appareil, safe areas, cibles ≥ 44 px — voir `cadre-mobile.md` |
 | Favicon | `<link rel="icon">` obligatoire, `href` en `data:` uniquement — jamais absent, jamais chargé depuis le réseau |
 | Saisie de date | `<input type="date">` natif uniquement — aucun datepicker maison au MVP |
+| Champs de saisie | **TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE** pour tout champ, tout format, tout contexte — `oracle-saisie` SA1–SA6, doctrine dans `patterns-interaction.md` |
+| Geste d'ouverture | un champ temporel natif s'ouvre au clic **n'importe où** sur le champ (`showPicker()` délégué), garde `disabled`/`readOnly`, `try/catch`, clavier intact — `oracle-saisie` SA5/SA6 |
+| Écrans de création | deux motifs légitimes : formulaire replié (création simple) ou panneau adressable (tâche à branches) — `oracle-panneau-tache` PA1–PA6 |
 | Impression | `@media print` fonctionnelle |
 
 ## Favicon et saisie de date — promesses non négociables au MVP
@@ -35,6 +38,33 @@ premier chargement, l'autre se remarque à la première saisie.
   défaut, et gratuit sur le budget de poids ; un datepicker maison est un composant
   entier à spécifier, construire et rendre accessible pour un gain cosmétique que
   le MVP n'a pas à payer.
+
+### Geste global d'ouverture — le snippet de référence
+
+TF-0739 : sur un `input type="date"`, seul le clic sur l'icône de bord ouvre le
+sélecteur ; le corps du champ — la quasi-totalité de sa surface — place un curseur
+de saisie. Le correctif tient en huit lignes posées **une seule fois** dans le script
+global, et vaut d'un coup pour tous les écrans porteurs de dates. Coût constaté chez
+le produit : une demi-heure, un test. Le coût réel est dans la **redécouverte par
+chaque produit** — d'où ce snippet, à recopier tel quel dans toute maquette.
+
+```js
+// Cible de geste : tout le champ, jamais la seule icône de vingt pixels.
+document.addEventListener('click', function (ev) {
+  var champ = ev.target.closest(
+    'input[type="date"], input[type="time"], input[type="datetime-local"],' +
+    ' input[type="month"], input[type="week"]');
+  if (!champ) return;
+  if (champ.disabled || champ.readOnly) return;   // un champ inactif n'ouvre rien
+  try { champ.showPicker(); } catch (e) { /* navigateur qui refuse : silence */ }
+});
+```
+
+Trois garanties que le snippet doit conserver, et que `oracle-saisie` vérifie :
+la **garde** `disabled`/`readOnly` (SA5), le **silence** si le navigateur refuse le
+geste — `try/catch`, jamais une erreur en console (SA5), et la **saisie clavier
+entière** : Tab n'ouvre rien, Échap ferme, le champ reste éditable (SA6). Ne jamais
+poser `readonly` sur un champ temporel pour forcer le sélecteur.
 
 ## Conséquences du zéro-CDN
 

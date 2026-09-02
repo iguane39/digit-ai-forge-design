@@ -74,6 +74,9 @@ node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode co
 
 node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # sync DTCG → CSS
 
+node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA6 : typé, proposé, borné, atteignable
+node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
+
 node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
@@ -139,10 +142,36 @@ parcours C13 dans tous les cas
 | `oracle-images` | I1–I6 | alt, plafonds, zéro réseau, manifeste de génération |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
+| `oracle-saisie` | SA1–SA6 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier) |
+| `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et
 les images qu'il ne voit pas.
+
+### « L'affordance existe » ne suffit pas — `oracle-saisie` et `oracle-panneau-tache`
+
+Trois retours utilisateur en deux semaines, sur des écrans **livrés et audités**
+(lots Produit-12, TF-0707/TF-0708 puis TF-0736/TF-0739). La campagne de tests les
+mesurait câblés — interface 233/235 — et ils l'étaient : le bouton existait, le champ
+existait, l'icône ouvrait bien le calendrier. Le défaut n'était mesurable par **aucun**
+référentiel de la forge, parce que tous jugeaient la **présence** de l'affordance,
+jamais sa **valeur**, sa **borne**, sa **surface utile** ni l'**ordre** dans lequel
+elle demande de choisir.
+
+- `oracle-saisie` (SA1–SA6) : un champ au format connu est typé natif, porte la
+  meilleure hypothèse du système comme valeur, des bornes posées par son sens, et une
+  cible de geste qui couvre **tout** le composant — pas l'icône de vingt pixels au
+  bord droit. Toute promesse écrite dans l'aide (« la période part de la dernière
+  lecture ») est câblée dans le champ, sinon elle n'existe pas.
+- `oracle-panneau-tache` (PA1–PA6) : un choix exclusif se pose **avant** les champs
+  qu'il commande ; un panneau de tâche ne coexiste pas avec la liste qu'il alimente ;
+  une seule branche est rendue. Deux motifs de création restent légitimes — formulaire
+  replié pour une création simple, panneau adressable pour une tâche à branches — au
+  lieu d'un seul imposé partout.
+
+Doctrine complète et balisage attendu :
+[patterns-interaction.md](skills/ameliore-le-design/references/patterns-interaction.md).
 
 Node seul, aucune dépendance npm. Contrat commun : JSON sur stdout, exit 0/1/2,
 `non_juge` déclaré. **Injectés au registre global** le 04/08/2026 (v2.7.0, 39 oracles),

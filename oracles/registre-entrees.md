@@ -184,3 +184,84 @@ depuis le socle reviendrait à opposer une règle à une prescription qu'il ne c
 > Le second `oracle-motion` M1-M8 proposé côté socle **n'a plus d'objet** : ses règles sont
 > couvertes par R1-R10, à l'exception de ce que R4/R9 rendent inutile (un barème sans
 > prescription). Aucun oracle de mouvement ne se crée ailleurs sans retirer celui-ci d'abord.
+
+## Entrée du 02/09/2026 — oracle-saisie et oracle-panneau-tache (TF-0736, TF-0739, TF-0707, TF-0708)
+
+Deux domaines qui n'existaient nulle part, révélés par trois retours utilisateur en deux
+semaines sur des écrans **livrés et audités** (lots Produit-12). La campagne de tests les
+mesurait câblés — interface 233/235 — et ils l'étaient : l'affordance existait. Ce qui
+manquait n'était mesuré par aucun oracle du registre — la **valeur** proposée, la **borne**,
+la **surface utile** du geste, et l'**ordre** dans lequel un choix exclusif est posé.
+
+Déclenchement **par contenu**, jamais par extension : `oracle-saisie` sur la présence de
+`<input>`, `<textarea>` ou `<select>` ; `oracle-panneau-tache` sur `data-panneau-tache` ou
+`data-branche`. Hors de ces marqueurs, `run-oracles-design.mjs` les déclare `SANS OBJET` avec
+leur raison — jamais un `PASS` par défaut.
+
+Comme pour `oracle-motion` (TF-0321), l'injection dans
+`~/.claude/skills/quality-oracles/references/registre-oracles.{md,json}` reste **un geste de
+poste**, à faire par un humain ou par un mandat qui le nomme : écrire ici dans une copie
+installée recréerait la divergence que TF-0290 a soldée. Les lignes ci-dessous sont prêtes.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Champs de saisie : typé, proposé, borné, atteignable | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format connu non typé natif, SA2 champ temporel sans valeur proposée, SA3 champ temporel ou numérique sans borne, SA4 promesse d'aide (valeur ou borne) non câblée dans le champ, SA5 cible de geste réduite à l'icône native (aucun `showPicker()` global), SA6 saisie clavier confisquée (`readonly` posé pour forcer le sélecteur, ou `preventDefault` sur `keydown`) | cli | ✅ |
+| Écran de création : choix exclusif, branches, coexistence | `node c:/dev/digit-ai-forge-design/oracles/oracle-panneau-tache.mjs <page.html>` — PA1 branches exclusives sans sélecteur qui les commande, PA2 sélecteur placé après les champs qu'il gouverne, PA3 plusieurs branches rendues simultanément, PA4 même renseignement demandé deux fois, PA5 tâche à branches en formulaire replié coexistant avec sa liste, PA6 panneau adressable dont la route n'est pointée par rien | cli | ✅ |
+
+```json
+[
+  {
+    "domaine": "Champs de saisie : typé, proposé, borné, atteignable",
+    "oracle": "oracles/oracle-saisie.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "content_patterns": ["<input", "<textarea", "<select"],
+    "fixtures": {
+      "verte": "oracles/fixtures/saisie-verte.html",
+      "rouge": "oracles/fixtures/saisie-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-09-02",
+      "mandat": "TF-0736 + TF-0739",
+      "amont": "retours utilisateur Produit-12 des 2026-08-31 et 2026-09-01, captures à l'appui"
+    },
+    "regles": 6
+  },
+  {
+    "domaine": "Écran de création : choix exclusif, branches, coexistence",
+    "oracle": "oracles/oracle-panneau-tache.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "content_patterns": ["data-panneau-tache", "data-branche"],
+    "fixtures": {
+      "verte": "oracles/fixtures/panneau-tache-verte.html",
+      "rouge": "oracles/fixtures/panneau-tache-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-09-02",
+      "mandat": "TF-0707 + TF-0708",
+      "amont": "inspection utilisateur en production, lot Produit-12 du 2026-08-16"
+    },
+    "regles": 6
+  }
+]
+```
+
+### Ce que ces deux oracles ne jugent PAS
+
+- La **justesse** de la valeur proposée (fin de période = aujourd'hui, début = dernière
+  position connue sinon profondeur métier 1/3/6 mois) : leur présence est décidable sur le
+  fichier, leur pertinence métier non.
+- La **surface de geste réelle en pixels** : mesurable au rendu seulement (`render_page.py`).
+  Ces oracles jugent le câblage du geste, pas sa géométrie rendue.
+- La **garde serveur symétrique** des bornes : hors périmètre d'un fichier HTML autonome,
+  à exiger au contrat du produit.
+- La **justesse du découpage en branches** — deux moitiés d'un même flux prises pour une
+  alternative, le fond du retour TF-0707 : cela relève de la revue de conception, pas d'un
+  attribut. Ce qui est mécanisé, c'est l'ordre du choix et la coexistence, pas le sens.
+- Les branches **non balisées** : un formulaire qui n'annote pas ses groupes exclusifs par
+  `data-branche` n'est pas jugé exclusif, et l'oracle le déclare au lieu de le supposer.

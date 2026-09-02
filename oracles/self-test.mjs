@@ -288,6 +288,57 @@ const CAS = [
     rouge: [fx('maquette-cta-rouge.html')],
   },
   {
+    // TF-0736 + TF-0739 (lots Produit-12, 31/08 et 01/09) : DEUX retours utilisateur en deux
+    // jours sur LE MÊME composant d'un écran livré ET audité — la campagne v0.4.0 le mesurait
+    // câblé (interface 233/235), et il l'était : le défaut n'était mesurable par AUCUN
+    // référentiel. Il manquait la VALEUR (deux champs date rendus vides alors que le système
+    // connaissait la dernière position de lecture), la BORNE (« Jusqu'au » acceptait une date
+    // future), la PROMESSE (« la période part de la … » jamais câblée) et la CIBLE DE GESTE
+    // (seule l'icône de vingt pixels ouvrait le sélecteur : « personne ne pense à cliquer tout
+    // à droite »). Les deux fixtures sont le MÊME écran, avant et après le correctif produit.
+    // La verte garde volontairement un avertissement SA3 (borne d'un seul côté) : il prouve que
+    // le palier non bloquant existe sans faire rougir une page saine.
+    oracle: 'oracle-saisie.mjs',
+    regles: ['SA1', 'SA2', 'SA3', 'SA4', 'SA5', 'SA6'],
+    verte: [fx('saisie-verte.html')],
+    rouge: [fx('saisie-rouge.html')],
+  },
+  {
+    // Verrou du faux négatif que ce dépôt a DÉJÀ payé une fois (slop-runtime-rouge) : le
+    // contrat technique impose un rendu dynamique, donc le formulaire d'une maquette vit
+    // dans un gabarit JS, pas dans le DOM statique. Un oracle aveugle au runtime rendrait
+    // PASS sur l'écran même qu'il doit juger. Le DOM statique de la rouge est vide de tout
+    // champ : SA1, SA2 et SA3 ne peuvent se déclencher que dans le gabarit.
+    oracle: 'oracle-saisie.mjs',
+    regles: ['SA1', 'SA2', 'SA3'],
+    verte: [fx('saisie-verte.html')],
+    rouge: [fx('saisie-runtime-rouge.html')],
+  },
+  {
+    // TF-0707 + TF-0708 (lot Produit-12, 16/08, inspection utilisateur en production) : un écran
+    // affichait SIMULTANÉMENT les champs des deux modes d'un même flux, derrière un encart replié
+    // toujours présent sous la liste qu'il alimentait. L'utilisateur en a déduit une alternative
+    // INEXISTANTE entre deux moitiés du même flux, et la même clé lui était demandée deux fois.
+    // TF-0708 en tire la seconde moitié : le formulaire replié reste bon pour une création simple,
+    // et devient nuisible sur une tâche à branches — d'où DEUX motifs légitimes, pas un imposé
+    // partout. La verte porte les deux motifs côte à côte, chacun à sa place ; la rouge porte
+    // l'écran tel qu'il a été livré, plus un second panneau dont le sélecteur arrive après les
+    // champs qu'il commande (PA2) et dont la route n'est pointée par rien (PA6).
+    oracle: 'oracle-panneau-tache.mjs',
+    regles: ['PA1', 'PA2', 'PA3', 'PA4', 'PA5', 'PA6'],
+    verte: [fx('panneau-tache-verte.html')],
+    rouge: [fx('panneau-tache-rouge.html')],
+  },
+  {
+    // Même verrou côté panneau : la liste ET l'encart replié à deux branches sont produits
+    // par render(). Le DOM statique ne porte aucun panneau — PA1, PA3 et PA5 ne peuvent se
+    // déclencher que si l'oracle lit les gabarits JS autant que le DOM.
+    oracle: 'oracle-panneau-tache.mjs',
+    regles: ['PA1', 'PA3', 'PA5'],
+    verte: [fx('panneau-tache-verte.html')],
+    rouge: [fx('panneau-tache-runtime-rouge.html')],
+  },
+  {
     // TF-0278 : l'agrégateur perdait les issues[] de render_page. Sa table de
     // sévérités ignorait l2_width et l2_gouttiere, pourtant comptés dans le
     // « blocking » de render_page.py — un FAIL sur « L2 accroche bridée 0.47 »
