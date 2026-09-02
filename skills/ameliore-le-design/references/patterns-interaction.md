@@ -49,6 +49,104 @@ Contrôle exécutable : `check_maquette.py` (C15) — élément interactif sans 
 réel, `data-action` ni `type="submit"`, ou libellé dupliqué à cibles divergentes
 sur un même écran. Contrat de sortie correspondant : `references/criteres-sortie.md`.
 
+## Champs de saisie — TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE
+
+Quatre volets, pour **tout** champ, quel que soit son format et son contexte
+(TF-0736 et TF-0739, deux retours utilisateur en deux jours sur le même composant
+d'un écran **livré et audité** : la campagne de tests le mesurait câblé, et il
+l'était — le défaut n'était mesurable par aucun référentiel). Contrôle exécutable :
+`oracle-saisie` (SA1–SA6).
+
+**TYPÉ** — tout format connu prend son type d'entrée natif : `date`,
+`datetime-local`, `month`, `week`, `time`, `email`, `tel`, `url`, `number`,
+`password`, `color`. Un champ de date en `type="text"` est un défaut nommé, pas un
+choix. Le natif est gratuit sur le budget de poids, accessible au clavier par
+défaut, et correct hors connexion. Écart motivé : `data-type-motive="<raison>"`.
+
+**PROPOSÉ** — la valeur par défaut est **la meilleure hypothèse du système**,
+jamais un champ vide quand le système sait :
+
+| Contexte | Valeur proposée |
+|---|---|
+| fin de période | aujourd'hui |
+| début de période | dernière position connue de l'utilisateur ; à défaut, profondeur métier justifiée (1, 3 ou 6 mois) |
+| port réseau | celui du protocole retenu (993 IMAPS, 587 SMTP submission…) |
+| unité, devise, fuseau, langue | celle du contexte de l'utilisateur, jamais la première de la liste |
+| champ unique d'un formulaire à une entrée | focus posé dessus au chargement |
+
+Le vide qui a un **sens** se déclare : `data-vide-motive="<raison>"`. Un champ vide
+non déclaré à côté d'un texte qui affiche la valeur que le système connaît déjà —
+le défaut exact de TF-0736 — est le cas à ne jamais reproduire.
+
+**BORNÉ** — les bornes `min`/`max` sont posées **par le sens** : une période ne
+finit pas dans le futur, un port tient dans 1–65535, une date de naissance n'est
+pas demain. Toute borne d'interface a sa **garde serveur symétrique** — l'interface
+guide, elle ne protège pas. Borne absente pour une raison : `data-borne-motive`.
+
+**ATTEIGNABLE** — la cible de geste d'un composant composite couvre **tout le
+composant**, jamais une fraction de sa surface, et le mode de saisie alternatif
+(clavier au moins) reste toujours ouvert. Le critère se mesure, il ne se juge pas :
+une zone active plus petite que la surface visible est un défaut nommé. Sur un
+`input type="date"` natif, seul le clic sur l'icône de bord — une vingtaine de
+pixels — ouvre le sélecteur ; le corps du champ place un curseur de saisie. « Vu la
+taille du composant, personne ne pense à cliquer tout à droite. » Le geste global se
+pose une fois pour tout le fichier : voir le snippet de référence dans
+`contrat-technique.md`. Interdits : `readonly` posé pour forcer le sélecteur,
+`preventDefault()` sur `keydown` — Tab n'ouvre rien, Échap ferme, le champ reste
+éditable.
+
+**Toute promesse écrite dans l'aide est câblée dans le champ.** « La période part de
+la dernière lecture » exige une `value` ; « jusqu'à aujourd'hui au plus tard » exige
+un `max`. Une promesse non câblée n'existe pas (loi transverse n° 1) — c'est le
+troisième défaut du même écran.
+
+## Écrans de création — deux motifs légitimes, et le critère de choix
+
+TF-0707 et TF-0708. Le motif « formulaire replié toujours présent » (`<details>`
+sous la liste) était imposé partout par une exigence d'interface. Il est **bon**
+quand le formulaire est court et unique ; il devient **nuisible** dès que le
+formulaire porte des branches exclusives, car le repli **masque** la contradiction
+au lieu de la résoudre — et le test a dû être assoupli pour laisser passer une
+refonte qui corrigeait un vrai défaut d'ergonomie. Deux motifs, donc, et un critère.
+
+| Motif | Quand | Forme |
+|---|---|---|
+| **Formulaire replié** | création **simple** : ≤ 4 champs, aucune branche exclusive, aucune étape | `<details>` + `data-cible`, sous la liste qu'il alimente |
+| **Panneau adressable** | tâche à **branches**, à étapes, ou à plus de 4 champs | écran ou panneau sur sa propre route (`#…?nouveau=…`), **hors** de la liste |
+
+Critère de choix, binaire : **le formulaire porte-t-il un choix exclusif ?** Oui →
+panneau adressable. Non, et ≤ 4 champs → formulaire replié. Un doute se tranche vers
+le panneau adressable : il est adressable, donc partageable et testable.
+
+**Loi du panneau de tâche** — *un panneau de tâche ne coexiste pas avec la liste
+qu'il alimente, et ne rend que les champs de la branche retenue ; un choix exclusif
+se pose AVANT les champs qu'il commande, jamais au milieu d'un formulaire qui les
+affiche déjà tous.*
+
+Mauvais (l'écran de TF-0707, mal compris par son destinataire) : un encart replié
+sous la liste des connexions affiche **en même temps** les champs des deux modes du
+même flux — clé d'application, secret, code d'autorisation **et** jeton direct.
+L'utilisateur en déduit une alternative entre « clé d'application » et « OAuth »
+alors que la clé d'application **est** l'identifiant client du flux OAuth. La même
+clé lui est demandée deux fois, et un seul libellé porte deux actions.
+
+Bon : une route dédiée ; en tête du panneau, la question qui tranche (« comment ce
+stockage vous autorise-t-il ? ») ; puis, et seulement puis, les champs de la branche
+retenue. L'autre branche n'est pas rendue.
+
+Balisage attendu, qui rend la règle mécanisable (`oracle-panneau-tache`, PA1–PA6) :
+
+| Attribut | Sur quoi |
+|---|---|
+| `data-panneau-tache="<nom>"` | le panneau de création |
+| `data-route="#…?nouveau=…"` | sa route, si panneau adressable — un déclencheur réel doit la pointer |
+| `data-commande-branches` | le sélecteur exclusif (radios ou `select`), **placé avant** les branches |
+| `data-branche="<valeur>"` | chaque groupe de champs d'une branche |
+| `data-branche-active` | la seule branche rendue ; les autres sont `hidden` |
+
+**Un renseignement n'est demandé qu'une fois par branche** : deux champs de même
+`name`, ou deux étiquettes visibles identiques dans un même panneau, sont un défaut.
+
 ## Tables de données
 
 Attendu sur au moins une table de la maquette, en fonctionnement réel :

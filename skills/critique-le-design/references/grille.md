@@ -9,6 +9,8 @@ node oracles/oracle-taste.mjs   <cible.html>          # TA1–TA4
 node oracles/oracle-mobile.mjs  <cible.html>          # si cible mobile
 node oracles/oracle-images.mjs  <cible.html>          # si visuels générés
 node oracles/oracle-restitution.mjs <cible.html>      # si data-restitution (RL, TF-0235)
+node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA6, si champs de saisie (TF-0736/0739)
+node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
 python <…>/render_page.py <cible.html>                # V1–V7, 5 breakpoints × 2 thèmes
 ```
@@ -66,8 +68,18 @@ Un seul suffit à plafonner le verdict à **Refondre**, quel que soit le total :
 | RF5 | Image chargée depuis le réseau dans un livrable annoncé autonome | `oracle-images` I4 |
 | RF6 | Donnée chiffrée non marquée dans une maquette de démonstration | `oracle-claims` |
 | RF7 | Visuel généré présenté comme photographie authentique | revue humaine |
+| RF8 | Cible de geste plus petite que le composant, ou saisie clavier confisquée | `oracle-saisie` SA5 / SA6 |
+| RF9 | Deux branches exclusives rendues en même temps, ou choix exclusif posé après les champs qu'il commande | `oracle-panneau-tache` PA1 / PA2 / PA3 |
 
 Un red flag se **nomme**, il ne s'absorbe pas dans une moyenne.
+
+RF8 et RF9 viennent de trois retours utilisateur en deux semaines sur des écrans
+**livrés et audités** (Produit-12, TF-0707, TF-0736, TF-0739). Chacun de ces écrans
+passait l'audit d'interface : l'affordance existait et elle était câblée. Ce qui
+manquait — la valeur proposée, la borne, la surface de geste, l'ordre du choix — ne
+figurait dans aucune grille. D6 Interaction s'instruit désormais avec `oracle-saisie`
+(SA1–SA6) et `oracle-panneau-tache` (PA1–PA6) ; une dimension D6 notée sans avoir
+lancé ces deux-là, sur une page qui porte des champs ou un panneau, est `non_juge`.
 
 ## Règle de verdict
 

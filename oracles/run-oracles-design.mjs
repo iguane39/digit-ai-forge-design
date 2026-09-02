@@ -249,6 +249,11 @@ if (!cible || !fs.existsSync(cible)) {
 
 const html = fs.readFileSync(cible, 'utf8');
 const aDesImages = /<img\b|<source\b[^>]*srcset/i.test(html);
+// TF-0736/TF-0739 et TF-0707/TF-0708 : deux domaines qui n'existaient nulle part avant les
+// retours Produit-12. Détection par contenu, jamais imposée — une page sans champ de saisie
+// n'a pas de champ mal typé, et une page sans panneau de création n'a pas de branche exclusive.
+const aDesChamps = /<input\b|<textarea\b|<select\b/i.test(html);
+const aUnPanneau = /data-panneau-tache|data-branche\s*=/i.test(html);
 const estMobile = args.includes('--mobile')
   || /viewport-fit\s*=\s*cover|safe-area-inset|data-chassis|class="[^"]*chassis/i.test(html);
 
@@ -266,6 +271,12 @@ else sansObjet.push('oracle-mobile : SANS OBJET — cible non mobile (ni --mobil
 
 if (aDesImages) resultats.push(lancer('oracle-images.mjs', [cible]));
 else sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
+
+if (aDesChamps) resultats.push(lancer('oracle-saisie.mjs', [cible]));
+else sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans le document');
+
+if (aUnPanneau) resultats.push(lancer('oracle-panneau-tache.mjs', [cible]));
+else sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
 
 if (rendu) resultats.push(...lancerRendu(cible));
 

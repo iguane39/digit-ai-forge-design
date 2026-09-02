@@ -11,7 +11,7 @@ secteur et **l'hypothèse est nommée** dans la note de partis pris.
 | 1 | Landing page | proposition de valeur, preuve, un moment signature, CTA |
 | 2 | Connexion | e-mail/mot de passe + SSO (Google, Microsoft, Apple, Facebook selon pertinence), erreur, mot de passe oublié |
 | 3 | Tableau de bord | 4–6 KPI, 2–3 graphiques, 2 listes courtes, chaque bloc menant à son écran |
-| 4 | Liste + CRUD | tri, filtre et recherche **dans les en-têtes de colonne**, sélection tous/aucun, actions de masse, création, édition, suppression avec confirmation |
+| 4 | Liste + CRUD | tri, filtre et recherche **dans les en-têtes de colonne**, sélection tous/aucun, actions de masse, création, édition, suppression avec confirmation. La **création** prend l'un des deux motifs légitimes (TF-0707/TF-0708) : formulaire replié si elle est simple (≤ 4 champs, aucune branche exclusive), **panneau adressable** sur sa propre route dès qu'elle porte un choix exclusif, des étapes ou plus de 4 champs — un panneau de tâche ne coexiste jamais avec la liste qu'il alimente. Détail et balisage : `patterns-interaction.md` |
 | 5 | Catalogue produits + fiche détail | grille, facettes, fiche riche avec médias et actions |
 | 6 | Galerie média | au moins 3 dispositions : grille, mosaïque, table, plus une visionneuse |
 | 7 | Bibliothèque de composants | palette, typographie, états, graphiques, cartographie, import/export, glisser-déposer, arborescence, module 3D |

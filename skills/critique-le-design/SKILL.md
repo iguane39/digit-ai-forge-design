@@ -13,7 +13,7 @@ corrections priorisées, le commanditaire décide.
 
 Loi de qualité et registre → `quality-oracles`.
 Règles de design → `impeccable`.
-Détection déterministe → `oracle-slop`, `oracle-tokens`, `oracle-mobile`, `oracle-images`, `oracle-restitution`.
+Détection déterministe → `oracle-slop`, `oracle-tokens`, `oracle-mobile`, `oracle-images`, `oracle-restitution`, `oracle-saisie`, `oracle-panneau-tache`.
 Rendu réel → `render_page.py` (`digit-ai-page-html`).
 
 Reste en propre : la grille en huit dimensions, la règle de verdict, et la grammaire
@@ -83,7 +83,7 @@ le contrôle.
 | D3 | Hiérarchie | typographie, densité, rythme d'espacement | `render_page.py` + lecture |
 | D4 | Accessibilité | contraste, focus, clavier, sémantique | `oracle-a11y` + `render_page.py` V2 |
 | D5 | Adaptation | breakpoints, tactile, orientation | `oracle-mobile` + `render_page.py` |
-| D6 | Interaction | états des composants, retours, erreurs, vides | parcours exécuté |
+| D6 | Interaction | états des composants, retours, erreurs, vides, **champs typés/proposés/bornés/atteignables**, **choix exclusif posé avant ses champs** | `oracle-saisie` SA1–SA6 + `oracle-panneau-tache` PA1–PA6 + parcours exécuté |
 | D7 | Contenu | libellés, erreurs, états vides, constance du vocabulaire | lecture |
 
 Détail des barèmes, red flags et règle de verdict : `references/grille.md`.

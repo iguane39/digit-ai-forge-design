@@ -18,6 +18,8 @@
 | C12 | Visuels générés tracés et plafonnés (I1–I6) | `oracle-images` — **si images générées** | bloquant |
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
 | C15 | Un CTA = une cible : `href` réel, `data-action` ou `type=submit` ; même libellé même écran ⇒ même cible | `check_maquette.py` | bloquant |
+| C16 | Champs **typés, proposés, bornés, atteignables** (SA1–SA6) | `oracle-saisie` — **si le document porte des champs** | bloquant |
+| C17 | Choix exclusif posé avant ses champs, panneau de tâche hors de sa liste, motif de création justifié (PA1–PA6) | `oracle-panneau-tache` — **si un panneau de création est balisé** | bloquant |
 
 `check_maquette.py` juge ce qui est décidable sur le fichier. Ce qui exige un
 rendu réel est délégué à `render_page.py` (V1–V7), **installé le 04/08/2026** dans
@@ -37,7 +39,19 @@ Le thème sombre se mesure sur une copie dont `data-theme` vaut `dark` : sans ç
 seul le thème clair est rendu et V2 ne dit rien du second.
 
 C11 et C12 sont **conditionnels** : hors cible mobile ou sans visuel généré, ils
-sont reportés `SANS OBJET` avec leur raison — jamais `PASS` par défaut.
+sont reportés `SANS OBJET` avec leur raison — jamais `PASS` par défaut. C16 et C17
+le sont aussi, et pour la même raison : un document sans champ de saisie n'a pas de
+champ mal typé, un document sans panneau de création balisé n'a pas de branche
+exclusive. `run-oracles-design.mjs` détecte les deux par contenu (`<input>`,
+`<textarea>`, `<select>` pour C16 ; `data-panneau-tache` ou `data-branche` pour C17)
+et déclare le `SANS OBJET` dans son `non_juge`.
+
+C16 et C17 viennent des lots Produit-12 (TF-0736, TF-0739, TF-0707, TF-0708). Ils
+couvrent une classe de défaut que les critères précédents laissaient passer :
+l'affordance **existe et est câblée** — donc verte à l'audit d'interface — mais elle
+n'a ni valeur proposée, ni borne, ni surface de geste utile ; ou bien elle pose son
+choix exclusif au milieu des champs qu'il commande. Doctrine et balisage :
+`patterns-interaction.md`.
 
 ## Enchaînement de contrôle
 

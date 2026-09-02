@@ -79,6 +79,23 @@ true`, prompt, modèle et date. Reprises telles quelles sur mandat du propriéta
 modèle n'ont alors pas d'objet et ne se remplissent pas de « aucun ». Aucun
 visage, lieu ou logo réel fabriqué et présenté comme authentique.
 
+**Tout champ est TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE.** Type d'entrée natif pour tout
+format connu ; valeur par défaut = meilleure hypothèse du système selon le contexte
+(fin de période = aujourd'hui, début = dernière position connue sinon profondeur
+métier justifiée, port = celui du protocole) ; bornes `min`/`max` posées par le sens,
+avec garde serveur symétrique au contrat du produit ; et **cible de geste qui couvre
+tout le composant** — sur un champ date natif, un clic n'importe où ouvre le sélecteur,
+la saisie clavier restant entière (`oracle-saisie` SA1–SA6, snippet de référence dans
+`contrat-technique.md`). Toute promesse écrite dans l'aide est câblée dans le champ :
+« la période part de la dernière lecture » sans `value` est un défaut, pas une intention.
+
+**Un choix exclusif se pose AVANT les champs qu'il commande.** Un panneau de tâche ne
+coexiste pas avec la liste qu'il alimente et ne rend que les champs de la branche
+retenue. Deux motifs de création sont légitimes — formulaire replié pour une création
+simple (≤ 4 champs, aucune branche), panneau adressable dès qu'il y a branche, étape ou
+plus de 4 champs (`oracle-panneau-tache` PA1–PA6, doctrine et balisage dans
+`patterns-interaction.md`).
+
 **Secteur, cible et job de l'écran sont établis avant le premier choix visuel.**
 S'ils ne se déduisent pas de l'entrant, ils sont demandés. Jamais supposés en
 silence.
