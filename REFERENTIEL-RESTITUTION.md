@@ -3,7 +3,7 @@
 Campagne TF-0235 (pilot), mandat humain du 15/08/2026. Source d'instruction :
 `<pilot>\output\01-revues-et-propositions\Digit-AI - Proposition Forge - Restitution
 lisible - 20260815a.md` (étude d'opportunité 20260815a, verdict O2). Preuve
-d'application : maquette SEO AuxPortesDeLaBaie (CONFORME, 13 PASS au profil digit-ai).
+d'application : maquette SEO Produit-02 (CONFORME, 13 PASS au profil digit-ai).
 
 **Position** : l'étage au-dessus du socle `digit-ai-page-html`. Le socle juge
 « la page est-elle bien construite ? » (L1-L12, V1-V7) ; ce référentiel juge

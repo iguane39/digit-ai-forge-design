@@ -123,7 +123,7 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 // « pure black/white never appears in nature » — toujours teinter.
 {
   const vus = new Set();
-  // TF-0426 (lot Client-B 20260820a, 21/08) : la charte Digit-AI PRESCRIT `--surface: #FFFFFF`.
+  // TF-0426 (lot Produit-05 20260820a, 21/08) : la charte Digit-AI PRESCRIT `--surface: #FFFFFF`.
   // S4 le signalait à chaque page conforme — un échec permanent n'est plus lu (« écart
   // documenté, charte prime », deux fois le même jour). Liste FERMÉE d'exemption : les valeurs
   // pures déclarées comme TOKENS (`--x: …`) dans :root / html / [data-theme] — ce que la charte
@@ -190,7 +190,7 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 {
   const emoji = /\p{Extended_Pictographic}/u;
   const vus = new Set();
-  // TF-0436 (lot Client-B 20260820b, 21/08) : un oracle de forme ne juge pas un texte que le
+  // TF-0436 (lot Produit-05 20260820b, 21/08) : un oracle de forme ne juge pas un texte que le
   // livrable n'a pas ÉCRIT. Le contenu CITÉ — <pre>, <code>, <blockquote>, [data-cite] (sources
   // embarquées, extraits de correspondance) — est exclu de l'analyse « interface » : corriger
   // un « ↔ » dans une décision citée reviendrait à falsifier la citation.

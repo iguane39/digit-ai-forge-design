@@ -238,7 +238,7 @@ for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]
     pairesTestees++;
     const ratio = contrast(ct, cs);
     if (ratio < 4.5) {
-      // TF-0427 (lot Client-B 20260820a, 21/08) : une paire dont le texte est HÉRITÉ DE L'AMBIANCE
+      // TF-0427 (lot Produit-05 20260820a, 21/08) : une paire dont le texte est HÉRITÉ DE L'AMBIANCE
       // n'est pas forcément réalisée — une barre de répartition posée sur --blue ne porte aucun
       // texte, et le produit cartésien la jugeait « --ink sur --blue » en majeur. Statiquement
       // indécidable : AVERTISSEMENT nommé, la mesure de vérité est render_page.py V2 (texte réel
