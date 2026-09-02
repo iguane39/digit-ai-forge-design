@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — les deux motifs légitimes d'écran de création</title>
+<!-- TF-0707 + TF-0708 : les DEUX motifs coexistent dans le même fichier, chacun à sa place.
+     1) Écran « stockages » : une liste, et une création SIMPLE (un seul champ, aucune
+        branche) en formulaire replié <details> sous la liste. Motif légitime, TF-0708.
+     2) Écran « stockage-nouveau » : la tâche à BRANCHES, sortie de la liste, rendue en
+        panneau ADRESSABLE (data-route, atteignable depuis un déclencheur réel). Le
+        sélecteur exclusif est posé AVANT les champs qu'il commande ; une seule branche
+        est rendue ; la clé d'application n'est demandée qu'une fois. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+  [data-branche]:not([data-branche-active]) { display: none; }
+</style>
+</head>
+<body>
+
+<section id="stockages" data-ecran="stockages">
+  <h1>Stockages connectés</h1>
+
+  <table>
+    <thead><tr><th>Nom</th><th>Mode</th><th>État</th></tr></thead>
+    <tbody>
+      <tr><td>Archives 2025</td><td>OAuth</td><td>Actif</td></tr>
+      <tr><td>Sauvegardes</td><td>Jeton</td><td>Actif</td></tr>
+    </tbody>
+  </table>
+
+  <p><a href="#stockage-nouveau" data-action="ouvrir-connexion-stockage">Connecter un stockage</a></p>
+
+  <!-- Motif « formulaire replié » : création simple, courte, sans branche. Légitime. -->
+  <details>
+    <summary>Créer un dossier de classement</summary>
+    <form>
+      <label for="nom-dossier">Nom du dossier</label>
+      <input type="text" id="nom-dossier" name="nom-dossier" maxlength="60">
+      <button type="submit">Créer le dossier</button>
+    </form>
+  </details>
+</section>
+
+<section id="stockage-nouveau" data-ecran="stockage-nouveau">
+  <h1>Connecter un stockage</h1>
+
+  <!-- Motif « panneau adressable » : tâche à branches, hors de la liste, sur sa propre route. -->
+  <form data-panneau-tache="connexion-stockage" data-route="#stockage-nouveau">
+
+    <fieldset data-commande-branches>
+      <legend>Comment ce stockage vous autorise-t-il ?</legend>
+      <label><input type="radio" name="mode" value="oauth" checked> Autorisation déléguée (OAuth)</label>
+      <label><input type="radio" name="mode" value="jeton"> Jeton généré à la main</label>
+    </fieldset>
+
+    <div data-branche="oauth" data-branche-active>
+      <p>
+        <label for="cle-application">Clé d'application</label>
+        <input type="text" id="cle-application" name="cle_application">
+      </p>
+      <p>
+        <label for="secret-application">Secret d'application</label>
+        <input type="password" id="secret-application" name="secret_application">
+      </p>
+      <p>
+        <label for="code-autorisation">Code d'autorisation</label>
+        <input type="text" id="code-autorisation" name="code_autorisation">
+      </p>
+    </div>
+
+    <div data-branche="jeton" hidden>
+      <p>
+        <label for="jeton-direct">Jeton d'accès</label>
+        <input type="password" id="jeton-direct" name="jeton_direct">
+      </p>
+    </div>
+
+    <button type="submit">Connecter</button>
+  </form>
+</section>
+
+<script>
+  // Bascule de branche : une seule est rendue à la fois, jamais les deux.
+  var panneau = document.querySelector('[data-panneau-tache="connexion-stockage"]');
+  panneau.querySelectorAll('[data-commande-branches] input[type="radio"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      panneau.querySelectorAll('[data-branche]').forEach(function (groupe) {
+        var actif = groupe.getAttribute('data-branche') === radio.value;
+        groupe.hidden = !actif;
+        groupe.toggleAttribute('data-branche-active', actif);
+      });
+    });
+  });
+</script>
+</body>
+</html>
