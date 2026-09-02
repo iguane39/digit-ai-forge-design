@@ -36,7 +36,7 @@ premier correctif) : l'action principale n'a qu'**une occurrence visible à la f
 défaut et sa soumission n'apparaît qu'une fois le formulaire ouvert. Test-garde côté produit :
 au **texte visible rendu**, un libellé de CTA n'apparaît qu'une fois par écran
 (implémentation de référence : `backend/tests/test_exigences_interface.py` de
-Produit-01). La visibilité étant un état dynamique, C15 reste un contrôle de cibles — ce
+Produit-12). La visibilité étant un état dynamique, C15 reste un contrôle de cibles — ce
 test-garde est le contrôle de visibilité, à exiger au contrat du produit.
 
 **La maquette n'invente pas d'affordance sans destination.** Un élément qui a
