@@ -91,6 +91,16 @@ export function genererCss(dtcg) {
     ? dtcg.$description.split('\n').map(l => ` * ${l}`).join('\n')
     : ' * Généré depuis une source DTCG.';
 
+  // TF-0796 (01/09/2026) — `color-scheme` est émis PAR THÈME, jamais laissé au
+  // réglage du système. Le fait qui l'impose : une fenêtre `dialog` stylée aux
+  // jetons, verte à la campagne v0.4.0, s'est affichée en boîte sombre aux
+  // boutons natifs sur un poste en mode sombre OS. Sans cette déclaration, le
+  // navigateur peint SES composants (top-layer, contrôles de formulaire, barres
+  // de défilement, `::backdrop`) dans le schéma de l'OS pendant que la page,
+  // elle, obéit à `data-theme` : deux autorités, un rendu bâtard.
+  // Clair STRICT par défaut (doctrine du socle digit-ai-page-html) ; sombre
+  // déclaré seulement si un thème sombre existe dans la source.
+
   const clair = dtcg.couleur?.clair || {};
   const sombre = dtcg.couleur?.sombre || {};
   const typo = dtcg.typographie || {};
@@ -120,6 +130,10 @@ export function genererCss(dtcg) {
         .map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n') + '\n'
     : '';
 
+  const aSombre = Object.keys(sombre).filter(k => !k.startsWith('$')).length > 0;
+  const schemaSombre = aSombre ? 'color-scheme: dark; ' : '';
+  const blocSchemaSombre = aSombre ? '    color-scheme: dark;\n' : '';
+
   const sombreUneLigle = Object.entries(sombre).filter(([k]) => !k.startsWith('$'))
     .map(([nom, noeud]) => `--${nom}: ${valeurCss(noeud)};`).join(' ');
   const clairUneLigne = Object.entries(clair).filter(([k]) => !k.startsWith('$'))
@@ -134,6 +148,11 @@ ${preambule}
  */
 
 :root {
+  /* --- Rendu natif : le navigateur peint SES composants (top-layer dialog/popover,
+         contrôles de formulaire, barres de défilement, ::backdrop) dans le schéma
+         déclaré ici, jamais dans celui de l'OS (TF-0796) --- */
+  color-scheme: light;
+
   /* --- Couleurs, thème clair (référence) --- */
 ${blocCouleurs(clair)}
 
@@ -153,13 +172,13 @@ ${blocMouvement}}
 /* --- Thème sombre, dérivé --- */
 @media (prefers-color-scheme: dark) {
   :root {
-${blocCouleurs(sombre)}
+${blocSchemaSombre}${blocCouleurs(sombre)}
   }
 }
 
-:root[data-theme="dark"] { ${sombreUneLigle} }
+:root[data-theme="dark"] { ${schemaSombre}${sombreUneLigle} }
 
-:root[data-theme="light"] { ${clairUneLigne} }
+:root[data-theme="light"] { color-scheme: light; ${clairUneLigne} }
 `;
 }
 

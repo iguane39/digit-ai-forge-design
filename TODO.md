@@ -81,6 +81,11 @@ fonctionné. Si le cas se répète, ajouter un champ de désambiguïsation.
 
 ## Fermé dans cette passe
 
+Ce chapitre liste ce qui a été soldé, et avec quelle preuve exécutée — jamais une
+intention. Il se lit ligne à ligne : la colonne « Item » renvoie à la lettre employée
+plus haut dans ce fichier, la colonne « Preuve » nomme la commande jouée et son
+résultat. Ce qui n'a pas de preuve exécutée n'entre pas dans ce tableau.
+
 | # | Item | Preuve |
 |---|---|---|
 | **G** | Parcours C13 | `demo/executer-parcours.py` — Chromium réel, navigation clavier, focus contrôlé à chaque tabulation. **3/3 OK**, trace datée |
@@ -107,3 +112,17 @@ déclarées. Verrouillé par un token semi-transparent ajouté à `tokens-verte.
 Rappel des trois défauts trouvés à la passe précédente : OKLCH illisible par T5,
 oracles aveugles au rendu dynamique, S7 aveugle aux boucles. **Cinq faux négatifs
 au total, tous trouvés par l'exécution, aucun par la relecture.**
+
+---
+
+## Écarts assumés — passe du 05/09/2026 (lot pilot TF-0796 / TF-0797 / TF-0800)
+
+**N. La maquette de démonstration construite est en retard sur son gabarit.**
+`demo/maquette.template.html` porte désormais `color-scheme` par thème (TF-0796) ;
+le fichier construit `demo/Digit-AI - Maquette Bailleur - Interventions - 20260804a.html`
+et les captures de `demo/rendus/` datent du 19/08 et ne le portent pas — ils échouent
+donc `oracle-surcouche` SC4. Reconstruire suppose de rejouer `demo/build.mjs`, qui
+appelle un producteur d'images tiers, et de refaire les cinq captures par largeur.
+→ **Reco : ne rien faire dans ce lot.** L'écart est de même nature que celui déjà
+déclaré pour `dist/` : le gabarit mène, l'artefact construit suit à la prochaine
+reconstruction mandatée. La règle, elle, est verrouillée par ses deux fixtures.

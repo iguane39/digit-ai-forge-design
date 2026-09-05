@@ -339,6 +339,21 @@ const CAS = [
     rouge: [fx('panneau-tache-runtime-rouge.html')],
   },
   {
+    // TF-0796 (lot pilot du 05/09, fait du 01/09) : une fenêtre `dialog` de choix de dossier,
+    // stylée aux jetons et VERTE à sa campagne (api 483/483, suite 989/989), s'est affichée en
+    // boîte sombre aux boutons natifs sur le poste de l'utilisateur — mode sombre OS, rendu en
+    // top-layer, `color-scheme` absent. Aucun référentiel ne pouvait le voir : tous jugent ce
+    // que la PAGE dessine, aucun ne jugeait ce que le NAVIGATEUR dessine à sa place. Les deux
+    // fixtures sont la même page, avant et après habillage ; la rouge porte en plus le piège
+    // nommé par le message de SC4 — un <meta name="color-scheme"> qui annonce sans jamais
+    // suivre la bascule — et fait vivre le composant dans un GABARIT JS, comme le contrat
+    // technique de la forge l'impose.
+    oracle: 'oracle-surcouche.mjs',
+    regles: ['SC1', 'SC2', 'SC3', 'SC4'],
+    verte: [fx('surcouche-verte.html')],
+    rouge: [fx('surcouche-rouge.html')],
+  },
+  {
     // TF-0278 : l'agrégateur perdait les issues[] de render_page. Sa table de
     // sévérités ignorait l2_width et l2_gouttiere, pourtant comptés dans le
     // « blocking » de render_page.py — un FAIL sur « L2 accroche bridée 0.47 »

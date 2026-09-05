@@ -11,6 +11,7 @@ node oracles/oracle-images.mjs  <cible.html>          # si visuels générés
 node oracles/oracle-restitution.mjs <cible.html>      # si data-restitution (RL, TF-0235)
 node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA6, si champs de saisie (TF-0736/0739)
 node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
+node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, si dialog/popover/role=dialog (TF-0796)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
 python <…>/render_page.py <cible.html>                # V1–V7, 5 breakpoints × 2 thèmes
 ```
@@ -36,6 +37,12 @@ Une note ne s'attribue qu'avec **au moins un constat cité** : verdict d'oracle,
 ligne, valeur mesurée. Une dimension sans constat est `non_juge`, pas 3/5.
 
 ## Pondération
+
+Toutes les dimensions ne pèsent pas pareil : ce chapitre dit combien vaut chacune
+dans la note finale, et pourquoi. Il se lit ligne à ligne — la colonne « Poids »
+donne la part de la note pondérée, la colonne « Pourquoi » la raison du réglage.
+Les neutralisations (hors cible mobile, hors restitution) sont dites juste après
+le tableau, elles ne se devinent pas depuis les poids.
 
 | Dimension | Poids | Pourquoi |
 |---|---|---|
@@ -70,6 +77,7 @@ Un seul suffit à plafonner le verdict à **Refondre**, quel que soit le total :
 | RF7 | Visuel généré présenté comme photographie authentique | revue humaine |
 | RF8 | Cible de geste plus petite que le composant, ou saisie clavier confisquée | `oracle-saisie` SA5 / SA6 |
 | RF9 | Deux branches exclusives rendues en même temps, ou choix exclusif posé après les champs qu'il commande | `oracle-panneau-tache` PA1 / PA2 / PA3 |
+| RF10 | Composant dynamique ou en sur-couche rendu par défaut du navigateur, ou `color-scheme` non déclaré par thème | `oracle-surcouche` SC1 / SC2 / SC4 |
 
 Un red flag se **nomme**, il ne s'absorbe pas dans une moyenne.
 
@@ -81,7 +89,20 @@ figurait dans aucune grille. D6 Interaction s'instruit désormais avec `oracle-s
 (SA1–SA6) et `oracle-panneau-tache` (PA1–PA6) ; une dimension D6 notée sans avoir
 lancé ces deux-là, sur une page qui porte des champs ou un panneau, est `non_juge`.
 
+RF10 vient du même genre de fait, un cran plus tard dans la chaîne (TF-0796, produit 02,
+01/09/2026) : une fenêtre `dialog` **PASS** à sa campagne s'est affichée en boîte sombre aux
+boutons natifs sur le poste de l'utilisateur, parce que la grille juge ce que la page dessine
+et jamais ce que le navigateur dessine à sa place. D2 Système s'instruit désormais avec
+`oracle-surcouche` (SC1–SC4) dès que la page porte un `<dialog>`, un `[popover]` ou un
+`role="dialog"` — dans son DOM statique **ou** dans ses gabarits ; sans cet oracle, la
+dimension est `non_juge` sur une telle page. Le volet complet, avec le fait qui le fonde :
+`critique-implementation.md`, contrôle 7.
+
 ## Règle de verdict
+
+Le verdict ne se choisit pas : il se lit dans le tableau ci-dessous, à partir de la
+note pondérée et du relevé de red flags. Chaque ligne porte une condition
+entièrement vérifiable — aucune ne dépend d'une impression.
 
 | Verdict | Condition |
 |---|---|

@@ -4,6 +4,12 @@
 
 ```css
 :root {
+  /* Schéma natif — le navigateur peint SES composants (dialog et popover en
+     top-layer, contrôles de formulaire, barres de défilement, ::backdrop) dans
+     le schéma déclaré ici. Clair STRICT par défaut ; sombre déclaré dans le
+     bloc sombre, jamais laissé au réglage de l'OS (TF-0796). */
+  color-scheme: light;
+
   /* Couleurs — OKLCH, jamais HSL. Perceptuellement uniforme. */
   --fond: oklch(0.97 0.008 45);
   --surface: oklch(0.94 0.012 45);
@@ -56,6 +62,13 @@
 
 ## Règles de composition
 
+Ce chapitre dit à quel seuil chaque choix de `tokens.css` est refusé, et par quel
+contrôle. Il se lit ligne à ligne : la colonne « Seuil » porte la valeur mesurée,
+la colonne « Vérifié par » nomme la règle d'oracle qui la mesure — une ligne sans
+règle nommée serait une intention, pas un seuil. Rien n'y est trié par gravité :
+l'ordre suit la structure du bloc `:root` ci-dessus. Sont exclus de ce tableau les
+jugements humains (adéquation à la marque, goût), déclarés plus bas.
+
 | Règle | Seuil | Vérifié par |
 |---|---|---|
 | Contraste du texte courant sur sa surface | ≥ 4.5:1, sur les **deux** thèmes | `oracle-tokens` T5 |
@@ -68,6 +81,7 @@
 | Échelle d'espacement | multiples de 4 | T3 |
 | Tracking optique | ~-0.02em sur le display, ~0 sur le corps | corpus GL49 (apple-design) |
 | Aucune valeur en dur hors `:root` | 0 couleur, 0 police littérale | T1, T2 |
+| `color-scheme` déclaré par thème | `light` au bloc clair · `dark` au bloc sombre | `oracle-dtcg` D3 (dérivé) · `oracle-surcouche` SC4 (page) |
 | Durée de transition | ≤ `--dur-plafond` (300 ms) — pour le token **et** pour la feuille | `oracle-motion` R9, R4 |
 | Durée consommée | par `var(--dur-*)`, jamais un littéral | R8 |
 | Courbe d'easing | aucun dépassement (y hors [0,1] = rebond déguisé) | R9, `oracle-slop` S8 |
@@ -187,6 +201,40 @@ décoratif). Cette distinction se lit sur le rendu, pas dans la feuille : T7 mes
 et les signale en avertissement, en le déclarant `non_juge` plutôt qu'en refusant à tort.
 De même, un anneau *rendu* peut être masqué par un en-tête collant (WCAG 2.4.11) : c'est
 `render_page.py` V2 et la revue humaine qui le voient, pas un token.
+
+## Schéma natif — ce que le navigateur peint, et que les jetons ne touchent pas
+
+Un socle de jetons habille ce que la page dessine. Il ne dit rien de ce que le
+**navigateur** dessine tout seul : la boîte d'un `dialog`, le voile `::backdrop`
+qui l'accompagne, les contrôles de formulaire natifs, les barres de défilement,
+l'autofill. Ces surfaces-là suivent `color-scheme`, et `color-scheme` seul.
+
+Le fait qui l'impose (TF-0796, 01/09/2026) : une fenêtre `dialog` de choix de
+dossier, stylée aux jetons et verte à sa campagne de tests, s'est affichée en
+boîte sombre aux boutons natifs sur le poste d'un utilisateur — mode sombre au
+niveau du système, composant rendu en top-layer, `color-scheme` absent du socle.
+Mots de l'utilisateur : « des trucs moches sortis de nulle part ». La page
+obéissait à `data-theme`, le navigateur au réglage du système : deux autorités
+sur un même écran, et le rendu qui en sort n'a été validé par personne.
+
+D'où la règle, sans exception :
+
+1. **`color-scheme: light` au bloc `:root`** — clair strict par défaut, comme la
+   doctrine du socle `digit-ai-page-html`. Une page qui ne déclare rien laisse le
+   système décider à sa place.
+2. **`color-scheme: dark` dans chaque bloc de thème sombre** — le bloc
+   `@media (prefers-color-scheme: dark)` **et** `:root[data-theme="dark"]`, parce
+   que la bascule manuelle doit gagner sur la préférence système jusque sur les
+   composants natifs.
+3. **`<meta name="color-scheme">` ne suffit pas.** Il annonce ce que la page
+   supporte, il ne suit pas la bascule : un `content="light dark"` laisse les
+   widgets natifs en sombre quand l'utilisateur a choisi le thème clair.
+
+Le générateur `scripts/generer-tokens-css.mjs` émet ces trois déclarations ; un
+`tokens.css` écrit à la main les porte de la même façon. La vérification, elle,
+se fait des deux côtés : `oracle-dtcg` D3 refuse un dérivé qui aurait perdu la
+déclaration, et `oracle-surcouche` SC4 refuse une page qui rend un composant en
+sur-couche sans schéma déclaré par thème.
 
 ## Teinter les neutres
 

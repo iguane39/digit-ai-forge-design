@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — sur-couche nue, rendue par le navigateur</title>
+<!--
+  TF-0796, le fait du 01/09/2026 reproduit. La page est saine partout ailleurs : elle
+  passait ses oracles, exactement comme le composant qui a ete livre PASS (api 483/483,
+  suite 989/989) et s'est affiche en boite sombre aux boutons natifs sur le poste de
+  l'utilisateur.
+
+  Quatre defauts, un par regle :
+    SC1  la fenetre est produite par un GABARIT JS et aucune regle CSS ne la cible —
+         ni fond, ni couleur, ni contour : le navigateur la peint a sa facon ;
+    SC2  ses deux boutons ne sont habilles par rien — « boutons natifs » ;
+    SC3  aucun ::backdrop : le voile est celui du navigateur ;
+    SC4  aucun color-scheme, alors qu'un theme sombre existe : la page obeit a
+         data-theme, le navigateur au reglage de l'OS.
+
+  La balise <meta name="color-scheme"> est presente A DESSEIN : elle annonce ce que la
+  page SUPPORTE, elle ne suit pas la bascule — le piege exact que le message de SC4 nomme.
+-->
+<meta name="color-scheme" content="light dark">
+<style>
+  :root {
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  [data-theme="dark"] {
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .note { color: var(--texte-secondaire); }
+  @media (max-width: 768px) { body { padding: 16px; } }
+  @media (max-width: 390px) { body { padding: 8px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Cette page ouvre une fenetre de choix de dossier a la demande. Tout ce qui est visible au repos est habille depuis les jetons : c'est justement pourquoi le defaut ne se voit qu'une fois le composant ouvert, sur un poste en mode sombre.</p>
+  <p class="note">Le composant lui-meme vit dans un gabarit JS, comme le contrat technique de la forge l'impose : un oracle aveugle au rendu dynamique rendrait PASS sur le composant meme qu'il doit juger.</p>
+  <div id="hote"></div>
+
+  <script>
+    const bouton = document.querySelector('.theme-toggle');
+    const appliquer = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      bouton.setAttribute('aria-pressed', String(t === 'dark'));
+      localStorage.setItem('theme', t);
+    };
+    appliquer(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'light');
+    bouton.addEventListener('click', () => {
+      appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    const fenetreChoixDossier = () => `
+      <dialog class="choix-dossier" aria-labelledby="cd-titre">
+        <h2 id="cd-titre">Choisir un dossier</h2>
+        <p class="note">Le dossier retenu recevra les fichiers produits par le traitement.</p>
+        <button type="button" data-action="annuler-choix-dossier">Annuler</button>
+        <button type="button" data-action="valider-choix-dossier">Valider</button>
+      </dialog>`;
+    document.getElementById('hote').innerHTML = fenetreChoixDossier();
+  </script>
+</body>
+</html>

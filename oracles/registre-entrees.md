@@ -19,6 +19,12 @@
 
 ## Lignes du tableau (vue humaine)
 
+Ce chapitre donne les cinq entrées du 04/08/2026 dans la forme lisible du registre
+global — la même information que les entrées JSON qui suivent, sans la syntaxe. Il se
+lit ligne à ligne : la colonne « Oracle » porte l'invocation exacte et l'énoncé de
+chaque règle, la colonne « Statut » dit si l'entrée est injectée. Les oracles nés
+après cette date vivent dans les chapitres datés du bas de ce fichier, pas ici.
+
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
 | Design généré : marqueurs de slop | `oracles/oracle-slop.mjs <page.html>` — S1 bandeau latéral > 1px, S2 texte en dégradé, S3 polices réflexes, S4 noir/blanc purs, S5 palette IA (violet→bleu, néon sur sombre), S6 emojis en production, S7 grille de cartes clonée, S8 easing à dépassement, S9 rayon uniforme + ombre non teintée, S10 sparkline décoratif | cli | ✅ |
@@ -265,3 +271,64 @@ installée recréerait la divergence que TF-0290 a soldée. Les lignes ci-dessou
   attribut. Ce qui est mécanisé, c'est l'ordre du choix et la coexistence, pas le sens.
 - Les branches **non balisées** : un formulaire qui n'annote pas ses groupes exclusifs par
   `data-branche` n'est pas jugé exclusif, et l'oracle le déclare au lieu de le supposer.
+
+## Entrée du 05/09/2026 — oracle-surcouche (TF-0796)
+
+Un domaine que rien ne couvrait : **ce que le navigateur dessine à la place de la page**.
+Une fenêtre `dialog` de choix de dossier, stylée aux jetons et **PASS** à sa campagne
+(api 483/483, suite 989/989), s'est affichée en boîte sombre aux boutons natifs sur le poste
+de l'utilisateur le 01/09/2026 — mode sombre au niveau du système, composant rendu en
+top-layer, `color-scheme` absent du socle. Tous les oracles du registre jugent ce que la page
+dessine ; la boîte d'un `dialog`, son voile `::backdrop`, les contrôles natifs et les barres
+de défilement suivent `color-scheme`, et rien ne le vérifiait.
+
+Déclenchement **par contenu**, jamais par extension : présence de `<dialog`, d'un attribut
+`popover`, d'un `role="dialog"`/`"alertdialog"`, d'un `::backdrop` ou d'un `showModal(`.
+Hors de ces marqueurs, `run-oracles-design.mjs` le déclare `SANS OBJET` avec sa raison, et
+l'oracle lancé seul rend `SKIP` motivé — jamais un `PASS` par défaut.
+
+Comme pour `oracle-motion` et les deux oracles de TF-0736, l'injection dans
+`~/.claude/skills/quality-oracles/references/registre-oracles.{md,json}` reste **un geste de
+poste**, à faire par un humain ou par un mandat qui le nomme. La ligne ci-dessous est prête.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Composant dynamique et sur-couche : habillage explicite depuis les jetons | `node c:/dev/digit-ai-forge-design/oracles/oracle-surcouche.mjs <page.html> [--tokens tokens.css]` — SC1 surface de la sur-couche sans fond, sans contour, et sans couleur de texte si le composant est natif, SC2 contrôle de la sur-couche sans fond ni couleur (« boutons natifs »), SC3 voile `::backdrop` d'un modal natif non habillé, SC4 `color-scheme` non déclaré par thème (`light` au bloc de base, `dark` au bloc sombre) | cli | ✅ |
+
+```json
+[
+  {
+    "domaine": "Composant dynamique et sur-couche : habillage explicite depuis les jetons",
+    "oracle": "oracles/oracle-surcouche.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "content_patterns": ["<dialog", "popover", "role=\"dialog\"", "::backdrop", "showModal("],
+    "fixtures": {
+      "verte": "oracles/fixtures/surcouche-verte.html",
+      "rouge": "oracles/fixtures/surcouche-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-09-05",
+      "mandat": "TF-0796",
+      "amont": "retour utilisateur du 2026-09-01, capture à l'appui (produit 02, campagne v0.4.0 verte)"
+    },
+    "regles": 4
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- La **prescription et le contraste de l'anneau de focus** : `oracle-tokens` T8 les porte
+  déjà, et une règle dupliquée est une règle qui divergera.
+- Le **rendu réel du composant ouvert** — empilement du top-layer, voile composé,
+  contraste après cascade : `render_page.py` et la matrice d'états de la critique
+  d'implémentation.
+- L'**ouverture effective** du composant (`showModal()`, `popovertarget`, piège de focus) :
+  pan `interface` de forge-tests, qui juge le câblage.
+- Un habillage porté par une **feuille externe** ou un framework : la lecture se limite au
+  CSS du document et au fichier passé par `--tokens`, et le saut est déclaré.
+- Un composant construit **sans littéral de gabarit** (`document.createElement` en série) :
+  l'analyse statique ne le voit pas, et elle le dit.
