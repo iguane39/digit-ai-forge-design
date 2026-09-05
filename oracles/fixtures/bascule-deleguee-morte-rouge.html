@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — bascule DELEGUEE qui vise autre chose</title>
+<!--
+  TF-0800, le sens rouge du meme motif. La page ressemble trait pour trait a
+  bascule-deleguee-verte.html : meme ecouteur delegue sur le document, meme cle en
+  constante, meme palette sombre derivee. Une seule chose change, et elle suffit : le
+  selecteur du closest() vise « [data-panneau-toggle] », qui n'est pas le bouton de
+  bascule. Aucun clic sur le bouton n'atteindra jamais ce gestionnaire.
+
+  C'est le cas que l'elargissement de B-T2 ne doit PAS laisser passer : reconnaitre la
+  delegation ne veut pas dire faire confiance a toute delegation. Seule B-T2 est
+  cassee ici ; B-T1, B-T3 et B-T4 restent verts.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Le bouton est en place, la persistance est declaree, la palette sombre existe : tout se lit comme une bascule conforme. Elle ne bascule rien, parce que le seul ecouteur de la page attend un declencheur qui n'est pas celui-la.</p>
+  <p class="note">C'est la bascule vraiment morte, et elle doit rester refusee : sans ce sens rouge, l'elargissement de la regle deviendrait une porte de sortie.</p>
+
+  <script>
+    const CLE_THEME = 'produit02.preferences.theme';
+    const racine = document.documentElement;
+
+    function appliquer(theme) {
+      racine.setAttribute('data-theme', theme);
+      localStorage.setItem(CLE_THEME, theme);
+    }
+
+    appliquer(localStorage.getItem(CLE_THEME) || 'light');
+
+    // Ecouteur delegue... vers un tout autre declencheur : le bouton de bascule n'est
+    // jamais atteint.
+    document.addEventListener('click', (e) => {
+      const declencheur = e.target.closest('[data-panneau-toggle]');
+      if (!declencheur) return;
+      appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>
