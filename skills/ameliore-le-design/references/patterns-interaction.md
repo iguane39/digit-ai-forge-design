@@ -29,7 +29,8 @@ même `href` partout sur cet écran. Deux occurrences du même libellé avec des
 différentes sont soit une incohérence à corriger, soit deux actions distinctes qui
 doivent porter des libellés distincts — jamais les deux à la fois en silence.
 
-**Un seul CTA visible par écran** (RD-6, 2ᵉ inspection utilisateur du premier produit —
+**Un seul CTA visible par écran** (RD-6 : renvoi de design 6, 2ᵉ inspection utilisateur
+du premier produit —
 rendre des doublons *fonctionnels* ne suffit pas, l'utilisateur les a re-signalés après le
 premier correctif) : l'action principale n'a qu'**une occurrence visible à la fois** par
 écran — dans l'état vide OU dans l'en-tête, jamais les deux ; le formulaire est replié par
@@ -48,6 +49,51 @@ le développement paiera en production.
 Contrôle exécutable : `check_maquette.py` (C15) — élément interactif sans `href`
 réel, `data-action` ni `type="submit"`, ou libellé dupliqué à cibles divergentes
 sur un même écran. Contrat de sortie correspondant : `references/criteres-sortie.md`.
+
+## Registre des déclencheurs — la forme dit ce que la chose fait
+
+Deux tours de retour utilisateur, sur la même fonctionnalité, en deux jours (TF-0797).
+Le 31/08 : « je ne vois pas de changement » — la fonctionnalité était pourtant livrée et
+câblée. Le 01/09, une fois montrée du doigt : « mets-le sous forme de bouton, pas de lien
+— le lien a une signification particulière, tout comme le bouton a la sienne ». Le point
+d'entrée unique d'une fenêtre d'arborescence était un bouton **fantôme** : sans fond ni
+bordure, il se lisait comme du texte. Aucune grille ne mesurait qu'une fonctionnalité a au
+moins un point d'entrée qui **a l'air de ce qu'il fait**.
+
+Le registre tient en trois lignes, et se lit comme un contrat entre la forme et l'effet.
+La colonne « Forme » dit ce qu'on écrit dans le HTML et le CSS, la colonne « Ce que
+l'utilisateur en déduit » dit ce que la forme promet — une promesse que le déclencheur
+doit tenir.
+
+| Intention | Forme | Ce que l'utilisateur en déduit |
+|---|---|---|
+| **Action** (crée, envoie, ouvre, calcule, supprime) | `<button>` au fond posé, ou bordé | « il va se passer quelque chose ici » |
+| **Navigation** (change d'écran, va à une ancre, ouvre une ressource) | `<a href="…">` vers une destination réelle | « je me déplace, je peux ouvrir dans un onglet » |
+| **Action secondaire** | bouton fantôme — fond transparent, pas de bordure | « c'est possible, ce n'est pas le geste principal » |
+
+Trois règles dures en découlent :
+
+1. **Une action ne se déclenche jamais par un lien.** Un `<a>` sans destination réelle
+   (`href` absent, `#` seul, `javascript:`) qui agit trompe sur ce qui va se passer et
+   perd le contrat clavier du bouton. Un `href` réel **plus** un `data-action` reste un
+   lien : la destination écrite est ce que l'utilisateur lit.
+2. **Une navigation ne se fait jamais par un bouton.** Un `<button>` qui pose
+   `location.href` prive d'ouvrir dans un onglet, de copier l'adresse, et de l'annonce
+   faite par les technologies d'assistance.
+3. **Un fantôme n'est jamais l'unique accès à une fonctionnalité.** Il est légitime en
+   second accès, en rappel, en action de rangée. Seul, il rend la fonctionnalité
+   invisible — c'est le défaut du 31/08, et il coûte deux tours.
+
+Balisage attendu, qui rend le critère mesurable (`oracle-declencheurs`, DE1–DE3) :
+
+| Attribut | Sur quoi |
+|---|---|
+| `data-fonctionnalite="<nom>"` | chaque point d'entrée d'une fonctionnalité, y compris les rappels secondaires |
+| `data-action="<verbe-objet>"` ou `href="#route"` | sa cible, comme pour tout CTA (voir « Un CTA = une cible ») |
+
+Sans `data-fonctionnalite`, l'oracle rend le **registre** de la page — chaque déclencheur
+avec sa nature mesurée — et déclare que la couverture des fonctionnalités n'a pas été
+jugée. Il ne devine pas un regroupement à partir des libellés : un contrôle qui devine ment.
 
 ## Champs de saisie — TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE
 

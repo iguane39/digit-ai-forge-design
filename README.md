@@ -82,6 +82,7 @@ node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # 
 node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA6 : typé, proposé, borné, atteignable
 node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
 node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
+node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
 
 node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
@@ -151,6 +152,7 @@ parcours C13 dans tous les cas
 | `oracle-saisie` | SA1–SA6 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4 | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème |
+| `oracle-declencheurs` | DE1–DE3 | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et
@@ -196,6 +198,22 @@ surface, contrôles, voile — et `color-scheme` déclaré **par thème** : `lig
 base, `dark` au bloc sombre. Le socle le porte à la source (`scripts/generer-tokens-css.mjs`,
 verrouillé par `oracle-dtcg` D3) ; l'oracle vérifie qu'il est arrivé jusqu'à la page.
 Volet de revue correspondant : `critique-implementation.md`, contrôle 7 « livré à l'écran ».
+
+### Deux tours de retour pour un bouton — `oracle-declencheurs`
+
+Le 31/08/2026, sur une fonctionnalité livrée et câblée : « je ne vois pas de changement ».
+Le 01/09, une fois le bouton montré du doigt : « mets-le sous forme de bouton, pas de lien —
+le lien a une signification particulière, tout comme le bouton a la sienne » (TF-0797). Le
+point d'entrée unique d'une fenêtre d'arborescence était un bouton **fantôme** : sans fond ni
+bordure, il se lisait comme du texte.
+
+`oracle-declencheurs` (DE1–DE3) porte le **registre des déclencheurs** : une action se
+déclenche par un bouton qui a l'air d'un bouton, une navigation se fait par un lien, et la
+variante fantôme est une action secondaire — jamais l'unique accès à une fonctionnalité. Le
+critère est mesurable et non discutable : l'oracle rend, dans le champ `registre` de son
+JSON, la **liste des points d'entrée de la page avec la nature de chacun**. La couverture par
+fonctionnalité se déclare par `data-fonctionnalite="<nom>"` ; sans elle, l'oracle rend le
+registre et dit que la couverture n'a pas été jugée, au lieu de deviner un regroupement.
 
 Node seul, aucune dépendance npm. Contrat commun : JSON sur stdout, exit 0/1/2,
 `non_juge` déclaré. **Injectés au registre global** le 04/08/2026 (v2.7.0, 39 oracles),

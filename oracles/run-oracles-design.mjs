@@ -258,6 +258,10 @@ const aUnPanneau = /data-panneau-tache|data-branche\s*=/i.test(html);
 // (role="dialog") est peint EN PARTIE par le navigateur — c'est le seul cas où la page
 // n'a pas le dernier mot. Détection par contenu, comme les deux précédentes : une page
 // sans sur-couche n'a pas de sur-couche nue.
+// TF-0797 : la nature d'un déclencheur se juge sur TOUTE page qui en porte un — un bouton
+// qui a l'air d'un lien coûte deux tours de retour utilisateur, quel que soit le domaine de
+// la page. Une page sans déclencheur, elle, n'a pas de déclencheur mal formé.
+const aUnDeclencheur = /<button[\s>]|<a[\s>]|<summary[\s>]|data-action|onclick|role\s*=\s*["'](button|link)["']/i.test(html);
 const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(html);
 const estMobile = args.includes('--mobile')
   || /viewport-fit\s*=\s*cover|safe-area-inset|data-chassis|class="[^"]*chassis/i.test(html);
@@ -282,6 +286,10 @@ else sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans l
 
 if (aUnPanneau) resultats.push(lancer('oracle-panneau-tache.mjs', [cible]));
 else sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
+
+if (aUnDeclencheur) {
+  resultats.push(lancer('oracle-declencheurs.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));
+} else sansObjet.push('oracle-declencheurs : SANS OBJET — aucun déclencheur (bouton, lien, élément porteur de data-action/onclick) dans le document');
 
 if (aUneSurcouche) {
   resultats.push(lancer('oracle-surcouche.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));

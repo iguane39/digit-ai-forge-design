@@ -43,6 +43,12 @@ déclare — jamais de conformité jugée sans référentiel.
    (pattern « un CTA = une cible » — la convention `data-action`/`href` de la maquette permet le
    mapping mécanique). Un CTA maquetté disparu, dupliqué ou re-libellé = écart.
    (Le câblage effectif, lui, est jugé par le pan `interface` de forge-tests.)
+   **Nature du déclencheur** (TF-0797) : chaque point d'entrée est confronté au registre —
+   action = bouton, navigation = lien, fantôme = action secondaire jamais unique. Oracle :
+   `oracle-declencheurs` (DE1–DE3), dont le champ `registre` rend la liste des points
+   d'entrée de la page avec la nature de chacun. Cette liste est jointe au rapport telle
+   quelle : c'est la même mesure qu'en maquette, donc un écart maquette → produit se lit
+   d'une colonne à l'autre au lieu de se plaider.
 4. **Rendu réel** : `run-oracles-design.mjs <page> --rendu --tokens <tokens-reference>` sur les
    pages clés du produit (ou `render_page.py` contre l'instance servie), **deux thèmes**, tous
    breakpoints — V1 débordements, V2 contraste, V4 chevauchements, a11y.
