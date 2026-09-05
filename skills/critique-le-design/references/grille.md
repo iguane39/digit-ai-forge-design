@@ -12,6 +12,7 @@ node oracles/oracle-restitution.mjs <cible.html>      # si data-restitution (RL,
 node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA6, si champs de saisie (TF-0736/0739)
 node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
 node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, si dialog/popover/role=dialog (TF-0796)
+node oracles/oracle-declencheurs.mjs <cible.html>     # DE1–DE3 + registre des déclencheurs (TF-0797)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
 python <…>/render_page.py <cible.html>                # V1–V7, 5 breakpoints × 2 thèmes
 ```
@@ -64,7 +65,13 @@ ceux d'avant TF-0235. Sur une restitution, D8 s'instruit avec
 
 ## Red flags — bloquants, indépendants du score
 
-Un seul suffit à plafonner le verdict à **Refondre**, quel que soit le total :
+Un seul suffit à plafonner le verdict à **Refondre**, quel que soit le total. Le tableau
+se lit ligne à ligne : la colonne « Red flag » énonce le fait refusé, la colonne
+« Détection » nomme l'oracle et la règle qui le constatent — un red flag sans détection
+nommée n'entre pas dans cette liste. L'ordre est celui de l'ancienneté, pas de la gravité :
+tous plafonnent au même verdict. En sont exclus les écarts qui se rattrapent par une note :
+ceux-là vivent dans les dimensions.
+
 
 | # | Red flag | Détection |
 |---|---|---|
@@ -78,6 +85,7 @@ Un seul suffit à plafonner le verdict à **Refondre**, quel que soit le total :
 | RF8 | Cible de geste plus petite que le composant, ou saisie clavier confisquée | `oracle-saisie` SA5 / SA6 |
 | RF9 | Deux branches exclusives rendues en même temps, ou choix exclusif posé après les champs qu'il commande | `oracle-panneau-tache` PA1 / PA2 / PA3 |
 | RF10 | Composant dynamique ou en sur-couche rendu par défaut du navigateur, ou `color-scheme` non déclaré par thème | `oracle-surcouche` SC1 / SC2 / SC4 |
+| RF11 | Fonctionnalité dont l'unique accès est un bouton fantôme, action portée par un lien, ou navigation portée par un bouton | `oracle-declencheurs` DE1 / DE2 / DE3 |
 
 Un red flag se **nomme**, il ne s'absorbe pas dans une moyenne.
 
@@ -97,6 +105,18 @@ et jamais ce que le navigateur dessine à sa place. D2 Système s'instruit déso
 `role="dialog"` — dans son DOM statique **ou** dans ses gabarits ; sans cet oracle, la
 dimension est `non_juge` sur une telle page. Le volet complet, avec le fait qui le fonde :
 `critique-implementation.md`, contrôle 7.
+
+RF11 est le prix de deux tours de retour sur une même fonctionnalité, en deux jours
+(TF-0797, 31/08 puis 01/09/2026) : « je ne vois pas de changement », puis « mets-le sous
+forme de bouton, pas de lien — le lien a une signification particulière, tout comme le
+bouton a la sienne ». Le **registre des déclencheurs** (une action se déclenche par un
+bouton · une navigation se fait par un lien · un fantôme est une action secondaire, jamais
+l'unique accès) est énoncé dans `patterns-interaction.md` et mesuré par
+`oracle-declencheurs`. Le critère est la **liste des points d'entrée de la page, chacun
+avec sa nature** : l'oracle la rend dans le champ `registre` de son JSON, en maquette comme
+à l'implémentation. Une dimension D3 Hiérarchie notée sans cette liste, sur une page qui
+porte des déclencheurs, est `non_juge` — l'accès à une fonctionnalité est de la hiérarchie,
+pas du détail.
 
 ## Règle de verdict
 

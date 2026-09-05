@@ -339,6 +339,22 @@ const CAS = [
     rouge: [fx('panneau-tache-runtime-rouge.html')],
   },
   {
+    // TF-0797 (lot pilot du 05/09, faits des 31/08 et 01/09) : le point d'entrée UNIQUE d'une
+    // fenêtre d'arborescence était un bouton fantôme, lu comme un lien ou comme du texte.
+    // Premier retour : « je ne vois pas de changement » — la fonctionnalité était pourtant
+    // livrée. Second, le lendemain : « mets-le sous forme de bouton, pas de lien — le lien a
+    // une signification particulière, tout comme le bouton a la sienne ». Deux tours de retour
+    // pour un bouton. Les deux fixtures sont la même page, avant et après : la rouge porte une
+    // action sur un lien (DE1), une navigation sur un bouton (DE2) et deux fonctionnalités dont
+    // l'unique accès n'a pas la forme de ce qu'il fait (DE3) — dont une produite par un gabarit
+    // JS. La verte garde le bouton fantôme, mais en SECOND accès : la règle ne condamne pas le
+    // fantôme, elle refuse qu'il soit seul.
+    oracle: 'oracle-declencheurs.mjs',
+    regles: ['DE1', 'DE2', 'DE3'],
+    verte: [fx('declencheurs-verte.html')],
+    rouge: [fx('declencheurs-rouge.html')],
+  },
+  {
     // TF-0796 (lot pilot du 05/09, fait du 01/09) : une fenêtre `dialog` de choix de dossier,
     // stylée aux jetons et VERTE à sa campagne (api 483/483, suite 989/989), s'est affichée en
     // boîte sombre aux boutons natifs sur le poste de l'utilisateur — mode sombre OS, rendu en

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — declencheurs qui mentent sur ce qu'ils font</title>
+<!--
+  TF-0797, les faits des 31/08 et 01/09/2026 reproduits. La page est habillee, ses
+  jetons sont propres, et chaque declencheur est cable : c'est exactement pourquoi le
+  defaut a coute DEUX tours de retour utilisateur avant d'etre nomme.
+
+  Trois defauts, un par regle :
+    DE1  « Exporter en CSV » est une ACTION portee par un lien sans destination ;
+    DE2  « Voir le tableau detaille » est une NAVIGATION portee par un bouton ;
+    DE3  la fonctionnalite « arborescence » n'a qu'un seul point d'entree, et c'est un
+         bouton fantome — sans fond ni bordure, lu comme du texte. Mots de
+         l'utilisateur : « je ne vois pas de changement », puis « mets-le sous forme de
+         bouton, pas de lien ».
+
+  Le fantome est produit par un GABARIT JS, comme le contrat technique de la forge
+  l'impose : un oracle aveugle au rendu dynamique rendrait PASS sur le declencheur meme
+  qu'il doit juger.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .btn { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .btn-fantome { background: transparent; color: var(--texte-secondaire); border: none; padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Tout est cable sur cette page : le lien exporte vraiment, le bouton change vraiment d'ecran, et le fantome ouvre vraiment l'arborescence. Aucune campagne de tests d'interface ne peut trouver ce qui cloche, parce que ce qui cloche est la NATURE de chaque declencheur, pas son cablage.</p>
+
+  <p class="note">
+    <a href="#" data-action="exporter-csv" data-fonctionnalite="export">Exporter en CSV</a>
+    <button class="btn" type="button" onclick="window.location.href='#tableau'" data-fonctionnalite="tableau">Voir le tableau detaille</button>
+  </p>
+
+  <section id="tableau">
+    <h2>Tableau detaille</h2>
+    <div id="hote-arborescence"></div>
+  </section>
+
+  <script>
+    const bouton = document.querySelector('.theme-toggle');
+    const appliquer = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      bouton.setAttribute('aria-pressed', String(t === 'dark'));
+      localStorage.setItem('theme', t);
+    };
+    appliquer(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'light');
+    bouton.addEventListener('click', () => {
+      appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+
+    const accesArborescence = () => `
+      <button class="btn-fantome" type="button" data-action="ouvrir-arborescence" data-fonctionnalite="arborescence">Parcourir</button>`;
+    document.getElementById('hote-arborescence').innerHTML = accesArborescence();
+  </script>
+</body>
+</html>

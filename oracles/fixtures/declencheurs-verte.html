@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — registre des declencheurs</title>
+<!--
+  TF-0797. La MEME page que declencheurs-rouge.html, une fois corrigee :
+    - l'export est une ACTION, portee par un bouton plein qui a l'air d'un bouton ;
+    - le tableau est une DESTINATION, atteinte par un lien ;
+    - l'arborescence garde son bouton fantome — mais en SECOND acces, derriere un
+      bouton secondaire borde : un fantome est une action secondaire, jamais l'unique
+      acces (retours utilisateur des 31/08 et 01/09/2026).
+  Les points d'entree sont declares par data-fonctionnalite : c'est ce qui rend le
+  critere mesurable au lieu de le laisser a l'appreciation.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  /* Bouton plein : l'acces principal d'une action. */
+  .btn { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  /* Bouton secondaire : sans fond, mais borde — il se lit encore comme un bouton. */
+  .btn-secondaire { background: transparent; color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  /* Bouton fantome : ni fond ni bordure. Legitime en second acces, jamais seul. */
+  .btn-fantome { background: transparent; color: var(--texte-secondaire); border: none; padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Chaque fonctionnalite de cette page a au moins un point d'entree qui a l'air de ce qu'il fait : l'export s'obtient par un bouton, le tableau se rejoint par un lien, et l'arborescence s'ouvre depuis un bouton secondaire borde avant d'etre rappelee par un fantome.</p>
+
+  <p class="note">
+    <button class="btn" type="button" data-action="exporter-csv" data-fonctionnalite="export">Exporter en CSV</button>
+    <button class="btn-secondaire" type="button" data-action="ouvrir-arborescence" data-fonctionnalite="arborescence">Parcourir l'arborescence</button>
+    <a href="#tableau" data-fonctionnalite="tableau">Voir le tableau detaille</a>
+  </p>
+
+  <section id="tableau">
+    <h2>Tableau detaille</h2>
+    <p class="note">Le meme acces a l'arborescence est rappele ici en variante fantome : action secondaire, jamais unique.</p>
+    <button class="btn-fantome" type="button" data-action="ouvrir-arborescence" data-fonctionnalite="arborescence">Parcourir</button>
+  </section>
+
+  <script>
+    const bouton = document.querySelector('.theme-toggle');
+    const appliquer = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      bouton.setAttribute('aria-pressed', String(t === 'dark'));
+      localStorage.setItem('theme', t);
+    };
+    appliquer(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'light');
+    bouton.addEventListener('click', () => {
+      appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

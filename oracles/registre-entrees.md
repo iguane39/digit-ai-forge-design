@@ -332,3 +332,64 @@ poste**, à faire par un humain ou par un mandat qui le nomme. La ligne ci-desso
   CSS du document et au fichier passé par `--tokens`, et le saut est déclaré.
 - Un composant construit **sans littéral de gabarit** (`document.createElement` en série) :
   l'analyse statique ne le voit pas, et elle le dit.
+
+## Entrée du 05/09/2026 — oracle-declencheurs (TF-0797)
+
+Un second domaine que rien ne couvrait : **la nature du point d'entrée d'une
+fonctionnalité**. Le 31/08/2026, sur une fonctionnalité livrée et câblée, l'utilisateur
+écrit « je ne vois pas de changement » ; le lendemain, une fois le bouton montré du doigt :
+« mets-le sous forme de bouton, pas de lien — le lien a une signification particulière,
+tout comme le bouton a la sienne ». Le point d'entrée unique d'une fenêtre d'arborescence
+était un bouton fantôme, sans fond ni bordure, lu comme du texte. Deux tours de retour pour
+un bouton, parce qu'aucun référentiel ne mesurait qu'une fonctionnalité a au moins un point
+d'entrée qui A L'AIR de ce qu'il fait.
+
+Déclenchement **par contenu** : présence d'un `<button`, d'un `<a`, d'un `<summary`, d'un
+`data-action`, d'un `onclick` ou d'un `role="button"`/`"link"`. Hors de ces marqueurs,
+`run-oracles-design.mjs` le déclare `SANS OBJET`, et l'oracle lancé seul rend `SKIP` motivé.
+
+Cet oracle rend un champ de plus que le contrat commun : `registre`, la liste des points
+d'entrée de la page avec la nature mesurée de chacun. C'est le critère que la grille cite en
+maquette comme à l'implémentation — une nature se lit, elle ne se plaide pas.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Déclencheurs : nature du point d'entrée d'une fonctionnalité | `node c:/dev/digit-ai-forge-design/oracles/oracle-declencheurs.mjs <page.html> [--tokens tokens.css]` — DE1 action portée par un lien sans destination réelle, DE2 navigation portée par un bouton (`location`, `window.open`, `href` sur un `<button>`), DE3 fonctionnalité déclarée par `data-fonctionnalite` dont tous les points d'entrée sont fantômes, du texte nu ou des liens sans destination | cli | ✅ |
+
+```json
+[
+  {
+    "domaine": "Déclencheurs : nature du point d'entrée d'une fonctionnalité",
+    "oracle": "oracles/oracle-declencheurs.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "content_patterns": ["<button", "<a ", "data-action", "onclick", "role=\"button\""],
+    "fixtures": {
+      "verte": "oracles/fixtures/declencheurs-verte.html",
+      "rouge": "oracles/fixtures/declencheurs-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-09-05",
+      "mandat": "TF-0797",
+      "amont": "retours utilisateur des 2026-08-31 et 2026-09-01 sur une même fonctionnalité livrée"
+    },
+    "regles": 3
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- Que le déclencheur ait une **cible nommée** et qu'un même libellé pointe la même cible :
+  `check_maquette` C15 le fait déjà, et une règle dupliquée divergera.
+- Le **câblage effectif** du déclencheur : pan `interface` de forge-tests.
+- La **taille rendue** de la cible de geste : `oracle-saisie` SA5 pour le câblage,
+  `render_page.py` pour la géométrie.
+- La **navigation portée par un routeur applicatif** — un `data-action` interprété par un
+  aiguillage JS : indécidable statiquement, déclarée plutôt que devinée. DE2 ne juge que
+  la navigation ÉCRITE sur le bouton.
+- La **justesse du découpage** en fonctionnalités et la pertinence des libellés : c'est de
+  la conception, pas un attribut. Sans `data-fonctionnalite`, la couverture n'est pas jugée
+  et l'oracle le dit — il ne regroupe jamais des déclencheurs par ressemblance de libellé.
