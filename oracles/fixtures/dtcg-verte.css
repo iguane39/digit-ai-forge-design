@@ -11,6 +11,11 @@
  */
 
 :root {
+  /* --- Rendu natif : le navigateur peint SES composants (top-layer dialog/popover,
+         contrôles de formulaire, barres de défilement, ::backdrop) dans le schéma
+         déclaré ici, jamais dans celui de l'OS (TF-0796) --- */
+  color-scheme: light;
+
   /* --- Couleurs, thème clair (référence) --- */
   --bg: #FAFBFF;
   --card: #FFFFFF;
@@ -59,6 +64,7 @@
 /* --- Thème sombre, dérivé --- */
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
   --bg: #0E1219;
   --card: #171C25;
   --surface: #171C25;
@@ -79,6 +85,6 @@
   }
 }
 
-:root[data-theme="dark"] { --bg: #0E1219; --card: #171C25; --surface: #171C25; --ink: #ECEFF6; --muted: #A6B0C2; --faint: #7C879A; --line: #2A3140; --blue: #6FA0FF; --green: #5FCB86; --green-fill: #12261A; --green-line: #24422F; --amber: #F0AE4E; --amber-fill: #2A1F0E; --amber-line: #46351A; --teal: #4FC9BC; --teal-fill: #0C2624; --teal-line: #1B403C; }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #0E1219; --card: #171C25; --surface: #171C25; --ink: #ECEFF6; --muted: #A6B0C2; --faint: #7C879A; --line: #2A3140; --blue: #6FA0FF; --green: #5FCB86; --green-fill: #12261A; --green-line: #24422F; --amber: #F0AE4E; --amber-fill: #2A1F0E; --amber-line: #46351A; --teal: #4FC9BC; --teal-fill: #0C2624; --teal-line: #1B403C; }
 
-:root[data-theme="light"] { --bg: #FAFBFF; --card: #FFFFFF; --surface: #FFFFFF; --ink: #0F172A; --muted: #64748B; --faint: #94A3B8; --line: #E6EAF2; --blue: #2563EB; --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD; --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8; --teal: #0E9488; --teal-fill: #EFFDFB; --teal-line: #C7F0EA; }
+:root[data-theme="light"] { color-scheme: light; --bg: #FAFBFF; --card: #FFFFFF; --surface: #FFFFFF; --ink: #0F172A; --muted: #64748B; --faint: #94A3B8; --line: #E6EAF2; --blue: #2563EB; --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD; --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8; --teal: #0E9488; --teal-fill: #EFFDFB; --teal-line: #C7F0EA; }

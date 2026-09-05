@@ -52,6 +52,11 @@ ne contient que la forge elle-même (skills, oracles, corpus) — pas ses produc
 
 ## Les quatre verbes
 
+Voici les quatre points d'entrée de la forge, ce qu'il faut leur donner et ce qu'ils
+rendent. Le tableau se lit ligne à ligne : la colonne « Entrée » dit la matière
+minimale à fournir, la colonne « Sortie » le fichier produit — rien d'autre n'est
+promis, et ce qui n'y figure pas n'est pas du ressort de la forge.
+
 | Skill | Entrée | Sortie |
 |---|---|---|
 | [systeme-de-marque](skills/systeme-de-marque/) | logo, site, charte PDF, 3 mots de ton | `tokens.css` + `MARQUE.md` |
@@ -76,6 +81,7 @@ node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # 
 
 node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA6 : typé, proposé, borné, atteignable
 node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
+node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
 
 node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
@@ -144,6 +150,7 @@ parcours C13 dans tous les cas
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
 | `oracle-saisie` | SA1–SA6 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
+| `oracle-surcouche` | SC1–SC4 | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et
@@ -173,6 +180,23 @@ elle demande de choisir.
 Doctrine complète et balisage attendu :
 [patterns-interaction.md](skills/ameliore-le-design/references/patterns-interaction.md).
 
+### Ce que la page ne dessine pas elle-même — `oracle-surcouche`
+
+Quatrième retour du même genre, un cran plus loin (TF-0796, 01/09/2026). Une fenêtre
+`dialog` de choix de dossier, stylée aux jetons et **PASS** à sa campagne (api 483/483,
+suite 989/989), s'est affichée en boîte sombre aux boutons natifs sur le poste de
+l'utilisateur : mode sombre au niveau du système, composant rendu en top-layer,
+`color-scheme` absent du socle. « Des trucs moches sortis de nulle part. » Tous les
+oracles jugeaient ce que la **page** dessine ; aucun ne jugeait ce que le **navigateur**
+dessine à sa place — la boîte d'un `dialog`, son voile `::backdrop`, les contrôles
+natifs, les barres de défilement.
+
+`oracle-surcouche` (SC1–SC4) exige l'habillage complet de tout composant en sur-couche —
+surface, contrôles, voile — et `color-scheme` déclaré **par thème** : `light` au bloc de
+base, `dark` au bloc sombre. Le socle le porte à la source (`scripts/generer-tokens-css.mjs`,
+verrouillé par `oracle-dtcg` D3) ; l'oracle vérifie qu'il est arrivé jusqu'à la page.
+Volet de revue correspondant : `critique-implementation.md`, contrôle 7 « livré à l'écran ».
+
 Node seul, aucune dépendance npm. Contrat commun : JSON sur stdout, exit 0/1/2,
 `non_juge` déclaré. **Injectés au registre global** le 04/08/2026 (v2.7.0, 39 oracles),
 déclenchés par contenu et non par extension — détail et sauvegardes :
@@ -199,6 +223,11 @@ Déterministe : même requête, même sortie. Une requête sans résultat se **d
 au lieu de produire une entrée inventée.
 
 ## Skills tiers installés pour la forge
+
+Trois skills extérieurs sont installés à côté de la forge, et le tableau ci-dessous dit
+lequel sert à quoi et sous quelle licence il est repris. Sont exclus de cette liste les
+outils simplement consultés : n'y figure que ce qui est effectivement installé et
+exécuté ou cité par un oracle.
 
 | Skill | Rôle | Licence |
 |---|---|---|

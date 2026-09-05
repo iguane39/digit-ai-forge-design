@@ -254,6 +254,11 @@ const aDesImages = /<img\b|<source\b[^>]*srcset/i.test(html);
 // n'a pas de champ mal typé, et une page sans panneau de création n'a pas de branche exclusive.
 const aDesChamps = /<input\b|<textarea\b|<select\b/i.test(html);
 const aUnPanneau = /data-panneau-tache|data-branche\s*=/i.test(html);
+// TF-0796 : un composant rendu en top-layer (dialog, popover) ou déclaré en sur-couche
+// (role="dialog") est peint EN PARTIE par le navigateur — c'est le seul cas où la page
+// n'a pas le dernier mot. Détection par contenu, comme les deux précédentes : une page
+// sans sur-couche n'a pas de sur-couche nue.
+const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(html);
 const estMobile = args.includes('--mobile')
   || /viewport-fit\s*=\s*cover|safe-area-inset|data-chassis|class="[^"]*chassis/i.test(html);
 
@@ -277,6 +282,10 @@ else sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans l
 
 if (aUnPanneau) resultats.push(lancer('oracle-panneau-tache.mjs', [cible]));
 else sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
+
+if (aUneSurcouche) {
+  resultats.push(lancer('oracle-surcouche.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));
+} else sansObjet.push('oracle-surcouche : SANS OBJET — aucun composant en sur-couche (<dialog>, [popover], role="dialog") dans le document');
 
 if (rendu) resultats.push(...lancerRendu(cible));
 

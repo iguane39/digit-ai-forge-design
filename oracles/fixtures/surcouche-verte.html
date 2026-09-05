@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — sur-couche habillee depuis les jetons</title>
+<!--
+  TF-0796. La MEME page que surcouche-rouge.html, une fois habillee : la fenetre de
+  choix de dossier porte fond, couleur, contour et voile depuis les jetons, ses deux
+  boutons sont habilles, et color-scheme est declare par theme — clair au bloc de base,
+  sombre au bloc [data-theme="dark"]. C'est le sens vert du fait du 01/09/2026 : un
+  composant en top-layer ne prend jamais le rendu par defaut du navigateur.
+-->
+<style>
+  :root {
+    /* Le navigateur peint SES composants dans ce schema, jamais dans celui de l'OS. */
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --voile: rgba(29, 33, 38, 0.55);
+    --police: Georgia, serif;
+  }
+  [data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+    --voile: rgba(6, 8, 11, 0.68);
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .note { color: var(--texte-secondaire); }
+
+  /* La surface de la sur-couche : fond, couleur, contour — les trois facettes. */
+  .choix-dossier { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); border-radius: 12px; padding: 24px; }
+  /* Le voile : sans lui, c'est celui du navigateur, qui ignore le theme. */
+  .choix-dossier::backdrop { background: var(--voile); }
+  /* Les controles de la sur-couche : sans cela, boutons natifs — le defaut du 01/09. */
+  .choix-dossier button { background: var(--fond); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+
+  @media (max-width: 768px) { body { padding: 16px; } }
+  @media (max-width: 390px) { body { padding: 8px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Cette page porte une fenetre de choix de dossier rendue en top-layer. Elle est habillee entierement depuis les jetons, ce que la regle SC1 exige, et ses boutons le sont aussi, ce que SC2 exige apres le retour utilisateur du 01/09/2026.</p>
+  <p class="note">Le voile qui accompagne la fenetre vient lui aussi d'un jeton, et le schema natif est declare pour chacun des deux themes : rien n'est laisse au reglage du systeme d'exploitation.</p>
+
+  <dialog class="choix-dossier" aria-labelledby="cd-titre">
+    <h2 id="cd-titre">Choisir un dossier</h2>
+    <p class="note">Le dossier retenu recevra les fichiers produits par le traitement.</p>
+    <button type="button" data-action="annuler-choix-dossier">Annuler</button>
+    <button type="button" data-action="valider-choix-dossier">Valider</button>
+  </dialog>
+
+  <script>
+    const bouton = document.querySelector('.theme-toggle');
+    const appliquer = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      bouton.setAttribute('aria-pressed', String(t === 'dark'));
+      localStorage.setItem('theme', t);
+    };
+    appliquer(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'light');
+    bouton.addEventListener('click', () => {
+      appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

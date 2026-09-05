@@ -31,7 +31,7 @@ sans les deux colonnes, il n'y a pas d'écart à relever, seulement une opinion.
 Sans artefacts de référence (produit hors forge), le mode dégrade en critique classique et le
 déclare — jamais de conformité jugée sans référentiel.
 
-## Méthode (5 contrôles, chacun avec preuve)
+## Méthode (7 contrôles, chacun avec preuve)
 
 1. **Tokens** : diff entre le `tokens.css` de référence et le CSS servi — toute divergence de
    valeur est nommée (token, valeur attendue, valeur constatée). Un token absent ou une couleur
@@ -56,6 +56,49 @@ déclare — jamais de conformité jugée sans référentiel.
    (`etat_muet`) ; un état dont le déclencheur est absent est **NON JOUÉ**, jamais vert.
 6. **Voix** : libellés, messages d'erreur et états vides confrontés à `MARQUE.md` (registre,
    vocabulaire, anti-références). Dérive de ton = écart mineur nommé.
+7. **Livré à l'écran** (TF-0796) : tout composant chargé dynamiquement ou rendu en sur-couche
+   porte son habillage complet depuis les jetons — voir le volet ci-dessous. Oracle :
+   `oracle-surcouche` (SC1–SC4), lancé d'office par `run-oracles-design.mjs` dès qu'un
+   `<dialog>`, un `[popover]` ou un `role="dialog"` est détecté dans la page ou ses gabarits.
+
+## Volet « livré à l'écran » — ce que la page ne dessine pas elle-même
+
+Les six contrôles ci-dessus jugent ce que le produit dessine. Il reste une part de l'écran
+que **le navigateur** dessine à sa place, et que personne ne regardait : la boîte d'un
+`dialog` en top-layer, son voile `::backdrop`, les contrôles de formulaire natifs, les barres
+de défilement, l'autofill. Cette part suit `color-scheme`, et `color-scheme` seul.
+
+Le fait qui l'impose (01/09/2026, produit 02) : une fenêtre `dialog` de choix de dossier,
+stylée aux jetons et **PASS** à sa campagne (api 483/483, suite 989/989), s'est affichée en
+boîte sombre aux boutons natifs sur le poste de l'utilisateur — mode sombre au niveau du
+système, composant en top-layer, `color-scheme` absent du socle. Mots de l'utilisateur :
+« des trucs moches sortis de nulle part ». La grille jugeait le rendu au repos ; le composant
+n'existait qu'après un clic, et son habillage n'était complet que sur le poste de l'auteur.
+
+Ce volet se lit règle par règle : la colonne « Exigé » porte ce qui doit être écrit dans le
+CSS livré, la colonne « Refusé par » nomme la règle d'oracle qui le mesure. Rien n'y est
+laissé à l'appréciation — une facette absente est le rendu par défaut du navigateur, jamais
+un choix de design.
+
+| Exigé sur le produit livré | Refusé par |
+|---|---|
+| la surface du composant porte fond, contour, et couleur de texte s'il est natif | `oracle-surcouche` SC1 |
+| chaque bouton ou champ de la sur-couche porte fond (ou `appearance`) et couleur | SC2 |
+| le voile d'un modal natif est habillé (`::backdrop`) depuis les jetons | SC3 |
+| `color-scheme: light` au bloc de base, `color-scheme: dark` au bloc sombre | SC4 |
+| l'anneau de focus est prescrit par un jeton et contrasté | `oracle-tokens` T8 (non dupliqué) |
+
+Trois conséquences pour la revue :
+
+1. **Le composant se juge ouvert, pas au repos.** La matrice d'états du contrôle 5 est le
+   seul endroit où un `dialog` est mesuré à l'écran ; un composant dont le déclencheur est
+   absent est **NON JOUÉ**, jamais vert.
+2. **Le thème système fait partie du cas de test.** Un rendu vert sur un poste en clair ne
+   dit rien du même écran sur un poste en sombre : `run-oracles-design.mjs --rendu` mesure
+   déjà les deux thèmes, et SC4 ferme la porte que ce passage laissait ouverte.
+3. **`<meta name="color-scheme">` ne vaut pas déclaration.** Il annonce ce que la page
+   supporte ; il ne suit pas la bascule. SC4 le dit dans son message plutôt que de laisser
+   l'auteur croire qu'il a fait le nécessaire.
 
 ## Restitution — des retours, pas une revue
 

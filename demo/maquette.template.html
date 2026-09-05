@@ -11,6 +11,9 @@
    de validation n'embarque pas de fonte, l'écart est déclaré.
    ============================================================ */
 :root {
+  /* TF-0796 — le navigateur peint SES composants (top-layer, controles natifs,
+     barres de defilement, ::backdrop) dans ce schema, jamais dans celui de l'OS. */
+  color-scheme: light;
   --fond-page: oklch(0.98 0.006 250);
   --fond-surface: oklch(0.95 0.010 250);
   --fond-creux: oklch(0.92 0.012 250);
@@ -51,6 +54,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --fond-page: oklch(0.17 0.010 250);
     --fond-surface: oklch(0.22 0.014 250);
     --fond-creux: oklch(0.26 0.016 250);
@@ -72,6 +76,7 @@
 }
 
 :root[data-theme="dark"] {
+  color-scheme: dark;
   --fond-page: oklch(0.17 0.010 250); --fond-surface: oklch(0.22 0.014 250);
   --fond-creux: oklch(0.26 0.016 250); --texte-principal: oklch(0.96 0.006 250);
   --texte-faible: oklch(0.76 0.012 250); --trait: oklch(0.33 0.018 250);
@@ -85,6 +90,7 @@
 }
 
 :root[data-theme="light"] {
+  color-scheme: light;
   --fond-page: oklch(0.98 0.006 250); --fond-surface: oklch(0.95 0.010 250);
   --fond-creux: oklch(0.92 0.012 250); --texte-principal: oklch(0.23 0.018 250);
   --texte-faible: oklch(0.46 0.018 250); --trait: oklch(0.87 0.012 250);
