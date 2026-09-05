@@ -7,15 +7,31 @@
 // (jamais une seconde charte). Quatre règles, décidables sur le fichier seul :
 //   B-T1  bouton .theme-toggle ou [data-theme-toggle] présent, en zone d'en-tête
 //         (ancêtre <header>, ou classe header/entete/topbar/navbar/app-bar)
-//   B-T2  câblé — un écouteur de clic est bien attaché à CE bouton (getElementById /
-//         querySelector + addEventListener, onclick=, ou attribut onclick inline) ET
-//         le JS inline mute data-theme sur la racine (<html>/documentElement) quelque
-//         part — un bouton sans écouteur, ou un écouteur qui ne mute jamais la racine,
-//         est une bascule morte (loi n° 1)
-//   B-T3  persistance localStorage déclarée (lecture ET écriture d'une clé « *theme* »)
+//   B-T2  câblé — un écouteur de clic atteint CE bouton (attachement direct par
+//         getElementById / querySelector + addEventListener ou onclick=, attribut
+//         onclick inline, ou DÉLÉGATION : addEventListener('click') sur
+//         document/body/window avec closest()/matches() sur un sélecteur qui vise ce
+//         bouton, ou lecture de data-theme-toggle sur la cible) ET le JS inline mute
+//         data-theme sur la racine (<html>/documentElement) quelque part — un bouton
+//         sans écouteur, ou un écouteur qui ne mute jamais la racine, est une bascule
+//         morte (loi n° 1)
+//   B-T3  persistance localStorage déclarée (lecture ET écriture d'une clé de thème :
+//         littéral contenant « theme », ou constante du même script dont la valeur ou
+//         le nom le contient)
 //   B-T4  palette sombre présente sous [data-theme="dark"] (ou @media prefers-color-scheme:
 //         dark), dérivée des tokens clairs (parité) — aucune couleur en dur nouvelle dans
 //         une règle scopée au thème sombre hors du bloc de définition des tokens
+//
+// TF-0800 (lot pilot du 05/09/2026) — POURQUOI B-T2 ET B-T3 ONT ÉTÉ ÉLARGIES. Un produit
+// dont la bascule fonctionnait depuis sa v0.1.0 a été jugé « bascule morte » : son écouteur
+// était délégué (closest) et sa clé vivait dans une constante. La session du 01/09 a réécrit
+// son app.js pour obtenir le PASS — un oracle qui refuse un comportement correct au nom d'une
+// convention non écrite pousse les produits à réécrire du code qui marche, ou à l'ignorer.
+// Les deux motifs sont statiquement lisibles : les reconnaître ne relâche aucun seuil, et
+// laisse intact ce qui doit être refusé — un bouton sans écouteur, un écouteur délégué dont
+// le sélecteur vise autre chose, une clé qu'aucune lecture ne rattache au thème. Ce dernier
+// cas n'est plus un refus mais un AVERTISSEMENT qui énonce la convention : refuser à tort et
+// se taire sont deux façons de mentir.
 //
 // Ce que cet oracle NE juge PAS (déclaré en non_juge, jamais dupliqué) :
 //   - le contraste AA des deux thèmes : delegué à render_page.py (mesure déjà 2 thèmes,
@@ -130,6 +146,37 @@ if (bouton) {
     const suite = texteScripts.slice(m.index + m[0].length, m.index + m[0].length + 60);
     if (/^\s*\.\s*(addEventListener\(\s*['"]click['"]|onclick\s*=)/.test(suite)) ecouteurTrouve = true;
   }
+  // TF-0800 (lot pilot du 05/09/2026) — LA DÉLÉGATION EST UN CÂBLAGE, PAS UNE ABSENCE.
+  // Un produit dont la bascule marchait depuis sa v0.1.0 a été jugé « bascule morte » parce
+  // que son écouteur était posé sur le document et retrouvait le bouton par `closest()`.
+  // La session du 01/09 a réécrit son app.js pour obtenir le PASS : l'oracle refusait un
+  // comportement correct au nom d'une convention que personne n'avait écrite. Or la
+  // délégation offre EXACTEMENT la même preuve statique que l'attachement direct — un
+  // écouteur de clic, et un sélecteur qui vise ce bouton — au niveau de coprésence que cet
+  // oracle déclare déjà juger (voir non_juge). La reconnaître n'affaiblit rien : une
+  // bascule sans écouteur, ou dont le sélecteur délégué vise autre chose, reste refusée.
+  const ECOUTE_DELEGUEE = /(?:document(?:\s*\.\s*(?:body|documentElement))?|window)\s*\.\s*addEventListener\(\s*['"]click['"]/;
+  if (ECOUTE_DELEGUEE.test(texteScripts)) {
+    const CIBLE_DELEGUEE = /\.\s*(?:closest|matches)\(\s*(['"])([^'"]+)\1\s*\)/g;
+    for (const m of texteScripts.matchAll(CIBLE_DELEGUEE)) {
+      for (const morceau of m[2].split(',')) {
+        const sel = morceau.trim();
+        const parId = /#([\w-]+)/.exec(sel);
+        const parClasse = /\.([\w-]+)/.exec(sel);
+        const viseBouton =
+          (parId && bouton.attrs.id === parId[1]) ||
+          (parClasse && classesDe(bouton).includes(parClasse[1])) ||
+          (/\[\s*data-theme-toggle/i.test(sel) && Object.prototype.hasOwnProperty.call(bouton.attrs || {}, 'data-theme-toggle'));
+        if (viseBouton) ecouteurTrouve = true;
+      }
+    }
+    // Second motif de délégation, sans sélecteur : le gestionnaire interroge directement
+    // l'attribut de marquage sur la cible du clic.
+    if (/\.(?:dataset\s*\.\s*themeToggle|getAttribute\(\s*['"]data-theme-toggle['"]\s*\))/i.test(texteScripts)
+      && Object.prototype.hasOwnProperty.call(bouton.attrs || {}, 'data-theme-toggle')) {
+      ecouteurTrouve = true;
+    }
+  }
   const REF_ALIAS = /\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*document\.(getElementById|querySelector)\(\s*(['"])([^'"]+)\3\s*\)/g;
   for (const m of texteScripts.matchAll(REF_ALIAS)) {
     if (!coincideBouton(m[2], m[4], bouton)) continue;
@@ -147,7 +194,14 @@ const mutationTrouvee = MUTATION_RE.test(texteAnalyse);
 
 if (bouton) {
   if (!ecouteurTrouve) {
-    add('bloquant', 'B-T2', 'bouton de bascule présent mais aucun écouteur de clic ne lui est attaché (getElementById/querySelector + addEventListener, ou onclick) : bascule morte — loi n° 1', 'JS inline');
+    add('bloquant', 'B-T2',
+      'bouton de bascule présent mais aucun écouteur de clic ne lui est attaché : bascule morte — loi n° 1. ' +
+      'Motifs reconnus : (1) écouteur attaché au bouton — getElementById/querySelector, directement ou par ' +
+      'alias, suivi de addEventListener(\'click\') ou onclick= ; (2) attribut onclick inline ; ' +
+      '(3) délégation — addEventListener(\'click\') sur document/body/window, avec closest() ou matches() sur ' +
+      'un sélecteur qui vise CE bouton, ou lecture de data-theme-toggle sur la cible du clic. ' +
+      'Un câblage porté par un script externe ou un framework n\'est pas lisible ici : le déclarer.',
+      'JS inline');
   } else if (!mutationTrouvee) {
     add('bloquant', 'B-T2', 'écouteur de clic détecté sur le bouton, mais aucune mutation de data-theme sur la racine (<html>) trouvée dans le JS inline : bascule inopérante — loi n° 1', 'JS inline');
   }
@@ -156,10 +210,49 @@ if (bouton) {
 }
 
 // ── B-T3 · persistance localStorage déclarée ────────────────────────────────
-const A_ECRITURE = /localStorage\.setItem\(\s*['"][^'"]*theme[^'"]*['"]/i.test(texteAnalyse);
-const A_LECTURE = /localStorage\.getItem\(\s*['"][^'"]*theme[^'"]*['"]/i.test(texteAnalyse);
-if (!A_ECRITURE && !A_LECTURE) {
-  add('bloquant', 'B-T3', 'aucune persistance localStorage déclarée pour le thème (ni lecture ni écriture d\'une clé contenant « theme »)', 'JS inline');
+// TF-0800, second motif : LA CLÉ EN CONSTANTE. `localStorage.setItem(CLE, theme)` avec
+// `const CLE = 'produit.theme'` déclaré deux lignes plus haut est aussi lisible qu'un
+// littéral — il suffit de résoudre la constante, ce qui est déterministe. La clé est
+// reconnue si la constante RÉSOUT vers une valeur contenant « theme », ou si son NOM
+// le contient (`CLE_THEME`, `themeKey`) : dans les deux cas, la trace existe.
+const litteraux = new Map();
+for (const m of texteAnalyse.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(['"])([^'"]*)\2/g)) {
+  if (!litteraux.has(m[1])) litteraux.set(m[1], m[3]);
+}
+const EST_CLE_THEME = /theme/i;
+/** Un appel localStorage porte-t-il une clé de thème reconnaissable ? */
+function accesLocalStorage(methode) {
+  const re = new RegExp(`localStorage\\s*\\.\\s*${methode}\\(\\s*(?:(['"])([^'"]*)\\1|([A-Za-z_$][\\w$]*))`, 'g');
+  let reconnu = false, opaque = false;
+  for (const m of texteAnalyse.matchAll(re)) {
+    if (m[2] !== undefined) { if (EST_CLE_THEME.test(m[2])) reconnu = true; else opaque = true; continue; }
+    const nom = m[3];
+    const valeur = litteraux.get(nom);
+    if ((valeur !== undefined && EST_CLE_THEME.test(valeur)) || EST_CLE_THEME.test(nom)) reconnu = true;
+    else opaque = true;
+  }
+  return { reconnu, opaque };
+}
+const ecriture = accesLocalStorage('setItem');
+const lecture = accesLocalStorage('getItem');
+const A_ECRITURE = ecriture.reconnu;
+const A_LECTURE = lecture.reconnu;
+const CONVENTION_CLE = 'Motifs reconnus pour la clé : un littéral contenant « theme », ou une ' +
+  'constante déclarée dans le même script dont la valeur ou le nom le contient. Une clé calculée ' +
+  '(concaténation, variable d\'environnement, préfixe injecté) n\'est pas lisible statiquement : ' +
+  'la déclarer, ou nommer la constante d\'après le thème.';
+if (!A_ECRITURE && !A_LECTURE && (ecriture.opaque || lecture.opaque)) {
+  // La page persiste QUELQUE CHOSE, sous une clé que l'analyse statique ne sait pas
+  // rattacher au thème. Refuser serait mentir ; se taire aussi. On le dit, et on dit
+  // ce qui rendrait la clé lisible — c'est la convention, énoncée là où elle sert.
+  add('avertissement', 'B-T3',
+    'un accès localStorage existe mais sa clé n\'est pas rattachable au thème par lecture statique. ' +
+    CONVENTION_CLE, 'JS inline');
+  NON_JUGE.push('B-T3 : persistance présente sous une clé non résolue — la sauvegarde du thème n\'a PAS été vérifiée, elle n\'est pas non plus refusée');
+} else if (!A_ECRITURE && !A_LECTURE) {
+  add('bloquant', 'B-T3',
+    'aucune persistance localStorage déclarée pour le thème (ni lecture ni écriture d\'une clé de thème). ' +
+    CONVENTION_CLE, 'JS inline');
 } else if (!A_ECRITURE) {
   add('majeur', 'B-T3', 'persistance localStorage partielle : lecture (getItem) sans écriture (setItem) — le choix de l\'utilisateur ne serait jamais sauvegardé', 'JS inline');
 } else if (!A_LECTURE) {

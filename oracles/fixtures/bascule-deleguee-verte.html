@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — bascule DELEGUEE, cle en constante</title>
+<!--
+  TF-0800. Le motif que B-T2 et B-T3 declaraient mort alors qu'il fonctionne : un
+  ecouteur pose UNE FOIS sur le document, qui retrouve le bouton par closest(), et une
+  cle de persistance rangee dans une constante. C'est le cablage d'un produit dont la
+  bascule marchait depuis sa v0.1.0 ; la session du 01/09/2026 a reecrit son app.js pour
+  obtenir un PASS que le comportement meritait deja.
+
+  Rien n'est relache : l'ecouteur existe, son selecteur vise CE bouton, la racine est
+  mutee, la cle resout vers une valeur qui porte « theme », et la palette sombre est
+  derivee des memes jetons. C'est le sens vert du motif delegue.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Cette page ne pose aucun ecouteur sur le bouton lui-meme : un seul ecouteur vit sur le document et retrouve le declencheur par closest(). Le motif tient quand le bouton est re-rendu, ce qui est precisement pourquoi un produit le choisit.</p>
+  <p class="note">La cle de persistance est une constante, declaree une fois et employee des deux cotes : elle resout vers une valeur qui porte le mot theme, donc elle reste lisible statiquement.</p>
+
+  <script>
+    const CLE_THEME = 'produit02.preferences.theme';
+    const racine = document.documentElement;
+
+    function appliquer(theme) {
+      racine.setAttribute('data-theme', theme);
+      localStorage.setItem(CLE_THEME, theme);
+      document.querySelectorAll('[data-theme-toggle]').forEach((b) => {
+        b.setAttribute('aria-pressed', String(theme === 'dark'));
+      });
+    }
+
+    appliquer(localStorage.getItem(CLE_THEME) || 'light');
+
+    // Ecouteur unique, delegue : le bouton peut etre re-rendu sans re-cabler quoi que ce soit.
+    document.addEventListener('click', (e) => {
+      const declencheur = e.target.closest('[data-theme-toggle]');
+      if (!declencheur) return;
+      appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

@@ -251,6 +251,20 @@ const CAS = [
     rouge: [fx('bascule-rouge-bt4.html')],
   },
   {
+    // TF-0800 (lot pilot du 05/09) : LE MOTIF DÉLÉGUÉ, dans les deux sens. B-T2 et B-T3 ne
+    // voyaient que le câblage écrit à un seul endroit — écouteur attaché après sélection du
+    // bouton, clé localStorage en littéral. Un produit dont la bascule fonctionnait depuis sa
+    // v0.1.0, câblée par délégation (closest) avec sa clé en constante, a été jugé « bascule
+    // morte » ; la session du 01/09 a réécrit son app.js pour obtenir le PASS. Les deux
+    // fixtures ne diffèrent QUE par le sélecteur du closest() : la verte vise le bouton de
+    // bascule, la rouge vise un autre déclencheur, et aucun clic n'atteint jamais le
+    // gestionnaire. Reconnaître la délégation n'est pas faire confiance à toute délégation.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T2'],
+    verte: [fx('bascule-deleguee-verte.html')],
+    rouge: [fx('bascule-deleguee-morte-rouge.html')],
+  },
+  {
     // TF-0235 (campagne pilot du 15/08) : restitution lisible — une page déclarée
     // data-restitution porte verdict, KPIs complets, questions de graphiques,
     // chemins de lecteurs et manifeste d'écarts. RL-2/5/6/7/8 déclarées non jugées

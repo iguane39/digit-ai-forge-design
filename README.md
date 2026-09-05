@@ -149,6 +149,7 @@ parcours C13 dans tous les cas
 | `oracle-images` | I1–I6 | alt, plafonds, zéro réseau, manifeste de génération |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
+| `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée |
 | `oracle-saisie` | SA1–SA6 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4 | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème |
@@ -214,6 +215,24 @@ critère est mesurable et non discutable : l'oracle rend, dans le champ `registr
 JSON, la **liste des points d'entrée de la page avec la nature de chacun**. La couverture par
 fonctionnalité se déclare par `data-fonctionnalite="<nom>"` ; sans elle, l'oracle rend le
 registre et dit que la couverture n'a pas été jugée, au lieu de deviner un regroupement.
+
+### Reconnaître un câblage au lieu d'exiger une convention — `oracle-bascule`
+
+`oracle-bascule` (B-T1–B-T4) ne lisait que le câblage écrit à un seul endroit : un écouteur
+attaché après sélection du bouton, une clé `localStorage` en littéral. Une bascule d'un
+produit, fonctionnelle depuis sa v0.1.0 et câblée par **délégation** (`closest`) avec sa clé
+en **constante**, était donc déclarée « bascule morte » — et la session du 01/09/2026 a
+réécrit son code pour obtenir le vert (TF-0800). Un oracle qui refuse un comportement correct
+au nom d'une convention que personne n'a écrite pousse les produits à réécrire ce qui marche,
+ou à l'ignorer.
+
+Les deux motifs sont désormais reconnus, parce qu'ils sont statiquement lisibles au même
+niveau de preuve que l'attachement direct — celui que cet oracle déclare déjà juger, la
+coprésence, jamais un suivi de flux. Ce qui doit tomber tombe toujours : un bouton sans
+écouteur, un écouteur délégué dont le sélecteur vise **autre chose** (fixture rouge dédiée),
+une clé qu'aucune lecture ne rattache au thème — ce dernier cas en avertissement qui **énonce
+la convention** plutôt qu'en refus, parce que refuser à tort et se taire sont deux façons de
+mentir.
 
 Node seul, aucune dépendance npm. Contrat commun : JSON sur stdout, exit 0/1/2,
 `non_juge` déclaré. **Injectés au registre global** le 04/08/2026 (v2.7.0, 39 oracles),
