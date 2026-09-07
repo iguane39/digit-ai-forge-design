@@ -1,0 +1,93 @@
+{
+  "name": "Digit-AI — thème dérivé de la source DTCG (généré, ne pas éditer)",
+  "dataColors": [
+    "#2563EB",
+    "#15803D",
+    "#D97706",
+    "#0E9488",
+    "#0F172A",
+    "#64748B",
+    "#94A3B8",
+    "#CFEEDD"
+  ],
+  "background": "#FAFBFF",
+  "foreground": "#0F172A",
+  "tableAccent": "#2563EB",
+  "good": "#15803D",
+  "neutral": "#D97706",
+  "textClasses": {
+    "callout": {
+      "fontFace": "Roboto",
+      "fontSize": 28,
+      "color": "#0F172A"
+    },
+    "title": {
+      "fontFace": "Roboto",
+      "fontSize": 14,
+      "color": "#0F172A"
+    },
+    "header": {
+      "fontFace": "Roboto",
+      "fontSize": 12,
+      "color": "#0F172A"
+    },
+    "label": {
+      "fontFace": "DM Sans",
+      "fontSize": 10,
+      "color": "#0F172A"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "background": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            },
+            "transparency": 0
+          }
+        ],
+        "border": [
+          {
+            "show": true,
+            "color": {
+              "solid": {
+                "color": "#E6EAF2"
+              }
+            },
+            "radius": 12
+          }
+        ],
+        "visualHeader": [
+          {
+            "foreground": {
+              "solid": {
+                "color": "#64748B"
+              }
+            },
+            "background": {
+              "solid": {
+                "color": "#FFFFFF"
+              }
+            }
+          }
+        ],
+        "title": [
+          {
+            "fontFamily": "Roboto",
+            "fontSize": 12,
+            "fontColor": {
+              "solid": {
+                "color": "#0F172A"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

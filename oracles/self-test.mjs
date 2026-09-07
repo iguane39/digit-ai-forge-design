@@ -217,6 +217,16 @@ const CAS = [
     rouge: [fx('dtcg-rouge.tokens.json'), fx('dtcg-rouge.css')],
   },
   {
+    // TF-0863 (lot L6, 07/09/2026) — un rapport Power BI « personnalisé » livré au thème par
+    // défaut est un défaut de loi n° 6. La verte est la régénération exacte du corpus de tokens
+    // (scripts/generer-theme-powerbi.mjs) ; la rouge est le thème par défaut du produit : palette
+    // d'usine (TP3) et, forcément, désynchronisée de toute source DTCG (TP2).
+    oracle: 'oracle-theme-powerbi.mjs',
+    regles: ['TP2', 'TP3'],
+    verte: [path.join(ici, '..', 'corpus', 'tokens-digit-ai.tokens.json'), fx('theme-powerbi-verte.json')],
+    rouge: [path.join(ici, '..', 'corpus', 'tokens-digit-ai.tokens.json'), fx('theme-powerbi-rouge.json')],
+  },
+  {
     // TF-0133 (aval R-30) : bouton présent mais aucun écouteur de clic attaché —
     // bascule morte (loi n° 1). Seule B-T2 est délibérément cassée dans cette
     // fixture ; B-T1, B-T3, B-T4 y restent verts (voir le commentaire en tête de
