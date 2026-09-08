@@ -17,8 +17,14 @@
 // TF-0708 en tire la seconde moitié : le motif « formulaire replié » (<details> toujours
 // présent sous la liste) est BON pour une création simple, courte et sans branche — il devient
 // nuisible dès que le formulaire porte des branches exclusives, car le repli MASQUE la
-// contradiction au lieu de la résoudre. Deux motifs légitimes, donc, et un critère de choix :
-// création simple → formulaire replié ; tâche à branches → panneau adressable (route dédiée).
+// contradiction au lieu de la résoudre. Critère de choix : création simple → formulaire replié ;
+// tâche à branches → panneau adressable (route dédiée).
+//
+// TF-0925 (08/09/2026) ajoute le TROISIÈME motif, et l'ajoute pour ADMETTRE : la PAGE DÉDIÉE,
+// où la page EST le formulaire de création — rien à replier, rien à adresser, l'adresse c'est
+// la page. Le pan interface de forge-tests l'admet depuis le 08/09 ; tant que cet oracle-ci ne
+// l'admettait pas, un produit à page dédiée restait refusé par l'une ou par l'autre des deux
+// forges quoi qu'il fasse, et l'action restait insoldable chez le développeur.
 //
 // Convention de balisage (référence : skills/ameliore-le-design/references/patterns-interaction.md).
 // Elle est le prix de la mécanisation : sans marquage, aucune lecture statique ne distingue
@@ -43,6 +49,10 @@
 //        tâche à branches est le panneau adressable.
 //   PA6  panneau adressable déclaré ([data-route]) sans aucun déclencheur qui pointe cette route :
 //        un panneau inatteignable est une affordance qui n'existe pas (loi transverse n° 1).
+//   PA7  écran qui ANNONCE une création sans AUCUN des TROIS motifs légitimes : ni formulaire
+//        replié, ni panneau adressable, ni page dédiée (l'affordance qui annonce la création
+//        SOUMET un formulaire de l'écran). Écrite pour ADMETTRE le troisième motif, pas pour
+//        ajouter un refus : un écran qui ne promet aucune création n'est pas jugé (TF-0925).
 //
 // Ce que cet oracle NE juge PAS (déclaré en non_juge, jamais supposé) :
 //   - les branches non balisées : un formulaire qui n'annote pas ses branches n'est pas jugé
@@ -78,7 +88,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-panneau-tache', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'PA1–PA6 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'PA1–PA7 sans écart', where: file }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -250,7 +260,7 @@ for (const panneau of panneaux) {
       (el.tag === 'table' || aAttr(el, 'data-liste')) && !descendants(panneau).includes(el) && el !== panneau);
     if (replie && listes.length > 0) {
       add('bloquant', 'PA5',
-        `panneau « ${nomPanneau} » : tâche à ${valeurs.length} branches rendue en « formulaire replié » (<details>) coexistant, dans l'écran « ${nomEcran(ecran)} », avec la liste qu'elle alimente. Le repli masque la contradiction au lieu de la résoudre : le motif attendu pour une tâche à branches est le panneau adressable (route dédiée), le formulaire replié restant réservé à la création simple, courte et sans branche`,
+        `panneau « ${nomPanneau} » : tâche à ${valeurs.length} branches rendue en « formulaire replié » (<details>) coexistant, dans l'écran « ${nomEcran(ecran)} », avec la liste qu'elle alimente. Le repli masque la contradiction au lieu de la résoudre : le motif attendu pour une tâche à branches est le panneau adressable (route dédiée) ou la page dédiée, le formulaire replié restant réservé à la création simple, courte et sans branche`,
         `[data-panneau-tache=${nomPanneau}]`);
     }
   }
@@ -269,10 +279,84 @@ for (const panneau of panneaux) {
   }
 }
 
+// ── PA7 · l'écran qui ANNONCE une création porte l'un des TROIS motifs ──────
+// TF-0925 (08/09/2026). Cet oracle n'énumérait que DEUX motifs légitimes de création :
+// formulaire replié pour le simple, panneau adressable pour les branches. Le pan interface de
+// forge-tests en admet désormais TROIS — la PAGE DÉDIÉE, où la page EST le formulaire : rien à
+// replier, rien à adresser, l'adresse c'est la page. Tant que les deux forges n'énumèrent pas
+// les mêmes motifs, un produit à page dédiée est refusé par l'une ou par l'autre quoi qu'il
+// fasse : l'impasse se referme de l'autre côté, et l'action reste insoldable chez le
+// développeur. D'où cette règle, écrite pour ADMETTRE, pas pour ajouter un refus.
+//
+// La reconnaissance est mécanique et étroite, alignée sur celle du pan interface :
+//   ANNONCE  un <button>, <a> ou <summary> dont le libellé visible fait au plus 4 mots et dont
+//            le verbe de création est dans les 2 premiers. Les deux bornes viennent d'une mesure
+//            réelle : sans elles, « Open the booking engine in a NEW tab » accusait 7 fois sur
+//            un corpus de 220 gabarits, 7 fois à tort ;
+//   (a)      formulaire replié : un <details> qui porte un formulaire, ou visé par un
+//            [data-cible] — un <details> seul est un accordéon de contenu, pas une création ;
+//   (b)      panneau adressable : un [data-route], ou une destination portant « ?nouveau= » ;
+//   (c)      PAGE DÉDIÉE : l'affordance qui annonce la création est le contrôle qui SOUMET un
+//            formulaire de l'écran. Sur une page de liste, le « Nouveau lot » est HORS du
+//            formulaire — il ouvre un panneau, et l'écran doit alors porter (a) ou (b).
+const MOTS_MAX_LIBELLE = 4;
+const MOTS_DE_TETE = 2;
+const ANNONCE_CREATION = /(?<![\w-])(nouveau|nouvelle|nouveaux|nouvelles|cr[eé]er|cr[eé]ation|ajouter|new|create)(?![\w-])/i;
+const PORTEUSES = new Set(['button', 'a', 'summary']);
+const libelleAnnonce = texte => {
+  const mots = String(texte || '').split(/\s+/).filter(Boolean);
+  if (!mots.length || mots.length > MOTS_MAX_LIBELLE) return false;
+  return ANNONCE_CREATION.test(mots.slice(0, MOTS_DE_TETE).join(' '));
+};
+const annonceur = el => {
+  if (PORTEUSES.has(el.tag)) return libelleAnnonce(texteDe(el));
+  if (el.tag === 'input' && at(el, 'type').toLowerCase() === 'submit') return libelleAnnonce(at(el, 'value'));
+  return false;
+};
+const soumetUnFormulaire = el => {
+  const dansForm = ancetres(el).some(p => p.tag === 'form');
+  if (!dansForm) return false;
+  if (el.tag === 'button') return (at(el, 'type') || 'submit').toLowerCase() === 'submit';
+  if (el.tag === 'input') return at(el, 'type').toLowerCase() === 'submit';
+  return false; // un <a> dans un formulaire ne le soumet pas — c'est ce qui sépare
+                // une page dédiée d'une liste qui porte une barre de recherche
+};
+
+{
+  const ecransDeclares = tous.filter(el =>
+    aAttr(el, 'data-ecran') || aAttr(el, 'data-route-ecran') || (el.tag === 'section' && at(el, 'id')));
+  const perimetres = ecransDeclares.length ? ecransDeclares : [...racines];
+  let juges = 0;
+  for (const p of perimetres) {
+    const dedans = descendants(p);
+    const annonceurs = dedans.filter(annonceur);
+    if (!annonceurs.length) continue;   // un écran qui ne promet pas de créer n'est pas jugé
+    juges++;
+    const motifs = [];
+    if (dedans.some(el => el.tag === 'details' && descendants(el).some(d => d.tag === 'form'))
+        || dedans.some(el => at(el, 'data-cible').trim() !== ''))
+      motifs.push('formulaire replié');
+    if (dedans.some(el => at(el, 'data-route').trim() !== '')
+        || dedans.some(el => /[?&]nouveau=/i.test(at(el, 'href') + ' ' + at(el, 'action') + ' ' + at(el, 'data-route-cible'))))
+      motifs.push('panneau adressable');
+    if (annonceurs.some(soumetUnFormulaire)) motifs.push('page dédiée');
+    if (!motifs.length) {
+      add('bloquant', 'PA7',
+        `écran « ${nomEcran(p)} » : « ${texteDe(annonceurs[0]) || at(annonceurs[0], 'value')} » annonce une création, et l'écran ne porte AUCUN des trois motifs légitimes — ni formulaire replié (<details> portant le formulaire), ni panneau adressable ([data-route] ou destination « ?nouveau= »), ni page dédiée (l'affordance qui annonce la création SOUMET un formulaire de l'écran). Sur un écran de liste, une affordance de création posée HORS de tout formulaire ne fait pas une page dédiée : elle ouvre un panneau, qui doit alors être replié ou adressable`,
+        `[data-ecran=${nomEcran(p)}]`);
+    } else {
+      add('info', 'PA7',
+        `écran « ${nomEcran(p)} » : création annoncée et motif légitime reconnu — ${motifs.join(', ')}`,
+        `[data-ecran=${nomEcran(p)}]`);
+    }
+  }
+  if (!juges) NON_JUGE.push('PA7 : aucun écran n\'annonce de création (aucune affordance dont le libellé tient en 4 mots avec le verbe de création dans les 2 premiers) — la règle est sans objet ici, jamais PASS par défaut');
+}
+
 // ── Verdict ────────────────────────────────────────────────────────────────
 const RANG = { bloquant: 0, majeur: 1, avertissement: 2, info: 3 };
 F.sort((x, y) => RANG[x.sev] - RANG[y.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — PA1–PA6 sans écart\n');
+if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — PA1–PA7 sans écart\n');
 if (durs.length) sortir('FAIL', 1);
 sortir('PASS', 0);

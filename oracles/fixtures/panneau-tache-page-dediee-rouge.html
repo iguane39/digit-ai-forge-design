@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — page de liste dont l'affordance de creation est dehors</title>
+<!-- TF-0925 (08/09/2026). LE PIEGE que la reconnaissance de la page dediee doit refuser.
+     Cet ecran porte bien un <form> — mais c'est la BARRE DE RECHERCHE, et son bouton
+     soumet une recherche, pas une creation. L'affordance qui annonce la creation
+     (« Nouveau lot ») est HORS de tout formulaire : elle ouvre un panneau, elle n'envoie
+     rien. Ce n'est donc pas une page dediee.
+
+     Et l'ecran ne porte aucun des deux autres motifs : pas de <details> portant un
+     formulaire, pas de [data-route], aucune destination en « ?nouveau= ». Le panneau que
+     « Nouveau lot » pretend ouvrir n'existe nulle part : creation annoncee, aucun motif —
+     c'est ce que PA7 refuse.
+
+     Sans ce sens rouge, admettre la page dediee reviendrait a admettre n'importe quel ecran
+     de liste portant un formulaire quelconque, ce qui rendrait la regle vide. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; --trait: #d7d9de; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  table { border-collapse: collapse; margin-top: 24px; }
+  th, td { border: 1px solid var(--trait); padding: 8px 12px; text-align: left; }
+  button, input { padding: 8px; border: 1px solid var(--trait); background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+
+<section id="lots" data-ecran="lots">
+  <h1>Lots de traitement</h1>
+
+  <!-- La barre de recherche : un formulaire, oui, mais son bouton soumet une RECHERCHE. -->
+  <form role="search" action="/lots" method="get">
+    <label for="recherche-lot">Rechercher un lot</label>
+    <input type="search" id="recherche-lot" name="q">
+    <button type="submit">Rechercher</button>
+  </form>
+
+  <!-- L'affordance de creation, HORS du formulaire : elle n'envoie rien. -->
+  <button type="button" data-action="creer-lot">Nouveau lot</button>
+
+  <table>
+    <thead><tr><th>Lot</th><th>Depose le</th><th>Etat</th></tr></thead>
+    <tbody>
+      <tr><td>Archives 2025</td><td>02/09/2026</td><td>Traite</td></tr>
+      <tr><td>Sauvegardes</td><td>05/09/2026</td><td>En cours</td></tr>
+    </tbody>
+  </table>
+</section>
+
+</body>
+</html>

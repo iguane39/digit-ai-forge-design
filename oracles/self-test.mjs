@@ -376,6 +376,23 @@ const CAS = [
     rouge: [fx('panneau-tache-runtime-rouge.html')],
   },
   {
+    // TF-0925 (08/09) : le TROISIÈME motif de création. Le pan interface de forge-tests admet
+    // depuis le 08/09 la PAGE DÉDIÉE — la page EST le formulaire, rien à replier, rien à
+    // adresser. Tant que cet oracle-ci n'admettait que deux motifs, un produit à page dédiée
+    // était refusé par l'une ou par l'autre des deux forges quoi qu'il fasse, et l'action
+    // restait insoldable chez le développeur : l'impasse se refermait de l'autre côté.
+    // La verte EST une page dédiée : l'affordance qui annonce la création (« Creer mon
+    // compte ») soumet le formulaire de la page. La rouge est le piège exact qui empêche la
+    // règle d'être vide — une page de LISTE qui porte bien un <form>, mais c'est la barre de
+    // recherche, et le « Nouveau lot » est DEHORS : il n'envoie rien, l'écran n'a donc aucun
+    // des trois motifs. Sans ce sens rouge, admettre la page dédiée reviendrait à admettre
+    // tout écran de liste portant un formulaire quelconque.
+    oracle: 'oracle-panneau-tache.mjs',
+    regles: ['PA7'],
+    verte: [fx('panneau-tache-page-dediee-verte.html')],
+    rouge: [fx('panneau-tache-page-dediee-rouge.html')],
+  },
+  {
     // TF-0797 (lot pilot du 05/09, faits des 31/08 et 01/09) : le point d'entrée UNIQUE d'une
     // fenêtre d'arborescence était un bouton fantôme, lu comme un lien ou comme du texte.
     // Premier retour : « je ne vois pas de changement » — la fonctionnalité était pourtant
