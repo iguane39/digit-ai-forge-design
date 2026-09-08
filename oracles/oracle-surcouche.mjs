@@ -158,7 +158,23 @@ function declarationsPour(el, { pseudo = false } = {}) {
   return decls;
 }
 
-const NUL = /^(none|transparent|initial|unset|revert|0|0px)\b/i;
+// TF-0834 (lot Produit-61, 05/09/2026). La nullité se lisait sur le DÉBUT de la valeur :
+// « 0 » en tête suffisait. `box-shadow: 0 -8px 24px var(--ombre)` — l'écriture naturelle
+// d'une ombre portée, décalage horizontal d'abord — était donc prise pour une absence de
+// contour, et SC1 déclarait NUE une fenêtre parfaitement habillée. Le contournement était
+// d'écrire la couleur en tête, c'est-à-dire de tordre le CSS pour plaire au juge : une
+// passe de maquette payée pour cela.
+//
+// La nullité se décide maintenant PAR COMPOSANTES : une valeur n'est nulle que si CHACUN
+// de ses morceaux est nul. Un seul morceau porteur — une longueur non nulle, une couleur,
+// un style de trait — et la propriété est posée.
+const MOT_NUL = /^(?:none|transparent|initial|unset|revert|hidden)$/i;
+const MORCEAU_NUL = /^0(?:[a-z%]+)?$/i; // 0, 0px, 0rem, 0% — un zéro, quelle qu'en soit l'unité
+const NUL = val => {
+  const v = String(val).trim();
+  if (!v) return true;
+  return v.split(/\s+/).every(m => MORCEAU_NUL.test(m) || MOT_NUL.test(m));
+};
 const CONTOUR = ['border', 'border-color', 'border-width', 'border-style', 'border-top',
   'border-block-start', 'outline', 'box-shadow'];
 // Deux questions distinctes, deux mesures. « Posé et opaque » pour la SURFACE d'une
@@ -166,7 +182,7 @@ const CONTOUR = ['border', 'border-color', 'border-width', 'border-style', 'bord
 // pour un CONTRÔLE : un `background: transparent` explicite est une DÉCISION (un bouton
 // fantôme), pas un oubli — sa légitimité comme point d'entrée relève du registre des
 // déclencheurs (oracle-declencheurs), pas d'ici.
-const pose = (d, props) => props.some(p => d.get(p) !== undefined && !NUL.test(d.get(p)));
+const pose = (d, props) => props.some(p => d.get(p) !== undefined && !NUL(d.get(p)));
 const declare = (d, props) => props.some(p => d.get(p) !== undefined);
 const aFond = d => pose(d, ['background', 'background-color']);
 const aTexte = d => pose(d, ['color']);

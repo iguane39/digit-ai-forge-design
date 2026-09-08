@@ -21,6 +21,7 @@
     --texte-secondaire: #4a5058;
     --trait: #d8d2c6;
     --voile: rgba(29, 33, 38, 0.55);
+    --ombre: rgba(29, 33, 38, 0.18);
     --police: Georgia, serif;
   }
   [data-theme="dark"] {
@@ -31,18 +32,24 @@
     --texte-secondaire: #b8bfc9;
     --trait: #333a45;
     --voile: rgba(6, 8, 11, 0.68);
+    --ombre: rgba(0, 0, 0, 0.45);
   }
   body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
   .accroche { font-size: 20px; }
   .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
   .note { color: var(--texte-secondaire); }
 
-  /* La surface de la sur-couche : fond, couleur, contour — les trois facettes. */
-  .choix-dossier { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); border-radius: 12px; padding: 24px; }
+  /* La surface de la sur-couche : fond, couleur, contour — les trois facettes.
+     TF-0833/TF-0834 : le contour est ici une OMBRE PORTEE, ecrite dans l'ordre naturel
+     (decalage horizontal d'abord, couleur en dernier). Le zero de tete n'est pas une
+     absence d'ombre : c'est un decalage nul sur un seul axe. */
+  .choix-dossier { background: var(--fond-eleve); color: var(--texte); box-shadow: 0 -8px 24px var(--ombre); border-radius: 12px; padding: 24px; }
   /* Le voile : sans lui, c'est celui du navigateur, qui ignore le theme. */
   .choix-dossier::backdrop { background: var(--voile); }
-  /* Les controles de la sur-couche : sans cela, boutons natifs — le defaut du 01/09. */
-  .choix-dossier button { background: var(--fond); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  /* Les controles de la sur-couche : sans cela, boutons natifs — le defaut du 01/09.
+     Nommes par une classe a eux : c'est ce qui fait que la surface de la fenetre n'a
+     pour tout contour que son ombre portee, et donc que SC1 juge bien l'ombre. */
+  .cd-btn { background: var(--fond); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
 
   @media (max-width: 768px) { body { padding: 16px; } }
   @media (max-width: 390px) { body { padding: 8px; } }
@@ -61,8 +68,8 @@
   <dialog class="choix-dossier" aria-labelledby="cd-titre">
     <h2 id="cd-titre">Choisir un dossier</h2>
     <p class="note">Le dossier retenu recevra les fichiers produits par le traitement.</p>
-    <button type="button" data-action="annuler-choix-dossier">Annuler</button>
-    <button type="button" data-action="valider-choix-dossier">Valider</button>
+    <button class="cd-btn" type="button" data-action="annuler-choix-dossier">Annuler</button>
+    <button class="cd-btn" type="button" data-action="valider-choix-dossier">Valider</button>
   </dialog>
 
   <script>
