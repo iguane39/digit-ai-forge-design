@@ -42,6 +42,15 @@
   .accroche { font-size: 20px; }
   .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
   .note { color: var(--texte-secondaire); }
+  /* TF-0921 — LE PIEGE DU SELECTEUR COMPOSE. Cette regle habille une VARIANTE compacte de la
+     fenetre : elle ne s'applique qu'a un element portant les DEUX classes. La fenetre de cette
+     page ne porte que « choix-dossier ». Sous l'appariement par jeton (celui d'avant le
+     08/09/2026), il suffisait qu'un seul morceau du selecteur se retrouve dedans : la fenetre
+     heritait de ce fond, de cette couleur et de cette bordure, SC1 se taisait, et cette fixture
+     rouge devenait verte POUR LA MAUVAISE RAISON. C'est le sens rouge de la bibliotheque de
+     selecteurs partagee : un element qui ne porte qu'un jeton d'un selecteur compose n'herite
+     de rien. */
+  .choix-dossier.compacte { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); }
   @media (max-width: 768px) { body { padding: 16px; } }
   @media (max-width: 390px) { body { padding: 8px; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

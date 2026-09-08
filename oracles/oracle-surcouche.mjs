@@ -37,6 +37,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, elements, arbres, css, cssRulesDeep } from './lib/html.mjs';
+import { declarationsPour as declarationsDe } from './lib/selecteurs.mjs';
 
 const DOM = 'Composant dynamique et sur-couche : habillage explicite depuis les jetons';
 const args = process.argv.slice(2);
@@ -52,6 +53,7 @@ const NJ = [
   'ouverture effective du composant (showModal(), popovertarget, piège de focus) — pan « interface » de forge-tests',
   'habillage porté par une feuille externe (<link rel="stylesheet">) ou un framework — lecture limitée au CSS du document et au fichier --tokens',
   'composant construit sans littéral de gabarit (document.createElement en série) — non lu par l\'analyse statique',
+  'partie ANCÊTRE d\'un sélecteur descendant (« .modale .bouton ») — seul le dernier compound est confronté à l\'élément, l\'arbre n\'est pas remonté : une règle qui ne s\'applique qu\'en contexte est comptée comme si elle s\'appliquait (lib/selecteurs.mjs, TF-0921)',
 ];
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
@@ -122,41 +124,19 @@ if (composants.length === 0) {
 }
 
 // ── Appariement élément → règles CSS ───────────────────────────────────────
-// Par jetons de sélecteur : le nom de balise, l'id, chaque classe, l'attribut popover
-// et le rôle ARIA. Une règle compte pour l'élément dès qu'un de ses morceaux (séparés
-// par la virgule) porte un de ces jetons. Approximation assumée et déclarée : elle ne
-// résout pas la spécificité, elle établit qu'un habillage a été ÉCRIT pour ce composant.
-const echap = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const FIN = '([\\s.:>+~,)\\[]|$)';
-function jetonsDe(el) {
-  const j = [new RegExp(`(^|[\\s>+~,(])${echap(el.tag)}${FIN}`, 'i')];
-  if (el.attrs.id) j.push(new RegExp(`#${echap(el.attrs.id)}${FIN}`));
-  for (const c of classesDe(el)) j.push(new RegExp(`\\.${echap(c)}${FIN}`));
-  if (aAttribut(el, 'popover')) j.push(/\[popover/i);
-  if (roleDe(el)) j.push(new RegExp(`\\[role[~|^$*]?=["']?${echap(roleDe(el))}`, 'i'));
-  return j;
-}
-const ETAT = /:(hover|active|disabled|checked|visited|focus)/i;
-function declarationsPour(el, { pseudo = false } = {}) {
-  const jetons = jetonsDe(el);
-  const decls = new Map();
-  for (const r of regles) {
-    for (const part of r.selector.split(',')) {
-      const s = part.trim();
-      if (!s) continue;
-      if (!pseudo && (s.includes('::') || ETAT.test(s))) continue;
-      if (pseudo && !s.includes('::backdrop')) continue;
-      if (!jetons.some(j => j.test(s))) continue;
-      for (const m of r.body.matchAll(/(^|[;{\s])([-\w]+)\s*:\s*([^;]+)/g)) {
-        decls.set(m[2].toLowerCase(), m[3].trim());
-      }
-      break;
-    }
-  }
-  const enLigne = String((el.attrs && el.attrs.style) || '');
-  for (const m of enLigne.matchAll(/(^|[;\s])([-\w]+)\s*:\s*([^;]+)/g)) decls.set(m[2].toLowerCase(), m[3].trim());
-  return decls;
-}
+// TF-0921 (08/09/2026). Cet oracle appariait par JETON : une règle comptait pour l'élément
+// dès qu'UN de ses morceaux — balise, id, une classe — se retrouvait dans le sélecteur. La
+// mécanique avait déjà été corrigée le 05/09 dans `oracle-declencheurs.mjs` (TF-0833) et
+// subsistait ici à l'identique : deux implémentations divergentes du même geste. Mesuré sur
+// la fixture de sur-couche : un élément héritait d'une bordure venue d'une règle dont il ne
+// portait qu'un seul jeton du sélecteur composé, et SC1 passait POUR LA MAUVAISE RAISON —
+// le pire des verdicts, parce qu'il ne se signale pas.
+// La règle vit désormais à UN endroit, `lib/selecteurs.mjs` : dernier compound, TOUTES ses
+// conditions tenues. Les attributs `popover` et `role` que l'ancien appariement listait à
+// part sont des conditions de compound comme les autres — `[popover]`, `[role="dialog"]` —
+// donc mieux jugés par la règle générale que par une liste de jetons.
+const declarationsPour = (el, { pseudo = false } = {}) =>
+  declarationsDe(el, regles, pseudo ? { pseudoElement: '::backdrop' } : {});
 
 // TF-0834 (lot Produit-61, 05/09/2026). La nullité se lisait sur le DÉBUT de la valeur :
 // « 0 » en tête suffisait. `box-shadow: 0 -8px 24px var(--ombre)` — l'écriture naturelle

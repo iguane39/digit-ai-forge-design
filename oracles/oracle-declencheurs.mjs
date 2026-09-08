@@ -41,6 +41,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, elements, arbres, css, cssRulesDeep, visibleText } from './lib/html.mjs';
+import { declarationsPour as declarationsDe } from './lib/selecteurs.mjs';
 
 const DOM = 'Déclencheurs : nature du point d\'entrée d\'une fonctionnalité';
 const args = process.argv.slice(2);
@@ -81,75 +82,14 @@ if (tokensArg && fs.existsSync(tokensArg)) {
 }
 const regles = cssRulesDeep(cssText).filter(r => !r.atRules.some(a => /\bprint\b/i.test(a)));
 
-// ── Appariement élément → règles CSS ───────────────────────────────────────
-// TF-0833 (lot Produit-61, 05/09/2026). L'appariement se faisait par JETON : il suffisait
-// qu'un morceau du sélecteur — un nom de classe, un id, une balise — se retrouve n'importe
-// où dedans. `.bouton.fantome { background: transparent }` tombait donc sur TOUS les
-// `.bouton`, et la page entière se lisait en boutons fantômes : DE3 refusait des accès
-// parfaitement pleins. Le seul contournement connu était de renommer la classe, ce qui
-// revient à plier l'écriture du CSS à un défaut du juge — deux passes de maquette.
-//
-// L'appariement se fait désormais sur le DERNIER COMPOUND du sélecteur, celui qui désigne
-// l'élément : toutes ses conditions doivent être tenues, pas une seule. Les ancêtres
-// (`.carte .bouton`) restent non vérifiés — l'arbre n'est pas remonté ici — et c'est dit
-// au non_juge : approximation LARGE, mais plus jamais l'inverse d'une intersection.
-const ETAT = /:(hover|active|disabled|checked|visited|focus)/i;
-const classesDe = el => String((el.attrs && el.attrs.class) || '').split(/\s+/).filter(Boolean);
-
-// Les morceaux d'un compound : #id, .classe, [attribut], pseudo, balise.
-const MORCEAUX = /::[\w-]+(?:\([^)]*\))?|:[\w-]+(?:\([^)]*\))?|\[[^\]]*\]|[.#][\w-]+|\*|[A-Za-z][\w-]*/g;
-
-function attributTenu(el, morceau) {
-  const m = /^\[\s*([-\w:]+)\s*(?:([~^$*|]?=)\s*["']?([^\]"']*)["']?\s*)?\]$/.exec(morceau);
-  if (!m) return true; // forme non reconnue : ne pas inventer une exclusion
-  const val = el.attrs ? el.attrs[m[1].toLowerCase()] : undefined;
-  if (val === undefined) return false;
-  if (!m[2]) return true; // présence seule
-  const v = String(val);
-  switch (m[2]) {
-    case '=': return v === m[3];
-    case '~=': return v.split(/\s+/).includes(m[3]);
-    case '^=': return v.startsWith(m[3]);
-    case '$=': return v.endsWith(m[3]);
-    case '*=': return v.includes(m[3]);
-    default: return v === m[3] || v.startsWith(m[3] + '-');
-  }
-}
-
-/** L'élément satisfait-il TOUTES les conditions du compound qui le désigne ? */
-function correspond(el, part) {
-  // Le dernier compound : ce qui suit le dernier combinateur (espace, >, +, ~).
-  const dernier = part.trim().split(/\s*[>+~]\s*|\s+/).filter(Boolean).pop() || '';
-  const classes = new Set(classesDe(el));
-  const morceaux = dernier.match(MORCEAUX) || [];
-  if (!morceaux.length) return false;
-  for (const mo of morceaux) {
-    if (mo === '*') continue;
-    if (mo.startsWith('::') || mo.startsWith(':')) continue; // pseudo : non décidable ici
-    if (mo.startsWith('.')) { if (!classes.has(mo.slice(1))) return false; continue; }
-    if (mo.startsWith('#')) { if (String(el.attrs.id || '') !== mo.slice(1)) return false; continue; }
-    if (mo.startsWith('[')) { if (!attributTenu(el, mo)) return false; continue; }
-    if (mo.toLowerCase() !== el.tag) return false; // nom de balise
-  }
-  return true;
-}
-
-function declarationsPour(el) {
-  const decls = new Map();
-  for (const r of regles) {
-    for (const part of r.selector.split(',')) {
-      const s = part.trim();
-      if (!s || s.includes('::') || ETAT.test(s)) continue;
-      if (!correspond(el, s)) continue;
-      for (const m of r.body.matchAll(/(^|[;{\s])([-\w]+)\s*:\s*([^;]+)/g)) decls.set(m[2].toLowerCase(), m[3].trim());
-      break;
-    }
-  }
-  for (const m of String((el.attrs && el.attrs.style) || '').matchAll(/(^|[;\s])([-\w]+)\s*:\s*([^;]+)/g)) {
-    decls.set(m[2].toLowerCase(), m[3].trim());
-  }
-  return decls;
-}
+// ── Appariement élément → règles CSS ────────────────────────
+// TF-0833 (lot Produit-61, 05/09/2026) a corrigé ICI l'appariement par JETON, qui lisait
+// toute la page en boutons fantômes. TF-0921 (08/09) a retrouvé la même mécanique intacte
+// dans `oracle-surcouche.mjs` : deux implémentations divergentes du même geste, dont une
+// déjà corrigée. La règle vit désormais à UN endroit, `lib/selecteurs.mjs`, que les deux
+// oracles partagent — dernier compound, toutes ses conditions tenues, ancêtres non remontés
+// (approximation LARGE dite au non_juge, mais plus jamais l'inverse d'une intersection).
+const declarationsPour = el => declarationsDe(el, regles);
 
 // ── Ce qui est un déclencheur, et de quelle nature ─────────────────────────
 const NUL = /^(none|transparent|initial|unset|revert|0|0px)\b/i;

@@ -519,6 +519,39 @@ for (const cas of CAS) {
   ligne(Array.isArray(r.json?.non_juge) && r.json.non_juge.length > 0, 'non_juge déclaré et non vide');
 }
 
+// TF-0921 — la bibliothèque de sélecteurs, aux DEUX sens et à l'unité. Elle est partagée par
+// `oracle-declencheurs` et `oracle-surcouche` : la juger seulement à travers eux laisserait sa
+// branche décisive invisible. Le fait : le 05/09, l'appariement par jeton lisait toute une page
+// en boutons fantômes ; le 08/09, la même mécanique dormait intacte dans l'oracle de sur-couche,
+// où un élément héritait d'une bordure d'un sélecteur COMPOSÉ dont il ne portait qu'un jeton —
+// et le contrôle passait POUR LA MAUVAISE RAISON, le seul verdict qui ne se signale pas.
+{
+  console.log(String.fromCharCode(10) + 'lib/selecteurs.mjs (TF-0921) — appariement au dernier compound, deux sens');
+  const { declarationsPour, correspond } = await import('./lib/selecteurs.mjs');
+  const regles = [{ selector: '.choix-dossier.compacte', body: 'border: 1px solid var(--trait); background: var(--fond-eleve)', atRules: [] },
+                  { selector: '.choix-dossier', body: 'padding: 24px', atRules: [] }];
+  const unSeulJeton = { tag: 'dialog', attrs: { class: 'choix-dossier' } };
+  const lesDeux = { tag: 'dialog', attrs: { class: 'choix-dossier compacte' } };
+  // Sens ROUGE — celui qui a coûté : un jeton ne suffit pas.
+  ligne(!declarationsPour(unSeulJeton, regles).has('border'),
+    'sens rouge · un élément ne portant qu\'UN jeton d\'un sélecteur composé n\'hérite pas de ses déclarations');
+  // Sens VERT — et la règle s'applique bel et bien quand toutes ses conditions sont tenues :
+  // un appariement qui ne trouverait plus rien serait l'excès inverse, tout aussi faux.
+  ligne(declarationsPour(lesDeux, regles).get('border') === '1px solid var(--trait)',
+    'sens vert · l\'élément qui porte TOUTES les conditions du compound hérite bien de la règle');
+  ligne(declarationsPour(unSeulJeton, regles).get('padding') === '24px',
+    'sens vert · la règle simple qui le désigne s\'applique toujours — la correction resserre, elle n\'aveugle pas');
+  // L'ancêtre n'est pas remonté : c'est l'approximation LARGE déclarée au non_juge des deux
+  // oracles. Elle est verrouillée ici pour qu'un durcissement futur soit un choix, pas une dérive.
+  ligne(correspond({ tag: 'button', attrs: { class: 'cd-btn' } }, '.modale .cd-btn'),
+    'approximation déclarée · l\'ancêtre d\'un sélecteur descendant n\'est pas remonté (non_juge des deux oracles)');
+  // Les attributs sont des conditions de compound comme les autres — c'est ce qui a permis de
+  // supprimer la liste de jetons `popover` / `role` de l'oracle de sur-couche sans rien perdre.
+  ligne(correspond({ tag: 'div', attrs: { role: 'dialog' } }, '[role="dialog"]')
+     && !correspond({ tag: 'div', attrs: { role: 'alertdialog' } }, '[role="dialog"]'),
+    'attributs · [role="dialog"] est une condition du compound, jugée par la règle générale');
+}
+
 // TF-0335 — le générateur de DESIGN.md n'est pas un oracle (il ne rend pas de verdict), mais
 // c'est un exécutable de ce dépôt, et le seul qui n'avait aucun verrou. Sa régression ne se
 // serait vue qu'en AVAL, chez forge-development, sur un produit réel. Il est donc joué ici :
