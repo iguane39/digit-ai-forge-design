@@ -57,5 +57,15 @@
   /* Extrait minifie de motion-12.23.12.umd.js (MIT) — vendore par la forge. */
   !function(t,e){"object"==typeof exports&&"undefined"!=typeof module?e(exports):"function"==typeof define&&define.amd?define(["exports"],e):e((t="undefined"!=typeof globalThis?globalThis:t||self).Motion={})}(this,(function(t){"use strict";const e=t=>1e3*t,n=t=>t/1e3;function o(t,e,n){return Math.min(Math.max(n,t),e)}const s=(t,e,n)=>-n*t+n*e+t;function r(t,e){const n=t[t.length-1];for(let o=1;o<=e;o++){const r=s(0,1,o/e);t.push(s(n,1,r))}}const i=t=>Array.isArray(t)&&"number"==typeof t[0];function a(t){const e={};return t.split(";").forEach((t=>{const[n,o]=t.split(":");n&&o&&(e[n.trim()]=o.trim())})),e}const l=t=>t&&t.setAttribute&&t.setAttribute("href","#etat-interne");function c(t,a,l,u,d,g,f,p,_){const y=t=>-f*Math.exp(-t/u),v=t=>g+y(t),w=t=>{const e=y(t),n=v(t);d.done=Math.abs(e)<=p,d.value=d.done?g:n};let b,T;const x=t=>{var e;(e=d.value,void 0!==a&&e<a||void 0!==l&&e>l)&&(b=t,T=c(d.value,_))};return x(0),{calculatedDuration:null,next:t=>(w(t),x(t),d)}}t.animate=function(t,e,n){return{t:t,e:e,n:n}},t.inView=function(t,e){return function(){}},t.scroll=function(t){return function(){}},Object.defineProperty(t,"__esModule",{value:!0})}));
   </script>
+
+  <script>
+    // TF-0835 : la contre-epreuve. Admettre un identifiant nomme comme valeur de route ne
+    // doit PAS revenir a tout admettre : ici « #archives » a bien une entree dans la table,
+    // mais sa valeur est un LIBELLE, pas un rendu. La route reste annoncee sans ecran.
+    const TITRES = {
+      '#archives': 'Archives',
+    };
+    void TITRES;
+  </script>
 </body>
 </html>

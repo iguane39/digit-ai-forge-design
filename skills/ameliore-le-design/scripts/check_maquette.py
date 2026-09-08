@@ -115,9 +115,21 @@ def routes_declarees(html):
     })
 
 
+# TF-0835 (lot Produit-61, 05/09/2026). La valeur d'une route devait commencer par
+# `function`, `(` ou `ident =>` : une table qui REFERENCE des fonctions nommees --
+# « '#archives': rendreArchives » -- ne comptait aucune de ses routes, et C2 les
+# declarait toutes « sans ecran ». Le contournement etait d'ecrire « r => rendreArchives(r) »,
+# soit une indirection inutile ajoutee pour satisfaire le controle. Un identifiant est donc
+# admis, mais un identifiant SEULEMENT : une chaine, un nombre ou un litteral booleen reste
+# une valeur qui ne rend rien, et la route reste orpheline.
+_IDENT_ROUTE = r"(?!(?:true|false|null|undefined)\b)(?:async\s+)?[A-Za-z_$][\w$.]*"
+
+
 def routes_implementees(html):
     """Routes que le code sait rendre : cles de table de routage ou id de section."""
-    cles = set(re.findall(r'["\']#?([A-Za-z0-9_\-/]+)["\']\s*:\s*(?:function|\(|\w+\s*=>)', html))
+    cles = set(re.findall(
+        r'["\']#?([A-Za-z0-9_\-/]+)["\']\s*:\s*'
+        r'(?:function\b|\(|' + _IDENT_ROUTE + r'(?:\s*=>|(?=[\s,}\)])))', html))
     cles |= set(re.findall(r'\bcase\s+["\']#?([A-Za-z0-9_\-/]+)["\']', html))
     cles |= set(re.findall(r'\bid\s*=\s*["\']([A-Za-z0-9_\-/]+)["\']', html))
     cles |= set(re.findall(r'data-route\s*=\s*["\']#?([A-Za-z0-9_\-/]+)["\']', html))

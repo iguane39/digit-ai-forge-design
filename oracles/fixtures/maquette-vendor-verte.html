@@ -35,6 +35,7 @@
   <nav>
     <a href="#accueil" data-action="aller-accueil">Accueil</a>
     <a href="#suivi" data-action="aller-suivi">Suivi</a>
+    <a href="#archives" data-action="aller-archives">Archives</a>
   </nav>
 
   <main>
@@ -60,6 +61,21 @@
     // Gabarit ecrit a la main : ce balisage-la reste scanne (il produit du DOM reel).
     const rendreCarte = (n) => `<article class="carte"><a href="#suivi" data-action="aller-suivi">${n}</a></article>`;
     document.querySelector('[data-theme]');
+
+    // TF-0835 : une table de routage qui REFERENCE des fonctions nommees. C'est la forme
+    // la plus courante d'un aiguillage lisible ; l'ecran d'archives n'existe que par elle
+    // -- aucune section statique ne le porte. Une route rendue par une fonction nommee est une route
+    // rendue -- le contournement etait d'ecrire « r => rendreArchives(r) », c'est-a-dire
+    // d'ajouter une indirection inutile pour satisfaire le controle.
+    function rendreArchives(hote) { hote.innerHTML = '<h2>Archives</h2>'; }
+    const ROUTES = {
+      '#accueil': rendreAccueil,
+      '#suivi': rendreSuivi,
+      '#archives': rendreArchives,
+    };
+    function rendreAccueil(hote) { hote.hidden = false; }
+    function rendreSuivi(hote) { hote.hidden = false; }
+    void ROUTES;
   </script>
 </body>
 </html>
