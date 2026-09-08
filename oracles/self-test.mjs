@@ -462,6 +462,31 @@ const CAS = [
     // à 390px il repasse à la ligne et le rendu s'allonge de 174px. Sens
     // « avant → après » : RC-1 refuse. Sens inverse : PASS — ce qui est réparé
     // ne pèse jamais au débit, sinon l'outil punirait les corrections.
+    // TF-0857 (constat du 04/09, arbitré le 08/09) : S3 bannissait « DM Sans » que la charte du
+    // socle digit-ai EXIGE en police de corps et que le propre contrôle du socle vérifie. Un
+    // oracle qui refuse ce que le socle qu'il juge prescrit rend « Refondre » par construction :
+    // le verdict cesse d'être un défaut du produit pour devenir un désaccord entre juges, et il
+    // n'est corrigible par personne. L'exemption se MÉRITE à une déclaration de la page (les deux
+    // jetons --head → Roboto et --sans → DM Sans), et la rouge prouve qu'elle n'est pas une porte
+    // de sortie : la MÊME déclaration, mais « Inter » en plus, et l'écart tombe.
+    oracle: 'oracle-slop.mjs',
+    regles: ['S3'],
+    verte: [fx('socle-charte-verte.html')],
+    rouge: [fx('socle-charte-rouge.html')],
+  },
+  {
+    // TF-0857, seconde moitié : M4 lisait « colonnes masquées » sur le thead masqué par le REPLI
+    // EN CARTES prescrit par le socle (composants.md §6) — alors que rien n'est amputé, l'en-tête
+    // change de place (td::before { content: attr(data-label) }). Règle AMENDÉE, pas exemptée :
+    // ce qui rend le repli légitime est la RESTITUTION des étiquettes, pas la provenance du
+    // gabarit. La rouge porte le repli ET une vraie amputation (une colonne entière masquée sans
+    // restitution) : l'amendement ne se laisse pas acheter par la seule présence du repli.
+    oracle: 'oracle-mobile.mjs',
+    regles: ['M4'],
+    verte: [fx('socle-charte-verte.html')],
+    rouge: [fx('socle-charte-rouge.html')],
+  },
+  {
     rendu: true,
     oracle: 'rendu-comparatif.mjs',
     regles: ['RC-1'],

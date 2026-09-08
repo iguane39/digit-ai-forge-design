@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fixture rouge — la declaration de charte n'est pas une porte de sortie</title>
+<!-- TF-0857 (constat du 04/09/2026, arbitre le 08/09). LE PIEGE que les deux amendements
+     doivent refuser : la MEME page, avec la MEME declaration de charte du socle — et deux
+     ecarts qui n'ont rien a voir avec le socle.
+
+     1) Elle emploie « Inter », famille reflexe que la charte du socle ne prescrit NULLE PART.
+        L'exemption ne porte que sur Roboto et DM Sans : si elle debordait, la declaration de
+        charte deviendrait une porte de sortie, et il suffirait de l'ecrire pour tout obtenir.
+
+     2) Sous le seuil, elle masque une COLONNE entiere (td.secondaire) en plus du thead : la
+        donnee disparait, aucune etiquette ne la restitue. Le repli en cartes reste present a
+        cote — donc l'amendement de M4 ne doit pas se laisser acheter par sa seule presence.
+
+     Sans ce sens rouge, admettre le motif du socle reviendrait a admettre toute amputation
+     accompagnee d'un repli, et toute police reflexe sur une page qui se declare au socle. -->
+<style>
+  /* Les deux jetons de charte du socle : c'est CETTE declaration qui vaut reconnaissance. */
+  :root { --head: "Roboto", system-ui, sans-serif; --sans: "DM Sans", system-ui, sans-serif; }
+  body { font-family: "DM Sans", system-ui, sans-serif; margin: 0; padding: 16px; }
+  h1, h2 { font-family: "Roboto", system-ui, sans-serif; }
+  /* Famille reflexe HORS charte du socle : l'exemption ne la couvre pas. */
+  .accroche { font-family: "Inter", system-ui, sans-serif; }
+
+  .btn { min-height: 44px; min-width: 44px; padding: 12px 16px; }
+  a.lien { min-height: 44px; display: inline-flex; align-items: center; }
+
+  .barre-basse {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  .ecran { min-height: 100dvh; display: flex; flex-direction: column; }
+  .contenu { flex: 1; min-height: 0; overflow-y: auto; }
+
+  :root { --dur-normale: 280ms; --ease-sortie: cubic-bezier(.16, 1, .3, 1); }
+  .carte { transition: transform var(--dur-normale) var(--ease-sortie); }
+
+  /* Le repli en cartes PRESCRIT par le socle (composants.md §6) : le thead disparait, et
+     chaque cellule reprend son etiquette. C'est un deplacement de l'en-tete, pas une coupe. */
+  @media (max-width: 768px) {
+    table, tbody, tr, td { display: block; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid; margin-bottom: 12px; }
+    td::before { content: attr(data-label); font-weight: 600; }
+    /* AMPUTATION : cette colonne disparait, et rien ne la restitue. */
+    td.secondaire { display: none; }
+  }
+
+  @media (orientation: landscape) and (max-height: 480px) {
+    .barre-basse { position: static; }
+    .ecran { min-height: auto; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <div class="ecran">
+    <h1>Dossiers ouverts</h1>
+    <p class="accroche">Une accroche posee dans une famille reflexe hors charte.</p>
+    <button class="btn">Filtrer</button>
+    <a class="lien" href="#detail">Detail</a>
+
+    <form id="panier">
+      <label for="qte">Quantite</label>
+      <input class="champ" id="qte" name="qte" type="number" min="0" value="2">
+    </form>
+
+    <table>
+      <thead><tr><th>Dossier</th><th>Ouvert le</th><th>Statut</th></tr></thead>
+      <tbody>
+        <tr><td data-label="Dossier">D-1042</td><td data-label="Ouvert le">02/07/2026</td><td class="secondaire" data-label="Statut">En cours</td></tr>
+        <tr><td data-label="Dossier">D-1043</td><td data-label="Ouvert le">03/07/2026</td><td class="secondaire" data-label="Statut">Clos</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <nav class="barre-basse">
+    <a class="lien" href="accueil.html">Accueil</a>
+    <a class="lien" href="dossiers.html">Dossiers</a>
+    <a class="lien" href="profil.html">Profil</a>
+  </nav>
+  <script>
+    var champ = document.getElementById('qte');
+    var garde = sessionStorage.getItem('panier.qte');
+    if (garde !== null) champ.value = garde;
+    champ.addEventListener('input', function () { sessionStorage.setItem('panier.qte', champ.value); });
+  </script>
+</body>
+</html>

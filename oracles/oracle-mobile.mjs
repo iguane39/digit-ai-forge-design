@@ -121,9 +121,29 @@ const regles = cssRulesDeep(cssText);
       add('bloquant', 'M4', `${tables.length} table(s) sans reflow en cartes sous 768 px : défilement horizontal forcé`,
         'feuille de style');
     }
-    const cache = regles.some(r => r.atRules.some(a => /max-width\s*:\s*(\d|[1-7]\d\d)px/.test(a))
-      && /(^|[\s,>])(table|td|th)\b/i.test(r.selector) && /display\s*:\s*none/.test(r.body));
+    // TF-0857 (constat du 04/09, arbitré le 08/09) — RÈGLE AMENDÉE, pas exemptée. « Colonnes
+    // masquées » condamnait aussi le `thead` masqué par le REPLI EN CARTES, qui est le motif
+    // prescrit par le socle digit-ai (composants.md §6) et écrit dans son boilerplate : sous le
+    // seuil, `thead` disparaît et chaque cellule reprend son étiquette par
+    // `td::before { content: attr(data-label) }`. Rien n'est amputé — l'en-tête change de place.
+    // Un oracle qui refuse ce que le socle qu'il juge PRESCRIT rend « Refondre » par
+    // construction, et le verdict cesse d'être un défaut du produit pour devenir un désaccord
+    // entre juges. L'amendement vaut pour tout le monde, socle ou pas : ce qui rend le repli
+    // légitime est la RESTITUTION des étiquettes, pas la provenance du gabarit.
+    const restitueLesEtiquettes = regles.some(r =>
+      r.atRules.some(a => /max-width\s*:\s*\d+px/.test(a))
+      && /::before/i.test(r.selector)
+      && /content\s*:\s*attr\(\s*data-label\s*\)/i.test(r.body));
+    const neMasqueQueLeThead = sel => sel.split(',').every(p => /(^|[\s>+~])thead\s*$/i.test(' ' + p.trim()));
+    const cache = regles.some(r => {
+      if (!r.atRules.some(a => /max-width\s*:\s*(\d|[1-7]\d\d)px/.test(a))) return false;
+      if (!/(^|[\s,>])(table|td|th)\b/i.test(r.selector) || !/display\s*:\s*none/.test(r.body)) return false;
+      if (neMasqueQueLeThead(r.selector) && restitueLesEtiquettes) return false;
+      return true;
+    });
     if (cache) add('majeur', 'M4', 'colonnes masquées en mobile : adapter l\'interface, ne pas l\'amputer', 'feuille de style');
+    else if (regles.some(r => /display\s*:\s*none/.test(r.body) && neMasqueQueLeThead(r.selector)) && restitueLesEtiquettes)
+      add('info', 'M4', 'thead masqué sous le seuil, mais les étiquettes sont restituées cellule par cellule (content: attr(data-label)) : c\'est le repli en cartes prescrit par le socle digit-ai, pas une amputation (TF-0857)', 'feuille de style');
   }
 }
 

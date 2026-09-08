@@ -90,8 +90,33 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 }
 
 // ── S3 · Polices réflexes ──────────────────────────────────────────────────
+// TF-0857 (constat du 04/09, arbitré le 08/09) — EXEMPTION DÉCLARÉE, et déclarée par la PAGE.
+// S3 bannit « DM Sans » comme police réflexe ; la charte du socle digit-ai l'EXIGE en police de
+// corps, et `check_html.py` du socle le vérifie. Un oracle qui refuse ce que le socle qu'il juge
+// prescrit rend « Refondre » par construction : le verdict cesse d'être un défaut du produit
+// pour devenir un désaccord entre juges, et il n'est corrigible par personne.
+//
+// L'exemption est étroite et se MÉRITE : la page doit lier elle-même les deux jetons de charte
+// du socle — `--head` à Roboto ET `--sans` à DM Sans, exactement ce que le boilerplate écrit.
+// Une page qui emploie DM Sans sans déclarer la charte n'est pas une page au socle, et reste
+// jugée. Et l'exemption ne porte QUE sur les deux polices de la charte : toute autre famille
+// réflexe reste un écart majeur sur une page au socle comme ailleurs — sans quoi le marqueur
+// deviendrait une porte de sortie, ce que la doctrine des blocs du socle (TF-0830) refuse déjà.
+const POLICES_CHARTE_SOCLE = ['roboto', 'dm sans'];
+const auSocleDigitAi = /--head\s*:\s*["']?Roboto["']?/i.test(cssText)
+  && /--sans\s*:\s*["']?DM\s+Sans["']?/i.test(cssText);
+if (auSocleDigitAi) {
+  NON_JUGE.push('S3 : page déclarant la charte du socle digit-ai (jetons `--head` → Roboto et `--sans` → DM Sans) — ces DEUX familles y sont prescrites par le socle et vérifiées par son propre contrôle ; elles sont exemptées et le constat est rendu en `info`. Toute autre famille réflexe reste jugée (TF-0857)');
+}
 {
   const vus = new Set();
+  const constater = (n, libelle, ou) => {
+    if (auSocleDigitAi && POLICES_CHARTE_SOCLE.includes(n)) {
+      add('info', 'S3', `police « ${libelle} » : famille réflexe, mais PRESCRITE par la charte du socle digit-ai que cette page déclare (jetons --head / --sans) — exemptée, TF-0857`, ou);
+      return;
+    }
+    add('majeur', 'S3', `police réflexe « ${libelle} » — famille bannie par impeccable, monoculture inter-projets`, ou);
+  };
   const scan = (texte, ou) => {
     const re = /font-family\s*:\s*([^;{}]+)/gi;
     let m;
@@ -100,7 +125,7 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
         const n = fam.trim().replace(/^["']|["']$/g, '').toLowerCase();
         if (POLICES_REFLEXES.includes(n) && !vus.has(n)) {
           vus.add(n);
-          add('majeur', 'S3', `police réflexe « ${fam.trim()} » — famille bannie par impeccable, monoculture inter-projets`, ou);
+          constater(n, fam.trim(), ou);
         }
       }
     }
@@ -113,7 +138,9 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
       const slug = n.replace(/\s+/g, '\\+'); // « + » est le séparateur de Google Fonts, pas un quantificateur
       if (new RegExp('family=' + slug + '(?![a-z])', 'i').test(href) && !vus.has(n)) {
         vus.add(n);
-        add('majeur', 'S3', `police réflexe « ${n} » importée depuis Google Fonts`, L(l.start));
+        if (auSocleDigitAi && POLICES_CHARTE_SOCLE.includes(n))
+          add('info', 'S3', `police « ${n} » importée depuis Google Fonts : famille réflexe, mais PRESCRITE par la charte du socle digit-ai que cette page déclare — exemptée, TF-0857`, L(l.start));
+        else add('majeur', 'S3', `police réflexe « ${n} » importée depuis Google Fonts`, L(l.start));
       }
     }
   }
