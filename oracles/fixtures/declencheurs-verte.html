@@ -42,6 +42,12 @@
   .btn-secondaire { background: transparent; color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
   /* Bouton fantome : ni fond ni bordure. Legitime en second acces, jamais seul. */
   .btn-fantome { background: transparent; color: var(--texte-secondaire); border: none; padding: 8px 16px; }
+  /* TF-0833 : la MEME variante, ecrite en selecteur COMPOSE — la forme la plus courante
+     d'un systeme de classes. `.bouton.fantome` ne doit s'appliquer qu'aux elements qui
+     portent LES DEUX classes ; l'appariement par jeton la faisait tomber sur tous les
+     `.bouton`, et le seul contournement connu etait de renommer la classe. */
+  .bouton { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .bouton.fantome { background: transparent; border: none; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   @media print { .theme-toggle { display: none; } }
 </style>
@@ -57,6 +63,7 @@
     <button class="btn" type="button" data-action="exporter-csv" data-fonctionnalite="export">Exporter en CSV</button>
     <button class="btn-secondaire" type="button" data-action="ouvrir-arborescence" data-fonctionnalite="arborescence">Parcourir l'arborescence</button>
     <a href="#tableau" data-fonctionnalite="tableau">Voir le tableau detaille</a>
+    <button class="bouton" type="button" data-action="imprimer" data-fonctionnalite="impression">Imprimer</button>
   </p>
 
   <section id="tableau">

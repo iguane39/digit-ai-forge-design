@@ -45,6 +45,11 @@
   .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
   .btn { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
   .btn-fantome { background: transparent; color: var(--texte-secondaire); border: none; padding: 8px 16px; }
+  /* TF-0833 : les MEMES deux regles que dans la verte, au caractere pres. Ce qui change,
+     c'est l'element : ici il porte LES DEUX classes, donc la variante fantome s'applique
+     vraiment, et l'unique acces a l'impression est bel et bien un fantome. */
+  .bouton { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .bouton.fantome { background: transparent; border: none; }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
   @media print { .theme-toggle { display: none; } }
 </style>
@@ -59,6 +64,7 @@
   <p class="note">
     <a href="#" data-action="exporter-csv" data-fonctionnalite="export">Exporter en CSV</a>
     <button class="btn" type="button" onclick="window.location.href='#tableau'" data-fonctionnalite="tableau">Voir le tableau detaille</button>
+    <button class="bouton fantome" type="button" data-action="imprimer" data-fonctionnalite="impression">Imprimer</button>
   </p>
 
   <section id="tableau">
