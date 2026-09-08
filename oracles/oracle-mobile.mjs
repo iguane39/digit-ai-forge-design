@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // oracle-mobile — Domaine « Cible mobile : contrat d'usage tactile » (déterministe).
 //
-// Règles M1–M7, décidables sur le fichier :
+// Règles M1–M8, décidables sur le fichier :
 //   M1  viewport déclaré, zoom non bridé
 //   M2  cibles tactiles déclarées ≥ 44 px sur les éléments interactifs
 //   M3  safe-area-inset utilisé dès qu'une barre fixe borde l'écran
@@ -9,6 +9,7 @@
 //   M5  orientation paysage traitée
 //   M6  prefers-reduced-motion respecté dès qu'il y a du mouvement
 //   M7  un état saisi survit à la navigation qui recharge le document
+//   M8  une barre basse hors flux vit dans une coquille défilante
 //
 // Ce qui exige un rendu réel (taille effective après cascade, gestes, débordements
 // au breakpoint) est déclaré non jugé et délégué à render_page.py.
@@ -40,7 +41,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-mobile', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'M1–M7 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'M1–M8 sans écart', where: file }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -191,9 +192,50 @@ const regles = cssRulesDeep(cssText);
   }
 }
 
+// ── M8 · coquille défilante sous une barre basse hors flux ─────────────────
+// TF-0846 (lot Produit-61, 05/09) : DIX-HUIT pages réelles en FAIL V4 (chevauchement) au
+// premier passage 5 bis, à quatre largeurs, pour un seul et même motif — la barre basse
+// `position: fixed` recouvrait le bas du contenu. La maquette mono-fichier, elle, passait
+// V4 : sa mise en page propre laissait par hasard assez de vide sous le dernier bloc.
+// Une barre hors flux ne prend pas de place ; il faut donc la lui donner, et la doctrine
+// est la COQUILLE DÉFILANTE — un écran borné dont le contenu défile à l'intérieur, la
+// barre vivant hors de ce flux. La réserve explicite (padding sous le contenu) reste admise.
+{
+  const estBarreBasse = r => /position\s*:\s*(fixed|sticky)/.test(r.body)
+    && /(^|[;{\s])bottom\s*:\s*0(?![0-9.])/.test(r.body);
+  const barresBasses = regles.filter(estBarreBasse);
+  if (barresBasses.length) {
+    const selecteursBarre = new Set(barresBasses.map(r => r.selector));
+    // Une coquille : une zone qui DÉFILE et dont la hauteur est bornée. Les deux dans la
+    // même règle — un overflow sans hauteur bornée ne défile pas, il déborde.
+    const coquille = regles.some(r => !selecteursBarre.has(r.selector)
+      && /(^|[;{\s])overflow(-y|-block)?\s*:\s*(auto|scroll)/i.test(r.body)
+      && /(^|[;{\s])(height|min-height|max-height|block-size|flex)\s*:/.test(r.body));
+    // La réserve : de la place rendue sous le contenu, hors de la barre elle-même, et
+    // au moins de la hauteur d'une cible tactile (44px) — sinon c'est un liseré, pas une place.
+    const reserve = regles.some(r => {
+      if (selecteursBarre.has(r.selector)) return false;
+      const m = /(^|[;{\s])(padding-bottom|margin-bottom|scroll-padding-bottom|padding-block-end)\s*:\s*([^;]+)/i.exec(r.body);
+      if (!m) return false;
+      const val = m[3].trim();
+      if (/var\(|calc\(|env\(/i.test(val)) return true; // valeur composée : la place est pensée
+      const px = /(-?[\d.]+)px/.exec(val);
+      return px !== null && parseFloat(px[1]) >= 44;
+    });
+    if (!coquille && !reserve) {
+      add('majeur', 'M8',
+        `barre basse hors flux (« ${barresBasses[0].selector.slice(0, 40)} ») sans coquille défilante `
+        + 'ni réserve de place sous le contenu : elle recouvre le bas du dernier bloc à toutes les '
+        + 'largeurs (V4). Poser la coquille — un écran borné (100dvh) dont le contenu défile dans '
+        + 'une zone à overflow-y: auto — ou réserver la hauteur de la barre en bas du contenu',
+        'feuille de style');
+    }
+  }
+}
+
 // ── Verdict ────────────────────────────────────────────────────────────────
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const dur = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(dur.length ? `FAIL — ${dur.length} écart(s) dur(s)\n` : 'PASS — M1–M7 sans écart dur\n');
+if (!jsonOnly) process.stderr.write(dur.length ? `FAIL — ${dur.length} écart(s) dur(s)\n` : 'PASS — M1–M8 sans écart dur\n');
 if (dur.length) sortir('FAIL', 1);
 sortir('PASS', 0);

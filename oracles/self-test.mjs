@@ -149,8 +149,13 @@ const CAS = [
     // deux fixtures portent la même saisie et la même barre basse qui navigue vers d'autres
     // documents ; elles ne diffèrent que par le support de survie — la verte confie la
     // quantité à sessionStorage, la rouge s'en remet à un <form action> qui ne prouve rien.
+    // TF-0846 (lot Produit-61, 05/09) : M8 ajoutée. DIX-HUIT pages réelles en FAIL V4 à quatre
+    // largeurs pour un seul motif — la barre basse hors flux recouvrait le bas du contenu —
+    // quand la maquette mono-fichier passait V4 par le vide que sa mise en page laissait par
+    // hasard. La verte pose la coquille défilante (écran borné, contenu à overflow-y: auto) ;
+    // la rouge garde la même barre fixe sans coquille ni réserve de place.
     oracle: 'oracle-mobile.mjs',
-    regles: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7'],
+    regles: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8'],
     verte: [fx('mobile-verte.html')],
     rouge: [fx('mobile-rouge.html')],
   },

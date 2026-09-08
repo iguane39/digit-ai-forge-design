@@ -19,7 +19,10 @@
     padding-right: env(safe-area-inset-right, 0px);
   }
 
-  .ecran { min-height: 100dvh; }
+  /* coquille défilante (M8) : l'écran est borné, le contenu défile À L'INTÉRIEUR,
+     la barre basse vit hors de ce flux et ne recouvre donc jamais le dernier bloc. */
+  .ecran { min-height: 100dvh; display: flex; flex-direction: column; }
+  .contenu { flex: 1; min-height: 0; overflow-y: auto; }
 
   :root { --dur-normale: 280ms; --ease-sortie: cubic-bezier(.16, 1, .3, 1); }
   .carte { transition: transform var(--dur-normale) var(--ease-sortie); }

@@ -26,6 +26,31 @@ iOS, un Android — au format 390 × 844 et 412 × 915.
 Le châssis est **décoratif** : il porte `aria-hidden="true"`, il ne piège pas le
 focus, et le contenu réel reste atteignable au clavier depuis l'extérieur du cadre.
 
+## Coquille défilante — la mise en page par défaut de tout écran mobile
+
+Une barre basse `position: fixed` **ne prend aucune place** : elle se pose PAR-DESSUS le
+contenu. Le 05/09, dix-huit pages réelles sont sorties en `FAIL V4` (chevauchement) à
+quatre largeurs, pour ce seul motif — pendant que la maquette mono-fichier passait V4,
+son dernier bloc laissant par hasard assez de vide sous lui. Un écran qui « passe » sur
+la maquette n'est donc **aucune preuve** ; c'est la structure qu'il faut prescrire.
+
+La structure, et elle n'est pas optionnelle dès qu'une barre basse existe :
+
+```css
+.ecran   { min-height: 100dvh; display: flex; flex-direction: column; }
+.contenu { flex: 1; min-height: 0; overflow-y: auto; }   /* c'est ICI que ça défile */
+.chrome-bas { position: fixed; inset-inline: 0; bottom: 0; }
+```
+
+L'écran est **borné** (`100dvh`), le contenu défile **à l'intérieur** de lui, et la barre
+vit hors de ce flux : elle ne peut plus rien recouvrir, à aucune largeur. `min-height: 0`
+sur la zone défilante n'est pas un détail — sans lui, un enfant flex refuse de rétrécir
+et la zone déborde au lieu de défiler.
+
+Seule alternative admise : **réserver** explicitement la hauteur de la barre en bas du
+contenu (`padding-bottom` d'au moins 44 px, ou une valeur composée avec la safe-area).
+Vérifié par `oracle-mobile` M8, qui accepte l'une ou l'autre et refuse l'absence des deux.
+
 ## Zones de sécurité
 
 ```css

@@ -14,7 +14,7 @@
 | C8 | Direction visuelle non générique | jugement argumenté ou arbitrage commanditaire | avertissement |
 | C9 | Aucun marqueur de design généré (S1–S10) | `oracle-slop` | bloquant |
 | C10 | Couleurs et polices tracées aux tokens, parité clair/sombre (T1–T6) | `oracle-tokens` | bloquant |
-| C11 | Contrat d'usage tactile tenu (M1–M7) | `oracle-mobile` — **si cible mobile** | bloquant |
+| C11 | Contrat d'usage tactile tenu (M1–M8) | `oracle-mobile` — **si cible mobile** | bloquant |
 | C12 | Visuels générés tracés et plafonnés (I1–I6) | `oracle-images` — **si images générées** | bloquant |
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
 | C15 | Un CTA = une cible : `href` réel, `data-action` ou `type=submit` ; même libellé même écran ⇒ même cible | `check_maquette.py` | bloquant |

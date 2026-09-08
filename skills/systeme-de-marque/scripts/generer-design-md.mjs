@@ -348,6 +348,16 @@ Conteneur de base des vues.
 Bordure de trait, fond \`surface\`, libellé en \`ink\`, aide et erreurs sur les tokens
 d'état. Toute saisie de date utilise \`input type="date"\` natif (contrat technique).
 
+### coquille-defilante
+
+Dès qu'un écran pose une barre basse hors du flux (\`position: fixed; bottom: 0\`), il est
+bâti en coquille défilante : écran borné à \`100dvh\`, contenu défilant À L'INTÉRIEUR
+(\`flex: 1; min-height: 0; overflow-y: auto\`), barre hors de ce flux. Une barre fixe ne
+prend aucune place : sans coquille, elle recouvre le bas du dernier bloc à toutes les
+largeurs. Seule alternative : réserver explicitement la hauteur de la barre sous le
+contenu (≥ 44px, ou une valeur composée avec \`env(safe-area-inset-bottom)\`).
+Refusé par \`oracle-mobile\` M8 dans le cas contraire.
+
 ## Spacing
 
 Échelle sur base 4 px : xs ${spacing.xs} · sm ${spacing.sm} · md ${spacing.md} · lg ${spacing.lg} · xl ${spacing.xl}.
