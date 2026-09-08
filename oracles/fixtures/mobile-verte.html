@@ -4,7 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Fixture verte — oracle-mobile</title>
-<!-- provenance : chantier forge-design, 04/08/2026. M1-M6 sans écart. -->
+<!-- provenance : chantier forge-design, 04/08/2026. M1-M7 sans écart.
+     M7 (TF-0875, 08/09/2026) : la barre basse navigue vers d'AUTRES documents — donc la page
+     recharge — et l'écran porte de la saisie. L'état est confié à sessionStorage : il survit. -->
 <style>
   .btn { min-height: 44px; min-width: 44px; padding: 12px 16px; }
   a.lien { min-height: 44px; display: inline-flex; align-items: center; }
@@ -46,6 +48,11 @@
     <button class="btn">Filtrer</button>
     <a class="lien" href="#detail">Détail</a>
 
+    <form id="panier">
+      <label for="qte">Quantité</label>
+      <input class="champ" id="qte" name="qte" type="number" min="0" value="2">
+    </form>
+
     <table>
       <thead><tr><th>Dossier</th><th>Ouvert le</th><th>Statut</th></tr></thead>
       <tbody>
@@ -54,6 +61,17 @@
       </tbody>
     </table>
   </div>
-  <nav class="barre-basse">Accueil · Dossiers · Profil</nav>
+  <nav class="barre-basse">
+    <a class="lien" href="accueil.html">Accueil</a>
+    <a class="lien" href="dossiers.html">Dossiers</a>
+    <a class="lien" href="profil.html">Profil</a>
+  </nav>
+  <script>
+    // L'état saisi est confié à un support qui survit au rechargement (M7).
+    var champ = document.getElementById('qte');
+    var garde = sessionStorage.getItem('panier.qte');
+    if (garde !== null) champ.value = garde;
+    champ.addEventListener('input', function () { sessionStorage.setItem('panier.qte', champ.value); });
+  </script>
 </body>
 </html>

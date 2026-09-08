@@ -14,7 +14,7 @@
 | C8 | Direction visuelle non générique | jugement argumenté ou arbitrage commanditaire | avertissement |
 | C9 | Aucun marqueur de design généré (S1–S10) | `oracle-slop` | bloquant |
 | C10 | Couleurs et polices tracées aux tokens, parité clair/sombre (T1–T6) | `oracle-tokens` | bloquant |
-| C11 | Contrat d'usage tactile tenu (M1–M6) | `oracle-mobile` — **si cible mobile** | bloquant |
+| C11 | Contrat d'usage tactile tenu (M1–M7) | `oracle-mobile` — **si cible mobile** | bloquant |
 | C12 | Visuels générés tracés et plafonnés (I1–I6) | `oracle-images` — **si images générées** | bloquant |
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
 | C15 | Un CTA = une cible : `href` réel, `data-action` ou `type=submit` ; même libellé même écran ⇒ même cible | `check_maquette.py` | bloquant |
@@ -89,14 +89,31 @@ chacune au format :
 Routes traversées : #dossiers → #dossier-nouveau → #dossier-1042 → #dossier-1042/valider
 État non nominal rencontré : erreur de validation sur pièce jointe manquante (#dossier-1042, état « erreur »)
 Clavier : parcouru en Tab seul, focus visible à chaque étape
+Joué sur : maquette
 Exécuté le : 2026-08-04
 ```
 
-Trois exigences, sans lesquelles la trace ne vaut rien : les routes sont **celles du
+Quatre exigences, sans lesquelles la trace ne vaut rien : les routes sont **celles du
 fichier** (vérifiables contre la table de routage par `check_maquette.py`), chaque
-parcours traverse **au moins un état non nominal**, et la trace dit qu'elle a été
+parcours traverse **au moins un état non nominal**, la trace dit **sur quoi** elle a été
+jouée (maquette ou produit rendu — voir ci-dessous), et elle dit qu'elle a été
 exécutée, pas décrite. Un parcours qui ne montre que le chemin heureux ne démontre
 rien.
+
+### Ce que la maquette mono-fichier ne peut PAS prouver (TF-0875, 06/09/2026)
+
+Un panier rendu par le serveur s'est vidé après « Aide » puis « La carte » — quantité
+2 → 0, mesuré au navigateur sur qualif — alors que dix-huit pages passaient les oracles
+et que **C13 était 3/3 sur la maquette**. La maquette navigue par ancres ou par routeur
+JS : elle ne recharge JAMAIS le document, donc elle ne peut pas perdre un état saisi.
+Un parcours joué sur elle est aveugle à cette classe entière de défaut.
+
+Conséquence, et elle n'est pas négociable : **dès qu'un parcours traverse de la saisie
+puis une navigation, il est rejoué sur le PRODUIT RENDU**, pas seulement sur la maquette.
+La trace le dit — `Joué sur : maquette` ou `Joué sur : produit rendu (qualif, 06/09/2026)` —
+et une trace qui ne le dit pas est réputée jouée sur la maquette, donc non concluante pour
+la survie de l'état. `oracle-mobile` M7 juge en amont le SUPPORT déclaré ; il ne remplace
+pas ce parcours, il le rend exigible plus tôt.
 
 ## Boucle
 

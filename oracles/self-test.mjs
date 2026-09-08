@@ -143,8 +143,14 @@ const CAS = [
     rouge: [fx('tokens-t8-rouge.html')],
   },
   {
+    // TF-0875 (lot Produit-61, 06/09) : M7 ajoutée. Le panier d'un produit rendu se vidait
+    // après « Aide » puis « La carte » — 2 → 0 au navigateur sur qualif — alors que C13 était
+    // 3/3 sur la maquette mono-fichier, où la navigation ne recharge JAMAIS le document. Les
+    // deux fixtures portent la même saisie et la même barre basse qui navigue vers d'autres
+    // documents ; elles ne diffèrent que par le support de survie — la verte confie la
+    // quantité à sessionStorage, la rouge s'en remet à un <form action> qui ne prouve rien.
     oracle: 'oracle-mobile.mjs',
-    regles: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6'],
+    regles: ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7'],
     verte: [fx('mobile-verte.html')],
     rouge: [fx('mobile-rouge.html')],
   },

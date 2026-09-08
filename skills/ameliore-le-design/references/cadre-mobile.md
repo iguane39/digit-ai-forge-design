@@ -63,6 +63,29 @@ Le paysage est rendu, pas seulement toléré. `100vh` est proscrit au profit de
 `100dvh`, et une règle `@media (orientation: landscape) and (max-height: 480px)`
 libère la hauteur : chrome allégé, barre basse remise dans le flux.
 
+## Un état saisi survit à la navigation
+
+Sur mobile, la barre d'onglets basse est le geste le plus fréquent : l'utilisateur en
+sort et y revient sans y penser. **Tout ce qu'il a saisi doit être là au retour.**
+
+Dans une maquette mono-fichier, la question ne se pose pas — la navigation est une
+ancre ou un routeur JS, le document ne recharge jamais. Dans le produit rendu, elle se
+pose à chaque onglet, et un formulaire rendu par le serveur ne suffit pas : le 06/09,
+un panier est passé de 2 à 0 après « Aide » puis « La carte ».
+
+L'état saisi est donc confié à un support qui survit à un rechargement :
+
+| Support | Ce qu'il faut écrire | Quand |
+|---|---|---|
+| `sessionStorage` | relecture à l'ouverture, écriture à chaque `input` | état de travail, panier, filtres |
+| `localStorage` | idem, persistant entre sessions | préférences, brouillons longs |
+| Session serveur / cookie | `data-etat-persiste="<support>"` sur le formulaire | quand le serveur détient déjà l'état |
+
+Vérifié par `oracle-mobile` M7, dont la limite est déclarée : il juge le support
+**déclaré**, pas la survie effective. Celle-ci se mesure par un parcours C13 **rejoué
+sur le produit rendu** (`criteres-sortie.md`, « Ce que la maquette mono-fichier ne peut
+pas prouver »).
+
 ## Ce qui reste non jugeable par script
 
 Gestes réels, inertie du défilement, comportement du clavier virtuel, rendu des

@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 // oracle-mobile — Domaine « Cible mobile : contrat d'usage tactile » (déterministe).
 //
-// Règles M1–M6, décidables sur le fichier :
+// Règles M1–M7, décidables sur le fichier :
 //   M1  viewport déclaré, zoom non bridé
 //   M2  cibles tactiles déclarées ≥ 44 px sur les éléments interactifs
 //   M3  safe-area-inset utilisé dès qu'une barre fixe borde l'écran
 //   M4  reflow des tables sous 768 px dès qu'une table existe
 //   M5  orientation paysage traitée
 //   M6  prefers-reduced-motion respecté dès qu'il y a du mouvement
+//   M7  un état saisi survit à la navigation qui recharge le document
 //
 // Ce qui exige un rendu réel (taille effective après cascade, gestes, débordements
 // au breakpoint) est déclaré non jugé et délégué à render_page.py.
@@ -28,6 +29,10 @@ const NJ = [
   'gestes réels (swipe, pull-to-refresh, retour geste) — parcours à exécuter',
   'débordements et chevauchements aux breakpoints — render_page.py V1/V4',
   'pertinence des patterns natifs choisis (bottom sheet vs modale) — jugement produit',
+  // TF-0875 : la SURVIE effective de l'état ne se lit pas sur le fichier — elle se mesure au
+  // navigateur, sur le produit RENDU, jamais sur la maquette mono-fichier où la navigation ne
+  // recharge rien. M7 juge le support déclaré ; le parcours C13 joué sur le produit fait foi.
+  'survie effective de l\'état saisi après navigation — parcours C13 exécuté au navigateur sur le PRODUIT RENDU, pas sur la maquette mono-fichier',
 ];
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
@@ -35,7 +40,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-mobile', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'M1–M6 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'M1–M7 sans écart', where: file }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -143,9 +148,52 @@ const regles = cssRulesDeep(cssText);
   }
 }
 
+// ── M7 · un état saisi survit à la navigation ──────────────────────────────
+// TF-0875 (lot Produit-61, 06/09) : un panier rendu par le serveur se vidait après
+// « Aide » puis « La carte » — quantité 2 → 0, mesuré au navigateur sur qualif — alors
+// que dix-huit pages passaient les oracles et que le parcours C13 était 3/3 SUR LA
+// MAQUETTE MONO-FICHIER, où la navigation de la barre basse ne recharge jamais le
+// document. Aucune règle ne rapprochait « il y a de la saisie » de « il y a une
+// navigation qui recharge ». C'est ce rapprochement, et lui seul, que M7 juge.
+{
+  const ARBRES = arbres(html, root);
+  // Un bouton, une case cochée par le gabarit, un champ masqué ne portent pas d'état SAISI.
+  const SANS_SAISIE = new Set(['hidden', 'submit', 'button', 'reset', 'image']);
+  const champs = ARBRES.flatMap(r => [
+    ...elements(r, 'input').filter(e => !SANS_SAISIE.has(String(e.attrs.type || 'text').toLowerCase())),
+    ...elements(r, 'textarea'),
+    ...elements(r, 'select'),
+  ]);
+  // Ce qui RECHARGE le document : un lien vers un autre document du produit, ou une
+  // assignation de location. Une ancre (#…) et un routeur JS ne rechargent rien — la
+  // maquette mono-fichier ne relève donc pas de M7, et c'est exactement pourquoi elle
+  // passait : la règle ne peut se déclencher que là où le défaut est possible.
+  const HORS_DOCUMENT = /^\s*(?:https?:|mailto:|tel:|javascript:|data:|#|$)/i;
+  const liensDocument = ARBRES.flatMap(r => elements(r, 'a'))
+    .filter(a => typeof a.attrs.href === 'string' && !HORS_DOCUMENT.test(a.attrs.href));
+  const rechargeJs = /(?:window\s*\.\s*)?location\s*\.\s*(?:href\s*=|assign\s*\(|replace\s*\()/.test(html);
+  // Deux liens au moins : une NAVIGATION (barre basse, menu), pas le lien isolé d'un pied de page.
+  const navigation = liensDocument.length >= 2 || rechargeJs;
+  // Ce qui SURVIT à un rechargement : un stockage client, ou un support déclaré par
+  // data-etat-persiste (session serveur, cookie). Un <form action> ne prouve RIEN :
+  // le panier du 06/09 était précisément un formulaire rendu par le serveur.
+  const persiste = /\b(?:sessionStorage|localStorage|indexedDB)\b/.test(html)
+    || /data-etat-persiste/i.test(html);
+  if (champs.length && navigation && !persiste) {
+    add('majeur', 'M7',
+      `${champs.length} champ(s) de saisie et une navigation qui RECHARGE le document `
+      + `(${liensDocument.length} lien(s) vers un autre document${rechargeJs ? ', assignation de location' : ''}) `
+      + 'sans aucun support de survie : l\'état saisi est perdu au premier aller-retour. '
+      + 'Confier l\'état à sessionStorage/localStorage, ou déclarer le support serveur par '
+      + 'data-etat-persiste sur le formulaire — un <form action> ne prouve rien, le panier '
+      + 'perdu du 06/09 en était un',
+      liensDocument.length ? `lien « ${String(liensDocument[0].attrs.href).slice(0, 40)} »` : 'scripts de la page');
+  }
+}
+
 // ── Verdict ────────────────────────────────────────────────────────────────
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const dur = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(dur.length ? `FAIL — ${dur.length} écart(s) dur(s)\n` : 'PASS — M1–M6 sans écart dur\n');
+if (!jsonOnly) process.stderr.write(dur.length ? `FAIL — ${dur.length} écart(s) dur(s)\n` : 'PASS — M1–M7 sans écart dur\n');
 if (dur.length) sortir('FAIL', 1);
 sortir('PASS', 0);

@@ -4,7 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1">
 <title>Fixture rouge — oracle-mobile</title>
-<!-- provenance : chantier forge-design, 04/08/2026. Déclenche M1 à M6. -->
+<!-- provenance : chantier forge-design, 04/08/2026. Déclenche M1 à M7.
+     M7 (TF-0875, 08/09/2026) : le panier du 06/09 en une page — un formulaire rendu par le
+     serveur, une barre basse qui navigue vers d'autres documents, et AUCUN support de survie.
+     La quantité 2 est perdue au premier aller-retour Aide → La carte. -->
 <style>
   /* M2 · cibles tactiles sous 44 px */
   .btn { height: 32px; min-width: 28px; }
@@ -31,6 +34,11 @@
     <button class="btn">Filtrer</button>
     <a class="lien" href="#detail">Détail</a>
 
+    <form id="panier" action="/panier" method="post">
+      <label for="qte">Quantité</label>
+      <input class="champ" id="qte" name="qte" type="number" min="0" value="2">
+    </form>
+
     <table>
       <thead><tr><th>Dossier</th><th class="secondaire">Ouvert le</th><th>Statut</th></tr></thead>
       <tbody>
@@ -39,6 +47,10 @@
       </tbody>
     </table>
   </div>
-  <nav class="barre-basse">Accueil · Dossiers · Profil</nav>
+  <nav class="barre-basse">
+    <a class="lien" href="aide.html">Aide</a>
+    <a class="lien" href="carte.html">La carte</a>
+    <a class="lien" href="profil.html">Profil</a>
+  </nav>
 </body>
 </html>
