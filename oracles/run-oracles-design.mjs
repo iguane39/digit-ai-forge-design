@@ -34,6 +34,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
+import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -58,10 +59,16 @@ function racineDeForge() {
 const RACINE = racineDeForge();
 const ORACLES = path.join(RACINE, 'oracles');
 
+// `socle_exempte` n'est rempli qu'en mode livrable (TF-0830) : les blocs du socle
+// reconnus, ceux qui n'ont pas pu l'être avec leur raison, et — nommés un par un — les
+// constats mis au compte du socle. Rien n'est effacé : ce qui sort du verdict reste lisible.
+let socleExempte = null;
+
 function sortir(verdict, resultats, nonJuge, code) {
   process.stdout.write(JSON.stringify({
     orchestrateur: 'run-oracles-design', racine: RACINE, artefact: cible || opt('--corpus') || null,
     verdict, oracles: resultats, non_juge: nonJuge,
+    ...(socleExempte ? { socle_exempte: socleExempte } : {}),
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
 }
@@ -266,34 +273,90 @@ const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|rol
 const estMobile = args.includes('--mobile')
   || /viewport-fit\s*=\s*cover|safe-area-inset|data-chassis|class="[^"]*chassis/i.test(html);
 
-const resultats = [];
 const sansObjet = [];
 
-resultats.push(lancer('oracle-slop.mjs', [cible]));
-resultats.push(lancer('oracle-tokens.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));
-resultats.push(lancer('oracle-motion.mjs', [cible]));
-resultats.push(lancer('oracle-bascule.mjs', [cible]));
-resultats.push(lancer('oracle-taste.mjs', [cible]));
+// Une passe complète d'oracles de fichier sur UNE cible. Les oracles applicables sont
+// décidés une fois pour toutes sur le document réel (ci-dessus) : une passe sur la copie
+// sans socle ne doit jamais changer la LISTE des juges, seulement leurs constats.
+function passeFichier(fichier, { muet = false } = {}) {
+  const out = [];
+  out.push(lancer('oracle-slop.mjs', [fichier]));
+  out.push(lancer('oracle-tokens.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
+  out.push(lancer('oracle-motion.mjs', [fichier]));
+  out.push(lancer('oracle-bascule.mjs', [fichier]));
+  out.push(lancer('oracle-taste.mjs', [fichier]));
 
-if (estMobile) resultats.push(lancer('oracle-mobile.mjs', [cible]));
-else sansObjet.push('oracle-mobile : SANS OBJET — cible non mobile (ni --mobile, ni marqueur de châssis détecté)');
+  if (estMobile) out.push(lancer('oracle-mobile.mjs', [fichier]));
+  else if (!muet) sansObjet.push('oracle-mobile : SANS OBJET — cible non mobile (ni --mobile, ni marqueur de châssis détecté)');
 
-if (aDesImages) resultats.push(lancer('oracle-images.mjs', [cible]));
-else sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
+  if (aDesImages) out.push(lancer('oracle-images.mjs', [fichier]));
+  else if (!muet) sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
 
-if (aDesChamps) resultats.push(lancer('oracle-saisie.mjs', [cible]));
-else sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans le document');
+  if (aDesChamps) out.push(lancer('oracle-saisie.mjs', [fichier]));
+  else if (!muet) sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans le document');
 
-if (aUnPanneau) resultats.push(lancer('oracle-panneau-tache.mjs', [cible]));
-else sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
+  if (aUnPanneau) out.push(lancer('oracle-panneau-tache.mjs', [fichier]));
+  else if (!muet) sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
 
-if (aUnDeclencheur) {
-  resultats.push(lancer('oracle-declencheurs.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));
-} else sansObjet.push('oracle-declencheurs : SANS OBJET — aucun déclencheur (bouton, lien, élément porteur de data-action/onclick) dans le document');
+  if (aUnDeclencheur) {
+    out.push(lancer('oracle-declencheurs.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
+  } else if (!muet) sansObjet.push('oracle-declencheurs : SANS OBJET — aucun déclencheur (bouton, lien, élément porteur de data-action/onclick) dans le document');
 
-if (aUneSurcouche) {
-  resultats.push(lancer('oracle-surcouche.mjs', opt('--tokens') ? [cible, '--tokens', opt('--tokens')] : [cible]));
-} else sansObjet.push('oracle-surcouche : SANS OBJET — aucun composant en sur-couche (<dialog>, [popover], role="dialog") dans le document');
+  if (aUneSurcouche) {
+    out.push(lancer('oracle-surcouche.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
+  } else if (!muet) sansObjet.push('oracle-surcouche : SANS OBJET — aucun composant en sur-couche (<dialog>, [popover], role="dialog") dans le document');
+
+  return out;
+}
+
+const resultats = passeFichier(cible);
+
+// ── TF-0830 · ce que l'auteur n'a pas le droit de changer ne lui est pas imputé ──
+// Les blocs `COMPOSANT-EMBARQUE` scellés viennent du socle et sont sous parité d'asset :
+// les éditer sur place est REFUSÉ par ailleurs. Leur imputer des écarts durs rendait FAIL
+// trois pages neuves et conformes (19 à 20 écarts chacune, TOUS du socle). On ne les efface
+// pas pour autant : la passe complète reste la vérité, et chaque constat mis de côté est
+// RENDU, nommé, avec le bloc qui le porte. Un bloc seulement DÉCLARÉ — socle absent,
+// empreinte fausse, copie éditée — reste jugé comme le CSS de l'auteur.
+const socle = blocsDuSocle(html);
+socleExempte = { verifies: [], declares: socle.declares.map(b => ({ nom: b.nom, socle: b.socle, raison: b.raison })), findings: [] };
+if (socle.verifies.length) {
+  const tmp = path.join(os.tmpdir(), `forge-design-socle-${process.pid}-${Date.now()}.html`);
+  fs.writeFileSync(tmp, neutraliser(html, socle.verifies), 'utf8');
+  try {
+    const sansSocle = passeFichier(tmp, { muet: true });
+    // La copie sans socle vit dans un fichier temporaire : son chemin apparaît dans les
+    // constats qui citent l'artefact. Le neutraliser avant de comparer, sinon un constat
+    // identique des deux côtés passerait pour un constat disparu.
+    const norm = s => String(s ?? '').split(tmp).join(cible);
+    const cle = f => `${f.sev}|${f.regle}|${norm(f.msg)}|${norm(f.where)}`;
+    for (const r of resultats) {
+      const pair = sansSocle.find(x => x.oracle === r.oracle);
+      if (!pair) continue;
+      const restants = new Map();
+      for (const f of pair.findings || []) restants.set(cle(f), (restants.get(cle(f)) || 0) + 1);
+      const gardes = [];
+      for (const f of r.findings || []) {
+        // Un `info` ne pèse dans aucun verdict : il n'a rien à faire dans une exemption,
+        // et le placeholder « sans écart » d'un oracle muet en est un.
+        if (f.sev === 'info') { gardes.push(f); continue; }
+        const k = cle(f);
+        if (restants.get(k)) { restants.set(k, restants.get(k) - 1); gardes.push(f); continue; }
+        // Présent AVEC le socle, absent SANS : c'est le socle qui le porte.
+        socleExempte.findings.push({ oracle: r.oracle, ...f });
+      }
+      if (gardes.length === (r.findings || []).length) continue;
+      r.findings = gardes;
+      r.ecarts_durs = gardes.filter(f => f.sev === 'bloquant' || f.sev === 'majeur').length;
+      r.avertissements = gardes.filter(f => f.sev === 'avertissement').length;
+      r.exemptes_socle = (socleExempte.findings.filter(f => f.oracle === r.oracle) || []).length;
+      if (r.verdict === 'FAIL' && r.ecarts_durs === 0) r.verdict = 'PASS';
+    }
+  } finally {
+    try { fs.unlinkSync(tmp); } catch { /* best-effort */ }
+  }
+  socleExempte.verifies = socle.verifies.map(b => ({ nom: b.nom, socle: b.socle, empreinte: `sha256:${b.empreinte}` }));
+}
 
 if (rendu) resultats.push(...lancerRendu(cible));
 
@@ -306,6 +369,14 @@ const nonJuge = [
     'accessibilité structurelle — oracle-a11y.py de quality-oracles : NON LANCÉ par cet orchestrateur',
   ]),
   'parcours de bout en bout (C13) — trace à produire à la main, voir references/criteres-sortie.md',
+  ...(socleExempte && socleExempte.verifies.length ? [
+    `conformité de ${socleExempte.verifies.length} composant(s) embarqué(s) du socle `
+    + `(${socleExempte.verifies.map(b => b.nom).join(', ')}) : NON JUGÉE ici — sceau vérifié contre la source, `
+    + `${socleExempte.findings.length} constat(s) mis à leur compte et listés dans socle_exempte. `
+    + 'Leur correction relève du socle et se propage par R-47, pas de l\'auteur de la page',
+  ] : []),
+  ...(socleExempte ? socleExempte.declares.map(b =>
+    `bloc COMPOSANT-EMBARQUE « ${b.nom} » DÉCLARÉ mais non vérifié (${b.raison}) : jugé comme le CSS de l'auteur, aucune exemption`) : []),
 ];
 
 const echecs = resultats.filter(r => r.verdict === 'FAIL');
@@ -314,9 +385,14 @@ const skips = resultats.filter(r => r.verdict === 'SKIP');
 if (!jsonOnly) {
   for (const r of resultats) {
     process.stderr.write(`  ${r.verdict.padEnd(4)} ${r.oracle}` +
-      (r.verdict === 'SKIP' ? ` — ${r.raison}` : ` — ${r.ecarts_durs} dur(s), ${r.avertissements} avert.`) + '\n');
+      (r.verdict === 'SKIP' ? ` — ${r.raison}` : ` — ${r.ecarts_durs} dur(s), ${r.avertissements} avert.`
+        + (r.exemptes_socle ? `, ${r.exemptes_socle} au compte du socle` : '')) + '\n');
   }
   for (const s of sansObjet) process.stderr.write(`  —    ${s}\n`);
+  if (socleExempte && socleExempte.verifies.length) {
+    process.stderr.write(`  socle  ${socleExempte.verifies.map(b => b.nom).join(', ')} — sceau vérifié, `
+      + `${socleExempte.findings.length} constat(s) hors du verdict (correction chez le socle)\n`);
+  }
   process.stderr.write(echecs.length ? `\nFAIL — ${echecs.length} oracle(s) en échec\n`
     : skips.length ? `\nINDÉTERMINÉ — ${skips.length} oracle(s) non exécuté(s)\n`
     : '\nPASS — tous les oracles applicables sont verts\n');

@@ -141,11 +141,32 @@ l'orchestrateur ne couvre pas (rendu réel V1–V7 et `oracle-a11y.py` sans `--r
 parcours C13 dans tous les cas
 — voir [criteres-sortie.md](skills/ameliore-le-design/references/criteres-sortie.md)).
 
+### Les composants embarqués du socle ne sont pas imputés à l'auteur (TF-0830)
+
+Une page peut embarquer un composant du socle `digit-ai-page-html` — un bloc
+`<!-- COMPOSANT-EMBARQUE:DEBUT … -->` scellé par l'empreinte sha256 de sa source, que la
+**parité d'asset interdit d'éditer sur place**. Le 06/09/2026, trois pages neuves et
+conformes (`check_html` PASS, `render_page` PASS aux quatre largeurs) sortaient de cet
+orchestrateur en `FAIL` avec 19 à 20 écarts durs chacune — couleurs en dur, espacements
+hors échelle 4pt, anneaux de focus posés — **tous** portés par le seul `table-filters.css`
+du socle, et aucun corrigeable par l'auteur.
+
+L'orchestrateur reconnaît donc ces blocs. Un bloc dont le sceau est **vérifié contre la
+source du socle installée** (`~/.claude/skills/<socle>/<fichier>`) sort du verdict : ses
+constats sont rendus, nommés un par un, dans `socle_exempte.findings`, et leur correction
+relève du socle (propagation R-47), pas de la page. Un bloc seulement **déclaré** — socle
+absent, empreinte fausse, copie éditée sur place — reste jugé comme le CSS de l'auteur, et
+la raison est écrite dans `non_juge` : deux commentaires n'exemptent de rien.
+
+Mécanique : la passe complète reste la vérité, une seconde passe est jouée sur une copie
+temporaire dont les blocs vérifiés sont vidés (nombre de lignes conservé), et la différence
+donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
+
 | Oracle | Règles | Domaine |
 |---|---|---|
 | `oracle-slop` | S1–S10 | marqueurs de design généré |
 | `oracle-tokens` | T1–T6 | traçabilité des tokens, parité des thèmes, contraste |
-| `oracle-mobile` | M1–M7 | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite |
+| `oracle-mobile` | M1–M8 | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante |
 | `oracle-images` | I1–I6 | alt, plafonds, zéro réseau, manifeste de génération |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |

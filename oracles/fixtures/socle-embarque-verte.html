@@ -1,0 +1,156 @@
+<!doctype html>
+<!--
+  Fixture VERTE de run-oracles-design — exemption des composants embarqués du socle (TF-0830).
+
+  Même page que rendu-l2-verte.html, plus le composant `table-filters.css` du socle
+  digit-ai-page-html, embarqué par le poseur du socle. Ce composant porte à lui seul les
+  couleurs en dur (#fff, #f6f8fc), les espacements hors échelle 4pt (3px, 7px, 6px, 14px…)
+  et les anneaux de focus posés qui faisaient sortir en FAIL, le 06/09/2026, trois pages
+  NEUVES et conformes du produit — 19 à 20 écarts durs chacune, tous du socle, aucun de
+  l'auteur, et aucun corrigeable sur place (parité d'asset).
+
+  Ici le sceau est JUSTE : il correspond à la source du socle installée sur le poste.
+  Les constats du bloc sortent du verdict, restent listés dans socle_exempte, et la page PASSE.
+
+  Les deux fixtures ne diffèrent QUE par ce sceau : c'est lui, et rien d'autre, qui décide.
+-->
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — propagation des issues de render_page</title>
+<!--
+  TF-0278. Meme page que rendu-l2-rouge.html, sans le bridage de largeur : le
+  rendu ne produit aucun constat bloquant et l'agregateur passe. Elle verrouille
+  le sens inverse — la propagation des issues[] n'invente pas de constat.
+-->
+<style>
+  :root {
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  [data-theme="dark"] {
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .note { color: var(--texte-secondaire); }
+  @media (max-width: 768px) { body { padding: 16px; } }
+  @media (max-width: 390px) { body { padding: 8px; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+<!-- COMPOSANT-EMBARQUE:DEBUT table-filters.css — copie du socle digit-ai-page-html/assets/table-filters.css,
+     posée par digit-ai-page-html/scripts/embarquer-composants.mjs. NE PAS ÉDITER ICI : la SOURCE fait foi.
+     La copie se régénère (--ecrire) et sa dérive est refusée (--constat, oracle-parite-assets). -->
+<style data-composant="table-filters.css" data-empreinte="sha256:62a4ed4ce94409b65d0afadafdde619f2fd18f625011c93841bebd02eef0a8f9">
+/* table-filters.css — habillage charté du composant de filtres de colonne (D-12).
+   TF-0176 (13/08) : un composant se livre AVEC son CSS — livré nu, il sort en rendu brut
+   navigateur chez tous ses hôtes (constaté sur le dashboard forge-tests du 13/08, refusé
+   par son destinataire). À inliner dans le bloc de style de la page, à côté du script du
+   composant — JAMAIS de balise écrite en toutes lettres dans ce commentaire (même famille
+   de piège que RA-1 : un « script » ouvrant en commentaire fausse toute lecture paresseuse
+   du document). Ne consomme que les tokens :root du socle (--surface, --ink, --muted,
+   --line, --blue, --r-sm) : aucune couleur en dur, les deux thèmes sont servis. */
+
+.tf-btn {
+  font: inherit; font-size: .72rem; line-height: 1;
+  color: var(--blue); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 3px 7px; margin-left: 6px; cursor: pointer; vertical-align: middle;
+}
+.tf-btn:hover { border-color: var(--blue); }
+.tf-btn:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+/* filtre ACTIF : l'état se voit sans ouvrir le panneau */
+.tf-btn.tf-on { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.tf-panel {
+  position: absolute; z-index: 30; top: calc(100% + 4px); left: 0;
+  min-width: 230px; max-width: 320px; max-height: 320px; overflow: auto;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .16);
+  padding: 10px 12px; text-align: left; text-transform: none;
+  font-family: var(--sans); font-size: .85rem; font-weight: 400;
+  letter-spacing: normal; cursor: default;
+}
+.tf-search {
+  width: 100%; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 6px 10px; margin: 0 0 8px;
+}
+.tf-search:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.tf-actions {
+  display: flex; gap: 14px; border-bottom: 1px solid var(--line);
+  padding-bottom: 8px; margin-bottom: 8px;
+}
+.tf-actions button {
+  font: inherit; font-weight: 600; color: var(--blue);
+  background: none; border: none; cursor: pointer; padding: 2px 4px;
+}
+.tf-actions button:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+.tf-opts { display: flex; flex-direction: column; gap: 2px; }
+.tf-opts label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px 2px; border-radius: 4px; cursor: pointer;
+}
+.tf-opts label:hover { background: var(--bg, #f6f8fc); }
+.tf-opts input[type="checkbox"] { accent-color: var(--blue); }
+/* TF-0782 (02/09) : la cardinalite decide de la FORME du panneau, pas de son existence — et
+   une forme qui change sans le dire est une affordance muette. Le panneau ouvert sur sa
+   recherche (plus de 15 valeurs) ou reduit a une valeur unique porte sa note. */
+.tf-forme-note { margin: 0 0 8px; color: var(--muted); font-size: .78rem; font-style: italic; }
+
+/* TF-0431 : panneau aligne a droite quand la place manque (choisi par le composant) ;
+   le conteneur defilant porteur d'un panneau ouvert ne rogne plus (data-tf-ouvert). */
+.tf-panel.tf-droite { left: auto; right: 0; }
+[data-tf-ouvert] { overflow: visible !important; }
+
+/* TF-0430 : etat vide — un filtre qui ne laisse rien le DIT dans le tableau, et offre la
+   seule action utile a ce moment. */
+tr[data-tf-empty] td {
+  padding: 18px 12px; text-align: center; color: var(--muted);
+  font-style: italic; border-bottom: 1px solid var(--line);
+}
+.tf-reset {
+  font: inherit; font-style: normal; font-weight: 600; color: var(--blue);
+  background: none; border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 4px 10px; margin-left: 10px; cursor: pointer;
+}
+.tf-reset:hover { border-color: var(--blue); }
+.tf-reset:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
+
+@media print { .tf-btn, .tf-panel, tr[data-tf-empty] { display: none; } }
+</style>
+<!-- COMPOSANT-EMBARQUE:FIN table-filters.css -->
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est celle que la page lui laisse : le rapport reste au-dessus du seuil et rien n'est compte.</p>
+  <p class="note">Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le silence de l'oracle ne tienne pas a un cas unique.</p>
+  <script>
+    const bouton = document.querySelector('.theme-toggle');
+    const appliquer = (t) => {
+      document.documentElement.setAttribute('data-theme', t);
+      bouton.setAttribute('aria-pressed', String(t === 'dark'));
+      localStorage.setItem('theme', t);
+    };
+    appliquer(localStorage.getItem('theme') || document.documentElement.getAttribute('data-theme') || 'light');
+    bouton.addEventListener('click', () => {
+      appliquer(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>

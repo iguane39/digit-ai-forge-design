@@ -7,6 +7,8 @@
 // Usage : node self-test.mjs   ·   exit 0 = tout vert, 1 = régression.
 
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detecterOutillageRendu } from './lib/rendu.mjs';
@@ -405,6 +407,23 @@ const CAS = [
     rouge: [fx('surcouche-rouge.html')],
   },
   {
+    // TF-0830 (lot Produit-12, 06/09) : TROIS pages neuves et conformes — check_html PASS sur
+    // 36 règles, render_page PASS aux quatre largeurs — sortaient de l'agrégateur en FAIL avec
+    // 19 à 20 écarts durs CHACUNE. Les vingt étaient portés par le seul `table-filters.css` du
+    // socle, embarqué scellé dans la page et NON MODIFIABLE localement (parité d'asset) : le
+    // juge refusait ce que l'auteur n'avait pas le droit de changer. Les deux fixtures sont la
+    // même page et le même bloc du socle ; elles ne diffèrent QUE par un caractère du sceau.
+    // La verte, sceau juste, sort à PASS avec ses 20 constats rendus dans `socle_exempte` ;
+    // la rouge, sceau faux, les reprend tous à son compte — deux commentaires n'exemptent rien.
+    socle: 'digit-ai-page-html/assets/table-filters.css',
+    oracle: 'run-oracles-design.mjs',
+    regles: ['T1', 'T3', 'T8', 'S4'],
+    contrat: CONTRAT_AGREGATEUR,
+    findingsDe: j => (j.oracles || []).flatMap(o => o.findings || []),
+    verte: [fx('socle-embarque-verte.html')],
+    rouge: [fx('socle-embarque-rouge.html')],
+  },
+  {
     // TF-0278 : l'agrégateur perdait les issues[] de render_page. Sa table de
     // sévérités ignorait l2_width et l2_gouttiere, pourtant comptés dans le
     // « blocking » de render_page.py — un FAIL sur « L2 accroche bridée 0.47 »
@@ -458,6 +477,16 @@ for (const cas of CAS) {
 
   if (cas.rendu && !OUTILLAGE_RENDU.ok) {
     console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+    sautes.push(cas.oracle);
+    continue;
+  }
+
+  // TF-0830 : le sceau d'un composant embarqué se vérifie CONTRE LA SOURCE du socle. Sans
+  // le socle installé, la vérification ne peut pas avoir lieu — et un poste qui ne peut pas
+  // la faire ne doit pas non plus faire échouer une garantie que rien de son ressort n'a
+  // cassé. Le saut se dit, comme pour l'outillage de rendu et pour Python.
+  if (cas.socle && !fs.existsSync(path.join(os.homedir(), '.claude', 'skills', ...cas.socle.split('/')))) {
+    console.log(`  SKIP  source du socle absente : ~/.claude/skills/${cas.socle}`);
     sautes.push(cas.oracle);
     continue;
   }
