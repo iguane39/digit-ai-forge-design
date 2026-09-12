@@ -13,9 +13,15 @@ node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA6, si champs de 
 node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
 node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, si dialog/popover/role=dialog (TF-0796)
 node oracles/oracle-declencheurs.mjs <cible.html>     # DE1–DE3 + registre des déclencheurs (TF-0797)
+node oracles/oracle-textes-application.mjs <cible.html>  # T4-1–T4-4, D7 Contenu (TF-1064)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
-python <…>/render_page.py <cible.html>                # V1–V7, 5 breakpoints × 2 thèmes
+python <…>/render_page.py <cible.html> --widths 3840,2560,1920,1440,1024,768,390   # V1–V7, 7 breakpoints × 2 thèmes
 ```
+
+La grille de rendu compte **sept** largeurs : conception à **1920 px** (Full HD), et
+vérification jusqu'au **4K (3840 px)** — règle E5 du pilot
+(`references\BEST-PRACTICES-HTML.md`), portée par `contrat-technique.md`. Un écran dont
+le rendu n'a pas été mesuré à 2560 et 3840 n'est pas jugé adapté (D5).
 
 Chaque verdict JSON est conservé et joint au rapport. Un oracle qui n'a pas pu
 tourner — Playwright absent, fichier non ouvrable, quota — donne `non_juge` sur sa
@@ -53,7 +59,7 @@ le tableau, elles ne se devinent pas depuis les poids.
 | D4 Accessibilité | 20 % | plancher légal et éthique, non négociable |
 | D5 Adaptation | 10 % | pondération réduite hors cible mobile |
 | D6 Interaction | 10 % | ce qu'une capture ne montre jamais |
-| D7 Contenu | 10 % | le plus sous-traité, le plus visible à l'usage |
+| D7 Contenu | 10 % | le plus sous-traité, le plus visible à l'usage — instruite par `oracle-textes-application` (T4-1…T4-4) depuis TF-1064 |
 | D8 Lecture de données | 10 % | un chiffre sans lecture n'informe pas — REFERENTIEL-RESTITUTION.md (TF-0235) |
 
 Hors cible mobile, D5 est neutralisé et son poids est réparti sur D1 et D4.
@@ -62,6 +68,18 @@ D8 est neutralisé et son poids est réparti sur D1 et D7 — les poids redevien
 ceux d'avant TF-0235. Sur une restitution, D8 s'instruit avec
 `oracle-restitution` (RL-1/3/4/9/10) et les points de revue RL-2/6/7
 (chapeaux de vues, effet des interactions, texte ancré constat → impact → action).
+
+**D7 n'est plus une dimension de pure lecture** (TF-1064, 12/09/2026). Son plancher —
+E-12 de `references\ECRITURE.md` du pilot, type T4 — est instruit par
+`oracle-textes-application` : T4-1 une erreur sans cause ni réparation, T4-2 un état vide
+sans invitation à agir, T4-3 un libellé générique (« Valider », « OK », « Cliquez ici »),
+T4-4 une erreur qui s'excuse. Une note en D7 se cite désormais comme les autres : verdict
+d'oracle d'abord, lecture ensuite. Ce que l'oracle ne tranche pas et que la lecture doit
+apporter : la **justesse** du ton, la fidélité à la voix du produit, et la **constance**
+d'un libellé d'un écran à l'autre. Un D7 sans verdict cité est `non_juge`, pas 3/5.
+
+*Les identifiants sont bien `T4-*` et non `TA*`* : `TA1`–`TA4` désignent déjà les règles
+d'`oracle-taste` citées en D1. « T4 » est le code de typologie de `ECRITURE.md`.
 
 ## Red flags — bloquants, indépendants du score
 

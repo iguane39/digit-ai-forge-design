@@ -1,0 +1,15 @@
+{
+  "action": {
+    "soumettre_formulaire": "Valider",
+    "aide_en_ligne": "Cliquez ici"
+  },
+  "erreur": {
+    "generique": "Une erreur est survenue",
+    "envoi": "Oups, une erreur est survenue. Désolé.",
+    "champ_courriel": "Champ invalide"
+  },
+  "liste": {
+    "vide": "Aucune donnée",
+    "recherche_sans_resultat": "Aucun résultat"
+  }
+}

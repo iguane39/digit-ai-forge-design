@@ -82,9 +82,9 @@ le contrôle.
 | D2 | Système | tokens tracés, parité des thèmes, échelle tenue | `oracle-tokens` |
 | D3 | Hiérarchie | typographie, densité, rythme d'espacement | `render_page.py` + lecture |
 | D4 | Accessibilité | contraste, focus, clavier, sémantique | `oracle-a11y` + `render_page.py` V2 |
-| D5 | Adaptation | breakpoints, tactile, orientation | `oracle-mobile` + `render_page.py` |
+| D5 | Adaptation | breakpoints, tactile, orientation, **tenue jusqu'au 4K — un écran dont le rendu n'a pas été mesuré à 2560 et 3840 n'est pas jugé adapté** | `oracle-mobile` + `render_page.py` (7 largeurs, E5) |
 | D6 | Interaction | états des composants, retours, erreurs, vides, **champs typés/proposés/bornés/atteignables**, **choix exclusif posé avant ses champs** | `oracle-saisie` SA1–SA6 + `oracle-panneau-tache` PA1–PA6 + parcours exécuté |
-| D7 | Contenu | libellés, erreurs, états vides, constance du vocabulaire | lecture |
+| D7 | Contenu | libellés, erreurs, états vides, constance du vocabulaire | `oracle-textes-application` T4-1…T4-4 (plancher E-12) + lecture |
 
 Détail des barèmes, red flags et règle de verdict : `references/grille.md`.
 

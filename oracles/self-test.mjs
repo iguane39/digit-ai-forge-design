@@ -487,6 +487,23 @@ const CAS = [
     rouge: [fx('socle-charte-rouge.html')],
   },
   {
+    // TF-1064 (lot pilot du 12/09/2026) — LE TEXTE QUE LE PLUS DE MONDE LIT N'AVAIT PAS DE JUGE.
+    // Le plancher d'écriture du pilot (references\ECRITURE.md) porte en E-12 la règle des textes
+    // d'application (type T4) : « un libellé nomme ce que la personne contrôle ; une erreur dit ce
+    // qui s'est passé puis comment réparer ; un état vide invite à agir ». L'oracle d'écriture du
+    // pilot juge le Markdown et déclare T4 en non_juge — les chaînes d'application vivent dans des
+    // fichiers de ressources qu'il ne lit pas. Aucun oracle du parc ne voyait donc « Une erreur est
+    // survenue » ni « Aucune donnée ». Les deux fixtures sont le MÊME écran de ressources, avant et
+    // après le passage au plancher. La rouge porte les quatre règles ; la verte garde volontairement
+    // une erreur qui dit sa cause ET sa réparation, pour prouver que le vert n'est pas un silence
+    // de l'oracle mais un texte qui tient. Rule ids en T4-* (et non TA-*) : TA1–TA4 sont déjà pris
+    // par oracle-taste dans cette forge, et deux sens pour un identifiant est un défaut.
+    oracle: 'oracle-textes-application.mjs',
+    regles: ['T4-1', 'T4-2', 'T4-3', 'T4-4'],
+    verte: [fx('textes-application-verte.json')],
+    rouge: [fx('textes-application-rouge.json')],
+  },
+  {
     rendu: true,
     oracle: 'rendu-comparatif.mjs',
     regles: ['RC-1'],

@@ -4,7 +4,7 @@
 
 | # | Critère | Moyen de preuve | Verdict |
 |---|---|---|---|
-| C1 | Zéro débordement, zéro chevauchement, contraste conforme | `render_page.py` (V1–V7), 5 breakpoints × 2 thèmes | bloquant |
+| C1 | Zéro débordement, zéro chevauchement, contraste conforme | `render_page.py` (V1–V7), **7 breakpoints (3840 → 390) × 2 thèmes** | bloquant |
 | C2 | Bijection menu ↔ écrans, aucun lien mort | `check_maquette.py` | bloquant |
 | C3 | Poids ≤ 10 Mo, aucune requête réseau | `check_maquette.py` | bloquant |
 | C4 | Navigation clavier de bout en bout | parcours scripté ou manuel tracé | bloquant |
@@ -17,6 +17,7 @@
 | C11 | Contrat d'usage tactile tenu (M1–M8) | `oracle-mobile` — **si cible mobile** | bloquant |
 | C12 | Visuels générés tracés et plafonnés (I1–I6) | `oracle-images` — **si images générées** | bloquant |
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
+| C14 | Textes d'application au plancher E-12 : erreur = cause + réparation, état vide = invitation à agir, libellé = ce que la personne contrôle (T4-1…T4-4) | `oracle-textes-application` — **joué sur la maquette AVANT C15** | bloquant |
 | C15 | Un CTA = une cible : `href` réel, `data-action` ou `type=submit` ; même libellé même écran ⇒ même cible | `check_maquette.py` | bloquant |
 | C16 | Champs **typés, proposés, bornés, atteignables** (SA1–SA6) | `oracle-saisie` — **si le document porte des champs** | bloquant |
 | C17 | Choix exclusif posé avant ses champs, panneau de tâche hors de sa liste, motif de création justifié (PA1–PA6) | `oracle-panneau-tache` — **si un panneau de création est balisé** | bloquant |
@@ -32,8 +33,12 @@ Si `render_page.py` ou Playwright venaient à manquer, C1 se déclare `non_juge`
 la raison — **jamais approuvé par lecture du code**.
 
 ```bash
-python ~/.claude/skills/digit-ai-page-html/scripts/render_page.py <fichier.html>        --widths 1920,1440,1024,768,390 --output json
+python ~/.claude/skills/digit-ai-page-html/scripts/render_page.py <fichier.html>        --widths 3840,2560,1920,1440,1024,768,390 --output json
 ```
+
+Sept largeurs, pas cinq : la conception se fait à **1920 px** (largeur de référence,
+règle E5 du pilot) et la vérification monte jusqu'au **4K (3840 px)**. 1440 et 1024
+restent dans la grille. Contrat : `contrat-technique.md`, ligne « Breakpoints ».
 
 Le thème sombre se mesure sur une copie dont `data-theme` vaut `dark` : sans ça,
 seul le thème clair est rendu et V2 ne dit rien du second.
@@ -45,6 +50,27 @@ champ mal typé, un document sans panneau de création balisé n'a pas de branch
 exclusive. `run-oracles-design.mjs` détecte les deux par contenu (`<input>`,
 `<textarea>`, `<select>` pour C16 ; `data-panneau-tache` ou `data-branche` pour C17)
 et déclare le `SANS OBJET` dans son `non_juge`.
+
+**C14 — les textes d'application, joués AVANT C15.** La numérotation n'est pas
+décorative : C15 vérifie qu'un CTA a une cible, C14 vérifie que son LIBELLÉ nomme
+quelque chose. Un « Valider » parfaitement câblé passe C15 et rate C14. L'ordre est
+donc : on juge le texte, puis le câblage.
+
+```bash
+node oracles/oracle-textes-application.mjs <maquette.html>
+```
+
+Sur un `.html`, l'oracle extrait les littéraux de `placeholder`, `title`,
+`aria-label`, `alt`, le texte des `<button>`, `<label>`, `<option>` et celui des
+éléments `role="alert"`, `.error`, `.empty`, `[data-etat="vide"]`. Il lit aussi un
+fichier de chaînes extraites (`.json` plat ou imbriqué, `.arb`, `.po`,
+`.properties`) quand le produit en a un — c'est la forme qui sert chez
+forge-development. Il juge la **présence** de ce que E-12 exige ; la justesse du ton
+et la fidélité à la voix restent en `non_juge`, à la relecture et à l'arbitrage du
+commanditaire (`systeme-de-marque/references/voix.md`).
+
+Une maquette sans aucun état vide ni message d'erreur atteignable ne peut pas passer
+C14 : elle rate d'abord **C5**, qui les exige.
 
 C16 et C17 viennent des lots Produit-12 (TF-0736, TF-0739, TF-0707, TF-0708). Ils
 couvrent une classe de défaut que les critères précédents laissaient passer :
@@ -61,6 +87,7 @@ en `SANS OBJET` ceux qui ne s'appliquent pas :
 ```bash
 python scripts/check_maquette.py <fichier.html>
 node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> [--mobile] [--tokens tokens.css] [--rendu]
+node "$FORGE_DESIGN_ROOT/oracles/oracle-textes-application.mjs" <fichier.html>   # C14, AVANT C15
 ```
 
 `FORGE_DESIGN_ROOT` est lu dans l'environnement, puis dans le `.env` de la forge,

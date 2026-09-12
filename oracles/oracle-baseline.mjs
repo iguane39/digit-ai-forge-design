@@ -2,7 +2,8 @@
 // oracle-baseline — Domaine « Régression visuelle : baseline versionnée » (TF-0102).
 //
 // Capture le rendu courant d'une page (via render_page.py, digit-ai-page-html) à
-// une grille de largeurs réduite, et le compare pixel à pixel aux captures
+// une grille de cinq largeurs — 3840, 2560, 1920, 1024, 390 depuis TF-1066 (12/09/2026) —
+// et le compare pixel à pixel aux captures
 // APPROUVÉES du dossier baseline/<slug>/ (versionnées dans ce dépôt). Décodage et
 // diff PNG en Node pur (oracles/lib/png.mjs, zéro dépendance — seul node:zlib) :
 // aucune dépendance Python supplémentaire au-delà de ce que --rendu exige déjà.
@@ -21,7 +22,7 @@
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage :
-//   node oracle-baseline.mjs <page.html> --slug <nom> [--widths 1920,1024,390]
+//   node oracle-baseline.mjs <page.html> --slug <nom> [--widths 3840,2560,1920,1024,390]
 //     [--seuil 0.001] [--tolerance 24] [--approuver] [--json-only]
 
 import fs from 'node:fs';
@@ -42,14 +43,20 @@ const file = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !==
   && args[args.indexOf(a) - 1] !== '--tolerance' && args[args.indexOf(a) - 1] !== '--racine');
 
 const RACINE = opt('--racine', path.join(path.dirname(fileURLToPath(import.meta.url)), '..'));
-const WIDTHS = opt('--widths', '1920,1024,390');
+// Grille par défaut — TF-1066 (12/09/2026). La « grille réduite v0 (3 largeurs) »
+// se clôt : une baseline approuvée à 1920 ne prouvait rien à 3840, et c'est là que
+// le débordement ou le vide se découvrent. 2560 et 3840 entrent ; 1440 et 768 sont
+// délibérément hors de la grille de BASELINE (coût de stockage des PNG approuvés) —
+// ils restent jugés par render_page.py via run-oracles-design.mjs --rendu, dont la
+// grille compte sept largeurs. Cette dissymétrie est déclarée en non_juge.
+const WIDTHS = opt('--widths', '3840,2560,1920,1024,390');
 const SEUIL = parseFloat(opt('--seuil', '0.001'));
 const TOLERANCE = parseInt(opt('--tolerance', '24'), 10);
 const slug = opt('--slug', file ? path.basename(file, path.extname(file)) : null);
 
 const NJ = [
   'V5 (croisements de flèches) et V6 (images déformées) — inspection visuelle, pas de ce diff pixel',
-  'grille réduite v0 (3 largeurs) — étendre à la grille complète (1920,1440,1024,768,390) est un reste',
+  '1440 px et 768 px — hors de la grille de BASELINE par défaut (3840,2560,1920,1024,390) pour borner le nombre de PNG approuvés ; ces deux largeurs restent jugées par render_page.py (grille de rendu à sept largeurs, run-oracles-design.mjs --rendu), jamais par ce diff pixel',
   'zones dynamiques (horodatage, contenu aléatoire) — pas de masques en v0, voir oracle-visual-diff.py (quality-oracles) pour ce mécanisme',
 ];
 const F = [];

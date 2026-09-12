@@ -23,14 +23,20 @@ Ce qu'on ne dit jamais.
 ## Actions
 Un libellé, un seul, d'un bout à l'autre du parcours.
 « Publier » produit « Publié » — jamais « Envoyer » puis « Soumis ».
+Plancher E-12 (pilot, `references\ECRITURE.md`) : un libellé nomme ce que la personne
+contrôle, jamais le geste du système — juge `oracle-textes-application` T4-3.
 
 ## Erreurs
 Ce qui s'est passé, puis comment le réparer. Jamais d'excuse, jamais de vague.
 Exemple type : « Le fichier dépasse 10 Mo. Compresse-le ou envoie-le en deux fois. »
+Plancher E-12 (pilot, `references\ECRITURE.md`) : une erreur dit ce qui s'est passé PUIS
+comment réparer — juge `oracle-textes-application` T4-1 (cause + réparation), T4-4 (excuse).
 
 ## États vides
 Une invitation à agir, jamais un constat de vide.
 Exemple type : « Aucun dossier pour l'instant. Crée le premier. »
+Plancher E-12 (pilot, `references\ECRITURE.md`) : un état vide invite à agir —
+juge `oracle-textes-application` T4-2.
 
 ## Anti-références
 Ce à quoi la voix ne doit surtout pas ressembler, et pourquoi.
@@ -56,3 +62,10 @@ décidable par script. Elle est déclarée `non_juge` et relève de l'arbitrage 
 commanditaire. Ce qui **est** vérifiable — et doit l'être à la relecture — c'est la
 constance : un libellé d'action qui change entre deux écrans est un défaut
 localisable, pas une nuance.
+
+Depuis le 12/09/2026 (TF-1064), une seconde chose est vérifiable et l'est :
+`oracles\oracle-textes-application.mjs` juge la **présence** de ce que E-12 exige —
+une cause et une réparation dans une erreur (T4-1), une action dans un état vide (T4-2),
+un libellé d'action qui nomme autre chose que « Valider » (T4-3), aucune excuse (T4-4).
+Il ne juge **toujours pas** la justesse du ton ni la fidélité à la voix du produit :
+c'est son premier `non_juge`. Un plancher franchi n'est pas une voix trouvée.

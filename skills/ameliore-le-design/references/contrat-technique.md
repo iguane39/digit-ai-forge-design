@@ -8,7 +8,7 @@
 | Données | constante JS en tête de fichier, rendu dynamique |
 | Thèmes | clair et sombre, bascule persistée, `prefers-color-scheme` respecté au premier chargement |
 | Routage | hash-based, historique navigateur fonctionnel, deep-link vers chaque écran |
-| Breakpoints | 390 / 768 / 1024 / 1440 / 1920 px, portrait et paysage |
+| Breakpoints | **1920 px = largeur de conception par défaut (Full HD)** ; grille de vérification 3840 / 2560 / 1920 / 1440 / 1024 / 768 / 390, portrait et paysage — règle **E5** de `references\BEST-PRACTICES-HTML.md` (pilot, décision humaine du 12/09/2026) |
 | Remplissage | aucune colonne vide latérale, aucun vide vertical > 1 écran, largeur de ligne de texte ~70ch |
 | Mobile / tables | reflow en cartes obligatoire sous 768 px |
 | Motion | build UMD autonome de Motion (79 ko, v12.23.12) inliné depuis `oracles/vendor/` ; `transform` et `opacity` seulement ; ni rebond ni élastique |
@@ -22,6 +22,28 @@
 | Geste d'ouverture | un champ temporel natif s'ouvre au clic **n'importe où** sur le champ (`showPicker()` délégué), garde `disabled`/`readOnly`, `try/catch`, clavier intact — `oracle-saisie` SA5/SA6 |
 | Écrans de création | deux motifs légitimes : formulaire replié (création simple) ou panneau adressable (tâche à branches) — `oracle-panneau-tache` PA1–PA6 |
 | Impression | `@media print` fonctionnelle |
+
+## Largeur de conception et grille de vérification — E5
+
+Deux notions distinctes, que la ligne « Breakpoints » sépare désormais :
+
+- **La largeur de conception** est celle à laquelle l'écran est DESSINÉ : **1920 px**
+  (Full HD) pour tout écran de bureau. C'est le viewport du rendu de travail, celui des
+  captures de maquette et celui des cotes annoncées. Jamais 1280, jamais 1440 : une
+  maquette dessinée à la largeur de l'écran de son auteur est jugée « trop petite » ou
+  « juste » par un lecteur qui n'a pas cet écran.
+- **La grille de vérification** est celle à laquelle l'écran est MESURÉ :
+  `3840, 2560, 1920, 1440, 1024, 768, 390`. 1440 et 1024 y restent — ce sont des
+  largeurs de vérification, pas des largeurs de conception. Le haut de la grille est
+  neuf : une baseline à 1920 ne prouve rien à 3840.
+
+Ce que le 4K change, et qui ne se devine pas depuis les nombres : la mesure de lecture
+reste portée par le CONTENEUR (E4) — la prose ne s'étire pas sur le plancher `75vw` de
+2 880 px ; une page de données prend toute la largeur et définit ses colonnes ; une
+grille fluide gagne des colonnes plutôt que des marges ; aucune hauteur fixe.
+
+Source : règle **E5** de `references\BEST-PRACTICES-HTML.md` du pilot (décision humaine
+du 12/09/2026), portée ici par le lot de travaux `pilot - TRAVAUX - 20260912b` (TF-1066).
 
 ## Favicon et saisie de date — promesses non négociables au MVP
 

@@ -39,7 +39,13 @@ import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
 const rendu = args.includes('--rendu');
-const LARGEURS_RENDU = '1920,1440,1024,768,390'; // convention grille.md / criteres-sortie.md
+// Grille de rendu — SEPT largeurs. Conception à 1920 px (Full HD), vérification
+// jusqu'au 4K (3840 px) : règle E5 de references\BEST-PRACTICES-HTML.md du pilot
+// (décision humaine du 12/09/2026, TF-1066). 1440 et 1024 restent des largeurs de
+// vérification. Convention partagée avec grille.md, criteres-sortie.md et
+// contrat-technique.md — une baseline à 1920 ne prouve rien à 3840.
+const LARGEURS_RENDU = '3840,2560,1920,1440,1024,768,390';
+const LARGEUR_CONCEPTION = 1920;
 const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus');
@@ -67,6 +73,9 @@ let socleExempte = null;
 function sortir(verdict, resultats, nonJuge, code) {
   process.stdout.write(JSON.stringify({
     orchestrateur: 'run-oracles-design', racine: RACINE, artefact: cible || opt('--corpus') || null,
+    // La grille est DITE, pas seulement passée à render_page.py : un lecteur du JSON
+    // doit pouvoir constater à quelles largeurs le verdict a été rendu (TF-1066).
+    grille_rendu: { largeur_conception: LARGEUR_CONCEPTION, largeurs: LARGEURS_RENDU.split(',').map(Number) },
     verdict, oracles: resultats, non_juge: nonJuge,
     ...(socleExempte ? { socle_exempte: socleExempte } : {}),
   }, null, jsonOnly ? 0 : 2));
@@ -383,6 +392,11 @@ const echecs = resultats.filter(r => r.verdict === 'FAIL');
 const skips = resultats.filter(r => r.verdict === 'SKIP');
 
 if (!jsonOnly) {
+  const largeurs = LARGEURS_RENDU.split(',');
+  process.stderr.write(`\n  grille de rendu (${largeurs.length} largeurs) : `
+    + largeurs.map(w => (Number(w) === LARGEUR_CONCEPTION ? `${w}*` : w)).join(' / ')
+    + ` px — * = largeur de conception (Full HD, E5)`
+    + (rendu ? '' : ' — NON LANCÉE ici (ajouter --rendu)') + '\n');
   for (const r of resultats) {
     process.stderr.write(`  ${r.verdict.padEnd(4)} ${r.oracle}` +
       (r.verdict === 'SKIP' ? ` — ${r.raison}` : ` — ${r.ecarts_durs} dur(s), ${r.avertissements} avert.`

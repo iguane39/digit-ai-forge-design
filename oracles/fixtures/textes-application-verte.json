@@ -1,0 +1,16 @@
+{
+  "action": {
+    "enregistrer": "Enregistrer les modifications",
+    "publier_dossier": "Publier le dossier",
+    "inviter_collegue": "Inviter un collègue"
+  },
+  "erreur": {
+    "taille_fichier": "Le fichier dépasse 10 Mo. Compresse-le ou envoie-le en deux fois.",
+    "format_refuse": "Ce format n'est pas pris en charge. Convertis le fichier en PDF avant de le déposer.",
+    "reseau": "La connexion a été interrompue. Vérifie ton accès au réseau puis relance l'envoi."
+  },
+  "liste": {
+    "vide": "Aucun dossier pour l'instant. Crée le premier.",
+    "recherche_sans_resultat": "Aucun résultat pour cette recherche. Élargis les filtres ou essaye un autre mot."
+  }
+}

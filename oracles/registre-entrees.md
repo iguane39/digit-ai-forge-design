@@ -393,3 +393,83 @@ maquette comme à l'implémentation — une nature se lit, elle ne se plaide pas
 - La **justesse du découpage** en fonctionnalités et la pertinence des libellés : c'est de
   la conception, pas un attribut. Sans `data-fonctionnalite`, la couverture n'est pas jugée
   et l'oracle le dit — il ne regroupe jamais des déclencheurs par ressemblance de libellé.
+
+## Entrée du 12/09/2026 — oracle-textes-application (TF-1064)
+
+**Remontée §4 à forge-agents : À FAIRE.** Cette entrée est écrite, exécutée et verrouillée
+au banc local (`self-test.mjs`, 4 règles), mais elle n'est **pas encore injectée** dans
+`~/.claude/skills/quality-oracles/references/registre-oracles.md` ni dans son pendant JSON :
+aucune écriture hors de ce dépôt n'a eu lieu pendant ce run. L'injection est un geste
+mandaté, à demander au pilot. Tant qu'elle n'a pas eu lieu, le statut global reste
+`candidat` — c'est écrit ici pour que personne ne le lise comme injecté.
+
+Le domaine que rien ne couvrait : **les textes d'application** (type T4 de
+`references\ECRITURE.md` du pilot) — libellés, messages d'erreur, états vides. Le
+12/09/2026, le pilot a déposé un plancher d'écriture transverse dont la règle **E-12**
+dit, pour T4 : « un libellé nomme ce que la personne contrôle ; une erreur dit ce qui
+s'est passé puis comment réparer ; un état vide invite à agir ». Son propre oracle
+(`oracle-ecriture.mjs`) juge le Markdown et déclare T4 en `non_juge` : les chaînes
+d'application vivent dans du code ou des fichiers de ressources qu'il ne lit pas. Aucun
+oracle du parc ne voyait donc « Une erreur est survenue », « Aucune donnée » ni
+« Valider » — alors que c'est le texte que le plus grand nombre de personnes lit, et que
+la critique d'implémentation le regarde en D7 Contenu, « la plus sous-traitée, la plus
+visible à l'usage ».
+
+**Identifiants de règles en `T4-*`, pas en `TA*`.** Le lot du pilot les nommait TA1–TA4 ;
+ces quatre identifiants sont déjà pris dans cette forge par `oracle-taste` et cités sous ce
+sens par `grille.md` (D1). Deux sens pour un même identifiant dans un même rapport est un
+défaut de cohérence, pas une nuance. `T4` est le code de typologie de `ECRITURE.md` : le
+préfixe dit ce qu'il juge. Écart consigné au lot de retours du 12/09.
+
+**Déclenchement par extension**, et c'est volontaire : `.json`, `.arb`, `.po`,
+`.properties`, `.html`. Sur un `.html`, l'oracle extrait les littéraux de `placeholder`,
+`title`, `aria-label`, `alt`, le texte des `<button>`, `<label>`, `<option>` et celui des
+éléments `role="alert"`, `.error`, `.empty`, `[data-etat="vide"]` — il n'est donc **pas**
+enrôlé dans `run-oracles-design.mjs`, qui juge la page, mais appelé nommément par le
+critère **C14** de `criteres-sortie.md`, avant C15.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Textes d'application (T4) : libellés, erreurs, états vides | `node c:/dev/digit-ai-forge-design/oracles/oracle-textes-application.mjs <chaines.json\|.arb\|.po\|.properties\|.html>` — T4-1 chaîne d'erreur sans indication de cause ni verbe de réparation (bloquant ; une seule des deux moitiés = avertissement), T4-2 état vide sans verbe d'action, T4-3 libellé d'action générique (« Valider », « OK », « Soumettre », « Cliquez ici », « Envoyer » seul, « Submit », « Click here ») — avertissement, T4-4 erreur qui s'excuse (« désolé », « oups », « sorry », « oops ») — avertissement | cli | candidat (remontée §4 à faire) |
+
+```json
+[
+  {
+    "domaine": "Textes d'application (T4) : libellés, erreurs, états vides",
+    "oracle": "oracles/oracle-textes-application.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".json", ".arb", ".po", ".properties", ".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/textes-application-verte.json",
+      "rouge": "oracles/fixtures/textes-application-rouge.json"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-09-12",
+      "mandat": "TF-1064",
+      "amont": "plancher d'écriture E-12 du pilot (references\ECRITURE.md, 12/09/2026), lot pilot - TRAVAUX - 20260912b"
+    },
+    "regles": 4
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- La **justesse du ton** et la fidélité à la voix de marque : `voix.md` le dit depuis
+  toujours — « la justesse d'une voix n'est pas décidable par script ». Cet oracle juge la
+  **présence** d'une cause, d'une réparation, d'une action ; jamais leur pertinence ni leur
+  élégance. Un plancher franchi n'est pas une voix trouvée.
+- Les **chaînes non extraites** : texte construit par concaténation ou interpolation,
+  libellés restés dans le code applicatif, contenu rendu par un `<script src="…">` ou un
+  framework, libellés venus d'une API. Ce qui n'est pas dans le fichier lu n'est pas jugé,
+  et l'absence de constat ne vaut pas conformité du produit. Le compte des chaînes
+  effectivement lues est remonté dans `non_juge`, à chaque exécution.
+- La **langue** : les listes de verbes et d'indices sont françaises. Sur un fichier en
+  anglais, l'oracle ne verrait ni réparation ni action et le dirait à tort — le déclarer
+  non jugé plutôt que le croire.
+- La **constance** d'un libellé d'un écran à l'autre (même geste, même mot) : elle reste au
+  contrat de voix et à la relecture, comme avant.
+- Les formes **ICU** (pluriels, genres, variables) : la variante rendue à l'utilisateur
+  dépend de la donnée, pas du fichier.

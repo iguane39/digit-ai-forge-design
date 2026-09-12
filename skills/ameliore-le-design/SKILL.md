@@ -52,6 +52,14 @@ l'identité du client de bout en bout : typographie, palette et thème selon le
 secteur, pas selon le gabarit maison. Nommage du fichier et oracles restent
 applicables — règles de livraison, pas de design.
 
+**Une maquette de bureau se conçoit à 1920 px, et se vérifie jusqu'au 4K.** Le viewport
+du rendu de travail, les captures et les cotes annoncées sont à **1920 px** (Full HD) —
+jamais 1280, jamais 1440 : la largeur à laquelle une maquette est dessinée est la largeur
+à laquelle son lecteur la juge. La grille de vérification compte sept largeurs —
+`3840, 2560, 1920, 1440, 1024, 768, 390` — et un écran non mesuré à 2560 et 3840 n'est pas
+jugé adapté. Règle E5 du pilot (`references\BEST-PRACTICES-HTML.md`), portée par
+`contrat-technique.md` (ligne « Breakpoints ») et `criteres-sortie.md` (C1).
+
 **Zéro dépendance réseau au runtime du livrable.** Réseau autorisé **au build**
 (corpus, images, docs), interdit dans le fichier rendu, qui s'ouvre en double-clic
 hors connexion. Conséquences : cartographie SVG/GeoJSON inline, graphiques SVG
