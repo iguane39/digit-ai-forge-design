@@ -135,6 +135,19 @@ const CAS = [
     rouge: [fx('tokens-print-rouge.html')],
   },
   {
+    // TF-1058 (mesuré le 11/09 sur Produit-62, RD-17) : EST_SURFACE confond toute surface
+    // nommée -bg avec une surface SUSCEPTIBLE DE PORTER UN FOCUS, remplissage de badge de
+    // statut compris (20px de haut, jamais focusable) — un simple RENOMMAGE du jeton faisait
+    // disparaître les 12 constats sans qu'une couleur change. Les deux fixtures ne diffèrent
+    // QUE par la présence de --surfaces-hors-focus : la rouge ne la déclare pas et reste jugée
+    // PAR DÉFAUT (1.45:1 mesuré) ; la verte la déclare et PASSE — l'exemption est la
+    // déclaration, jamais le nom du jeton.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-badge-verte.html')],
+    rouge: [fx('tokens-t8-badge-rouge.html')],
+  },
+  {
     // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
     // sous 3:1 est mesuré et signalé ; il ne devient un écart DUR que si l'auteur DÉCLARE la
     // frontière nécessaire par --paires-interface — WCAG n'exige 3:1 que des frontières qui

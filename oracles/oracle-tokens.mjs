@@ -387,6 +387,25 @@ const trouve = (table, noms) => noms.map(n => [n, table.get(n)]).find(([, v]) =>
 const tokenAnneau = trouve(tokens.clair, anneau) || trouve(tokens.sombre, anneau);
 const tokenDecalage = trouve(tokens.clair, decalage) || trouve(tokens.sombre, decalage);
 
+// TF-1058 (mesuré le 11/09 sur Produit-62, RD-17) — EST_SURFACE (ci-dessous) matche tout
+// jeton nommé -fond/-bg/-surface/-papier/-canvas, remplissage de badge de statut compris :
+// une pastille de 20px de haut ne porte jamais d'élément focusable, mais rien dans le CSS ne
+// le dit — le rôle d'une surface (conteneur focusable ou remplissage décoratif) n'est pas
+// décidable depuis la feuille seule, même limite que T7 pour un trait d'interface. Plutôt que
+// deviner par le nom (un renommage a suffi à faire disparaître 12 constats sans qu'une seule
+// couleur change), la feuille déclare les surfaces HORS CHAMP du focus, symétrique de
+// --paires-contraste / --paires-interface : c'est la déclaration qui exempte, jamais le nom.
+const surfaceHorsFocus = new Set();
+for (const table of [tokens.clair, tokens.sombre]) {
+  const v = table.get('--surfaces-hors-focus');
+  if (!v) continue;
+  for (const morceau of v.split(',')) {
+    const n = morceau.trim();
+    if (/^--[\w-]+$/.test(n)) surfaceHorsFocus.add(n);
+    else add('avertissement', 'T8', `--surfaces-hors-focus : « ${morceau.trim().slice(0, 50)} » illisible (forme attendue : --nom-du-jeton)`, 'bloc de tokens');
+  }
+}
+
 const reglesFocus = regles.filter(r => REGLE_FOCUS.test(r.selector));
 let focusImprovise = 0;
 for (const r of reglesFocus) {
@@ -414,7 +433,7 @@ if (tokenAnneau) {
     if (va === undefined) continue; // parité : c'est T4 qui la réclame
     const ca = color(va);
     if (!ca || ca.a !== 1) { NJ.push(`T8 : ${tokenAnneau[0]} semi-transparent ou illisible en thème ${theme} — contraste de l'anneau non décidable sur le fichier`); continue; }
-    const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && color(v) && color(v).a === 1);
+    const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k) && color(v) && color(v).a === 1);
     if (!surfaces.length) { NJ.push(`T8 : aucune surface nommée en thème ${theme} — l'anneau de focus n'a été confronté à rien`); continue; }
     for (const [ks, vs] of surfaces) {
       const ratio = contrast(ca, color(vs));
@@ -439,7 +458,11 @@ if (tokenAnneau) {
         'bloc de tokens');
     }
   }
-} else if (!focusImprovise) {
+}
+if (surfaceHorsFocus.size > 0) {
+  NJ.push(`T8 : surface(s) déclarée(s) --surfaces-hors-focus, écartée(s) de la confrontation à l'anneau (TF-1058) : ${[...surfaceHorsFocus].join(', ')}`);
+}
+if (!tokenAnneau && !focusImprovise) {
   // Ni tokens, ni focus posé : rien à refuser, mais le silence serait un faux vert.
   add('avertissement', 'T8',
     'aucun token de focus prescrit (--focus-anneau / --focus-decalage) et aucun style de focus posé — ' +

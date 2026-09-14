@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T8, anneau de focus jugé PAR DÉFAUT contre un remplissage de badge</title>
+<!--
+  TF-1058 (mesuré le 11/09 sur Produit-62, RD-17). --focus-anneau (#3B82F6) est
+  PRESCRIT et tient ≥ 3:1 contre les VRAIES surfaces conteneurs (--fond, sombre
+  compris) : aucun élément focusable ne se pose jamais sur --badge-muted-bg,
+  le remplissage d'une pastille de statut de 20px de haut. EST_SURFACE matche
+  pourtant tout jeton nommé « -bg » — ce document NE DÉCLARE PAS
+  --surfaces-hors-focus : la règle reste jugée PAR DÉFAUT, preuve qu'un simple
+  renommage de jeton ne suffit plus à l'exempter (seule une déclaration
+  explicite le permet, voir la fixture verte jumelle).
+
+  Attendu : FAIL, exit 1, sur T8 — contraste 1.45:1 < 3:1, valeur mesurée sur
+  Produit-62.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --focus-anneau: #3B82F6;
+    --focus-decalage: 2px;
+    --badge-muted-bg: #9CA3AF;
+    --texte-sur-badge: #111827;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #12151b;
+      --fond-carte: #1c2029;
+      --texte: #eef1f6;
+      --focus-anneau: #3B82F6;
+      --focus-decalage: 2px;
+      --badge-muted-bg: #9CA3AF;
+      --texte-sur-badge: #111827;
+    }
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police-corps); margin: 0; padding: 32px; }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .pastille { display: inline-block; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px; background: var(--badge-muted-bg); color: var(--texte-sur-badge); }
+  .bouton:focus-visible { outline: 3px solid var(--focus-anneau); outline-offset: var(--focus-decalage); }
+</style>
+</head>
+<body>
+  <h1>Suivi des statuts</h1>
+  <div class="carte">
+    <span class="pastille">En pause</span>
+    <button class="bouton" type="submit">Relancer</button>
+  </div>
+</body>
+</html>
