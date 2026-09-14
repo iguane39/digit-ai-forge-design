@@ -123,6 +123,46 @@ function nettoyerRendu(tmpHtml) {
   }
 }
 
+// TF-1100 (14/09/2026, récidive de la classe close en TF-0885/TF-0278) — cet agrégateur
+// tenait sa PROPRE COPIE de la sévérité par famille (durs/avert/info ci-dessous, en
+// commentaire pour mémoire), pendant que render_page.py fait évoluer son registre FAMILLES
+// (nouvelles familles bloquantes : l2_conteneur, l2_filet, etat_muet, v9_actif_invisible,
+// contenu_rogne, controles_desalignes, rognage_donnees, prose_etroite,
+// conteneur_bride_donnees, sommaire_perdu, etats_indiscernables, entete_pose_sur_lignes,
+// entete_masque_par_collants, v18_prose_etiree, v18_tableau_etrique…). Le garde-fou de
+// TF-0278 (le bloc « inconnues » plus bas) REND VISIBLE une famille non répertoriée ici,
+// mais il ne corrige pas sa sévérité : il la démontait systématiquement en avertissement,
+// puis rattrapait l'incohérence de verdict par un finding bloquant PLACEHOLDER (« relancer
+// render_page.py pour le détail ») — visible, mais faux : v18_prose_etiree EST bloquante
+// pour render_page.py lui-même (FAMILLES, sev="bloquant"), pas seulement pour son verdict
+// global. Le fichier source le dit explicitement : « --familles publie cette table : un
+// consommateur la LIT au lieu d'en tenir une copie. » Cet agrégateur ne la lisait pas.
+// Fait mesuré le 14/09 : `render_page.py --familles` liste 21 familles ; ce fichier n'en
+// codait que 8 en dur avant ce correctif.
+let FAMILLES_CACHE = null;
+function familles(outillage) {
+  if (FAMILLES_CACHE !== null) return FAMILLES_CACHE;
+  const r = spawnSync(outillage.python, [outillage.renderPage, '--familles'], { encoding: 'utf8' });
+  if (r.error || r.status !== 0) { FAMILLES_CACHE = null; return null; }
+  try {
+    const j = JSON.parse(r.stdout.trim());
+    FAMILLES_CACHE = (j.schema === 'digit-ai/familles-mesure@1' && j.familles) ? j.familles : null;
+  } catch { FAMILLES_CACHE = null; }
+  return FAMILLES_CACHE;
+}
+// Repli si `--familles` est indisponible (render_page.py trop ancien, ou exécution
+// impossible) : la copie historique, connue incomplète — mieux qu'un agrégateur muet,
+// mais le bloc « inconnues » plus bas reste la seule garantie tant que ce repli sert.
+const REPLI_DUR = { v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4', l2_width: 'L2', l2_gouttiere: 'L2' };
+const REPLI_AVERT = { v3_align: 'V3', v7_spacing: 'V7' };
+const REPLI_INFO = { unmeasured: '—' };
+
+// Le code court (« V1 », « L2 »…) qui préfixe le libellé d'une famille — repris tel quel
+// pour que les règles publiées par cet agrégateur ne changent pas de nom au fil des versions
+// de render_page.py. Sans préfixe reconnaissable (ex. « État vide MUET… »), le nom de la
+// famille elle-même sert de règle, jamais un code inventé.
+const codeDe = libelle => (/^([A-Z]+\d+)\b/.exec(libelle || '') || [, null])[1];
+
 function lancerRenderPage(tmpHtml, etiquette, outillage) {
   const r = spawnSync(outillage.python,
     [outillage.renderPage, tmpHtml, '--widths', LARGEURS_RENDU, '--output', 'json'],
@@ -138,33 +178,22 @@ function lancerRenderPage(tmpHtml, etiquette, outillage) {
       raison: `sortie illisible (exit ${r.status}) : ${(r.stderr || '').slice(0, 300)}`, findings: [], non_juge: [] };
   }
 
-  // Propagation des issues[] de render_page vers findings[] (TF-0278). Deux
-  // familles de constats bloquants manquaient à cette table — l2_width et
-  // l2_gouttiere, pourtant comptés dans le « blocking » de render_page.py : un
-  // rendu FAIL sur « L2 accroche bridée 0.47 » remontait ici en FAIL avec un
-  // findings[] VIDE, et le détail n'était visible qu'en relançant render_page.py
-  // à la main. Un agrégateur qui perd le motif du refus ne rapporte rien.
+  const reg = familles(outillage);
+  const repliUtilise = reg === null;
   const findings = [];
-  const durs = { v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4', l2_width: 'L2', l2_gouttiere: 'L2' };
-  const avert = { v3_align: 'V3', v7_spacing: 'V7' };
-  const info = { unmeasured: '—' };
-  const connues = new Set([...Object.keys(durs), ...Object.keys(avert), ...Object.keys(info)]);
   const inconnues = new Set();
   for (const [largeur, bp] of Object.entries(j.breakpoints || {})) {
     const issues = bp.issues || {};
-    for (const [cle, regle] of Object.entries(durs))
-      for (const it of issues[cle] || []) findings.push({ sev: 'bloquant', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
-    for (const [cle, regle] of Object.entries(avert))
-      for (const it of issues[cle] || []) findings.push({ sev: 'avertissement', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
-    for (const [cle, regle] of Object.entries(info))
-      for (const it of issues[cle] || []) findings.push({ sev: 'info', regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
-    // Une famille de constats que cette table ne connaît pas ne se perd pas en
-    // silence : elle remonte, nommée, plutôt que d'être oubliée à la prochaine
-    // montée de version de render_page.py.
     for (const [cle, liste] of Object.entries(issues)) {
-      if (connues.has(cle) || !Array.isArray(liste) || !liste.length) continue;
-      inconnues.add(cle);
-      for (const it of liste) findings.push({ sev: 'avertissement', regle: `render_page:${cle}`, msg: `${largeur}px — ${it.what} — ${it.detail}` });
+      if (!Array.isArray(liste) || !liste.length) continue;
+      const fam = reg && reg[cle];
+      let sev, regle;
+      if (fam) { sev = fam.severite; regle = codeDe(fam.libelle) || `render_page:${cle}`; }
+      else if (cle in REPLI_DUR) { sev = 'bloquant'; regle = REPLI_DUR[cle]; }
+      else if (cle in REPLI_AVERT) { sev = 'avertissement'; regle = REPLI_AVERT[cle]; }
+      else if (cle in REPLI_INFO) { sev = 'info'; regle = REPLI_INFO[cle]; }
+      else { sev = 'avertissement'; regle = `render_page:${cle}`; inconnues.add(cle); }
+      for (const it of liste) findings.push({ sev, regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
     }
   }
   // Filet de cohérence : un FAIL sans aucun constat dur propagé serait
@@ -173,24 +202,24 @@ function lancerRenderPage(tmpHtml, etiquette, outillage) {
     findings.push({ sev: 'bloquant', regle: '—',
       msg: `render_page rend FAIL sans constat bloquant propageable — relancer render_page.py sur ${path.basename(tmpHtml)} pour le détail` });
   }
-  if (inconnues.size) {
-    return {
-      oracle: `render_page(${etiquette})`, verdict: j.verdict, exit: r.status,
-      ecarts_durs: findings.filter(f => f.sev === 'bloquant').length,
-      avertissements: findings.filter(f => f.sev === 'avertissement').length,
-      findings,
-      non_juge: [
-        'V5 croisements de flèches et V6 images déformées — inspection visuelle des PNG produits, non jugés ici',
-        `familles de constats inconnues de cet agrégateur, remontées en avertissement faute de sévérité déclarée : ${[...inconnues].join(', ')}`,
-      ],
-    };
+  const nonJugeRendu = ['V5 croisements de flèches et V6 images déformées — inspection visuelle des PNG produits, non jugés ici'];
+  if (repliUtilise) {
+    nonJugeRendu.push('`render_page.py --familles` indisponible (exécution impossible, ou schéma inattendu) : sévérités lues '
+      + 'depuis la copie de repli de cet agrégateur, connue incomplète — une famille bloquante absente de ce repli '
+      + `redescendrait en avertissement${inconnues.size ? ` (ici : ${[...inconnues].join(', ')})` : ''}`);
+  } else if (inconnues.size) {
+    // Ne devrait plus arriver : `reg` vient de la même exécution de render_page.py que les
+    // issues[] elles-mêmes. Une clé absente du registre qu'il publie lui-même est une
+    // incohérence INTERNE à render_page.py, pas un oubli de cet agrégateur — à signaler côté socle.
+    nonJugeRendu.push(`famille(s) présente(s) dans issues[] mais absente(s) du registre --familles de render_page.py `
+      + `lui-même : ${[...inconnues].join(', ')} — incohérence à signaler côté digit-ai-page-html`);
   }
   return {
     oracle: `render_page(${etiquette})`, verdict: j.verdict, exit: r.status,
     ecarts_durs: findings.filter(f => f.sev === 'bloquant').length,
     avertissements: findings.filter(f => f.sev === 'avertissement').length,
     findings,
-    non_juge: ['V5 croisements de flèches et V6 images déformées — inspection visuelle des PNG produits, non jugés ici'],
+    non_juge: nonJugeRendu,
   };
 }
 

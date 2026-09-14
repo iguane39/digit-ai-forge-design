@@ -29,6 +29,10 @@
   .accroche { font-size: 20px; }
   .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
   .note { color: var(--texte-secondaire); }
+  /* Conteneur de lecture prescrit par le socle (E4) : centré (marges symétriques, jamais calé
+     à gauche — L2 conteneur), et c'est LUI qui porte la mesure de largeur, jamais le <p> qui
+     reste width:auto — L2-largeur ne bride que le paragraphe, pas son ancêtre. */
+  .chap.lire { max-width: 1080px; margin: 0 auto; }
   @media (max-width: 768px) { body { padding: 16px; } }
   @media (max-width: 390px) { body { padding: 8px; } }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
@@ -40,8 +44,17 @@
     <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
   </header>
   <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
-  <p class="corps">Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est celle que la page lui laisse : le rapport reste au-dessus du seuil et rien n'est compte.</p>
-  <p class="note">Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le silence de l'oracle ne tienne pas a un cas unique.</p>
+  <!-- TF-1100 (14/09/2026) — V18 (render_page.py, 12/09/2026) juge la prose bloquante des
+       2560px : sans conteneur de lecture, ces deux paragraphes depassaient 100
+       caracteres/ligne au 4K (229 et 170 mesures). section.chap.lire (1080px, regle E4)
+       est la mesure de lecture PRESCRITE par le socle sur le CONTENEUR, jamais sur le
+       paragraphe (lisibilite.md, composants.md #11) : render_page.py V18 reconnait
+       .closest('.lire, [data-mesure-lecture]') et publie alors « non mesurable » au lieu
+       de bloquer. -->
+  <section class="chap lire">
+    <p class="corps">Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est celle que la page lui laisse : le rapport reste au-dessus du seuil et rien n'est compte.</p>
+    <p class="note">Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le silence de l'oracle ne tienne pas a un cas unique.</p>
+  </section>
   <script>
     const bouton = document.querySelector('.theme-toggle');
     const appliquer = (t) => {
