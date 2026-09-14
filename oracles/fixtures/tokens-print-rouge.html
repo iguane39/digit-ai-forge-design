@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T5, vrai défaut de contraste sombre malgré un bloc @media print</title>
+<!--
+  TF-1057. Preuve que la correction n'exempte pas tout ce qui côtoie un bloc
+  @media print : ce document porte le MÊME bloc print que la fixture verte
+  jumelle (redéclare --bg:#FFFFFF sous [data-theme="dark"], à écarter), MAIS le
+  thème sombre lui-même est mal contrasté — --c-purple-fg (#DDD6FE) posé sur le
+  VRAI fond sombre #0B1220 tient très large, donc le défaut est introduit
+  ailleurs : --c-blue-fg vaut #2B4C7E en thème sombre, qui ne tient que 2.17:1
+  sur #0B1220 — un manque de contraste réel, indépendant du bloc print.
+
+  Attendu : FAIL, exit 1, sur T5 — un vrai défaut de thème sombre reste jugé,
+  le bloc print n'est pas un prétexte pour l'écarter.
+-->
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --c-purple-fg: #4C1D95;
+    --c-blue-fg: #1E3A8A;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B1220;
+    --c-purple-fg: #DDD6FE;
+    --c-blue-fg: #2B4C7E;
+  }
+  @media print {
+    :root, :root[data-theme="dark"] {
+      --bg: #FFFFFF;
+    }
+  }
+  body { background: var(--bg); color: var(--c-purple-fg); font-family: var(--police-corps); margin: 0; padding: 32px; }
+  .encart { background: var(--bg); color: var(--c-blue-fg); padding: 12px; }
+</style>
+</head>
+<body>
+  <h1>Journal des interventions</h1>
+  <p class="encart">Trois interventions closes cette semaine.</p>
+</body>
+</html>

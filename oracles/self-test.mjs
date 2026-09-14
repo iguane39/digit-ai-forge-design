@@ -122,6 +122,19 @@ const CAS = [
     rouge: [fx('tokens-t5-rouge.html')],
   },
   {
+    // TF-1057 (mesuré le 11/09 sur Produit-62, RD-16) : un bloc @media print redéclarant
+    // `:root, :root[data-theme="dark"] { --bg:#FFFFFF; }` était lu comme le fond du thème
+    // SOMBRE (le sélecteur porte « dark »), et confrontait l'encre sombre réelle à ce blanc
+    // d'impression — 1.39:1 et 1.22:1 mesurés, faux positifs sur toute page correctement
+    // contrastée. Les deux fixtures portent le MÊME bloc print ; seule la rouge porte, en
+    // plus, un vrai défaut de thème sombre (--c-blue-fg à 2.17:1), pour prouver que le bloc
+    // print n'est pas un prétexte pour taire un défaut réel.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-print-verte.html')],
+    rouge: [fx('tokens-print-rouge.html')],
+  },
+  {
     // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
     // sous 3:1 est mesuré et signalé ; il ne devient un écart DUR que si l'auteur DÉCLARE la
     // frontière nécessaire par --paires-interface — WCAG n'exige 3:1 que des frontières qui

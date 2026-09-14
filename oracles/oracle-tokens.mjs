@@ -72,15 +72,30 @@ const estBlocToken = r =>
 const estSombre = r =>
   r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) ||
   /dark/i.test(r.selector);
+// TF-1057 (mesuré le 11/09 sur Produit-62, RD-16) — un bloc `@media print` peut
+// redéclarer `:root, :root[data-theme="dark"] { --bg:#FFFFFF; … }` pour l'impression :
+// le SÉLECTEUR porte « dark », mais la VALEUR n'appartient à aucun des deux thèmes
+// d'écran. Sans ce filtre, la table « sombre » héritait d'un blanc d'impression, et
+// T5/T8 confrontaient cette valeur aux jetons d'encre sombre réels — un red flag de
+// contraste faux sur toute page qui définit correctement un thème sombre ET un bloc
+// print (la doctrine du socle boilerplate.html). Un bloc print ne décrit ni le thème
+// clair ni le thème sombre d'écran : ses tokens sont écartés de la lecture, pas
+// requalifiés dans l'un ou l'autre.
+const estImpression = r => r.atRules.some(a => /^@media\b[^{]*\bprint\b/i.test(a));
 
 // ── Collecte des tokens déclarés ───────────────────────────────────────────
 const tokens = { clair: new Map(), sombre: new Map() };
+let ecartesImpression = 0;
 for (const r of regles) {
   if (!estBlocToken(r)) continue;
+  if (estImpression(r)) { ecartesImpression++; continue; }
   const cible = estSombre(r) ? tokens.sombre : tokens.clair;
   const re = /(--[\w-]+)\s*:\s*([^;]+)/g;
   let m;
   while ((m = re.exec(r.body))) cible.set(m[1], m[2].trim());
+}
+if (ecartesImpression > 0) {
+  NJ.push(`${ecartesImpression} bloc(s) de tokens sous @media print écarté(s) de la lecture clair/sombre (TF-1057) — ils décrivent la mise en page imprimée, pas un thème d'écran ; contraste d'impression non jugé ici`);
 }
 
 if (tokens.clair.size === 0) {
