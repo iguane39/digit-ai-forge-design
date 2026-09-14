@@ -74,6 +74,13 @@ function blocCouleurs(groupe, indent = '  ') {
     .join('\n');
 }
 
+/** Dérive un nom de sortie plausible quand aucun n'est fourni (affichage de l'en-tête
+ * seulement — n'écrit jamais de fichier). */
+function deriverNomSortie(sourcePath) {
+  if (/\.tokens\.json$/i.test(sourcePath)) return sourcePath.replace(/\.tokens\.json$/i, '.css');
+  return sourcePath.replace(/\.json$/i, '.css');
+}
+
 /**
  * Transforme un document DTCG (déjà parsé) en tokens.css.
  * Contrat de groupes attendu (voir corpus/tokens-digit-ai.tokens.json) :
@@ -85,8 +92,17 @@ function blocCouleurs(groupe, indent = '  ') {
  * segment du chemin porte le nom de la custom property, quel que soit le thème
  * référencé dans la source — la résolution réelle se fait au runtime CSS via
  * la cascade des blocs de thème, pas à la génération.
+ *
+ * TF-1035 (constat en passant, lot marque Digit-AI du 11/09/2026) — `sourcePath` et
+ * `sortiePath` NOMMENT LA SOURCE RÉELLEMENT LUE : l'en-tête écrivait auparavant un
+ * chemin FIGÉ (« corpus/tokens-digit-ai.tokens.json ») quelle que soit la source
+ * réellement passée en argument — mesuré sur donnees/marque/tokens.css du produit
+ * digit-ai-marketing, généré depuis une tout autre source, et pourtant estampillé
+ * du chemin du corpus de cette forge. Un en-tête qui ment sur la provenance ne se
+ * corrige pas à la main : oracle-dtcg D3 interdit toute dérive manuelle du dérivé.
  */
-export function genererCss(dtcg) {
+export function genererCss(dtcg, sourcePath = 'corpus/tokens-digit-ai.tokens.json', sortiePath) {
+  const sortieEffective = sortiePath || deriverNomSortie(sourcePath);
   const preambule = dtcg.$description
     ? dtcg.$description.split('\n').map(l => ` * ${l}`).join('\n')
     : ' * Généré depuis une source DTCG.';
@@ -140,9 +156,9 @@ export function genererCss(dtcg) {
     .map(([nom, noeud]) => `--${nom}: ${valeurCss(noeud)};`).join(' ');
 
   return `/* tokens.css — DÉRIVÉ, ne pas éditer à la main.
- * Source unique : corpus/tokens-digit-ai.tokens.json (format W3C DTCG, stable 2025.10).
- * Régénérer : node scripts/generer-tokens-css.mjs corpus/tokens-digit-ai.tokens.json --sortie corpus/tokens-digit-ai.css
- * Vérifié par : node oracles/oracle-dtcg.mjs corpus/tokens-digit-ai.tokens.json corpus/tokens-digit-ai.css
+ * Source unique : ${sourcePath} (format W3C DTCG, stable 2025.10).
+ * Régénérer : node scripts/generer-tokens-css.mjs ${sourcePath} --sortie ${sortieEffective}
+ * Vérifié par : node oracles/oracle-dtcg.mjs ${sourcePath} ${sortieEffective}
  *
 ${preambule}
  */
@@ -193,7 +209,7 @@ if (import.meta.url === `file://${process.argv[1]}`.replace(/\\/g, '/') || proce
   }
   try {
     const dtcg = JSON.parse(readFileSync(entree, 'utf8'));
-    const css = genererCss(dtcg);
+    const css = genererCss(dtcg, entree, sortie);
     writeFileSync(sortie, css, 'utf8');
     console.log(`tokens.css généré : ${sortie} (source : ${entree})`);
   } catch (e) {

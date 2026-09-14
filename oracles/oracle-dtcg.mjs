@@ -15,6 +15,7 @@
 // Usage : node oracle-dtcg.mjs <source.tokens.json> <tokens.css> [--json-only]
 
 import fs from 'node:fs';
+import path from 'node:path';
 import { estFeuille, estAlias, resoudreChemin, feuillesDe, genererCss } from '../scripts/generer-tokens-css.mjs';
 
 const DOM = 'Pipeline de tokens : source DTCG → tokens.css dérivé';
@@ -74,9 +75,16 @@ for (const [chemin, noeud] of feuillesDe(dtcg)) {
 // Indépendant du verdict D1/D2 : une source qui ne génère plus rend le dérivé
 // non vérifiable, ce qui EST la question que pose D3 (peut-on garantir la synchro ?).
 {
+  // TF-1035 — genererCss nomme désormais la source réellement lue dans l'en-tête du
+  // dérivé (l'en-tête était figé sur « corpus/tokens-digit-ai.tokens.json » quelle que
+  // soit la source). Comparer à l'octet près exige donc de lui passer LES MÊMES chemins
+  // que ceux reçus sur la ligne de commande — normalisés relatifs au répertoire courant
+  // (et en « / ») pour que le dérivé versionné ne dépende ni de la machine ni de l'OS
+  // qui l'a régénéré.
+  const relatif = p => path.relative(process.cwd(), p).split(path.sep).join('/') || p;
   let attendu;
   try {
-    attendu = genererCss(dtcg);
+    attendu = genererCss(dtcg, relatif(source), relatif(derive));
   } catch (e) {
     add('bloquant', 'D3', `synchronisation non vérifiable : la source ne régénère plus (${e.message})`, source);
   }

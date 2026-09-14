@@ -66,6 +66,29 @@ const themeSombre = blocsSombres.length > 0;
 const blocSombre = blocsSombres.join("\n");
 // Cascade CSS : un token que le bloc sombre ne redéfinit pas garde sa valeur claire.
 const varSombre = (nomVar) => varDans(blocSombre, nomVar) ?? varDe(nomVar);
+
+// TF-1035 (constat en passant, lot marque Digit-AI, 11/09/2026) — le contrat de tokens.css
+// de cette forge (references/tokens.md) PRESCRIT un groupe d'ALIAS (--accent, --texte,
+// --fond…) émis en `var(--cible)` par scripts/generer-tokens-css.mjs ; ce générateur ne
+// savait lire QUE des valeurs littérales et refusait « couleur illisible pour --accent :
+// var(--blue) » sur tout tokens.css conforme à sa propre forge. Résoudre la chaîne de
+// `var(--x)` dans les blocs fournis (le bloc sombre d'abord si on résout en contexte
+// sombre, la cascade CSS retombant sur le clair) avant de parser une couleur — jamais
+// plus de 8 sauts, pour qu'un alias circulaire échoue proprement plutôt que de boucler.
+function resoudreVar(valeur, blocs, profondeur = 0) {
+  if (valeur == null) return valeur;
+  const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/.exec(valeur.trim());
+  if (!m) return valeur;
+  if (profondeur >= 8) return null; // chaîne d'alias trop longue ou circulaire
+  for (const bloc of blocs) {
+    const brut = (bloc.match(new RegExp(`${m[1]}\\s*:\\s*([^;]+);`)) || [, null])[1]?.trim();
+    if (brut !== undefined && brut !== null) return resoudreVar(brut, blocs, profondeur + 1);
+  }
+  return m[2] !== undefined ? resoudreVar(m[2].trim(), blocs, profondeur + 1) : null;
+}
+const coul = (nomVar) => resoudreVar(varDe(nomVar), [bloc]);
+const coulSombre = (nomVar) => resoudreVar(varSombre(nomVar), [blocSombre, bloc]);
+
 const enHex = (valeur, ou) => {
   if (!valeur) return null;
   const c = parse(valeur);
@@ -74,14 +97,14 @@ const enHex = (valeur, ou) => {
   return `#${h(c.r)}${h(c.g)}${h(c.b)}`;
 };
 const couleurs = {
-  primary: enHex(varDe("accent"), "--accent"),
-  ink: enHex(varDe("texte"), "--texte"),
-  "ink-soft": enHex(varDe("texte-faible"), "--texte-faible"),
-  surface: enHex(varDe("fond"), "--fond"),
-  "surface-soft": enHex(varDe("surface"), "--surface"),
+  primary: enHex(coul("accent"), "--accent"),
+  ink: enHex(coul("texte"), "--texte"),
+  "ink-soft": enHex(coul("texte-faible"), "--texte-faible"),
+  surface: enHex(coul("fond"), "--fond"),
+  "surface-soft": enHex(coul("surface"), "--surface"),
 };
 for (const [opt, source] of [["danger", "texte-erreur"], ["success", "texte-succes"]]) {
-  const v = varDe(source);
+  const v = coul(source);
   if (v) couleurs[opt] = enHex(v, `--${source}`);
 }
 if (!couleurs.primary || !couleurs.ink || !couleurs.surface) {
@@ -102,9 +125,9 @@ if (rTexte < 4.5) refus(`contraste texte/fond ${rTexte.toFixed(2)}:1 < 4.5`);
 // une autre forge, sur un produit réel (WCAG 1.4.3 vaut par thème rendu).
 const sombre = themeSombre
   ? {
-    ink: enHex(varSombre("texte"), "--texte (thème sombre)"),
-    surface: enHex(varSombre("fond"), "--fond (thème sombre)"),
-    primary: enHex(varSombre("accent"), "--accent (thème sombre)"),
+    ink: enHex(coulSombre("texte"), "--texte (thème sombre)"),
+    surface: enHex(coulSombre("fond"), "--fond (thème sombre)"),
+    primary: enHex(coulSombre("accent"), "--accent (thème sombre)"),
   }
   : null;
 const rTexteSombre = sombre && sombre.ink && sombre.surface ? ratio(sombre.ink, sombre.surface) : null;
@@ -135,13 +158,13 @@ const focus = {
 };
 focus.prescrit = Boolean(focus.anneau);
 if (focus.prescrit) {
-  focus.hex = enHex(focus.anneau, "--focus-anneau");
+  focus.hex = enHex(resoudreVar(focus.anneau, [bloc]), "--focus-anneau");
   focus.ratio = ratio(focus.hex, couleurs.surface);
   if (focus.ratio < 3) {
     refus(`contraste anneau de focus/fond ${focus.ratio.toFixed(2)}:1 < 3:1 (WCAG 1.4.11 — un anneau invisible n'est pas un focus visible)`);
   }
   if (sombre && sombre.surface && focus.anneauSombre) {
-    focus.hexSombre = enHex(focus.anneauSombre, "--focus-anneau (thème sombre)");
+    focus.hexSombre = enHex(resoudreVar(focus.anneauSombre, [blocSombre, bloc]), "--focus-anneau (thème sombre)");
     focus.ratioSombre = ratio(focus.hexSombre, sombre.surface);
     if (focus.ratioSombre < 3) {
       refus(`contraste anneau de focus/fond du thème sombre ${focus.ratioSombre.toFixed(2)}:1 < 3:1 (WCAG 1.4.11)`);

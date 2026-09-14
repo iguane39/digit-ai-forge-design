@@ -250,6 +250,10 @@ const CAS = [
     rouge: [fx('motion-revocation-rouge.html')],
   },
   {
+    // TF-1035 (constat en passant, lot marque Digit-AI, 11/09/2026) — D3 compare le dérivé à
+    // l'octet près, EN-TÊTE COMPRIS : dtcg-verte.tokens.json ne vit pas au chemin par défaut
+    // historique (« corpus/tokens-digit-ai.tokens.json »), donc cette fixture retombe en FAIL si
+    // l'en-tête du CSS dérivé redevient un chemin figé au lieu de la source réellement lue.
     oracle: 'oracle-dtcg.mjs',
     regles: ['D1', 'D2', 'D3'],
     verte: [fx('dtcg-verte.tokens.json'), fx('dtcg-verte.css')],

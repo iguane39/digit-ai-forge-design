@@ -1,7 +1,7 @@
 /* tokens.css — DÉRIVÉ, ne pas éditer à la main.
- * Source unique : corpus/tokens-digit-ai.tokens.json (format W3C DTCG, stable 2025.10).
- * Régénérer : node scripts/generer-tokens-css.mjs corpus/tokens-digit-ai.tokens.json --sortie corpus/tokens-digit-ai.css
- * Vérifié par : node oracles/oracle-dtcg.mjs corpus/tokens-digit-ai.tokens.json corpus/tokens-digit-ai.css
+ * Source unique : oracles/fixtures/dtcg-verte.tokens.json (format W3C DTCG, stable 2025.10).
+ * Régénérer : node scripts/generer-tokens-css.mjs oracles/fixtures/dtcg-verte.tokens.json --sortie oracles/fixtures/dtcg-verte.css
+ * Vérifié par : node oracles/oracle-dtcg.mjs oracles/fixtures/dtcg-verte.tokens.json oracles/fixtures/dtcg-verte.css
  *
  * tokens-digit-ai — mode « digit-ai » de systeme-de-marque. SOURCE au format W3C DTCG (stable 2025.10, https://www.designtokens.org/tr/drafts/format/). corpus/tokens-digit-ai.css est un DÉRIVÉ, régénéré par scripts/generer-tokens-css.mjs — ne pas éditer ce .css à la main, éditer ce .json puis régénérer.
  * Valeurs canoniques extraites de digit-ai-page-html/assets/boilerplate.html le 04/08/2026. La charte fait foi : ces valeurs ne sont pas retouchées ici.
