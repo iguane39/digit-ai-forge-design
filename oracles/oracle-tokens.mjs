@@ -38,7 +38,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, css, cssRulesDeep, lineOf } from './lib/html.mjs';
-import { parse as color, hsl, contrast, findColors } from './lib/color.mjs';
+import { parse as color, hsl, contrast, findColors, resoudreVar } from './lib/color.mjs';
 
 const DOM = 'Système de marque : traçabilité des tokens';
 const args = process.argv.slice(2);
@@ -247,7 +247,7 @@ for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]
     const [kt, ks] = cle.split('|');
     const vt = table.get(kt), vs = table.get(ks);
     if (vt === undefined || vs === undefined) continue; // paire absente de ce thème
-    const ct = color(vt), cs = color(vs);
+    const ct = color(resoudreVar(vt, [n => table.get(n)])), cs = color(resoudreVar(vs, [n => table.get(n)]));
     if (!ct || !cs) continue;
     if (ct.a !== 1 || cs.a !== 1) { pairesComposees++; continue; }
     pairesTestees++;
@@ -431,9 +431,12 @@ if (tokenAnneau) {
   for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
     const va = table.get(tokenAnneau[0]);
     if (va === undefined) continue; // parité : c'est T4 qui la réclame
-    const ca = color(va);
+    const ca = color(resoudreVar(va, [n => table.get(n)]));
     if (!ca || ca.a !== 1) { NJ.push(`T8 : ${tokenAnneau[0]} semi-transparent ou illisible en thème ${theme} — contraste de l'anneau non décidable sur le fichier`); continue; }
-    const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k) && color(v) && color(v).a === 1);
+    const surfaces = [...table]
+      .filter(([k]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k))
+      .map(([k, v]) => [k, resoudreVar(v, [n => table.get(n)])])
+      .filter(([, v]) => color(v) && color(v).a === 1);
     if (!surfaces.length) { NJ.push(`T8 : aucune surface nommée en thème ${theme} — l'anneau de focus n'a été confronté à rien`); continue; }
     for (const [ks, vs] of surfaces) {
       const ratio = contrast(ca, color(vs));

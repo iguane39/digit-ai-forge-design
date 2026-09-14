@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T8, anneau de focus déclaré par un alias var()</title>
+<!--
+  TF-1106 (14/09/2026). Même fixture que tokens-t8-verte.html, mais --focus-anneau n'est
+  pas un littéral hex : c'est un ALIAS, --focus-anneau: var(--blue), exactement la forme que
+  le contrat de tokens.css de cette forge prescrit (references/tokens.md, groupe alias) et
+  que scripts/generer-tokens-css.mjs émet pour tout token du groupe "focus" (TF-1034). Avant
+  TF-1106, oracle-tokens.mjs ne résolvait pas la chaîne var() et publiait « --focus-anneau
+  semi-transparent ou illisible » au lieu de mesurer le contraste réel.
+
+  Mêmes valeurs, mêmes ratios que tokens-t8-verte.html (--blue joue le rôle de --focus-anneau) :
+    clair  : #1f4fd8 sur #ffffff → 6.31:1 · sur #eef1f6 → 5.55:1
+    sombre : #7ea8ff sur #12151b → 7.15:1 · sur #1c2029 → 6.28:1
+
+  Attendu : PASS, exit 0 — l'alias est résolu avant la mesure de contraste.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --blue: #1f4fd8;
+    --focus-anneau: var(--blue);
+    --focus-decalage: 2px;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #12151b;
+      --fond-carte: #1c2029;
+      --texte: #eef1f6;
+      --blue: #7ea8ff;
+      --focus-anneau: var(--blue);
+      --focus-decalage: 2px;
+    }
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .bouton:focus-visible,
+  .champ:focus-visible {
+    outline: 3px solid var(--focus-anneau);
+    outline-offset: var(--focus-decalage);
+  }
+</style>
+</head>
+<body>
+  <h1>Demande d'intervention</h1>
+  <div class="carte">
+    <label for="objet">Objet</label>
+    <input class="champ" id="objet" type="text">
+    <button class="bouton" type="submit">Envoyer</button>
+  </div>
+</body>
+</html>

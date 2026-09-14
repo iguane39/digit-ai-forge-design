@@ -117,6 +117,34 @@ export function contrast(c1, c2) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
+/**
+ * Résout une chaîne `var(--x[, repli])` contre une liste de TABLES consultées dans
+ * l'ordre (chaque table : une fonction nom-avec-tirets → valeur brute, ou undefined/null
+ * si absente). Renvoie la valeur telle quelle si ce n'est pas un var(), ou `null` si la
+ * chaîne ne résout vers rien (ni table, ni repli). Boucle bornée à 8 sauts pour qu'un
+ * alias circulaire échoue proprement plutôt que de tourner.
+ *
+ * TF-1035 (11/09/2026) — `generer-design-md.mjs` refusait « couleur illisible pour
+ * --accent : var(--blue) » sur tout tokens.css employant le groupe ALIAS que le contrat
+ * de cette forge prescrit lui-même (references/tokens.md), et que son propre générateur
+ * émet en `var(--cible)`. TF-1106 (14/09/2026) — la même non-résolution touchait
+ * `oracle-tokens.mjs` T5/T8 : un `--focus-anneau: var(--blue)` ou une paire de contraste
+ * nommée par alias étaient jugés « illisibles » plutôt que résolus. Une seule
+ * implémentation ICI, consommée par les deux : jamais une seconde résolution qui
+ * pourrait diverger.
+ */
+export function resoudreVar(valeur, tables, profondeur = 0) {
+  if (valeur == null) return valeur;
+  const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/.exec(String(valeur).trim());
+  if (!m) return valeur;
+  if (profondeur >= 8) return null; // chaîne d'alias trop longue ou circulaire
+  for (const table of tables) {
+    const brut = table(m[1]);
+    if (brut !== undefined && brut !== null) return resoudreVar(brut, tables, profondeur + 1);
+  }
+  return m[2] !== undefined ? resoudreVar(m[2].trim(), tables, profondeur + 1) : null;
+}
+
 /** Toutes les couleurs littérales trouvées dans un texte CSS, avec leur offset. */
 export function findColors(text) {
   const out = [];

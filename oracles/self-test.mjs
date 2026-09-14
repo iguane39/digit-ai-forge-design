@@ -148,6 +148,19 @@ const CAS = [
     rouge: [fx('tokens-t8-badge-rouge.html')],
   },
   {
+    // TF-1106 (14/09/2026) — oracle-tokens ne résolvait pas les alias var() avant de parser
+    // une couleur : --focus-anneau: var(--blue), la forme que le contrat de tokens.css de
+    // cette forge prescrit et que scripts/generer-tokens-css.mjs émet, publiait « semi-
+    // transparent ou illisible » au lieu d'être mesuré (même classe que TF-1035, résolue par
+    // la MÊME fonction partagée, lib/color.mjs::resoudreVar). La verte reprend tokens-t8-verte
+    // avec --focus-anneau en alias de --blue (mêmes ratios, mêmes seuils tenus) ; la rouge
+    // porte un vrai défaut mesuré à travers le même alias (1.70:1, 1.50:1 < 3:1 en clair).
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-alias-verte.html')],
+    rouge: [fx('tokens-t8-alias-rouge.html')],
+  },
+  {
     // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
     // sous 3:1 est mesuré et signalé ; il ne devient un écart DUR que si l'auteur DÉCLARE la
     // frontière nécessaire par --paires-interface — WCAG n'exige 3:1 que des frontières qui

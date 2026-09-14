@@ -37,7 +37,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse, contrast } from "./lib/color.mjs";
+import { parse, contrast, resoudreVar } from "./lib/color.mjs";
 
 const arg = (n, def) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : def; };
 const tokensPath = arg("--tokens"), marquePath = arg("--marque"), sortie = arg("--sortie");
@@ -71,23 +71,14 @@ const varSombre = (nomVar) => varDans(blocSombre, nomVar) ?? varDe(nomVar);
 // de cette forge (references/tokens.md) PRESCRIT un groupe d'ALIAS (--accent, --texte,
 // --fond…) émis en `var(--cible)` par scripts/generer-tokens-css.mjs ; ce générateur ne
 // savait lire QUE des valeurs littérales et refusait « couleur illisible pour --accent :
-// var(--blue) » sur tout tokens.css conforme à sa propre forge. Résoudre la chaîne de
-// `var(--x)` dans les blocs fournis (le bloc sombre d'abord si on résout en contexte
-// sombre, la cascade CSS retombant sur le clair) avant de parser une couleur — jamais
-// plus de 8 sauts, pour qu'un alias circulaire échoue proprement plutôt que de boucler.
-function resoudreVar(valeur, blocs, profondeur = 0) {
-  if (valeur == null) return valeur;
-  const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/.exec(valeur.trim());
-  if (!m) return valeur;
-  if (profondeur >= 8) return null; // chaîne d'alias trop longue ou circulaire
-  for (const bloc of blocs) {
-    const brut = (bloc.match(new RegExp(`${m[1]}\\s*:\\s*([^;]+);`)) || [, null])[1]?.trim();
-    if (brut !== undefined && brut !== null) return resoudreVar(brut, blocs, profondeur + 1);
-  }
-  return m[2] !== undefined ? resoudreVar(m[2].trim(), blocs, profondeur + 1) : null;
-}
-const coul = (nomVar) => resoudreVar(varDe(nomVar), [bloc]);
-const coulSombre = (nomVar) => resoudreVar(varSombre(nomVar), [blocSombre, bloc]);
+// var(--blue) » sur tout tokens.css conforme à sa propre forge. `resoudreVar` (lib/color.mjs,
+// TF-1106 : réutilisée telle quelle par oracle-tokens.mjs pour T5/T8, jamais réimplémentée)
+// résout la chaîne de `var(--x)` contre les tables fournies (le bloc sombre d'abord si on
+// résout en contexte sombre, la cascade CSS retombant sur le clair) avant de parser une
+// couleur — jamais plus de 8 sauts, pour qu'un alias circulaire échoue proprement.
+const depuisBloc = (bloc) => (nom) => (bloc.match(new RegExp(`${nom}\\s*:\\s*([^;]+);`)) || [, null])[1]?.trim();
+const coul = (nomVar) => resoudreVar(varDe(nomVar), [depuisBloc(bloc)]);
+const coulSombre = (nomVar) => resoudreVar(varSombre(nomVar), [depuisBloc(blocSombre), depuisBloc(bloc)]);
 
 const enHex = (valeur, ou) => {
   if (!valeur) return null;
@@ -158,13 +149,13 @@ const focus = {
 };
 focus.prescrit = Boolean(focus.anneau);
 if (focus.prescrit) {
-  focus.hex = enHex(resoudreVar(focus.anneau, [bloc]), "--focus-anneau");
+  focus.hex = enHex(resoudreVar(focus.anneau, [depuisBloc(bloc)]), "--focus-anneau");
   focus.ratio = ratio(focus.hex, couleurs.surface);
   if (focus.ratio < 3) {
     refus(`contraste anneau de focus/fond ${focus.ratio.toFixed(2)}:1 < 3:1 (WCAG 1.4.11 — un anneau invisible n'est pas un focus visible)`);
   }
   if (sombre && sombre.surface && focus.anneauSombre) {
-    focus.hexSombre = enHex(resoudreVar(focus.anneauSombre, [blocSombre, bloc]), "--focus-anneau (thème sombre)");
+    focus.hexSombre = enHex(resoudreVar(focus.anneauSombre, [depuisBloc(blocSombre), depuisBloc(bloc)]), "--focus-anneau (thème sombre)");
     focus.ratioSombre = ratio(focus.hexSombre, sombre.surface);
     if (focus.ratioSombre < 3) {
       refus(`contraste anneau de focus/fond du thème sombre ${focus.ratioSombre.toFixed(2)}:1 < 3:1 (WCAG 1.4.11)`);
