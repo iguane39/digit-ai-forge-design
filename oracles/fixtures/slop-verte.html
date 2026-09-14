@@ -32,6 +32,11 @@
   /* filet d'une largeur de trait : autorisé */
   .alerte { border-left: 1px solid var(--trait); padding: 12px 16px; background: var(--surface); }
 
+  /* TF-1056 — triangle CSS (chevron de pliage) : construction canonique du socle
+     digit-ai-page-html (.arbre-glyphe), exemptée de S1 (les quatre conditions
+     à la fois : width:0, height:0, border-top et border-bottom transparents). */
+  .arbre-glyphe { display: inline-block; width: 0; height: 0; border-left: 5px solid currentColor; border-top: 4px solid transparent; border-bottom: 4px solid transparent; }
+
   /* rayons variés, pas de rectangle arrondi générique */
   .carte { border-radius: 10px; }
   .champ { border-radius: 4px; }
@@ -51,6 +56,9 @@
   <p>Bienvenue sur votre espace. <span class="signal">Trois traitements</span> sont en cours.</p>
 
   <div class="alerte">Quota bientôt atteint.</div>
+
+  <!-- TF-1056 — chevron de pliage rendu par le triangle CSS ci-dessus -->
+  <button aria-expanded="false"><i class="arbre-glyphe" aria-hidden="true"></i> Déplier</button>
 
   <!-- trois blocs de même classe mais sans icône : ce n'est pas une grille templatée -->
   <section class="liste">

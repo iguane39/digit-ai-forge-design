@@ -13,6 +13,10 @@
   .alerte { border-left: 4px solid var(--color-warning); padding: 12px; }
   .encart { border-right: 3px solid #e11d48; }
 
+  /* TF-1056 — un vrai bandeau sur un bloc avec hauteur reste jugé : width:0 seul
+     ne suffit pas à l'exemption du triangle CSS (il faut aussi height:0). */
+  .faux-triangle { width: 0; height: 20px; border-left: 6px solid #ef4444; border-top: 1px solid transparent; border-bottom: 1px solid transparent; }
+
   /* S2 + S5a · texte en dégradé, violet vers bleu */
   .titre {
     background: linear-gradient(90deg, #7c3aed, #2563eb);
