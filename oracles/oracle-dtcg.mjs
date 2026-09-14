@@ -1,11 +1,17 @@
 #!/usr/bin/env node
 // oracle-dtcg — Domaine « Pipeline de tokens : source DTCG → tokens.css dérivé » (déterministe).
 //
-// Règles D1–D3. Ce que l'oracle exige :
+// Règles D1–D4. Ce que l'oracle exige :
 //   D1  chaque token feuille non-alias porte $type et $value (forme DTCG minimale)
 //   D2  chaque alias {chemin.pointille} résout vers un token existant du document
 //   D3  le tokens.css fourni est EXACTEMENT la régénération de sa source DTCG —
 //       aucune dérive manuelle entre le fichier édité et le fichier livré
+//   D4  si la source déclare $fraicheur (empreintes datées d'un bloc EXTERNE qu'elle
+//       reprend telle quelle, ex. le boilerplate d'un socle de rendu), l'empreinte
+//       recalculée de ce bloc correspond à celle enregistrée — jamais réclamé aux
+//       sources qui ne déclarent pas $fraicheur (TF-1034, constat en passant du
+//       11/09/2026 : corpus/tokens-digit-ai.tokens.json se disait « extrait le
+//       04/08/2026 » sans qu'aucun contrôle ne tienne cette date).
 //
 // Utilise scripts/generer-tokens-css.mjs pour D2 (résolution d'alias) et D3
 // (régénération) : c'est la même fonction qui génère et qui vérifie, donc
@@ -15,7 +21,9 @@
 // Usage : node oracle-dtcg.mjs <source.tokens.json> <tokens.css> [--json-only]
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { estFeuille, estAlias, resoudreChemin, feuillesDe, genererCss } from '../scripts/generer-tokens-css.mjs';
 
 const DOM = 'Pipeline de tokens : source DTCG → tokens.css dérivé';
@@ -100,6 +108,49 @@ for (const [chemin, noeud] of feuillesDe(dtcg)) {
         `attendu « ${(A[i] ?? '(fin de fichier)').slice(0, 80)} », obtenu « ${(B[i] ?? '(fin de fichier)').slice(0, 80)} ». ` +
         `Régénérer : node scripts/generer-tokens-css.mjs ${source} --sortie ${derive}`,
         derive);
+    }
+  }
+}
+
+// ── D4 · fraîcheur face à un bloc EXTERNE nommé (TF-1034, sous seuil d'étude) ──
+// $fraicheur est un champ OPTIONNEL : { verifie_le, sources: [{cle, chemin, empreinte}] }.
+// `cle` sélectionne l'extracteur ci-dessous ; `chemin` accepte le préfixe « ~ » (répertoire
+// utilisateur, pour référencer un skill installé hors du dépôt). Une source qui ne déclare
+// pas $fraicheur n'est PAS mise en échec : la règle ne réclame rien à l'existant du parc.
+const EXTRACTEURS_FRAICHEUR = {
+  'boilerplate:root-clair': texte => (texte.match(/:root\s*{([^}]*)}/) || [, null])[1],
+  'boilerplate:root-dark': texte => (texte.match(/:root\[data-theme=["']dark["']\]\s*{([^}]*)}/) || [, null])[1],
+  'charte:root-solid': texte => (texte.match(/```css\n:root\s*{([\s\S]*?)}\n```/) || [, null])[1],
+};
+if (dtcg.$fraicheur && Array.isArray(dtcg.$fraicheur.sources) && dtcg.$fraicheur.sources.length) {
+  const empreinte = t => createHash('sha256').update(t.replace(/\r\n/g, '\n').trim()).digest('hex');
+  const dedomicilier = p => (p.startsWith('~') ? path.join(os.homedir(), p.slice(1)) : p);
+  for (const s of dtcg.$fraicheur.sources) {
+    if (!s || !s.cle || !s.chemin || !s.empreinte) {
+      add('bloquant', 'D4', '$fraicheur.sources : entrée incomplète (cle, chemin et empreinte requis)', source);
+      continue;
+    }
+    const extracteur = EXTRACTEURS_FRAICHEUR[s.cle];
+    if (!extracteur) {
+      add('avertissement', 'D4', `$fraicheur.sources : clé « ${s.cle} » non reconnue de cet oracle`, source);
+      continue;
+    }
+    const chemin = dedomicilier(s.chemin);
+    if (!fs.existsSync(chemin)) {
+      NJ.push(`D4 : « ${s.cle} » — fichier externe introuvable (${chemin}) : fraîcheur non vérifiable dans cet environnement`);
+      continue;
+    }
+    const bloc = extracteur(fs.readFileSync(chemin, 'utf8'));
+    if (bloc == null) {
+      add('bloquant', 'D4', `« ${s.cle} » : bloc introuvable dans ${chemin} — sa forme attendue a peut-être changé`, chemin);
+      continue;
+    }
+    const actuelle = empreinte(bloc);
+    if (actuelle !== s.empreinte) {
+      add('bloquant', 'D4',
+        `« ${s.cle} » a changé depuis le ${dtcg.$fraicheur.verifie_le} : empreinte enregistrée ` +
+        `${s.empreinte.slice(0, 12)}…, empreinte actuelle ${actuelle.slice(0, 12)}… — réaligner la source sur ${chemin}`,
+        chemin);
     }
   }
 }

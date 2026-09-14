@@ -1,0 +1,41 @@
+/* tokens.css — DÉRIVÉ, ne pas éditer à la main.
+ * Source unique : oracles/fixtures/dtcg-fraicheur-verte.tokens.json (format W3C DTCG, stable 2025.10).
+ * Régénérer : node scripts/generer-tokens-css.mjs oracles/fixtures/dtcg-fraicheur-verte.tokens.json --sortie oracles/fixtures/dtcg-fraicheur-verte.css
+ * Vérifié par : node oracles/oracle-dtcg.mjs oracles/fixtures/dtcg-fraicheur-verte.tokens.json oracles/fixtures/dtcg-fraicheur-verte.css
+ *
+ * Fixture D4 (TF-1034) — source DTCG minimale qui déclare $fraicheur : empreinte du bloc :root du bouchon de socle dtcg-fraicheur-socle.html, à jour.
+ */
+
+:root {
+  /* --- Rendu natif : le navigateur peint SES composants (top-layer dialog/popover,
+         contrôles de formulaire, barres de défilement, ::backdrop) dans le schéma
+         déclaré ici, jamais dans celui de l'OS (TF-0796) --- */
+  color-scheme: light;
+
+  /* --- Couleurs, thème clair (référence) --- */
+  --bg: #FFFFFF;
+  --ink: #111111;
+
+  /* --- Typographie --- */
+
+
+  /* --- Rayons --- */
+
+
+  /* --- Alias au nommage de la forge (oracle-tokens T5 résout les paires par le nom) --- */
+
+
+  /* --- Échelle d'espacement 4pt (oracle-tokens T3) --- */
+
+}
+
+/* --- Thème sombre, dérivé --- */
+@media (prefers-color-scheme: dark) {
+  :root {
+
+  }
+}
+
+:root[data-theme="dark"] {  }
+
+:root[data-theme="light"] { color-scheme: light; --bg: #FFFFFF; --ink: #111111; }

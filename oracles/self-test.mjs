@@ -260,6 +260,17 @@ const CAS = [
     rouge: [fx('dtcg-rouge.tokens.json'), fx('dtcg-rouge.css')],
   },
   {
+    // TF-1034 (constat en passant, lot marque Digit-AI, 11/09/2026) — D4 : une source qui
+    // DÉCLARE $fraicheur (empreinte datée d'un bloc externe qu'elle reprend telle quelle,
+    // ex. un socle de rendu) est mise en échec si ce bloc a changé depuis. Les deux fixtures
+    // ne diffèrent QUE par l'empreinte enregistrée : la verte est à jour, la rouge est
+    // volontairement périmée face au même bouchon de socle (dtcg-fraicheur-socle.html).
+    oracle: 'oracle-dtcg.mjs',
+    regles: ['D4'],
+    verte: [fx('dtcg-fraicheur-verte.tokens.json'), fx('dtcg-fraicheur-verte.css')],
+    rouge: [fx('dtcg-fraicheur-rouge.tokens.json'), fx('dtcg-fraicheur-rouge.css')],
+  },
+  {
     // TF-0863 (lot L6, 07/09/2026) — un rapport Power BI « personnalisé » livré au thème par
     // défaut est un défaut de loi n° 6. La verte est la régénération exacte du corpus de tokens
     // (scripts/generer-theme-powerbi.mjs) ; la rouge est le thème par défaut du produit : palette

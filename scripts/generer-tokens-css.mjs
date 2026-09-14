@@ -84,7 +84,9 @@ function deriverNomSortie(sourcePath) {
 /**
  * Transforme un document DTCG (déjà parsé) en tokens.css.
  * Contrat de groupes attendu (voir corpus/tokens-digit-ai.tokens.json) :
- *   couleur.clair, couleur.sombre, typographie, rayon, espacement, mouvement, alias.
+ *   couleur.clair, couleur.sombre, typographie, rayon, espacement, mouvement, alias, focus.
+ * `focus` (TF-1034) est un groupe MIXTE : chaque entrée peut être un alias {chemin} ou un
+ * littéral, contrairement à `alias` qui n'accepte que des références.
  * `mouvement` est émis SEULEMENT s'il est présent dans la source : une source
  * antérieure à TF-0321 se régénère donc à l'octet près, et oracle-dtcg D3 ne
  * requalifie aucun tokens.css existant.
@@ -124,6 +126,7 @@ export function genererCss(dtcg, sourcePath = 'corpus/tokens-digit-ai.tokens.jso
   const espacement = dtcg.espacement || {};
   const mouvement = dtcg.mouvement || {};
   const alias = dtcg.alias || {};
+  const focus = dtcg.focus || {};
 
   const lignesAlias = Object.entries(alias).map(([nom, noeud]) => {
     if (!estAlias(noeud)) throw new Error(`alias « ${nom} » sans référence {chemin} exploitable`);
@@ -144,6 +147,23 @@ export function genererCss(dtcg, sourcePath = 'corpus/tokens-digit-ai.tokens.jso
     ? `\n  /* --- Mouvement : durées par taille de geste, easings nommés, seuils (oracle-motion R4/R8/R9) --- */\n`
       + Object.entries(mouvement).filter(([k]) => !k.startsWith('$'))
         .map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n') + '\n'
+    : '';
+
+  // Focus (TF-1034, réalignement du corpus digit-ai sur le socle) : groupe MIXTE — un token
+  // peut y être un ALIAS ({chemin}, ex. --focus-anneau vers la couleur d'accent, pour ne
+  // jamais dupliquer la valeur) ou un littéral (--focus-decalage, une dimension). Même
+  // doctrine que « mouvement » : groupe absent ⇒ bloc absent, à l'octet près — une source
+  // antérieure à ce chantier se régénère donc identique, et oracle-dtcg D3 ne requalifie
+  // rien d'existant.
+  const ligneFocus = ([nom, noeud]) => {
+    if (!estAlias(noeud)) return `  --${nom}: ${valeurCss(noeud)};`;
+    const chemin = noeud.$value.trim().slice(1, -1);
+    if (resoudreChemin(dtcg, chemin) == null) throw new Error(`token « ${nom} » (groupe focus) référence un chemin introuvable : ${chemin}`);
+    return `  --${nom}: var(--${chemin.split('.').pop()});`;
+  };
+  const blocFocus = Object.keys(focus).filter(k => !k.startsWith('$')).length
+    ? `\n  /* --- Focus : anneau et écart PRESCRITS, jamais improvisés à la consommation (RGAA 10.7, oracle-tokens T8) --- */\n`
+      + Object.entries(focus).filter(([k]) => !k.startsWith('$')).map(ligneFocus).join('\n') + '\n'
     : '';
 
   const aSombre = Object.keys(sombre).filter(k => !k.startsWith('$')).length > 0;
@@ -183,7 +203,7 @@ ${lignesAlias}
 
   /* --- Échelle d'espacement 4pt (oracle-tokens T3) --- */
 ${lignesEspace}
-${blocMouvement}}
+${blocFocus}${blocMouvement}}
 
 /* --- Thème sombre, dérivé --- */
 @media (prefers-color-scheme: dark) {
