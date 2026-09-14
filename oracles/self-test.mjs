@@ -161,6 +161,19 @@ const CAS = [
     rouge: [fx('tokens-t8-alias-rouge.html')],
   },
   {
+    // TF-1108 (14/09/2026) — le boilerplate du socle prescrit --focus-anneau au format
+    // RACCOURCI complet (« 2px solid var(--blue) »), pas seulement la couleur. Après
+    // TF-1106 (résolution des alias), la valeur restait illisible : rien n'extrayait la
+    // composante couleur d'un raccourci border/outline avant de la passer à resoudreVar.
+    // La verte couvre les deux formes (couleur = alias en clair, couleur = littéral et
+    // style différent en sombre) ; la rouge porte le même raccourci avec un vrai défaut
+    // de contraste (1.70:1, 1.50:1 en clair).
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-shorthand-verte.html')],
+    rouge: [fx('tokens-t8-shorthand-rouge.html')],
+  },
+  {
     // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
     // sous 3:1 est mesuré et signalé ; il ne devient un écart DUR que si l'auteur DÉCLARE la
     // frontière nécessaire par --paires-interface — WCAG n'exige 3:1 que des frontières qui

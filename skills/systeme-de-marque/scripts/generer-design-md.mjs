@@ -37,7 +37,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { parse, contrast, resoudreVar } from "./lib/color.mjs";
+import { parse, contrast, resoudreVar, extraireCouleurRaccourci } from "./lib/color.mjs";
 
 const arg = (n, def) => { const i = process.argv.indexOf(n); return i > 0 ? process.argv[i + 1] : def; };
 const tokensPath = arg("--tokens"), marquePath = arg("--marque"), sortie = arg("--sortie");
@@ -149,13 +149,13 @@ const focus = {
 };
 focus.prescrit = Boolean(focus.anneau);
 if (focus.prescrit) {
-  focus.hex = enHex(resoudreVar(focus.anneau, [depuisBloc(bloc)]), "--focus-anneau");
+  focus.hex = enHex(resoudreVar(extraireCouleurRaccourci(focus.anneau), [depuisBloc(bloc)]), "--focus-anneau");
   focus.ratio = ratio(focus.hex, couleurs.surface);
   if (focus.ratio < 3) {
     refus(`contraste anneau de focus/fond ${focus.ratio.toFixed(2)}:1 < 3:1 (WCAG 1.4.11 — un anneau invisible n'est pas un focus visible)`);
   }
   if (sombre && sombre.surface && focus.anneauSombre) {
-    focus.hexSombre = enHex(resoudreVar(focus.anneauSombre, [depuisBloc(blocSombre), depuisBloc(bloc)]), "--focus-anneau (thème sombre)");
+    focus.hexSombre = enHex(resoudreVar(extraireCouleurRaccourci(focus.anneauSombre), [depuisBloc(blocSombre), depuisBloc(bloc)]), "--focus-anneau (thème sombre)");
     focus.ratioSombre = ratio(focus.hexSombre, sombre.surface);
     if (focus.ratioSombre < 3) {
       refus(`contraste anneau de focus/fond du thème sombre ${focus.ratioSombre.toFixed(2)}:1 < 3:1 (WCAG 1.4.11)`);

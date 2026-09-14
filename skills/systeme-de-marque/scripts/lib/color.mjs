@@ -117,6 +117,50 @@ export function contrast(c1, c2) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
+const RACCOURCI_STYLES = new Set(['none', 'hidden', 'dotted', 'dashed', 'solid', 'double',
+  'groove', 'ridge', 'inset', 'outset']);
+const RACCOURCI_LARGEURS = new Set(['thin', 'medium', 'thick']);
+const estLargeurRaccourci = t => RACCOURCI_LARGEURS.has(t.toLowerCase())
+  || /^-?\d*\.?\d+(px|em|rem|pt|cm|mm|in|pc|q|%)$/i.test(t);
+
+/** Découpe sur les espaces, SAUF à l'intérieur d'une parenthèse (var(--x), rgb(...)). */
+function tokeniserRaccourci(valeur) {
+  const out = [];
+  let buf = '', profondeur = 0;
+  for (const ch of valeur) {
+    if (ch === '(') profondeur++;
+    if (ch === ')') profondeur--;
+    if (/\s/.test(ch) && profondeur === 0) { if (buf) out.push(buf); buf = ''; }
+    else buf += ch;
+  }
+  if (buf) out.push(buf);
+  return out;
+}
+
+/**
+ * Extrait la composante COULEUR d'un raccourci `border`/`outline` (« 2px solid var(--blue) »,
+ * « 3px dashed #1d4ed8 ») en retirant largeur et style — dans CET ORDRE, TOUJOURS avant
+ * `resoudreVar` : un raccourci n'est jamais lui-même une chaîne `var(...)` valide, et lui
+ * laisser un raccourci intact revient à ne rien résoudre.
+ *
+ * TF-1108 (14/09/2026) — le boilerplate du socle digit-ai-page-html prescrit
+ * `--focus-anneau: 2px solid var(--blue)` (le token PORTE tout le raccourci, pas seulement
+ * la couleur) ; `oracle-tokens` T8 lisait cette valeur telle quelle et la jugeait illisible
+ * après TF-1106 déjà, faute d'extraction du composant couleur. Une valeur à un seul
+ * composant (pas de largeur ni de style détectés) est renvoyée TELLE QUELLE : ce n'est pas
+ * un raccourci, `resoudreVar` la traite normalement. Une valeur dont PLUSIEURS composants
+ * restent après avoir retiré largeur et style (ambiguïté — deux couleurs candidates, ou une
+ * syntaxe non reconnue) est renvoyée telle quelle aussi : deviner serait pire que refuser.
+ */
+export function extraireCouleurRaccourci(valeur) {
+  if (valeur == null) return valeur;
+  const s = String(valeur).trim();
+  const tokens = tokeniserRaccourci(s);
+  if (tokens.length <= 1) return s;
+  const reste = tokens.filter(t => !RACCOURCI_STYLES.has(t.toLowerCase()) && !estLargeurRaccourci(t));
+  return reste.length === 1 ? reste[0] : s;
+}
+
 /**
  * Résout une chaîne `var(--x[, repli])` contre une liste de TABLES consultées dans
  * l'ordre (chaque table : une fonction nom-avec-tirets → valeur brute, ou undefined/null

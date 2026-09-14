@@ -38,7 +38,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, css, cssRulesDeep, lineOf } from './lib/html.mjs';
-import { parse as color, hsl, contrast, findColors, resoudreVar } from './lib/color.mjs';
+import { parse as color, hsl, contrast, findColors, resoudreVar, extraireCouleurRaccourci } from './lib/color.mjs';
 
 const DOM = 'Système de marque : traçabilité des tokens';
 const args = process.argv.slice(2);
@@ -431,7 +431,7 @@ if (tokenAnneau) {
   for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
     const va = table.get(tokenAnneau[0]);
     if (va === undefined) continue; // parité : c'est T4 qui la réclame
-    const ca = color(resoudreVar(va, [n => table.get(n)]));
+    const ca = color(resoudreVar(extraireCouleurRaccourci(va), [n => table.get(n)]));
     if (!ca || ca.a !== 1) { NJ.push(`T8 : ${tokenAnneau[0]} semi-transparent ou illisible en thème ${theme} — contraste de l'anneau non décidable sur le fichier`); continue; }
     const surfaces = [...table]
       .filter(([k]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k))
