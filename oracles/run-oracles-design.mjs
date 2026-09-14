@@ -144,8 +144,16 @@ function lancerRenderPage(tmpHtml, etiquette, outillage) {
   // rendu FAIL sur « L2 accroche bridée 0.47 » remontait ici en FAIL avec un
   // findings[] VIDE, et le détail n'était visible qu'en relançant render_page.py
   // à la main. Un agrégateur qui perd le motif du refus ne rapporte rien.
+  // TF-1066 (12/09/2026) : même défaut, même classe, sur les deux familles V18
+  // livrées par le socle avec la grille 4K — v18_prose_etiree et
+  // v18_tableau_etrique sont « bloquant » dans render_page.py (FAMILLES),
+  // absentes d'ici. self-test.mjs le mesure : la fixture verte rendu-l2-verte
+  // sort en FAIL au-delà de 1920 px sans aucun constat bloquant propagé.
   const findings = [];
-  const durs = { v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4', l2_width: 'L2', l2_gouttiere: 'L2' };
+  const durs = {
+    v1_overflow: 'V1', v2_contrast: 'V2', v4_overlap: 'V4', l2_width: 'L2', l2_gouttiere: 'L2',
+    v18_prose_etiree: 'V18', v18_tableau_etrique: 'V18',
+  };
   const avert = { v3_align: 'V3', v7_spacing: 'V7' };
   const info = { unmeasured: '—' };
   const connues = new Set([...Object.keys(durs), ...Object.keys(avert), ...Object.keys(info)]);

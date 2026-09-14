@@ -8,6 +8,12 @@
   TF-0278. Meme page que rendu-l2-rouge.html, sans le bridage de largeur : le
   rendu ne produit aucun constat bloquant et l'agregateur passe. Elle verrouille
   le sens inverse — la propagation des issues[] n'invente pas de constat.
+
+  TF-1066 (12/09/2026) : la grille de verification est montee a 3840/2560 px.
+  A ces largeurs, ces deux paragraphes sans conteneur de lecture depassent le
+  plafond V18 (100 caracteres/ligne) — un defaut reel mais etranger a ce que
+  cette fixture verrouille (TF-0278, propagation L2). Assume par
+  data-mesure-lecture, comme le message de V18 le prescrit lui-meme.
 -->
 <style>
   :root {
@@ -40,8 +46,8 @@
     <button class="theme-toggle" type="button" data-action="basculer-theme" aria-pressed="false">Theme sombre</button>
   </header>
   <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
-  <p class="corps">Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est celle que la page lui laisse : le rapport reste au-dessus du seuil et rien n'est compte.</p>
-  <p class="note">Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le silence de l'oracle ne tienne pas a un cas unique.</p>
+  <p class="corps" data-mesure-lecture>Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est celle que la page lui laisse : le rapport reste au-dessus du seuil et rien n'est compte.</p>
+  <p class="note" data-mesure-lecture>Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le silence de l'oracle ne tienne pas a un cas unique.</p>
   <script>
     const bouton = document.querySelector('.theme-toggle');
     const appliquer = (t) => {
