@@ -99,6 +99,20 @@ const CAS = [
     rouge: [fx('tokens-rouge.html')],
   },
   {
+    // TF-1123 (mesuré le 14/09/2026 sur Produit-62, RD-18) — T1 cherchait des couleurs
+    // littérales dans la valeur ENTIÈRE d'une déclaration sans écarter l'intérieur d'un
+    // var() : le REPLI d'un var(--jeton, <repli>) comptait comme une couleur en dur, alors
+    // qu'il n'est jamais la couleur appliquée. Un bloquant tombait sur la forme même que la
+    // règle réclame (« passer par var(--token) ») ; le seul geste qui l'éteignait était de
+    // SUPPRIMER le repli. Les deux fixtures ne diffèrent QUE par la présence du var()
+    // autour des mêmes couleurs : la verte passe, la rouge (couleurs nues, hors var()) reste
+    // bloquante — la règle n'est pas désarmée.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T1'],
+    verte: [fx('tokens-t1-repli-verte.html')],
+    rouge: [fx('tokens-t1-repli-rouge.html')],
+  },
+  {
     // TF-0276 : preuve dédiée du PÉRIMÈTRE de T5. Le produit cartésien
     // texte-* × fond-* sortait --texte-sur-accent en FAIL 1.0:1 sur --fond —
     // une paire qu'aucune règle ne pose — tout en restant AVEUGLE à la vraie

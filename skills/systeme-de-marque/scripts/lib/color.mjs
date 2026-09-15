@@ -189,6 +189,42 @@ export function resoudreVar(valeur, tables, profondeur = 0) {
   return m[2] !== undefined ? resoudreVar(m[2].trim(), tables, profondeur + 1) : null;
 }
 
+/**
+ * Neutralise le contenu de chaque appel `var(...)` d'une valeur CSS — REPLI compris,
+ * `var(--jeton, <repli>)` — avant toute recherche de couleur littérale dans le texte qui
+ * l'entoure. Gère les parenthèses imbriquées (un repli peut lui-même contenir `var(...)`
+ * ou `calc(...)`).
+ *
+ * TF-1123 (15/09/2026) — `oracle-tokens` T1 cherchait des couleurs littérales dans la
+ * valeur ENTIÈRE d'une déclaration (`color: var(--muted, #475569)`) sans écarter
+ * l'intérieur d'un `var()` : le repli n'est JAMAIS la couleur appliquée, il ne l'est que
+ * si le jeton nommé est absent — un bloquant tombait sur la forme même que la règle
+ * réclame (« passer par var(--token) »), et le seul geste qui l'éteignait était de
+ * SUPPRIMER le repli, rendant le composant plus fragile. Même bibliothèque canonique que
+ * `resoudreVar` (TF-1106) et `extraireCouleurRaccourci` (TF-1108) : une seule
+ * implémentation, jamais une résolution parallèle qui pourrait diverger.
+ */
+export function neutraliserVar(valeur) {
+  if (valeur == null) return valeur;
+  const s = String(valeur);
+  let out = '', i = 0;
+  while (i < s.length) {
+    if (s.startsWith('var(', i)) {
+      let profondeur = 1, j = i + 4;
+      while (j < s.length && profondeur > 0) {
+        if (s[j] === '(') profondeur++;
+        else if (s[j] === ')') profondeur--;
+        j++;
+      }
+      i = j; // saute tout var(...), repli et parenthèses imbriquées compris
+      continue;
+    }
+    out += s[i];
+    i++;
+  }
+  return out;
+}
+
 /** Toutes les couleurs littérales trouvées dans un texte CSS, avec leur offset. */
 export function findColors(text) {
   const out = [];

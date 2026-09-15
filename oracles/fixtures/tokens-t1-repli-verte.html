@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T1, repli d'un var() n'est pas une couleur en dur</title>
+<!--
+  TF-1123 (mesuré le 14/09/2026 sur Produit-62, RD-18). PROPS_COULEUR capture la valeur
+  ENTIÈRE d'une déclaration de couleur, et findColors() y cherchait des littéraux sans
+  écarter l'intérieur d'un var() — le REPLI d'un var(--jeton, <repli>) n'est jamais la
+  couleur appliquée (il ne l'est que si le jeton est absent), et pourtant comptait comme
+  une couleur en dur. Reproduction fidèle du cas mesuré : .contenu { color: var(--muted,
+  #475569) } — la forme même que la charte réclame (« corriger les assets à la source —
+  couleurs en dur passées en jetons », RS-01 du lot 20260911c) rendait un bloquant T1.
+
+  Attendu : PASS, exit 0 — aucun T1 sur .contenu, .encart, ni sur le bouton au survol.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --muted: #475569;
+    --surface: #f8fafc;
+    --blue: #2563eb;
+  }
+  body { background: var(--fond); margin: 0; padding: 32px; }
+  .contenu { color: var(--muted, #475569); }
+  .encart { background: var(--surface, #fff); color: var(--muted, #64748b); padding: 16px; }
+  .bouton:hover { border-color: var(--blue, #2563eb); }
+</style>
+</head>
+<body>
+  <p class="contenu">Trois traitements en cours.</p>
+  <div class="encart">Note de version.</div>
+  <button class="bouton" type="button">Relancer</button>
+</body>
+</html>

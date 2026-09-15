@@ -38,7 +38,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, css, cssRulesDeep, lineOf } from './lib/html.mjs';
-import { parse as color, hsl, contrast, findColors, resoudreVar, extraireCouleurRaccourci } from './lib/color.mjs';
+import { parse as color, hsl, contrast, findColors, resoudreVar, extraireCouleurRaccourci, neutraliserVar } from './lib/color.mjs';
 
 const DOM = 'Système de marque : traçabilité des tokens';
 const args = process.argv.slice(2);
@@ -111,7 +111,9 @@ for (const r of regles) {
   PROPS_COULEUR.lastIndex = 0;
   while ((m = PROPS_COULEUR.exec(r.body))) {
     const val = m[3];
-    for (const c of findColors(val)) {
+    // TF-1123 — le repli d'un var(--jeton, <repli>) n'est jamais la couleur appliquée : ne
+    // jamais chercher de littéral à l'intérieur d'un var(), une couleur hors var() reste jugée.
+    for (const c of findColors(neutraliserVar(val))) {
       add('bloquant', 'T1', `couleur en dur « ${c.raw} » sur ${m[2]} : passer par var(--token)`,
         `sélecteur « ${r.selector.slice(0, 60)} », ligne ~${lineOf(cssText, r.start)} du CSS`);
     }
