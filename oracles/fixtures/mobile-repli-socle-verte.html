@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — oracle-mobile M4, repli en cartes au seuil du socle (900px)</title>
+<!--
+  TF-1129 (mesuré le 13/09/2026 sur Produit-64). Le boilerplate du socle digit-ai-page-html
+  pose son repli en cartes sous @media (max-width: 900px) (TF-0900 : au-dessus de 900px le
+  conteneur ne défile pas, sous 900px le repli masque le thead et restitue les étiquettes
+  cellule par cellule). M4 cherchait un reflow sous un max-width INFÉRIEUR OU ÉGAL à 768 —
+  900 > 768 échouait le test alors qu'un seuil plus large COUVRE la mesure à 768px : rendu
+  bloquant sur une page conforme au socle, sans un octet de mise en page maison.
+
+  Attendu : PASS, exit 0 — aucun M4 bloquant. render_page.py confirme par ailleurs (mesure
+  indépendante, non rejouée ici) zéro débordement (V1) à 768px sur ce même mécanisme.
+-->
+<style>
+  body { margin: 0; padding: 16px; }
+
+  /* Le repli en cartes du socle, à SON seuil réel (900px), pas un seuil choisi pour la
+     fixture : thead disparaît, chaque cellule reprend son étiquette. */
+  @media (max-width: 900px) {
+    table, tbody, tr, td { display: block; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid; margin-bottom: 12px; }
+    td::before { content: attr(data-label); font-weight: 600; }
+  }
+</style>
+</head>
+<body>
+  <h1>Dossiers ouverts</h1>
+  <table>
+    <thead><tr><th>Dossier</th><th>Ouvert le</th><th>Statut</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Dossier">D-1042</td><td data-label="Ouvert le">02/07/2026</td><td data-label="Statut">En cours</td></tr>
+      <tr><td data-label="Dossier">D-1043</td><td data-label="Ouvert le">03/07/2026</td><td data-label="Statut">Clos</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

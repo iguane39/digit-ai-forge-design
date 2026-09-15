@@ -568,6 +568,22 @@ const CAS = [
     rouge: [fx('socle-charte-rouge.html')],
   },
   {
+    // TF-1129 (mesuré le 13/09/2026 sur Produit-64) — M4 cherchait un reflow sous un
+    // max-width ≤ 768, alors que le sens correct est ≥ 768 : un `@media (max-width: Npx)`
+    // couvre la largeur 768 dès que N ≥ 768, jamais le contraire. Le seuil réel du
+    // boilerplate du socle (900px, TF-0900) échouait le test, ET un seuil manifestement
+    // insuffisant (600px, mobile-rouge.html) l'aurait satisfait. La verte porte le seuil du
+    // socle tel quel (900px) — plus de bloquant, et le même message « info » de restitution
+    // que l'oracle rendait déjà dans la même exécution (la contradiction avec le bloquant a
+    // disparu). La rouge (mobile-rouge.html, 600px, table sans repli à 768px) reste un vrai
+    // défaut mobile, confirmé par ailleurs par render_page.py (débordement V1) — elle n'est
+    // pas dupliquée ici.
+    oracle: 'oracle-mobile.mjs',
+    regles: ['M4'],
+    verte: [fx('mobile-repli-socle-verte.html')],
+    rouge: [fx('mobile-rouge.html')],
+  },
+  {
     // TF-1064 (lot pilot du 12/09/2026) — LE TEXTE QUE LE PLUS DE MONDE LIT N'AVAIT PAS DE JUGE.
     // Le plancher d'écriture du pilot (references\ECRITURE.md) porte en E-12 la règle des textes
     // d'application (type T4) : « un libellé nomme ce que la personne contrôle ; une erreur dit ce
