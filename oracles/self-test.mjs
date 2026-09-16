@@ -753,6 +753,70 @@ for (const cas of CAS) {
     'limite déclarée · l\'encre d\'une paire matricielle est portée au non_juge, jamais devinée');
 }
 
+// TF-1066 — LA GRILLE EST UNE DONNÉE, ET ELLE NE DOIT PLUS DÉRIVER. Le 12/09/2026, la
+// largeur de conception est passée à 1920 px et la grille de vérification au 4K dans
+// run-oracles-design.mjs et oracle-baseline.mjs ; rendu-comparatif.mjs, dans le même
+// dossier, est resté à `1920,1440,1024,768,390`. Quatre jours durant, un correctif comparé
+// avant/après ne voyait rien de ce qui se passe à 2560 et à 3840 — et rien ne le disait.
+// La grille vit désormais dans corpus/grille-viewports.json, datée et sourcée. Ce bloc
+// verrouille les trois choses qui peuvent la faire mentir : un consommateur qui la recopie,
+// une donnée absente que l'on devine, une donnée incohérente que l'on moyenne.
+{
+  console.log(String.fromCharCode(10) + 'lib/grille.mjs (TF-1066) — la grille de largeurs, lue au corpus et jamais devinée');
+  const { lireGrille, FICHIER_GRILLE } = await import('./lib/grille.mjs');
+
+  // Sens VERT — la donnée du corpus arrive telle quelle, triée du plus large au plus étroit.
+  const g = lireGrille();
+  const corpus = JSON.parse(fs.readFileSync(FICHIER_GRILLE, 'utf8'));
+  ligne(g.rendus === [...corpus.rendu].sort((a, b) => b - a).join(',')
+     && g.baselines === [...corpus.baseline].sort((a, b) => b - a).join(',')
+     && g.largeurConception === corpus.largeur_conception,
+    `sens vert · les grilles viennent du corpus — conception ${g.largeurConception} px, rendu ${g.rendus}, baseline ${g.baselines}`);
+  ligne(Boolean(g.source) && Boolean(g.date),
+    `donnée datée et sourcée · date ${g.date}, source déclarée (${(g.source || '').slice(0, 48)}…)`);
+
+  // Sens ROUGE 1 — donnée absente : on LÈVE. Un repli silencieux rendrait un verdict vrai
+  // sur une grille que personne n'a choisie, et c'est le seul verdict qui ne se signale pas.
+  const leve = f => { try { lireGrille(fx(f)); return null; } catch (e) { return e.message; } };
+  const sansRendu = leve('grille-viewports-rouge-sans-rendu.json');
+  ligne(Boolean(sansRendu) && /rendu/.test(sansRendu),
+    'sens rouge · grille sans liste de rendu — lève, aucun repli sur une grille devinée');
+
+  // Sens ROUGE 2 — donnée incohérente : vérifier partout SAUF à la largeur où l'écran a été
+  // dessiné est exactement le défaut que TF-1066 corrige. Il se refuse, il ne s'arbitre pas.
+  const horsGrille = leve('grille-viewports-rouge-conception-hors-grille.json');
+  ligne(Boolean(horsGrille) && /largeur de conception/.test(horsGrille),
+    'sens rouge · largeur de conception absente de la grille de rendu — lève');
+
+  // ANTI-DÉRIVE — aucun des trois consommateurs ne garde sa propre copie de la grille.
+  // C'est le verrou qui manquait le 12/09 : la règle avait été écrite, pas propagée.
+  for (const consommateur of ['run-oracles-design.mjs', 'oracle-baseline.mjs', 'rendu-comparatif.mjs']) {
+    const code = fs.readFileSync(path.join(ici, consommateur), 'utf8');
+    const listesEnDur = code.split(String.fromCharCode(10))
+      .filter(l => !l.trim().startsWith('//'))
+      .filter(l => /['"`]\s*\d{3,4}(?:\s*,\s*\d{3,4}){2,}\s*['"`]/.test(l));
+    ligne(listesEnDur.length === 0 && /lib\/grille\.mjs/.test(code),
+      `anti-dérive · ${consommateur} lit la grille au corpus et n'en garde aucune copie${listesEnDur.length ? ' — copie trouvée : ' + listesEnDur[0].trim().slice(0, 70) : ''}`);
+  }
+
+  // CONCORDANCE DE LA PROSE — les documents qui ÉNONCENT la grille aux producteurs disent
+  // la même chose que la donnée. Un contrat qui prescrit 1440 pendant que l'oracle rend à
+  // 3840 fait travailler le concepteur contre son juge.
+  const MEMES = [
+    'skills/ameliore-le-design/references/contrat-technique.md',
+    'skills/ameliore-le-design/references/criteres-sortie.md',
+    'skills/ameliore-le-design/SKILL.md',
+    'skills/critique-le-design/references/grille.md',
+  ];
+  for (const doc of MEMES) {
+    const texte = fs.readFileSync(path.join(ici, '..', doc), 'utf8');
+    const suites = [...texte.matchAll(/\b\d{3,4}\b(?:\s*[,/]\s*\d{3,4}\b)+/g)]
+      .map(m => m[0].split(/[,/]/).map(s => Number(s.trim())).join(','));
+    ligne(suites.includes(g.rendus),
+      `concordance · ${doc} énonce la grille du corpus (${g.rendus})`);
+  }
+}
+
 // TF-0335 — le générateur de DESIGN.md n'est pas un oracle (il ne rend pas de verdict), mais
 // c'est un exécutable de ce dépôt, et le seul qui n'avait aucun verrou. Sa régression ne se
 // serait vue qu'en AVAL, chez forge-development, sur un produit réel. Il est donc joué ici :

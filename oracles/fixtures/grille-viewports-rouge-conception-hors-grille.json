@@ -1,0 +1,6 @@
+{
+  "$description": "Fixture rouge TF-1066 — la largeur de CONCEPTION (1920) ne figure pas dans la grille de vérification. Attendu : lireGrille() LÈVE. Vérifier partout sauf là où l'écran a été dessiné est exactement le défaut que TF-1066 corrige.",
+  "largeur_conception": 1920,
+  "rendu": [3840, 2560, 1440, 1024, 768, 390],
+  "baseline": [3840, 1024, 390]
+}

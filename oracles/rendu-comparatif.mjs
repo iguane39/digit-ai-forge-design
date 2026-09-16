@@ -12,7 +12,7 @@
 // que s'il coûte UNE commande — c'est le cahier des charges de cet outil.
 //
 //   node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url>
-//        [--zone <sélecteur>] [--largeurs 1920,1440,1024,768,390]
+//        [--zone <sélecteur>] [--largeurs <grille du corpus par défaut>]
 //        [--sortie <dossier>] [--etats-ouverts] [--matrice-etats] [--json-only]
 //
 // Ce qu'il fait, mécaniquement :
@@ -40,6 +40,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
+import { lireGrille } from './lib/grille.mjs';
 import { decoderPng, comparerPng } from './lib/png.mjs';
 
 const args = process.argv.slice(2);
@@ -52,7 +53,13 @@ const matriceEtats = args.includes('--matrice-etats');
 const avantArg = opt('--avant');
 const apresArg = opt('--apres');
 const zone = opt('--zone');
-const largeurs = opt('--largeurs', '1920,1440,1024,768,390');
+// TF-1066 — la grille etait tenue ICI, en copie, et c'est ici que la derive a ete payee :
+// le 12/09/2026 elle est passee a sept largeurs chez run-oracles-design.mjs et a cinq chez
+// oracle-baseline.mjs, et ce fichier est reste a 1920,1440,1024,768,390 — un correctif
+// compare avant/apres ne voyait rien de ce qui se passe a 2560 et a 3840. Elle est lue au
+// corpus (corpus\grille-viewports.json, entree GL45), comme les deux autres.
+const GRILLE = lireGrille();
+const largeurs = opt('--largeurs', GRILLE.rendus);
 
 // LES FAMILLES ET LEUR POIDS SONT LUS DANS LE SOCLE (choix humain du 23/08/2026, option
 // « source unique »). Cette table était tenue ICI, en copie — et c'est ici que la dérive a été

@@ -1,0 +1,5 @@
+{
+  "$description": "Fixture rouge TF-1066 — la grille a perdu sa liste de rendu. Attendu : lireGrille() LÈVE. Un repli silencieux sur une grille devinée ferait rendre un verdict vrai sur la mauvaise question.",
+  "largeur_conception": 1920,
+  "baseline": [1920, 1024, 390]
+}

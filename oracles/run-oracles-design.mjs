@@ -34,18 +34,18 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
+import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
 const rendu = args.includes('--rendu');
-// Grille de rendu — SEPT largeurs. Conception à 1920 px (Full HD), vérification
-// jusqu'au 4K (3840 px) : règle E5 de references\BEST-PRACTICES-HTML.md du pilot
-// (décision humaine du 12/09/2026, TF-1066). 1440 et 1024 restent des largeurs de
-// vérification. Convention partagée avec grille.md, criteres-sortie.md et
-// contrat-technique.md — une baseline à 1920 ne prouve rien à 3840.
-const LARGEURS_RENDU = '3840,2560,1920,1440,1024,768,390';
-const LARGEUR_CONCEPTION = 1920;
+// Grille de rendu — LUE au corpus, jamais écrite ici (TF-1066, loi n° 4 du noyau :
+// une donnée volatile est une donnée, pas du code). Source, date et raison de chaque
+// largeur : corpus\grille-viewports.json, entrée GL45 de corpus\guidelines.csv.
+const GRILLE = lireGrille();
+const LARGEURS_RENDU = GRILLE.rendus;
+const LARGEUR_CONCEPTION = GRILLE.largeurConception;
 const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus');
@@ -75,7 +75,10 @@ function sortir(verdict, resultats, nonJuge, code) {
     orchestrateur: 'run-oracles-design', racine: RACINE, artefact: cible || opt('--corpus') || null,
     // La grille est DITE, pas seulement passée à render_page.py : un lecteur du JSON
     // doit pouvoir constater à quelles largeurs le verdict a été rendu (TF-1066).
-    grille_rendu: { largeur_conception: LARGEUR_CONCEPTION, largeurs: LARGEURS_RENDU.split(',').map(Number) },
+    grille_rendu: {
+      largeur_conception: LARGEUR_CONCEPTION, largeurs: LARGEURS_RENDU.split(',').map(Number),
+      source: 'corpus/grille-viewports.json', date: GRILLE.date,
+    },
     verdict, oracles: resultats, non_juge: nonJuge,
     ...(socleExempte ? { socle_exempte: socleExempte } : {}),
   }, null, jsonOnly ? 0 : 2));

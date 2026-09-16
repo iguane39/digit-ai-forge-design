@@ -1,0 +1,15 @@
+{
+  "$description": "Grille de largeurs de la forge design — une DONNÉE, pas du code. La largeur à laquelle un écran de bureau se dessine et les largeurs auxquelles on le vérifie sont périssables : le parc de postes bouge, le 4K est arrivé, le 1280 des maquettes s'est périmé. Tant qu'elles vivaient en constantes dans trois scripts et recopiées dans cinq documents, elles ont dérivé — le 12/09/2026, la grille est passée à sept largeurs partout SAUF dans oracles/rendu-comparatif.mjs, resté à 1920,1440,1024,768,390 : un correctif comparé avant/après ne voyait rien de ce qui se passe à 2560 et 3840. Ce fichier est la source ; oracles/lib/grille.mjs le lit ; run-oracles-design.mjs, oracle-baseline.mjs et rendu-comparatif.mjs en dérivent leurs grilles. Éditer ICI, jamais dans les scripts.",
+  "$source": "Règle E5 de references\\BEST-PRACTICES-HTML.md du pilot digit-ai-factory, écrite sur mot humain du 12/09/2026 : « pour le design, prends a minima par défaut FullHD (1920px en largeur) pour les desktops, et du responsive design pour monter jusqu'à du 4K ». Décisions D-1 (a) et D-3 (a) de la synthèse 20260911j ; TF-1066.",
+  "$date": "2026-09-12",
+  "$range_le": "2026-09-16",
+  "$entree_corpus": "GL45 de corpus/guidelines.csv",
+
+  "largeur_conception": 1920,
+
+  "rendu": [3840, 2560, 1920, 1440, 1024, 768, 390],
+
+  "baseline": [3840, 2560, 1920, 1024, 390],
+
+  "$baseline_pourquoi": "1440 et 768 sont délibérément hors de la grille de BASELINE : chaque largeur approuvée est un PNG versionné dans ce dépôt, et le coût de stockage se paie à chaque approbation. Ces deux largeurs restent jugées par render_page.py via run-oracles-design.mjs --rendu. La dissymétrie est déclarée en non_juge par oracle-baseline, jamais tue."
+}
