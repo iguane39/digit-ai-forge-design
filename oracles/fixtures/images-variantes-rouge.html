@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — oracle-images I7, variantes qui n'en sont pas</title>
+<!--
+  TF-1074. Trois refus, et les DEUX SENS de la regle.
+
+  1. I7a — « logo » et « logo-white » sont octet pour octet le meme fichier : la
+     variante blanche a recu le contenu de la variante couleur. C'est le defaut
+     E-06 du banc, vu en production le 25/08/2026 (lot Produit-02 20260825b RT-28) :
+     logo bleu fonce sur bandeau fonce.
+
+  2. I7b — « embleme » et « embleme-sombre » ont des empreintes DIFFERENTES :
+     l'export « sombre » porte un commentaire XML et deux identifiants internes en
+     plus. Un controle d'empreinte les declare distincts et se tait. Leur encre est
+     la meme au pixel pres : la variante sombre n'existe pas davantage que la
+     premiere. C'est le cas ou la grandeur correlee ment, et l'invariant tranche.
+
+  3. Une entree du manifeste declare « variante_de » vers un actif que la page ne
+     sert pas : une declaration qui ne designe rien n'est pas une declaration.
+
+  Manifeste complet et alts renseignes : SEULE I7 doit se declencher.
+
+  Attendu : FAIL, exit 1.
+-->
+<script type="application/json" id="manifeste-images">
+[
+  {"id": "logo", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron, fond carre arrondi", "date": "2026-09-16", "genere": true},
+  {"id": "logo-white", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron, variante blanche pour bandeau fonce", "date": "2026-09-16", "genere": true},
+  {"id": "embleme", "modele": "gemini-3.1-flash-image", "prompt": "embleme rond sur cadre arrondi", "date": "2026-09-16", "genere": true},
+  {"id": "embleme-sombre", "modele": "gemini-3.1-flash-image", "prompt": "embleme rond, variante sombre", "date": "2026-09-16", "genere": true},
+  {"id": "sceau-negative", "variante_de": "sceau", "modele": "gemini-3.1-flash-image", "prompt": "sceau, variante sur fond clair", "date": "2026-09-16", "genere": true}
+]
+</script>
+</head>
+<body>
+  <img data-image-id="logo" alt="Marque, version couleur" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE4IDQwIEwzMiAyMCBMNDYgNDAgWiIgZmlsbD0iIzI1NjNFQiIvPjwvc3ZnPg==">
+  <img data-image-id="logo-white" alt="Marque, version blanche du bandeau" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE4IDQwIEwzMiAyMCBMNDYgNDAgWiIgZmlsbD0iIzI1NjNFQiIvPjwvc3ZnPg==">
+  <img data-image-id="embleme" alt="Embleme, version claire" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgcm9sZT0iaW1nIj48dGl0bGU+RW1ibGVtZTwvdGl0bGU+PHJlY3QgaWQ9ImNhZHJlIiB4PSIyIiB5PSIyIiB3aWR0aD0iNDQiIGhlaWdodD0iNDQiIHJ4PSI4IiBmaWxsPSIjMTM0RTRBIi8+PGNpcmNsZSBpZD0icG9pbnQiIGN4PSIyNCIgY3k9IjI0IiByPSI5IiBmaWxsPSIjMTRCOEE2Ii8+PC9zdmc+">
+  <img data-image-id="embleme-sombre" alt="Embleme, version sombre" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCIgcm9sZT0iaW1nIj48dGl0bGU+RW1ibGVtZTwvdGl0bGU+PCEtLSBleHBvcnQgdmFyaWFudGUgc29tYnJlLCAyNS8wOC8yMDI2IC0tPjxyZWN0IGlkPSJjYWRyZS1zb21icmUiIHg9IjIiIHk9IjIiIHdpZHRoPSI0NCIgaGVpZ2h0PSI0NCIgcng9IjgiIGZpbGw9IiMxMzRFNEEiLz48Y2lyY2xlIGlkPSJwb2ludC1zb21icmUiIGN4PSIyNCIgY3k9IjI0IiByPSI5IiBmaWxsPSIjMTRCOEE2Ii8+PC9zdmc+">
+  <p>Le monogramme et l embleme, chacun dans ses deux versions.</p>
+</body>
+</html>

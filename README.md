@@ -167,7 +167,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-slop` | S1–S10 | marqueurs de design généré |
 | `oracle-tokens` | T1–T6 | traçabilité des tokens, parité des thèmes, contraste |
 | `oracle-mobile` | M1–M8 | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante |
-| `oracle-images` | I1–I6 | alt, plafonds, zéro réseau, manifeste de génération |
+| `oracle-images` | I1–I7 | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
 | `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée |

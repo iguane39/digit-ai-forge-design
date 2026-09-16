@@ -249,6 +249,20 @@ const CAS = [
     rouge: [fx('images-relevees-rouge.html')],
   },
   {
+    // TF-1074 (16/09) — L'INVERSE DE LA PARITE. oracle-parite-assets (TF-0784) garde
+    // qu'une COPIE declaree reste identique a sa source ; personne ne gardait l'invariant
+    // inverse. Le 25/08, `logo-white.svg` a recu le contenu de `logo.svg` : logo bleu
+    // fonce sur bandeau fonce, vu en production par l'exploitant (lot Produit-02
+    // 20260825b RT-28, defaut E-06 du banc des defauts echappes).
+    // La rouge porte les DEUX sens : la paire octet pour octet, et — c'est la le
+    // sujet — la paire dont les EMPREINTES DIFFERENT et dont l'encre est la meme.
+    // Un controle d'empreinte seule declarerait la seconde conforme.
+    oracle: 'oracle-images.mjs',
+    regles: ['I7'],
+    verte: [fx('images-variantes-verte.html')],
+    rouge: [fx('images-variantes-rouge.html')],
+  },
+  {
     oracle: 'oracle-corpus.mjs',
     regles: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
     verte: [fx('corpus-verte')],
@@ -706,6 +720,37 @@ for (const cas of CAS) {
   ligne(correspond({ tag: 'div', attrs: { role: 'dialog' } }, '[role="dialog"]')
      && !correspond({ tag: 'div', attrs: { role: 'alertdialog' } }, '[role="dialog"]'),
     'attributs · [role="dialog"] est une condition du compound, jugée par la règle générale');
+}
+
+// TF-1074 — I7 mesure-t-elle l'INVARIANT, ou seulement une grandeur qui lui est corrélée ?
+// La question n'est pas « la règle se déclenche-t-elle », mais « se déclenche-t-elle là où
+// l'empreinte se tait, et se tait-elle là où l'empreinte crierait ». Les deux cas vivent
+// dans les fixtures ; ce bloc les nomme un par un, sinon le compte de règles déclenchées
+// laisserait passer une I7 qui ne saurait faire que de l'empreinte.
+{
+  console.log(String.fromCharCode(10) + 'oracle-images I7 (TF-1074) — la corrélation rompue, aux deux sens');
+  const lire = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-images.mjs'), fx(f), '--json-only'], { encoding: 'utf8' });
+    return { code: r.status, json: JSON.parse(r.stdout.trim()) };
+  };
+  const rouge = lire('images-variantes-rouge.html');
+  const i7 = rouge.json.findings.filter(f => f.regle === 'I7');
+  // Sens 1 — le cas littéral du 25/08 : deux variantes, un seul fichier.
+  ligne(i7.some(f => f.sev === 'bloquant' && /octet pour octet/.test(f.msg)),
+    'sens 1 · empreintes identiques entre deux variantes déclarées — refusé');
+  // Sens 2 — CELUI QUI COMPTE : les empreintes diffèrent, un contrôle d'empreinte
+  // rendrait PASS, et les deux variantes posent pourtant la même encre.
+  ligne(i7.some(f => f.sev === 'bloquant' && /empreintes DIFFÉRENTES et posent la même encre/.test(f.msg)),
+    'sens 2 · empreintes DIFFÉRENTES et encre identique — refusé là où l\'empreinte se tait');
+  // Sens 3 — la fixture verte rompt la corrélation dans l'autre sens : onze octets
+  // d'écart sur 235, même longueur, mêmes identifiants, même géométrie. Une règle qui
+  // jugerait la DISTANCE entre les deux fichiers refuserait une variante légitime.
+  const verte = lire('images-variantes-verte.html');
+  ligne(verte.code === 0 && !verte.json.findings.some(f => f.regle === 'I7' && f.sev !== 'info'),
+    'sens 3 · variante légitime à onze octets d\'écart (mêmes ids, même géométrie, seules les couleurs changent) — acceptée');
+  // Et la limite se dit : une paire matricielle n'est jugée que sur son empreinte.
+  ligne(verte.json.non_juge.some(n => /variantes matricielles/.test(n)),
+    'limite déclarée · l\'encre d\'une paire matricielle est portée au non_juge, jamais devinée');
 }
 
 // TF-0335 — le générateur de DESIGN.md n'est pas un oracle (il ne rend pas de verdict), mais
