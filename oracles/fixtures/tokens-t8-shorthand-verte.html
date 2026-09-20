@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T8, anneau de focus déclaré en raccourci border/outline</title>
+<!--
+  TF-1108 (14/09/2026). Le boilerplate du socle digit-ai-page-html prescrit
+  --focus-anneau: 2px solid var(--blue) — le token porte tout le raccourci CSS
+  (largeur, style, couleur), pas seulement la couleur. Avant TF-1108, ni oracle-tokens
+  T8 ni generer-design-md.mjs ne l'extrayaient : la valeur passait telle quelle à color()
+  et échouait comme « illisible », même après la résolution d'alias de TF-1106 (l'alias
+  était bien là, noyé dans un raccourci que rien ne dépouillait).
+
+  Deux formes couvertes dans la même fixture, une par thème :
+    clair  : --focus-anneau: 2px solid var(--blue)   (couleur = ALIAS)
+             #1d4ed8 sur #ffffff → 6.70:1 · sur #eef1f6 → 5.92:1
+    sombre : --focus-anneau: 3px dashed #7ea8ff        (couleur = LITTÉRAL, style différent)
+             #7ea8ff sur #12151b → 7.15:1 · sur #1c2029 → 6.28:1
+
+  Attendu : PASS, exit 0 — la composante couleur du raccourci est extraite, puis
+  résolue si c'est un alias, puis mesurée.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --blue: #1d4ed8;
+    --focus-anneau: 2px solid var(--blue);
+    --focus-decalage: 2px;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #12151b;
+      --fond-carte: #1c2029;
+      --texte: #eef1f6;
+      --blue: #7ea8ff;
+      --focus-anneau: 3px dashed #7ea8ff;
+      --focus-decalage: 2px;
+    }
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .bouton:focus-visible,
+  .champ:focus-visible {
+    outline: var(--focus-anneau);
+    outline-offset: var(--focus-decalage);
+  }
+</style>
+</head>
+<body>
+  <h1>Demande d'intervention</h1>
+  <div class="carte">
+    <label for="objet">Objet</label>
+    <input class="champ" id="objet" type="text">
+    <button class="bouton" type="submit">Envoyer</button>
+  </div>
+</body>
+</html>

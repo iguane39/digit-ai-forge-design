@@ -117,6 +117,114 @@ export function contrast(c1, c2) {
   return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
 }
 
+const RACCOURCI_STYLES = new Set(['none', 'hidden', 'dotted', 'dashed', 'solid', 'double',
+  'groove', 'ridge', 'inset', 'outset']);
+const RACCOURCI_LARGEURS = new Set(['thin', 'medium', 'thick']);
+const estLargeurRaccourci = t => RACCOURCI_LARGEURS.has(t.toLowerCase())
+  || /^-?\d*\.?\d+(px|em|rem|pt|cm|mm|in|pc|q|%)$/i.test(t);
+
+/** Découpe sur les espaces, SAUF à l'intérieur d'une parenthèse (var(--x), rgb(...)). */
+function tokeniserRaccourci(valeur) {
+  const out = [];
+  let buf = '', profondeur = 0;
+  for (const ch of valeur) {
+    if (ch === '(') profondeur++;
+    if (ch === ')') profondeur--;
+    if (/\s/.test(ch) && profondeur === 0) { if (buf) out.push(buf); buf = ''; }
+    else buf += ch;
+  }
+  if (buf) out.push(buf);
+  return out;
+}
+
+/**
+ * Extrait la composante COULEUR d'un raccourci `border`/`outline` (« 2px solid var(--blue) »,
+ * « 3px dashed #1d4ed8 ») en retirant largeur et style — dans CET ORDRE, TOUJOURS avant
+ * `resoudreVar` : un raccourci n'est jamais lui-même une chaîne `var(...)` valide, et lui
+ * laisser un raccourci intact revient à ne rien résoudre.
+ *
+ * TF-1108 (14/09/2026) — le boilerplate du socle digit-ai-page-html prescrit
+ * `--focus-anneau: 2px solid var(--blue)` (le token PORTE tout le raccourci, pas seulement
+ * la couleur) ; `oracle-tokens` T8 lisait cette valeur telle quelle et la jugeait illisible
+ * après TF-1106 déjà, faute d'extraction du composant couleur. Une valeur à un seul
+ * composant (pas de largeur ni de style détectés) est renvoyée TELLE QUELLE : ce n'est pas
+ * un raccourci, `resoudreVar` la traite normalement. Une valeur dont PLUSIEURS composants
+ * restent après avoir retiré largeur et style (ambiguïté — deux couleurs candidates, ou une
+ * syntaxe non reconnue) est renvoyée telle quelle aussi : deviner serait pire que refuser.
+ */
+export function extraireCouleurRaccourci(valeur) {
+  if (valeur == null) return valeur;
+  const s = String(valeur).trim();
+  const tokens = tokeniserRaccourci(s);
+  if (tokens.length <= 1) return s;
+  const reste = tokens.filter(t => !RACCOURCI_STYLES.has(t.toLowerCase()) && !estLargeurRaccourci(t));
+  return reste.length === 1 ? reste[0] : s;
+}
+
+/**
+ * Résout une chaîne `var(--x[, repli])` contre une liste de TABLES consultées dans
+ * l'ordre (chaque table : une fonction nom-avec-tirets → valeur brute, ou undefined/null
+ * si absente). Renvoie la valeur telle quelle si ce n'est pas un var(), ou `null` si la
+ * chaîne ne résout vers rien (ni table, ni repli). Boucle bornée à 8 sauts pour qu'un
+ * alias circulaire échoue proprement plutôt que de tourner.
+ *
+ * TF-1035 (11/09/2026) — `generer-design-md.mjs` refusait « couleur illisible pour
+ * --accent : var(--blue) » sur tout tokens.css employant le groupe ALIAS que le contrat
+ * de cette forge prescrit lui-même (references/tokens.md), et que son propre générateur
+ * émet en `var(--cible)`. TF-1106 (14/09/2026) — la même non-résolution touchait
+ * `oracle-tokens.mjs` T5/T8 : un `--focus-anneau: var(--blue)` ou une paire de contraste
+ * nommée par alias étaient jugés « illisibles » plutôt que résolus. Une seule
+ * implémentation ICI, consommée par les deux : jamais une seconde résolution qui
+ * pourrait diverger.
+ */
+export function resoudreVar(valeur, tables, profondeur = 0) {
+  if (valeur == null) return valeur;
+  const m = /^var\(\s*(--[\w-]+)\s*(?:,\s*(.+))?\)$/.exec(String(valeur).trim());
+  if (!m) return valeur;
+  if (profondeur >= 8) return null; // chaîne d'alias trop longue ou circulaire
+  for (const table of tables) {
+    const brut = table(m[1]);
+    if (brut !== undefined && brut !== null) return resoudreVar(brut, tables, profondeur + 1);
+  }
+  return m[2] !== undefined ? resoudreVar(m[2].trim(), tables, profondeur + 1) : null;
+}
+
+/**
+ * Neutralise le contenu de chaque appel `var(...)` d'une valeur CSS — REPLI compris,
+ * `var(--jeton, <repli>)` — avant toute recherche de couleur littérale dans le texte qui
+ * l'entoure. Gère les parenthèses imbriquées (un repli peut lui-même contenir `var(...)`
+ * ou `calc(...)`).
+ *
+ * TF-1123 (15/09/2026) — `oracle-tokens` T1 cherchait des couleurs littérales dans la
+ * valeur ENTIÈRE d'une déclaration (`color: var(--muted, #475569)`) sans écarter
+ * l'intérieur d'un `var()` : le repli n'est JAMAIS la couleur appliquée, il ne l'est que
+ * si le jeton nommé est absent — un bloquant tombait sur la forme même que la règle
+ * réclame (« passer par var(--token) »), et le seul geste qui l'éteignait était de
+ * SUPPRIMER le repli, rendant le composant plus fragile. Même bibliothèque canonique que
+ * `resoudreVar` (TF-1106) et `extraireCouleurRaccourci` (TF-1108) : une seule
+ * implémentation, jamais une résolution parallèle qui pourrait diverger.
+ */
+export function neutraliserVar(valeur) {
+  if (valeur == null) return valeur;
+  const s = String(valeur);
+  let out = '', i = 0;
+  while (i < s.length) {
+    if (s.startsWith('var(', i)) {
+      let profondeur = 1, j = i + 4;
+      while (j < s.length && profondeur > 0) {
+        if (s[j] === '(') profondeur++;
+        else if (s[j] === ')') profondeur--;
+        j++;
+      }
+      i = j; // saute tout var(...), repli et parenthèses imbriquées compris
+      continue;
+    }
+    out += s[i];
+    i++;
+  }
+  return out;
+}
+
 /** Toutes les couleurs littérales trouvées dans un texte CSS, avec leur offset. */
 export function findColors(text) {
   const out = [];

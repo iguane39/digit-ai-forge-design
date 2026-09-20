@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T5, bloc @media print non confondu avec le thème sombre</title>
+<!--
+  TF-1057 (mesuré le 11/09 sur Produit-62, RD-16). Le boilerplate du socle
+  digit-ai-page-html porte un bloc `@media print { :root, :root[data-theme="dark"] {
+  --bg:#FFFFFF; … } }` : le SÉLECTEUR nomme « dark », mais la VALEUR est celle de
+  l'impression, pas celle du thème sombre d'écran. Sans filtrage, l'oracle lisait
+  #FFFFFF comme le fond du thème sombre et confrontait l'encre sombre réelle
+  (#DDD6FE, #DBEAFE) à ce blanc d'impression — un red flag de contraste FAUX sur
+  toute page qui fait bien (thème sombre correctement contrasté + bloc print).
+
+  Cette fixture porte les DEUX : un thème sombre réel et correctement contrasté
+  (--bg:#0B1220 en sombre, --c-purple-fg:#DDD6FE sur ce fond → largement ≥ 4.5:1),
+  ET un bloc @media print qui redéclare --bg:#FFFFFF sous [data-theme="dark"].
+
+  Attendu : PASS, exit 0 — le bloc print est écarté de la lecture clair/sombre,
+  cité au non_juge, jamais confondu avec une valeur de thème sombre réelle.
+-->
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --c-purple-fg: #4C1D95;
+    --c-blue-fg: #1E3A8A;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    --bg: #0B1220;
+    --c-purple-fg: #DDD6FE;
+    --c-blue-fg: #DBEAFE;
+  }
+  @media print {
+    :root, :root[data-theme="dark"] {
+      --bg: #FFFFFF;
+    }
+  }
+  body { background: var(--bg); color: var(--c-purple-fg); font-family: var(--police-corps); margin: 0; padding: 32px; }
+  .encart { background: var(--bg); color: var(--c-blue-fg); padding: 12px; }
+</style>
+</head>
+<body>
+  <h1>Journal des interventions</h1>
+  <p class="encart">Trois interventions closes cette semaine.</p>
+</body>
+</html>

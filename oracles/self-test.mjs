@@ -99,6 +99,20 @@ const CAS = [
     rouge: [fx('tokens-rouge.html')],
   },
   {
+    // TF-1123 (mesuré le 14/09/2026 sur Produit-62, RD-18) — T1 cherchait des couleurs
+    // littérales dans la valeur ENTIÈRE d'une déclaration sans écarter l'intérieur d'un
+    // var() : le REPLI d'un var(--jeton, <repli>) comptait comme une couleur en dur, alors
+    // qu'il n'est jamais la couleur appliquée. Un bloquant tombait sur la forme même que la
+    // règle réclame (« passer par var(--token) ») ; le seul geste qui l'éteignait était de
+    // SUPPRIMER le repli. Les deux fixtures ne diffèrent QUE par la présence du var()
+    // autour des mêmes couleurs : la verte passe, la rouge (couleurs nues, hors var()) reste
+    // bloquante — la règle n'est pas désarmée.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T1'],
+    verte: [fx('tokens-t1-repli-verte.html')],
+    rouge: [fx('tokens-t1-repli-rouge.html')],
+  },
+  {
     // TF-0276 : preuve dédiée du PÉRIMÈTRE de T5. Le produit cartésien
     // texte-* × fond-* sortait --texte-sur-accent en FAIL 1.0:1 sur --fond —
     // une paire qu'aucune règle ne pose — tout en restant AVEUGLE à la vraie
@@ -120,6 +134,58 @@ const CAS = [
     regles: ['T5'],
     verte: [fx('tokens-t5-herite.html')],
     rouge: [fx('tokens-t5-rouge.html')],
+  },
+  {
+    // TF-1057 (mesuré le 11/09 sur Produit-62, RD-16) : un bloc @media print redéclarant
+    // `:root, :root[data-theme="dark"] { --bg:#FFFFFF; }` était lu comme le fond du thème
+    // SOMBRE (le sélecteur porte « dark »), et confrontait l'encre sombre réelle à ce blanc
+    // d'impression — 1.39:1 et 1.22:1 mesurés, faux positifs sur toute page correctement
+    // contrastée. Les deux fixtures portent le MÊME bloc print ; seule la rouge porte, en
+    // plus, un vrai défaut de thème sombre (--c-blue-fg à 2.17:1), pour prouver que le bloc
+    // print n'est pas un prétexte pour taire un défaut réel.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-print-verte.html')],
+    rouge: [fx('tokens-print-rouge.html')],
+  },
+  {
+    // TF-1058 (mesuré le 11/09 sur Produit-62, RD-17) : EST_SURFACE confond toute surface
+    // nommée -bg avec une surface SUSCEPTIBLE DE PORTER UN FOCUS, remplissage de badge de
+    // statut compris (20px de haut, jamais focusable) — un simple RENOMMAGE du jeton faisait
+    // disparaître les 12 constats sans qu'une couleur change. Les deux fixtures ne diffèrent
+    // QUE par la présence de --surfaces-hors-focus : la rouge ne la déclare pas et reste jugée
+    // PAR DÉFAUT (1.45:1 mesuré) ; la verte la déclare et PASSE — l'exemption est la
+    // déclaration, jamais le nom du jeton.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-badge-verte.html')],
+    rouge: [fx('tokens-t8-badge-rouge.html')],
+  },
+  {
+    // TF-1106 (14/09/2026) — oracle-tokens ne résolvait pas les alias var() avant de parser
+    // une couleur : --focus-anneau: var(--blue), la forme que le contrat de tokens.css de
+    // cette forge prescrit et que scripts/generer-tokens-css.mjs émet, publiait « semi-
+    // transparent ou illisible » au lieu d'être mesuré (même classe que TF-1035, résolue par
+    // la MÊME fonction partagée, lib/color.mjs::resoudreVar). La verte reprend tokens-t8-verte
+    // avec --focus-anneau en alias de --blue (mêmes ratios, mêmes seuils tenus) ; la rouge
+    // porte un vrai défaut mesuré à travers le même alias (1.70:1, 1.50:1 < 3:1 en clair).
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-alias-verte.html')],
+    rouge: [fx('tokens-t8-alias-rouge.html')],
+  },
+  {
+    // TF-1108 (14/09/2026) — le boilerplate du socle prescrit --focus-anneau au format
+    // RACCOURCI complet (« 2px solid var(--blue) »), pas seulement la couleur. Après
+    // TF-1106 (résolution des alias), la valeur restait illisible : rien n'extrayait la
+    // composante couleur d'un raccourci border/outline avant de la passer à resoudreVar.
+    // La verte couvre les deux formes (couleur = alias en clair, couleur = littéral et
+    // style différent en sombre) ; la rouge porte le même raccourci avec un vrai défaut
+    // de contraste (1.70:1, 1.50:1 en clair).
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-shorthand-verte.html')],
+    rouge: [fx('tokens-t8-shorthand-rouge.html')],
   },
   {
     // TF-0409, O4 : T7 mesure le contraste NON TEXTUEL (WCAG 1.4.11, seuil 3:1). Un trait
@@ -183,6 +249,20 @@ const CAS = [
     rouge: [fx('images-relevees-rouge.html')],
   },
   {
+    // TF-1074 (16/09) — L'INVERSE DE LA PARITE. oracle-parite-assets (TF-0784) garde
+    // qu'une COPIE declaree reste identique a sa source ; personne ne gardait l'invariant
+    // inverse. Le 25/08, `logo-white.svg` a recu le contenu de `logo.svg` : logo bleu
+    // fonce sur bandeau fonce, vu en production par l'exploitant (lot Produit-02
+    // 20260825b RT-28, defaut E-06 du banc des defauts echappes).
+    // La rouge porte les DEUX sens : la paire octet pour octet, et — c'est la le
+    // sujet — la paire dont les EMPREINTES DIFFERENT et dont l'encre est la meme.
+    // Un controle d'empreinte seule declarerait la seconde conforme.
+    oracle: 'oracle-images.mjs',
+    regles: ['I7'],
+    verte: [fx('images-variantes-verte.html')],
+    rouge: [fx('images-variantes-rouge.html')],
+  },
+  {
     oracle: 'oracle-corpus.mjs',
     regles: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
     verte: [fx('corpus-verte')],
@@ -224,10 +304,25 @@ const CAS = [
     rouge: [fx('motion-revocation-rouge.html')],
   },
   {
+    // TF-1035 (constat en passant, lot marque Digit-AI, 11/09/2026) — D3 compare le dérivé à
+    // l'octet près, EN-TÊTE COMPRIS : dtcg-verte.tokens.json ne vit pas au chemin par défaut
+    // historique (« corpus/tokens-digit-ai.tokens.json »), donc cette fixture retombe en FAIL si
+    // l'en-tête du CSS dérivé redevient un chemin figé au lieu de la source réellement lue.
     oracle: 'oracle-dtcg.mjs',
     regles: ['D1', 'D2', 'D3'],
     verte: [fx('dtcg-verte.tokens.json'), fx('dtcg-verte.css')],
     rouge: [fx('dtcg-rouge.tokens.json'), fx('dtcg-rouge.css')],
+  },
+  {
+    // TF-1034 (constat en passant, lot marque Digit-AI, 11/09/2026) — D4 : une source qui
+    // DÉCLARE $fraicheur (empreinte datée d'un bloc externe qu'elle reprend telle quelle,
+    // ex. un socle de rendu) est mise en échec si ce bloc a changé depuis. Les deux fixtures
+    // ne diffèrent QUE par l'empreinte enregistrée : la verte est à jour, la rouge est
+    // volontairement périmée face au même bouchon de socle (dtcg-fraicheur-socle.html).
+    oracle: 'oracle-dtcg.mjs',
+    regles: ['D4'],
+    verte: [fx('dtcg-fraicheur-verte.tokens.json'), fx('dtcg-fraicheur-verte.css')],
+    rouge: [fx('dtcg-fraicheur-rouge.tokens.json'), fx('dtcg-fraicheur-rouge.css')],
   },
   {
     // TF-0863 (lot L6, 07/09/2026) — un rapport Power BI « personnalisé » livré au thème par
@@ -487,6 +582,22 @@ const CAS = [
     rouge: [fx('socle-charte-rouge.html')],
   },
   {
+    // TF-1129 (mesuré le 13/09/2026 sur Produit-64) — M4 cherchait un reflow sous un
+    // max-width ≤ 768, alors que le sens correct est ≥ 768 : un `@media (max-width: Npx)`
+    // couvre la largeur 768 dès que N ≥ 768, jamais le contraire. Le seuil réel du
+    // boilerplate du socle (900px, TF-0900) échouait le test, ET un seuil manifestement
+    // insuffisant (600px, mobile-rouge.html) l'aurait satisfait. La verte porte le seuil du
+    // socle tel quel (900px) — plus de bloquant, et le même message « info » de restitution
+    // que l'oracle rendait déjà dans la même exécution (la contradiction avec le bloquant a
+    // disparu). La rouge (mobile-rouge.html, 600px, table sans repli à 768px) reste un vrai
+    // défaut mobile, confirmé par ailleurs par render_page.py (débordement V1) — elle n'est
+    // pas dupliquée ici.
+    oracle: 'oracle-mobile.mjs',
+    regles: ['M4'],
+    verte: [fx('mobile-repli-socle-verte.html')],
+    rouge: [fx('mobile-rouge.html')],
+  },
+  {
     // TF-1064 (lot pilot du 12/09/2026) — LE TEXTE QUE LE PLUS DE MONDE LIT N'AVAIT PAS DE JUGE.
     // Le plancher d'écriture du pilot (references\ECRITURE.md) porte en E-12 la règle des textes
     // d'application (type T4) : « un libellé nomme ce que la personne contrôle ; une erreur dit ce
@@ -609,6 +720,101 @@ for (const cas of CAS) {
   ligne(correspond({ tag: 'div', attrs: { role: 'dialog' } }, '[role="dialog"]')
      && !correspond({ tag: 'div', attrs: { role: 'alertdialog' } }, '[role="dialog"]'),
     'attributs · [role="dialog"] est une condition du compound, jugée par la règle générale');
+}
+
+// TF-1074 — I7 mesure-t-elle l'INVARIANT, ou seulement une grandeur qui lui est corrélée ?
+// La question n'est pas « la règle se déclenche-t-elle », mais « se déclenche-t-elle là où
+// l'empreinte se tait, et se tait-elle là où l'empreinte crierait ». Les deux cas vivent
+// dans les fixtures ; ce bloc les nomme un par un, sinon le compte de règles déclenchées
+// laisserait passer une I7 qui ne saurait faire que de l'empreinte.
+{
+  console.log(String.fromCharCode(10) + 'oracle-images I7 (TF-1074) — la corrélation rompue, aux deux sens');
+  const lire = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-images.mjs'), fx(f), '--json-only'], { encoding: 'utf8' });
+    return { code: r.status, json: JSON.parse(r.stdout.trim()) };
+  };
+  const rouge = lire('images-variantes-rouge.html');
+  const i7 = rouge.json.findings.filter(f => f.regle === 'I7');
+  // Sens 1 — le cas littéral du 25/08 : deux variantes, un seul fichier.
+  ligne(i7.some(f => f.sev === 'bloquant' && /octet pour octet/.test(f.msg)),
+    'sens 1 · empreintes identiques entre deux variantes déclarées — refusé');
+  // Sens 2 — CELUI QUI COMPTE : les empreintes diffèrent, un contrôle d'empreinte
+  // rendrait PASS, et les deux variantes posent pourtant la même encre.
+  ligne(i7.some(f => f.sev === 'bloquant' && /empreintes DIFFÉRENTES et posent la même encre/.test(f.msg)),
+    'sens 2 · empreintes DIFFÉRENTES et encre identique — refusé là où l\'empreinte se tait');
+  // Sens 3 — la fixture verte rompt la corrélation dans l'autre sens : onze octets
+  // d'écart sur 235, même longueur, mêmes identifiants, même géométrie. Une règle qui
+  // jugerait la DISTANCE entre les deux fichiers refuserait une variante légitime.
+  const verte = lire('images-variantes-verte.html');
+  ligne(verte.code === 0 && !verte.json.findings.some(f => f.regle === 'I7' && f.sev !== 'info'),
+    'sens 3 · variante légitime à onze octets d\'écart (mêmes ids, même géométrie, seules les couleurs changent) — acceptée');
+  // Et la limite se dit : une paire matricielle n'est jugée que sur son empreinte.
+  ligne(verte.json.non_juge.some(n => /variantes matricielles/.test(n)),
+    'limite déclarée · l\'encre d\'une paire matricielle est portée au non_juge, jamais devinée');
+}
+
+// TF-1066 — LA GRILLE EST UNE DONNÉE, ET ELLE NE DOIT PLUS DÉRIVER. Le 12/09/2026, la
+// largeur de conception est passée à 1920 px et la grille de vérification au 4K dans
+// run-oracles-design.mjs et oracle-baseline.mjs ; rendu-comparatif.mjs, dans le même
+// dossier, est resté à `1920,1440,1024,768,390`. Quatre jours durant, un correctif comparé
+// avant/après ne voyait rien de ce qui se passe à 2560 et à 3840 — et rien ne le disait.
+// La grille vit désormais dans corpus/grille-viewports.json, datée et sourcée. Ce bloc
+// verrouille les trois choses qui peuvent la faire mentir : un consommateur qui la recopie,
+// une donnée absente que l'on devine, une donnée incohérente que l'on moyenne.
+{
+  console.log(String.fromCharCode(10) + 'lib/grille.mjs (TF-1066) — la grille de largeurs, lue au corpus et jamais devinée');
+  const { lireGrille, FICHIER_GRILLE } = await import('./lib/grille.mjs');
+
+  // Sens VERT — la donnée du corpus arrive telle quelle, triée du plus large au plus étroit.
+  const g = lireGrille();
+  const corpus = JSON.parse(fs.readFileSync(FICHIER_GRILLE, 'utf8'));
+  ligne(g.rendus === [...corpus.rendu].sort((a, b) => b - a).join(',')
+     && g.baselines === [...corpus.baseline].sort((a, b) => b - a).join(',')
+     && g.largeurConception === corpus.largeur_conception,
+    `sens vert · les grilles viennent du corpus — conception ${g.largeurConception} px, rendu ${g.rendus}, baseline ${g.baselines}`);
+  ligne(Boolean(g.source) && Boolean(g.date),
+    `donnée datée et sourcée · date ${g.date}, source déclarée (${(g.source || '').slice(0, 48)}…)`);
+
+  // Sens ROUGE 1 — donnée absente : on LÈVE. Un repli silencieux rendrait un verdict vrai
+  // sur une grille que personne n'a choisie, et c'est le seul verdict qui ne se signale pas.
+  const leve = f => { try { lireGrille(fx(f)); return null; } catch (e) { return e.message; } };
+  const sansRendu = leve('grille-viewports-rouge-sans-rendu.json');
+  ligne(Boolean(sansRendu) && /rendu/.test(sansRendu),
+    'sens rouge · grille sans liste de rendu — lève, aucun repli sur une grille devinée');
+
+  // Sens ROUGE 2 — donnée incohérente : vérifier partout SAUF à la largeur où l'écran a été
+  // dessiné est exactement le défaut que TF-1066 corrige. Il se refuse, il ne s'arbitre pas.
+  const horsGrille = leve('grille-viewports-rouge-conception-hors-grille.json');
+  ligne(Boolean(horsGrille) && /largeur de conception/.test(horsGrille),
+    'sens rouge · largeur de conception absente de la grille de rendu — lève');
+
+  // ANTI-DÉRIVE — aucun des trois consommateurs ne garde sa propre copie de la grille.
+  // C'est le verrou qui manquait le 12/09 : la règle avait été écrite, pas propagée.
+  for (const consommateur of ['run-oracles-design.mjs', 'oracle-baseline.mjs', 'rendu-comparatif.mjs']) {
+    const code = fs.readFileSync(path.join(ici, consommateur), 'utf8');
+    const listesEnDur = code.split(String.fromCharCode(10))
+      .filter(l => !l.trim().startsWith('//'))
+      .filter(l => /['"`]\s*\d{3,4}(?:\s*,\s*\d{3,4}){2,}\s*['"`]/.test(l));
+    ligne(listesEnDur.length === 0 && /lib\/grille\.mjs/.test(code),
+      `anti-dérive · ${consommateur} lit la grille au corpus et n'en garde aucune copie${listesEnDur.length ? ' — copie trouvée : ' + listesEnDur[0].trim().slice(0, 70) : ''}`);
+  }
+
+  // CONCORDANCE DE LA PROSE — les documents qui ÉNONCENT la grille aux producteurs disent
+  // la même chose que la donnée. Un contrat qui prescrit 1440 pendant que l'oracle rend à
+  // 3840 fait travailler le concepteur contre son juge.
+  const MEMES = [
+    'skills/ameliore-le-design/references/contrat-technique.md',
+    'skills/ameliore-le-design/references/criteres-sortie.md',
+    'skills/ameliore-le-design/SKILL.md',
+    'skills/critique-le-design/references/grille.md',
+  ];
+  for (const doc of MEMES) {
+    const texte = fs.readFileSync(path.join(ici, '..', doc), 'utf8');
+    const suites = [...texte.matchAll(/\b\d{3,4}\b(?:\s*[,/]\s*\d{3,4}\b)+/g)]
+      .map(m => m[0].split(/[,/]/).map(s => Number(s.trim())).join(','));
+    ligne(suites.includes(g.rendus),
+      `concordance · ${doc} énonce la grille du corpus (${g.rendus})`);
+  }
 }
 
 // TF-0335 — le générateur de DESIGN.md n'est pas un oracle (il ne rend pas de verdict), mais

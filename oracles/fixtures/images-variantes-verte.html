@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-images I7, variantes distinctes</title>
+<!--
+  TF-1074. Trois paires de variantes declarees, toutes legitimes.
+
+  LA PAIRE QUI COMPTE est « logo » / « logo-white » : meme geometrie, memes
+  identifiants, meme longueur — DOUZE octets d'ecart sur 268, rien que les deux
+  couleurs. Un controle qui exigerait un ecart d'octets consequent, ou qui
+  mesurerait la distance entre les deux fichiers, la refuserait. I7 ne mesure pas
+  l'ecart : il mesure l'ENCRE, et les deux encres different. PASS.
+
+  « marque-negative » n'a pas de suffixe de convention : elle est appairee par la
+  declaration explicite « variante_de » du manifeste.
+
+  « banniere » / « banniere-dark » sont matricielles : leurs empreintes different
+  (I7a jugee), leur encre ne se lit pas dans le fichier (declaree non jugee).
+
+  Attendu : PASS, exit 0.
+-->
+<script type="application/json" id="manifeste-images">
+[
+  {"id": "logo", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron, fond carre arrondi", "date": "2026-09-16", "genere": true},
+  {"id": "logo-white", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron, variante blanche pour bandeau fonce", "date": "2026-09-16", "genere": true},
+  {"id": "marque-negative", "variante_de": "logo", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron, variante sur fond clair", "date": "2026-09-16", "genere": true},
+  {"id": "banniere", "modele": "gemini-3.1-flash-image", "prompt": "aplat de bandeau, thème clair", "date": "2026-09-16", "genere": true},
+  {"id": "banniere-dark", "modele": "gemini-3.1-flash-image", "prompt": "aplat de bandeau, thème sombre", "date": "2026-09-16", "genere": true}
+]
+</script>
+</head>
+<body>
+  <img data-image-id="logo" alt="Marque, version couleur" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMwRjE3MkEiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE4IDQwIEwzMiAyMCBMNDYgNDAgWiIgZmlsbD0iIzI1NjNFQiIvPjwvc3ZnPg==">
+  <img data-image-id="logo-white" alt="Marque, version blanche du bandeau" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGRkZGRkYiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE4IDQwIEwzMiAyMCBMNDYgNDAgWiIgZmlsbD0iI0RCRUFGRSIvPjwvc3ZnPg==">
+  <img data-image-id="marque-negative" alt="Marque, version pour fond clair" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlLCBmb25kIGNsYWlyPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiNGOEZBRkMiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE4IDQwIEwzMiAyMCBMNDYgNDAgWiIgZmlsbD0iIzkzQzVGRCIvPjwvc3ZnPg==">
+  <img data-image-id="banniere" alt="Bandeau de la page d accueil" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGPgF9cCAACJAFEcS6mRAAAAAElFTkSuQmCC">
+  <img data-image-id="banniere-dark" alt="Bandeau de la page d accueil, theme sombre" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP48esPAAXcAu/e91mGAAAAAElFTkSuQmCC">
+  <p>Les trois variantes du monogramme et les deux bandeaux.</p>
+</body>
+</html>

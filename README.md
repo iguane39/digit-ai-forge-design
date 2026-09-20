@@ -30,7 +30,8 @@ Le catalogue consolidé des dix forges vit chez le pilot :
 ## Structure
 
 ```
-corpus/            matière indexée, recherche BM25 hors ligne
+corpus/            matière indexée, recherche BM25 hors ligne ; grille-viewports.json
+                   porte la largeur de conception et les grilles de rendu (TF-1066)
 oracles/           les juges exécutés + leurs fixtures + le self-test
 baseline/          captures approuvées de régression visuelle, versionnées (TF-0102)
 skills/            les quatre verbes
@@ -88,7 +89,7 @@ node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # 
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
 node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url> \
-  [--zone <sélecteur>] [--largeurs 1920,1440,1024,768,390] [--sortie <dossier>] \
+  [--zone <sélecteur>] [--largeurs <grille du corpus>] [--sortie <dossier>] \
   [--etats-ouverts] [--json-only]                             # avant/après d'un correctif ad hoc
 # états d'échec (TF-0493) : render_page.py <page> --matrice-etats — cinq états mesurés ET
 # capturés (dont filtre sans résultat et recherche sans correspondance). Un état vide muet est
@@ -167,7 +168,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-slop` | S1–S10 | marqueurs de design généré |
 | `oracle-tokens` | T1–T6 | traçabilité des tokens, parité des thèmes, contraste |
 | `oracle-mobile` | M1–M8 | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante |
-| `oracle-images` | I1–I6 | alt, plafonds, zéro réseau, manifeste de génération |
+| `oracle-images` | I1–I7 | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
 | `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée |

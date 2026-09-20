@@ -60,15 +60,42 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 // ── S1 · Bandeau latéral coloré ────────────────────────────────────────────
 // border-left / border-right d'une largeur > 1px : le « design touch » le plus
 // recyclé des UI d'admin. Interdit quelle que soit la couleur ou la variable.
+//
+// TF-1056 (mesuré le 11/09 sur Produit-62, RD-15) — EXEMPTION ÉTROITE : la même
+// déclaration produit un TRIANGLE CSS (chevron de pliage, flèche) quand la
+// RÈGLE QUI LA PORTE pose aussi `width: 0` ET `height: 0`, bordée de
+// `border-top` ET `border-bottom` TRANSPARENTS — la recette canonique de tout
+// triangle en CSS pur (`.arbre-glyphe` du socle digit-ai-page-html). Ce n'est
+// plus un bandeau : aucun aplat de couleur ne peut s'afficher sur un bloc de
+// largeur et hauteur nulles. L'exemption se lit dans LA MÊME règle, jamais
+// dans la feuille entière, et exige les QUATRE conditions à la fois : un
+// bandeau réel posé sur un bloc qui a une largeur ou une hauteur reste jugé,
+// y compris si border-top/bottom sont transparents pour une autre raison.
 {
-  const re = /border-(left|right)(?:-width)?\s*:\s*([^;{}]+)/gi;
-  let m;
-  while ((m = re.exec(cssText))) {
-    const val = m[2].trim();
-    if (/^(none|0|0px|initial|inherit|unset)\b/.test(val)) continue;
-    const lm = /(-?[\d.]+)\s*(px|rem|em)/.exec(val);
-    const epais = lm ? (lm[2] === 'px' ? parseFloat(lm[1]) : parseFloat(lm[1]) * 16) : (/\bthick\b/.test(val) ? 5 : null);
-    if (epais !== null && epais > 1) {
+  const ZERO = /^(0|0px|0rem|0em)$/i;
+  const TRANSPARENT = /transparent|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/i;
+  const lire = (body, prop) => {
+    const m = new RegExp(prop + '\\s*:\\s*([^;]+)', 'i').exec(body);
+    return m ? m[1].trim() : null;
+  };
+  for (const r of regles) {
+    const re = /border-(left|right)(?:-width)?\s*:\s*([^;{}]+)/gi;
+    let m;
+    while ((m = re.exec(r.body))) {
+      const val = m[2].trim();
+      if (/^(none|0|0px|initial|inherit|unset)\b/.test(val)) continue;
+      const lm = /(-?[\d.]+)\s*(px|rem|em)/.exec(val);
+      const epais = lm ? (lm[2] === 'px' ? parseFloat(lm[1]) : parseFloat(lm[1]) * 16) : (/\bthick\b/.test(val) ? 5 : null);
+      if (epais === null || epais <= 1) continue;
+
+      const w = lire(r.body, 'width'), h = lire(r.body, 'height');
+      const bt = lire(r.body, 'border-top'), bb = lire(r.body, 'border-bottom');
+      const triangle = w && ZERO.test(w) && h && ZERO.test(h) && bt && TRANSPARENT.test(bt) && bb && TRANSPARENT.test(bb);
+      if (triangle) {
+        add('info', 'S1', `triangle CSS (width/height à 0, border-top/bottom transparents) : construction de chevron, pas un bandeau — exempté (TF-1056)`,
+          `sélecteur « ${r.selector.trim().slice(0, 60)} »`);
+        continue;
+      }
       add('bloquant', 'S1', `bandeau latéral de ${lm ? lm[1] + lm[2] : 'thick'} : border-${m[1]} > 1px sur un bloc`,
         `css « ${m[0].trim().slice(0, 70)} »`);
     }

@@ -1,0 +1,15 @@
+{
+  "$description": "Fixture D4 (TF-1034) — source DTCG minimale qui déclare $fraicheur : empreinte du bloc :root du bouchon de socle dtcg-fraicheur-socle.html, à jour.",
+  "couleur": {
+    "clair": {
+      "bg": { "$type": "color", "$value": "#FFFFFF" },
+      "ink": { "$type": "color", "$value": "#111111" }
+    }
+  },
+  "$fraicheur": {
+    "verifie_le": "2026-09-14",
+    "sources": [
+      { "cle": "boilerplate:root-clair", "chemin": "oracles/fixtures/dtcg-fraicheur-socle.html", "empreinte": "b4935894c8ce16bde67bbffc672428b1533c4f1e1e8b1ce21a2933183db6bfa5" }
+    ]
+  }
+}

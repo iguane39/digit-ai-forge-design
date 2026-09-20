@@ -108,9 +108,18 @@ const regles = cssRulesDeep(cssText);
   const tables = ARBRES.flatMap(r => elements(r, 'table'));
   if (tables.length) {
     const reflow = regles.some(r => {
+      // TF-1129 (13/09/2026, Produit-64) — un `@media (max-width: Npx)` s'applique à TOUTE
+      // largeur ≤ N : pour couvrir la mesure à 768px, il faut N ≥ 768 (une bascule à 900px, le
+      // seuil du boilerplate du socle TF-0900, couvre 768 aussi bien qu'une bascule à 768 pile).
+      // Le sens INVERSE (N ≤ 768) exigeait un seuil PLUS ÉTROIT que la mesure — une bascule à
+      // 600px, par exemple, aurait satisfait ce test tout en laissant la table débordante à
+      // 768px, puisque `max-width: 600px` ne s'applique déjà plus à cette largeur. La règle
+      // avait le sens de comparaison inversé : elle acceptait un seuil insuffisant et refusait
+      // un seuil qui couvre le cas mesuré. render_page.py confirme à 768px : zéro débordement
+      // (V1) dès que N ≥ 768.
       const sousMobile = r.atRules.some(a => {
         const m = /max-width\s*:\s*(\d+)px/.exec(a);
-        return m && parseInt(m[1], 10) <= 768;
+        return m && parseInt(m[1], 10) >= 768;
       });
       // Un display:none sur une cellule n'est pas un reflow : c'est une amputation.
       // Seul un passage en flux bloc/grille/flex vaut reflow en cartes.

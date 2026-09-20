@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T1, couleur nue hors de tout var()</title>
+<!--
+  TF-1123. Preuve que neutraliser l'intérieur d'un var() ne désarme pas T1 : les mêmes
+  couleurs que la fixture verte jumelle, mais posées SANS aucun jeton — une couleur en dur
+  hors var() reste et doit rester bloquante.
+
+  Attendu : FAIL, exit 1, sur T1 (4 constats : .contenu, .encart × 2, .bouton:hover).
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+  }
+  body { background: var(--fond); margin: 0; padding: 32px; }
+  .contenu { color: #475569; }
+  .encart { background: #f8fafc; color: #64748b; padding: 16px; }
+  .bouton:hover { border-color: #2563eb; }
+</style>
+</head>
+<body>
+  <p class="contenu">Trois traitements en cours.</p>
+  <div class="encart">Note de version.</div>
+  <button class="bouton" type="button">Relancer</button>
+</body>
+</html>

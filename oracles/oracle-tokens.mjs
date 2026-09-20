@@ -38,7 +38,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, css, cssRulesDeep, lineOf } from './lib/html.mjs';
-import { parse as color, hsl, contrast, findColors } from './lib/color.mjs';
+import { parse as color, hsl, contrast, findColors, resoudreVar, extraireCouleurRaccourci, neutraliserVar } from './lib/color.mjs';
 
 const DOM = 'Système de marque : traçabilité des tokens';
 const args = process.argv.slice(2);
@@ -72,15 +72,30 @@ const estBlocToken = r =>
 const estSombre = r =>
   r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) ||
   /dark/i.test(r.selector);
+// TF-1057 (mesuré le 11/09 sur Produit-62, RD-16) — un bloc `@media print` peut
+// redéclarer `:root, :root[data-theme="dark"] { --bg:#FFFFFF; … }` pour l'impression :
+// le SÉLECTEUR porte « dark », mais la VALEUR n'appartient à aucun des deux thèmes
+// d'écran. Sans ce filtre, la table « sombre » héritait d'un blanc d'impression, et
+// T5/T8 confrontaient cette valeur aux jetons d'encre sombre réels — un red flag de
+// contraste faux sur toute page qui définit correctement un thème sombre ET un bloc
+// print (la doctrine du socle boilerplate.html). Un bloc print ne décrit ni le thème
+// clair ni le thème sombre d'écran : ses tokens sont écartés de la lecture, pas
+// requalifiés dans l'un ou l'autre.
+const estImpression = r => r.atRules.some(a => /^@media\b[^{]*\bprint\b/i.test(a));
 
 // ── Collecte des tokens déclarés ───────────────────────────────────────────
 const tokens = { clair: new Map(), sombre: new Map() };
+let ecartesImpression = 0;
 for (const r of regles) {
   if (!estBlocToken(r)) continue;
+  if (estImpression(r)) { ecartesImpression++; continue; }
   const cible = estSombre(r) ? tokens.sombre : tokens.clair;
   const re = /(--[\w-]+)\s*:\s*([^;]+)/g;
   let m;
   while ((m = re.exec(r.body))) cible.set(m[1], m[2].trim());
+}
+if (ecartesImpression > 0) {
+  NJ.push(`${ecartesImpression} bloc(s) de tokens sous @media print écarté(s) de la lecture clair/sombre (TF-1057) — ils décrivent la mise en page imprimée, pas un thème d'écran ; contraste d'impression non jugé ici`);
 }
 
 if (tokens.clair.size === 0) {
@@ -96,7 +111,9 @@ for (const r of regles) {
   PROPS_COULEUR.lastIndex = 0;
   while ((m = PROPS_COULEUR.exec(r.body))) {
     const val = m[3];
-    for (const c of findColors(val)) {
+    // TF-1123 — le repli d'un var(--jeton, <repli>) n'est jamais la couleur appliquée : ne
+    // jamais chercher de littéral à l'intérieur d'un var(), une couleur hors var() reste jugée.
+    for (const c of findColors(neutraliserVar(val))) {
       add('bloquant', 'T1', `couleur en dur « ${c.raw} » sur ${m[2]} : passer par var(--token)`,
         `sélecteur « ${r.selector.slice(0, 60)} », ligne ~${lineOf(cssText, r.start)} du CSS`);
     }
@@ -232,7 +249,7 @@ for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]
     const [kt, ks] = cle.split('|');
     const vt = table.get(kt), vs = table.get(ks);
     if (vt === undefined || vs === undefined) continue; // paire absente de ce thème
-    const ct = color(vt), cs = color(vs);
+    const ct = color(resoudreVar(vt, [n => table.get(n)])), cs = color(resoudreVar(vs, [n => table.get(n)]));
     if (!ct || !cs) continue;
     if (ct.a !== 1 || cs.a !== 1) { pairesComposees++; continue; }
     pairesTestees++;
@@ -372,6 +389,25 @@ const trouve = (table, noms) => noms.map(n => [n, table.get(n)]).find(([, v]) =>
 const tokenAnneau = trouve(tokens.clair, anneau) || trouve(tokens.sombre, anneau);
 const tokenDecalage = trouve(tokens.clair, decalage) || trouve(tokens.sombre, decalage);
 
+// TF-1058 (mesuré le 11/09 sur Produit-62, RD-17) — EST_SURFACE (ci-dessous) matche tout
+// jeton nommé -fond/-bg/-surface/-papier/-canvas, remplissage de badge de statut compris :
+// une pastille de 20px de haut ne porte jamais d'élément focusable, mais rien dans le CSS ne
+// le dit — le rôle d'une surface (conteneur focusable ou remplissage décoratif) n'est pas
+// décidable depuis la feuille seule, même limite que T7 pour un trait d'interface. Plutôt que
+// deviner par le nom (un renommage a suffi à faire disparaître 12 constats sans qu'une seule
+// couleur change), la feuille déclare les surfaces HORS CHAMP du focus, symétrique de
+// --paires-contraste / --paires-interface : c'est la déclaration qui exempte, jamais le nom.
+const surfaceHorsFocus = new Set();
+for (const table of [tokens.clair, tokens.sombre]) {
+  const v = table.get('--surfaces-hors-focus');
+  if (!v) continue;
+  for (const morceau of v.split(',')) {
+    const n = morceau.trim();
+    if (/^--[\w-]+$/.test(n)) surfaceHorsFocus.add(n);
+    else add('avertissement', 'T8', `--surfaces-hors-focus : « ${morceau.trim().slice(0, 50)} » illisible (forme attendue : --nom-du-jeton)`, 'bloc de tokens');
+  }
+}
+
 const reglesFocus = regles.filter(r => REGLE_FOCUS.test(r.selector));
 let focusImprovise = 0;
 for (const r of reglesFocus) {
@@ -397,9 +433,12 @@ if (tokenAnneau) {
   for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
     const va = table.get(tokenAnneau[0]);
     if (va === undefined) continue; // parité : c'est T4 qui la réclame
-    const ca = color(va);
+    const ca = color(resoudreVar(extraireCouleurRaccourci(va), [n => table.get(n)]));
     if (!ca || ca.a !== 1) { NJ.push(`T8 : ${tokenAnneau[0]} semi-transparent ou illisible en thème ${theme} — contraste de l'anneau non décidable sur le fichier`); continue; }
-    const surfaces = [...table].filter(([k, v]) => EST_SURFACE.test(k) && color(v) && color(v).a === 1);
+    const surfaces = [...table]
+      .filter(([k]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k))
+      .map(([k, v]) => [k, resoudreVar(v, [n => table.get(n)])])
+      .filter(([, v]) => color(v) && color(v).a === 1);
     if (!surfaces.length) { NJ.push(`T8 : aucune surface nommée en thème ${theme} — l'anneau de focus n'a été confronté à rien`); continue; }
     for (const [ks, vs] of surfaces) {
       const ratio = contrast(ca, color(vs));
@@ -424,7 +463,11 @@ if (tokenAnneau) {
         'bloc de tokens');
     }
   }
-} else if (!focusImprovise) {
+}
+if (surfaceHorsFocus.size > 0) {
+  NJ.push(`T8 : surface(s) déclarée(s) --surfaces-hors-focus, écartée(s) de la confrontation à l'anneau (TF-1058) : ${[...surfaceHorsFocus].join(', ')}`);
+}
+if (!tokenAnneau && !focusImprovise) {
   // Ni tokens, ni focus posé : rien à refuser, mais le silence serait un faux vert.
   add('avertissement', 'T8',
     'aucun token de focus prescrit (--focus-anneau / --focus-decalage) et aucun style de focus posé — ' +

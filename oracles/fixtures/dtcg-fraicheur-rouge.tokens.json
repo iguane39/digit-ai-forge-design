@@ -1,0 +1,15 @@
+{
+  "$description": "Fixture D4 (TF-1034) — source DTCG minimale qui déclare $fraicheur : empreinte PÉRIMÉE (le bouchon de socle dtcg-fraicheur-socle.html a changé depuis).",
+  "couleur": {
+    "clair": {
+      "bg": { "$type": "color", "$value": "#FFFFFF" },
+      "ink": { "$type": "color", "$value": "#111111" }
+    }
+  },
+  "$fraicheur": {
+    "verifie_le": "2026-09-14",
+    "sources": [
+      { "cle": "boilerplate:root-clair", "chemin": "oracles/fixtures/dtcg-fraicheur-socle.html", "empreinte": "0000000000000000000000000000000000000000000000000000000000000000" }
+    ]
+  }
+}

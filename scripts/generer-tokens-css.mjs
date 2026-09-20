@@ -74,10 +74,19 @@ function blocCouleurs(groupe, indent = '  ') {
     .join('\n');
 }
 
+/** Dérive un nom de sortie plausible quand aucun n'est fourni (affichage de l'en-tête
+ * seulement — n'écrit jamais de fichier). */
+function deriverNomSortie(sourcePath) {
+  if (/\.tokens\.json$/i.test(sourcePath)) return sourcePath.replace(/\.tokens\.json$/i, '.css');
+  return sourcePath.replace(/\.json$/i, '.css');
+}
+
 /**
  * Transforme un document DTCG (déjà parsé) en tokens.css.
  * Contrat de groupes attendu (voir corpus/tokens-digit-ai.tokens.json) :
- *   couleur.clair, couleur.sombre, typographie, rayon, espacement, mouvement, alias.
+ *   couleur.clair, couleur.sombre, typographie, rayon, espacement, mouvement, alias, focus.
+ * `focus` (TF-1034) est un groupe MIXTE : chaque entrée peut être un alias {chemin} ou un
+ * littéral, contrairement à `alias` qui n'accepte que des références.
  * `mouvement` est émis SEULEMENT s'il est présent dans la source : une source
  * antérieure à TF-0321 se régénère donc à l'octet près, et oracle-dtcg D3 ne
  * requalifie aucun tokens.css existant.
@@ -85,8 +94,17 @@ function blocCouleurs(groupe, indent = '  ') {
  * segment du chemin porte le nom de la custom property, quel que soit le thème
  * référencé dans la source — la résolution réelle se fait au runtime CSS via
  * la cascade des blocs de thème, pas à la génération.
+ *
+ * TF-1035 (constat en passant, lot marque Digit-AI du 11/09/2026) — `sourcePath` et
+ * `sortiePath` NOMMENT LA SOURCE RÉELLEMENT LUE : l'en-tête écrivait auparavant un
+ * chemin FIGÉ (« corpus/tokens-digit-ai.tokens.json ») quelle que soit la source
+ * réellement passée en argument — mesuré sur donnees/marque/tokens.css du produit
+ * digit-ai-marketing, généré depuis une tout autre source, et pourtant estampillé
+ * du chemin du corpus de cette forge. Un en-tête qui ment sur la provenance ne se
+ * corrige pas à la main : oracle-dtcg D3 interdit toute dérive manuelle du dérivé.
  */
-export function genererCss(dtcg) {
+export function genererCss(dtcg, sourcePath = 'corpus/tokens-digit-ai.tokens.json', sortiePath) {
+  const sortieEffective = sortiePath || deriverNomSortie(sourcePath);
   const preambule = dtcg.$description
     ? dtcg.$description.split('\n').map(l => ` * ${l}`).join('\n')
     : ' * Généré depuis une source DTCG.';
@@ -108,6 +126,7 @@ export function genererCss(dtcg) {
   const espacement = dtcg.espacement || {};
   const mouvement = dtcg.mouvement || {};
   const alias = dtcg.alias || {};
+  const focus = dtcg.focus || {};
 
   const lignesAlias = Object.entries(alias).map(([nom, noeud]) => {
     if (!estAlias(noeud)) throw new Error(`alias « ${nom} » sans référence {chemin} exploitable`);
@@ -130,6 +149,23 @@ export function genererCss(dtcg) {
         .map(([nom, noeud]) => `  --${nom}: ${valeurCss(noeud)};`).join('\n') + '\n'
     : '';
 
+  // Focus (TF-1034, réalignement du corpus digit-ai sur le socle) : groupe MIXTE — un token
+  // peut y être un ALIAS ({chemin}, ex. --focus-anneau vers la couleur d'accent, pour ne
+  // jamais dupliquer la valeur) ou un littéral (--focus-decalage, une dimension). Même
+  // doctrine que « mouvement » : groupe absent ⇒ bloc absent, à l'octet près — une source
+  // antérieure à ce chantier se régénère donc identique, et oracle-dtcg D3 ne requalifie
+  // rien d'existant.
+  const ligneFocus = ([nom, noeud]) => {
+    if (!estAlias(noeud)) return `  --${nom}: ${valeurCss(noeud)};`;
+    const chemin = noeud.$value.trim().slice(1, -1);
+    if (resoudreChemin(dtcg, chemin) == null) throw new Error(`token « ${nom} » (groupe focus) référence un chemin introuvable : ${chemin}`);
+    return `  --${nom}: var(--${chemin.split('.').pop()});`;
+  };
+  const blocFocus = Object.keys(focus).filter(k => !k.startsWith('$')).length
+    ? `\n  /* --- Focus : anneau et écart PRESCRITS, jamais improvisés à la consommation (RGAA 10.7, oracle-tokens T8) --- */\n`
+      + Object.entries(focus).filter(([k]) => !k.startsWith('$')).map(ligneFocus).join('\n') + '\n'
+    : '';
+
   const aSombre = Object.keys(sombre).filter(k => !k.startsWith('$')).length > 0;
   const schemaSombre = aSombre ? 'color-scheme: dark; ' : '';
   const blocSchemaSombre = aSombre ? '    color-scheme: dark;\n' : '';
@@ -140,9 +176,9 @@ export function genererCss(dtcg) {
     .map(([nom, noeud]) => `--${nom}: ${valeurCss(noeud)};`).join(' ');
 
   return `/* tokens.css — DÉRIVÉ, ne pas éditer à la main.
- * Source unique : corpus/tokens-digit-ai.tokens.json (format W3C DTCG, stable 2025.10).
- * Régénérer : node scripts/generer-tokens-css.mjs corpus/tokens-digit-ai.tokens.json --sortie corpus/tokens-digit-ai.css
- * Vérifié par : node oracles/oracle-dtcg.mjs corpus/tokens-digit-ai.tokens.json corpus/tokens-digit-ai.css
+ * Source unique : ${sourcePath} (format W3C DTCG, stable 2025.10).
+ * Régénérer : node scripts/generer-tokens-css.mjs ${sourcePath} --sortie ${sortieEffective}
+ * Vérifié par : node oracles/oracle-dtcg.mjs ${sourcePath} ${sortieEffective}
  *
 ${preambule}
  */
@@ -167,7 +203,7 @@ ${lignesAlias}
 
   /* --- Échelle d'espacement 4pt (oracle-tokens T3) --- */
 ${lignesEspace}
-${blocMouvement}}
+${blocFocus}${blocMouvement}}
 
 /* --- Thème sombre, dérivé --- */
 @media (prefers-color-scheme: dark) {
@@ -193,7 +229,7 @@ if (import.meta.url === `file://${process.argv[1]}`.replace(/\\/g, '/') || proce
   }
   try {
     const dtcg = JSON.parse(readFileSync(entree, 'utf8'));
-    const css = genererCss(dtcg);
+    const css = genererCss(dtcg, entree, sortie);
     writeFileSync(sortie, css, 'utf8');
     console.log(`tokens.css généré : ${sortie} (source : ${entree})`);
   } catch (e) {

@@ -98,6 +98,17 @@ const TOKENS_SOMBRE_BASCULE_FAIBLE = TOKENS_COMPLET
 // Accent pâle : le texte reste lisible (T5 vert), mais l'ÉLÉMENT D'INTERFACE tombe sous 3:1.
 const TOKENS_ACCENT_PALE = TOKENS_COMPLET.replace("--accent: #8a4b2a;", "--accent: #e0c3ae;");
 
+// TF-1035 (constat en passant, lot marque Digit-AI, 11/09/2026) — le contrat de tokens.css
+// (references/tokens.md) PRESCRIT un groupe d'ALIAS émis en `var(--cible)` par
+// scripts/generer-tokens-css.mjs ; ce générateur refusait « couleur illisible pour --accent :
+// var(--blue) » sur un tokens.css pourtant conforme à SA PROPRE forge.
+const TOKENS_ACCENT_ALIAS = TOKENS_COMPLET
+  .replace("--accent: #8a4b2a;", "--blue: #8a4b2a;\n  --accent: var(--blue);");
+// … un alias qui ne résout vers RIEN doit échouer proprement (comme --accent absent),
+// jamais silencieusement passer une chaîne « var(...) » telle quelle.
+const TOKENS_ACCENT_ALIAS_CASSE = TOKENS_COMPLET
+  .replace("--accent: #8a4b2a;", "--accent: var(--marque-inexistante);");
+
 // Focus prescrit, et prescrit trop pâle : l'anneau existe et ne se voit pas.
 const TOKENS_AVEC_FOCUS = TOKENS_COMPLET.replace(
   "--accent: #8a4b2a;",
@@ -155,6 +166,22 @@ try {
   const sceau = (t) => (t.match(/tokens=([0-9a-f]{64})/) || [, ""])[1];
   ok("un token modifié change le sceau", sceau(doc) !== sceau(doc2));
   ok("un token modifié change la valeur publiée", doc2.includes("#2a4b8a"));
+
+  // --- 2 bis · alias var() résolus avant mesure (TF-1035) ------------------------------------
+  console.log("\nalias var() : résolus avant lecture de la couleur, jamais passés tels quels");
+  const tokensAlias = ecrire("tokens-accent-alias.css", TOKENS_ACCENT_ALIAS);
+  const sortieAlias = join(atelier, "DESIGN-alias.md");
+  const ral = lancer(["--tokens", tokensAlias, "--marque", marque, "--sortie", sortieAlias]);
+  ok("--accent en var(--blue) → exit 0, comme un littéral", ral.status === 0, `obtenu ${ral.status} · ${ral.stderr.trim()}`);
+  const docAlias = existsSync(sortieAlias) ? readFileSync(sortieAlias, "utf8") : "";
+  ok("… la couleur de la cible de l'alias est publiée, résolue", docAlias.includes("#8a4b2a"));
+  ok("… jamais la chaîne « var(...) » telle quelle", !docAlias.includes("var(--blue)"));
+
+  const tokensAliasCasse = ecrire("tokens-accent-alias-casse.css", TOKENS_ACCENT_ALIAS_CASSE);
+  const sortieAliasCasse = join(atelier, "DESIGN-alias-casse.md");
+  const ralc = lancer(["--tokens", tokensAliasCasse, "--marque", marque, "--sortie", sortieAliasCasse]);
+  ok("… un alias qui ne résout vers RIEN échoue proprement, comme --accent absent", ralc.status === 1, `obtenu ${ralc.status}`);
+  ok("… et RIEN n'est écrit", !existsSync(sortieAliasCasse));
 
   // --- 3 · le mouvement PRESCRIT, et son absence DITE (TF-0321) ------------------------------
   console.log("\nmouvement : prescrit, ou déclaré absent — jamais inventé");

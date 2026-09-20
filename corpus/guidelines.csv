@@ -43,3 +43,4 @@ GL41;Bibliothèque de références curée;process;grouper les références par f
 GL42;Explorer en largeur avant de creuser;process;générer plusieurs variantes de direction comparées côte à côte avant d'affiner;skill:impeccable#shape;ok
 GL43;Juger sur rendu, jamais depuis le code;process;itérer visuellement, valider un design sur son rendu et non dans le terminal;skill:impeccable#live;ok
 GL44;S'inspirer d'une référence sans la copier;contenu;matcher le ressenti, jamais reproduire la mise en page source;skill:impeccable#adapt;ok
+GL45;Largeur de conception par défaut d'un écran de bureau et grille de vérification;espace;conception à 1920 px (Full HD), vérification à 3840 / 2560 / 1920 / 1440 / 1024 / 768 / 390 px;grille-viewports.json;ok

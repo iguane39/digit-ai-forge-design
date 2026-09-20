@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T8, anneau de focus en raccourci à couleur illisible</title>
+<!--
+  TF-1108. Preuve que l'extraction de la composante couleur d'un raccourci ne fait pas
+  passer un vrai défaut : --focus-anneau: 2px solid var(--blue), même forme que la fixture
+  verte jumelle, mais --blue vaut #b8c6f0 (bleu pâle) — 1.70:1 sur --fond (#ffffff), 1.50:1
+  sur --fond-carte (#eef1f6), tous deux < 3:1.
+
+  Attendu : FAIL, exit 1, sur T8 — thème clair seulement (--blue inchangé côté sombre pour
+  isoler la variable testée ; un bleu pâle tient au contraire très large sur un fond sombre,
+  comme pour tokens-t8-alias-rouge.html).
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --blue: #b8c6f0;
+    --focus-anneau: 2px solid var(--blue);
+    --focus-decalage: 2px;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --fond: #12151b;
+      --fond-carte: #1c2029;
+      --texte: #eef1f6;
+      --blue: #b8c6f0;
+      --focus-anneau: 2px solid var(--blue);
+      --focus-decalage: 2px;
+    }
+  }
+
+  body {
+    background: var(--fond);
+    color: var(--texte);
+    font-family: var(--police-corps);
+    margin: 0;
+    padding: 32px;
+  }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .bouton:focus-visible,
+  .champ:focus-visible {
+    outline: var(--focus-anneau);
+    outline-offset: var(--focus-decalage);
+  }
+</style>
+</head>
+<body>
+  <h1>Demande d'intervention</h1>
+  <div class="carte">
+    <label for="objet">Objet</label>
+    <input class="champ" id="objet" type="text">
+    <button class="bouton" type="submit">Envoyer</button>
+  </div>
+</body>
+</html>
