@@ -527,6 +527,11 @@ const CAS = [
     // même page et le même bloc du socle ; elles ne diffèrent QUE par un caractère du sceau.
     // La verte, sceau juste, sort à PASS avec ses 20 constats rendus dans `socle_exempte` ;
     // la rouge, sceau faux, les reprend tous à son compte — deux commentaires n'exemptent rien.
+    // RECTIFICATION du 22/09/2026 (TF-1241) : depuis le 15/09 (51a783f), la verte embarque le
+    // composant NETTOYÉ du socle réel — elle passe avec ZÉRO constat au compte du socle et ne
+    // différencie plus rien ; la rouge garde l'ancien composant. Ce cas prouve donc encore qu'un
+    // sceau faux n'exempte de rien, mais PLUS que la passe exempte un sceau juste : c'est le bloc
+    // « socle d'essai » en fin de recette qui le prouve désormais, sur un composant sale scellé juste.
     socle: 'digit-ai-page-html/assets/table-filters.css',
     oracle: 'run-oracles-design.mjs',
     regles: ['T1', 'T3', 'T8', 'S4'],
@@ -828,6 +833,65 @@ for (const cas of CAS) {
     { encoding: 'utf8' });
   const derniere = ((r.stdout || '').trim().split(String.fromCharCode(10)).pop() || '').trim();
   ligne(r.status === 0, `self-test du générateur · exit 0 (obtenu ${r.status}) — ${derniere}`);
+}
+
+// TF-1241 (22/09/2026) — LA PASSE D'IMPUTATION AU SOCLE, PROUVÉE SUR UN SOCLE D'ESSAI.
+//
+// POURQUOI UN SOCLE D'ESSAI. Depuis le 15/09 (51a783f), la fixture verte de TF-0830 embarque le
+// composant NETTOYÉ du socle réel : elle passe sans la moindre imputation, et elle ne prouve plus
+// rien de ce que son commentaire annonce (« ses 20 constats rendus dans socle_exempte » — il y en a
+// zéro). Tant que le socle réel est propre, AUCUNE fixture ne peut porter à la fois un sceau vérifié
+// et des constats : la passe n'était plus exercée par personne. D'où un socle posé pour la recette
+// (FORGE_SKILLS_INSTALLES, que lib/socle.mjs honore désormais), dont le composant est volontairement
+// SALE et scellé JUSTE.
+//
+// CE QUI EST PROUVÉ, DANS CET ORDRE : (1) l'oracle DIRECT échoue sur la page — c'est ce que le lanceur
+// général de quality-oracles jouait avant TF-1241 ; (2) le point d'entrée en mode `--oracle <juge>
+// --contrat-runner` passe, rend la forme d'entrée du lanceur, et met les constats au compte du socle
+// sans les effacer ; (3) le même bloc au sceau altéré d'un caractère échoue — deux commentaires
+// n'exemptent de rien.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design.mjs --oracle <juge> --contrat-runner (TF-1241, socle d\'essai)');
+  const { createHash } = await import('node:crypto');
+  const racineEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'socle-essai-'));
+  try {
+    const dossierSocle = path.join(racineEssai, 'digit-ai-page-html', 'assets');
+    fs.mkdirSync(dossierSocle, { recursive: true });
+    const sale = '.tf-btn.tf-on { background: #2563EB; color: #fff; padding: 7px 13px; }\n'
+      + '.tf-opts label:hover { background: #f6f8fc; }\n';
+    fs.writeFileSync(path.join(dossierSocle, 'table-filters.css'), sale, 'utf8');
+    const sceau = createHash('sha256').update(sale, 'utf8').digest('hex');
+    const bloc = (empreinte) => '<!-- COMPOSANT-EMBARQUE:DEBUT table-filters.css socle=digit-ai-page-html/assets -->\n'
+      + `<style data-composant="table-filters.css" data-empreinte="sha256:${empreinte}">\n${sale.replace(/\n+$/, '')}\n</style>\n`
+      + '<!-- COMPOSANT-EMBARQUE:FIN table-filters.css -->';
+    // La page hôte est la fixture verte de TF-0830, dont SEUL le bloc embarqué est remplacé : tout
+    // le reste de la page est donc déjà jugé propre par les cas ci-dessus.
+    const hote = fs.readFileSync(fx('socle-embarque-verte.html'), 'utf8');
+    const motif = /<!--\s*COMPOSANT-EMBARQUE:DEBUT table-filters\.css[\s\S]*?<!--\s*COMPOSANT-EMBARQUE:FIN table-filters\.css\s*-->/;
+    const juste = path.join(racineEssai, 'page-sceau-juste.html');
+    const altere = path.join(racineEssai, 'page-sceau-altere.html');
+    fs.writeFileSync(juste, hote.replace(motif, bloc(sceau)), 'utf8');
+    fs.writeFileSync(altere, hote.replace(motif, bloc((sceau[0] === 'a' ? 'b' : 'a') + sceau.slice(1))), 'utf8');
+    const env = { ...process.env, FORGE_SKILLS_INSTALLES: racineEssai };
+    const jouer = (args) => {
+      const r = spawnSync(process.execPath, args, { encoding: 'utf8', env });
+      let json = null; try { json = JSON.parse((r.stdout || '').trim()); } catch { /* sortie illisible, jugée ci-dessous */ }
+      return { code: r.status, json };
+    };
+    for (const juge of ['tokens', 'slop']) {
+      const direct = jouer([path.join(ici, `oracle-${juge}.mjs`), juste, '--json-only']);
+      ligne(direct.json?.verdict === 'FAIL', `${juge} · direct sur le composant sale scellé juste : FAIL (obtenu ${direct.json?.verdict}) — ce que le lanceur général jouait`);
+      const runner = jouer([path.join(ici, 'run-oracles-design.mjs'), juste, '--oracle', juge, '--contrat-runner', '--json-only']);
+      const cles = ['oracle', 'domaine', 'artefact', 'verdict', 'findings', 'non_juge'].filter(k => !(k in (runner.json || {})));
+      ligne(runner.code === 0 && runner.json?.verdict === 'PASS', `${juge} · mode lanceur, sceau juste : PASS exit 0 (obtenu ${runner.json?.verdict}, exit ${runner.code})`);
+      ligne((runner.json?.socle_exempte?.findings || []).length > 0, `${juge} · les constats du socle sont RENDUS dans socle_exempte, pas effacés (${(runner.json?.socle_exempte?.findings || []).length})`);
+      ligne(cles.length === 0, `${juge} · forme d'entrée du lanceur complète${cles.length ? ' — absents : ' + cles.join(', ') : ''}`);
+      const faux = jouer([path.join(ici, 'run-oracles-design.mjs'), altere, '--oracle', juge, '--contrat-runner', '--json-only']);
+      ligne(faux.code === 1 && faux.json?.verdict === 'FAIL', `${juge} · mode lanceur, sceau altéré d'un caractère : FAIL exit 1 (obtenu ${faux.json?.verdict}, exit ${faux.code})`);
+    }
+  } finally {
+    fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

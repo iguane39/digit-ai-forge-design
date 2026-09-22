@@ -48,7 +48,24 @@ const LARGEURS_RENDU = GRILLE.rendus;
 const LARGEUR_CONCEPTION = GRILLE.largeurConception;
 const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
-  && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus');
+  && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus'
+  && args[args.indexOf(a) - 1] !== '--oracle');
+
+// ── TF-1241 (22/09/2026) · UN SEUL JUGE, AVEC LA PASSE DU SOCLE, À LA FORME DU LANCEUR GÉNÉRAL ──
+// Le lanceur général de quality-oracles (`run-oracles.mjs`) indexait oracle-slop et oracle-tokens
+// par leur commande DIRECTE : il les jouait un par un, SANS la passe d'imputation au socle que ce
+// point d'entrée porte depuis TF-0830. Mesuré le 19/09 sur une même page, le même jour : ce point
+// d'entrée rendait PASS (22 constats au compte du socle, 0 à la page), le lanceur général rendait
+// NON CONFORME sur 26 constats — tous portés par un composant que l'auteur n'a pas le droit de
+// modifier. Et c'est le lanceur général qui écrit le journal de la page. La passe n'est pas
+// dupliquée chez lui : elle vit ici, et deux options la rendent empruntable.
+//   --oracle <nom>     ne joue QUE ce juge (« slop », « tokens »…), sur la page puis sur la copie
+//                      sans socle — la liste des juges reste décidée une fois, sur le document.
+//   --contrat-runner   rend la forme d'ENTRÉE du lanceur, `{oracle, domaine, artefact, verdict,
+//                      findings[], non_juge[]}`, exit 0/1/2 — celle d'un oracle direct, imputation
+//                      faite, les constats du socle restant RENDUS dans `socle_exempte`.
+const seul = opt('--oracle');
+const contratRunner = args.includes('--contrat-runner');
 
 function racineDeForge() {
   const ici = path.dirname(fileURLToPath(import.meta.url));
@@ -71,6 +88,20 @@ const ORACLES = path.join(RACINE, 'oracles');
 let socleExempte = null;
 
 function sortir(verdict, resultats, nonJuge, code) {
+  // TF-1241 — la forme d'ENTRÉE du lanceur général, pour un seul juge. Le verdict et le code sont
+  // ceux du juge APRÈS imputation au socle ; les constats mis au compte du socle ne sont pas
+  // effacés, ils partent dans `socle_exempte`, et le non_juge dit pourquoi.
+  if (contratRunner && seul) {
+    const r = resultats[0] || { oracle: `oracle-${seul}`, verdict, findings: [], non_juge: [] };
+    const v = r.verdict || verdict;
+    process.stdout.write(JSON.stringify({
+      oracle: r.oracle || `oracle-${seul}`, domaine: r.domaine || null,
+      artefact: cible || null, verdict: v, findings: r.findings || [], non_juge: nonJuge,
+      ...(socleExempte ? { socle_exempte: socleExempte } : {}),
+      emprunte: 'run-oracles-design --oracle (passe d\'imputation au socle, TF-0830 / TF-1241)',
+    }));
+    process.exit(v === 'FAIL' ? 1 : v === 'PASS' ? 0 : 2);
+  }
   process.stdout.write(JSON.stringify({
     orchestrateur: 'run-oracles-design', racine: RACINE, artefact: cible || opt('--corpus') || null,
     // La grille est DITE, pas seulement passée à render_page.py : un lecteur du JSON
@@ -100,7 +131,7 @@ function lancer(oracle, argv) {
     const j = JSON.parse(r.stdout.trim());
     const durs = (j.findings || []).filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
     return {
-      oracle: j.oracle, verdict: j.verdict, exit: r.status,
+      oracle: j.oracle, domaine: j.domaine, verdict: j.verdict, exit: r.status,
       ecarts_durs: durs.length,
       avertissements: (j.findings || []).filter(f => f.sev === 'avertissement').length,
       findings: j.findings || [], non_juge: j.non_juge || [],
@@ -320,6 +351,13 @@ const sansObjet = [];
 // décidés une fois pour toutes sur le document réel (ci-dessus) : une passe sur la copie
 // sans socle ne doit jamais changer la LISTE des juges, seulement leurs constats.
 function passeFichier(fichier, { muet = false } = {}) {
+  // TF-1241 : avec `--oracle`, un seul juge est joué — et aucun « SANS OBJET » n'est écrit pour
+  // les autres : ils ne sont pas sans objet, ils n'ont simplement pas été demandés.
+  if (seul) {
+    const script = `oracle-${seul}.mjs`;
+    const avecTokens = ['oracle-tokens.mjs', 'oracle-declencheurs.mjs', 'oracle-surcouche.mjs'].includes(script);
+    return [lancer(script, avecTokens && opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier])];
+  }
   const out = [];
   out.push(lancer('oracle-slop.mjs', [fichier]));
   out.push(lancer('oracle-tokens.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));

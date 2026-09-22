@@ -27,7 +27,15 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 
 const SOCLE_DEFAUT = 'digit-ai-page-html/assets';
-const RACINE_SKILLS = path.join(os.homedir(), '.claude', 'skills');
+// La racine des skills installés se RÉSOUT, dans l'ordre même du pilot (scripts/lib-config-installee.mjs
+// de digit-ai-factory) : `FORGE_SKILLS_INSTALLES` d'abord — c'est ce qui permet à une recette de poser
+// un socle d'ESSAI —, puis `CLAUDE_CONFIG_DIR/skills`, sinon `~/.claude/skills`. TF-1241 (22/09/2026) :
+// figée sur le répertoire personnel, cette racine rendait la passe d'imputation IMPROUVABLE dès que le
+// socle réel est propre — aucune fixture ne peut alors porter à la fois un sceau vérifié et des
+// constats, et la fixture verte de TF-0830 avait perdu, le 15/09, tout ce qu'elle démontrait.
+const RACINE_SKILLS = process.env.FORGE_SKILLS_INSTALLES
+  || (process.env.CLAUDE_CONFIG_DIR ? path.join(process.env.CLAUDE_CONFIG_DIR, 'skills') : null)
+  || path.join(os.homedir(), '.claude', 'skills');
 const RE_DEBUT = /<!--\s*COMPOSANT-EMBARQUE:DEBUT\s+([A-Za-z0-9._-]+)(?:\s+socle=([A-Za-z0-9._/-]+))?/g;
 
 export const sha = txt => crypto.createHash('sha256').update(txt, 'utf8').digest('hex');
