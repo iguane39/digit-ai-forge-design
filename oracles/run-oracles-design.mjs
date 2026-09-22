@@ -408,7 +408,15 @@ if (socle.verifies.length) {
     // constats qui citent l'artefact. Le neutraliser avant de comparer, sinon un constat
     // identique des deux côtés passerait pour un constat disparu.
     const norm = s => String(s ?? '').split(tmp).join(cible);
-    const cle = f => `${f.sev}|${f.regle}|${norm(f.msg)}|${norm(f.where)}`;
+    // L'IDENTITÉ D'UN CONSTAT NE PORTE AUCUNE POSITION (22/09/2026). Le neutraliseur garde les lignes
+    // du HTML, mais la balise <style> du bloc vidé disparaît : les lignes du CSS, que l'oracle des
+    // jetons cite (« ligne ~N du CSS »), se DÉCALENT pour tout ce qui suit le bloc. Le même constat
+    // changeait d'identité d'une passe à l'autre, et une couleur en dur écrite par l'AUTEUR après un
+    // composant du socle passait au compte du socle — effacée du verdict. Mesuré sur une page d'étude
+    // du pilot : T1 sur « .find-count.zero » imputé au socle, verdict PASS. Deux constats identiques
+    // restent distincts par leur NOMBRE (multiensemble ci-dessous), pas par leur position.
+    const sansPosition = s => String(s ?? '').replace(/\b(ligne|line|l\.)\s*~?\s*\d+/gi, '').replace(/:\d+(:\d+)?\b/g, '');
+    const cle = f => `${f.sev}|${f.regle}|${sansPosition(norm(f.msg))}|${sansPosition(norm(f.where))}`;
     for (const r of resultats) {
       const pair = sansSocle.find(x => x.oracle === r.oracle);
       if (!pair) continue;

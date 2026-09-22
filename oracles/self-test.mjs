@@ -889,6 +889,21 @@ for (const cas of CAS) {
       const faux = jouer([path.join(ici, 'run-oracles-design.mjs'), altere, '--oracle', juge, '--contrat-runner', '--json-only']);
       ligne(faux.code === 1 && faux.json?.verdict === 'FAIL', `${juge} · mode lanceur, sceau altéré d'un caractère : FAIL exit 1 (obtenu ${faux.json?.verdict}, exit ${faux.code})`);
     }
+    // LE SENS QUI MANQUAIT : UNE FAUTE DE L'AUTEUR, PLACÉE APRÈS UN BLOC DU SOCLE, RESTE À L'AUTEUR
+    // (22/09/2026, trouvé en jugeant une page d'étude du pilot). Le neutraliseur vide le bloc du socle
+    // en gardant les lignes du HTML, mais la balise <style> disparaît avec lui : les lignes du CSS,
+    // que l'oracle des jetons cite dans chaque constat (« ligne ~N du CSS »), se DÉCALENT pour tout ce
+    // qui suit. Le même constat changeait alors d'identité entre les deux passes, et une couleur en
+    // dur écrite par l'auteur passait au compte du socle — effacée du verdict. Une passe
+    // d'imputation qui efface une faute de l'auteur est pire que pas de passe du tout.
+    const fauteAuteur = hote.replace(motif, bloc(sceau)).replace('</head>', '<style>.faute-auteur{color:#123456}</style></head>');
+    const pageFaute = path.join(racineEssai, 'page-faute-auteur.html');
+    fs.writeFileSync(pageFaute, fauteAuteur, 'utf8');
+    const fa = jouer([path.join(ici, 'run-oracles-design.mjs'), pageFaute, '--oracle', 'tokens', '--contrat-runner', '--json-only']);
+    const aLAuteur = (fa.json?.findings || []).some(f => f.regle === 'T1' && /123456/i.test(f.msg || ''));
+    const auSocle = (fa.json?.socle_exempte?.findings || []).some(f => /123456/i.test(f.msg || ''));
+    ligne(fa.json?.verdict === 'FAIL' && aLAuteur && !auSocle,
+      `tokens · une couleur en dur de l'AUTEUR placée après le bloc du socle reste à l'auteur : FAIL, T1 sur « .faute-auteur », rien au compte du socle (obtenu ${fa.json?.verdict}, à l'auteur ${aLAuteur}, au socle ${auSocle})`);
   } finally {
     fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
   }
