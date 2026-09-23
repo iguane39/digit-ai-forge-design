@@ -88,6 +88,9 @@ node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : acti
 node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
+node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
+node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
+
 node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url> \
   [--zone <sélecteur>] [--largeurs <grille du corpus>] [--sortie <dossier>] \
   [--etats-ouverts] [--json-only]                             # avant/après d'un correctif ad hoc
