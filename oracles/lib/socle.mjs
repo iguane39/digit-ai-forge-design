@@ -126,3 +126,31 @@ export function neutraliser(html, blocs) {
   }
   return out;
 }
+
+// ── LA CHARTE DE POLICE DU SOCLE SE LIT DANS LE SOCLE (TF-1023, décision humaine D-11 (a) du 23/09/2026) ──
+//
+// LE FAIT. oracle-slop reconnaissait une page « au socle » à une paire de polices ÉCRITE ICI — Roboto
+// en titres, DM Sans en corps — et exemptait ces deux familles de la règle S3. Le 23/09, le socle a
+// pris les polices de la charte des présentations (Montserrat, Inter), sur la décision humaine D-5 (a)
+// du 22/09 « la charte des présentations fait foi, les pages s'y alignent ». La paire écrite ici
+// devenait un second domicile de la charte : chaque page neuve bâtie sur le socle aurait échoué S3,
+// bancs compris, pour une police que le socle lui-même prescrit.
+//
+// LE REMÈDE. La paire se LIT dans le gabarit du socle INSTALLÉ, sous la même racine que les blocs
+// embarqués ci-dessus : la page reconnue est celle qui déclare les mêmes familles de tête que le
+// socle qui s'exécute sur ce poste. Jusqu'à la propagation du socle, c'est l'ancienne paire ;
+// après, la nouvelle — le juge suit le socle au moment exact où les générateurs le suivent.
+/** La paire de polices du socle installé : { head, sans, familles[], source }, ou null s'il est introuvable. */
+export function charteDePoliceDuSocle(racine = RACINE_SKILLS) {
+  const fichier = path.join(racine, 'digit-ai-page-html', 'assets', 'boilerplate.html');
+  let txt;
+  try { txt = fs.readFileSync(fichier, 'utf8'); } catch { return null; }
+  const pile = (motif) => {
+    const m = motif.exec(txt);
+    return m ? m[1].split(',').map((x) => x.trim().replace(/^["']|["']$/g, '').toLowerCase()).filter(Boolean) : null;
+  };
+  const head = pile(/--head\s*:\s*([^;]+);/);
+  const sans = pile(/--sans\s*:\s*([^;]+);/);
+  if (!head || !sans) return null;
+  return { head: head[0], sans: sans[0], familles: [...new Set([...head, ...sans])], source: fichier };
+}

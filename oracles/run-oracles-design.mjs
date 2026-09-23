@@ -36,6 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
+import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -342,8 +343,9 @@ const aUnPanneau = /data-panneau-tache|data-branche\s*=/i.test(html);
 // la page. Une page sans déclencheur, elle, n'a pas de déclencheur mal formé.
 const aUnDeclencheur = /<button[\s>]|<a[\s>]|<summary[\s>]|data-action|onclick|role\s*=\s*["'](button|link)["']/i.test(html);
 const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(html);
-const estMobile = args.includes('--mobile')
-  || /viewport-fit\s*=\s*cover|safe-area-inset|data-chassis|class="[^"]*chassis/i.test(html);
+// TF-1322 (23/09/2026) : la règle vit dans lib/cible-mobile.mjs, que le lanceur général de
+// quality-oracles consulte aussi (par oracle-mobile --si-cible-mobile) — une portée, deux juges.
+const estMobile = estCibleMobile(html, args);
 
 const sansObjet = [];
 
@@ -366,7 +368,7 @@ function passeFichier(fichier, { muet = false } = {}) {
   out.push(lancer('oracle-taste.mjs', [fichier]));
 
   if (estMobile) out.push(lancer('oracle-mobile.mjs', [fichier]));
-  else if (!muet) sansObjet.push('oracle-mobile : SANS OBJET — cible non mobile (ni --mobile, ni marqueur de châssis détecté)');
+  else if (!muet) sansObjet.push(`oracle-mobile : SANS OBJET — ${MOTIF_SANS_OBJET}`);
 
   if (aDesImages) out.push(lancer('oracle-images.mjs', [fichier]));
   else if (!muet) sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');

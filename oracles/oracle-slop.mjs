@@ -10,6 +10,7 @@
 import fs from 'node:fs';
 import { parse, arbres, elements, visibleText, css, cssRules, lineOf } from './lib/html.mjs';
 import { parse as color, hsl, findColors } from './lib/color.mjs';
+import { charteDePoliceDuSocle } from './lib/socle.mjs';
 
 const DOM = 'Design généré : marqueurs de slop';
 const NON_JUGE = [
@@ -129,11 +130,31 @@ const tous = tag => ARBRES.flatMap(a => elements(a.r, tag).map(el => ({ a, el })
 // jugée. Et l'exemption ne porte QUE sur les deux polices de la charte : toute autre famille
 // réflexe reste un écart majeur sur une page au socle comme ailleurs — sans quoi le marqueur
 // deviendrait une porte de sortie, ce que la doctrine des blocs du socle (TF-0830) refuse déjà.
-const POLICES_CHARTE_SOCLE = ['roboto', 'dm sans'];
-const auSocleDigitAi = /--head\s*:\s*["']?Roboto["']?/i.test(cssText)
-  && /--sans\s*:\s*["']?DM\s+Sans["']?/i.test(cssText);
+//
+// TF-1023 (décision humaine D-11 (a) du 23/09/2026) — LA PAIRE DE LA CHARTE SE LIT DANS LE SOCLE.
+// Elle était écrite ici (Roboto, DM Sans) ; le socle a pris ce jour-là les polices de la charte des
+// présentations. Garder la paire en dur aurait fait échouer S3 à chaque page neuve bâtie sur le socle.
+// La page est reconnue quand elle déclare en tête de `--head` et de `--sans` les mêmes familles que
+// le gabarit du socle INSTALLÉ (lib/socle.mjs) ; ou la paire ANTÉRIEURE, datée, pour les pages
+// livrées avant l'alignement — on ne condamne pas un livrable daté pour une charte qui a changé
+// après lui. Sont exemptées les familles des piles du socle reconnu, et elles seules.
+const CHARTE_ANTERIEURE = { head: 'roboto', sans: 'dm sans', familles: ['roboto', 'dm sans'],
+  source: 'charte antérieure du socle (Roboto / DM Sans), en vigueur jusqu\'au 23/09/2026' };
+const charteInstallee = charteDePoliceDuSocle();
+const premiereFamille = (motif) => {
+  const m = motif.exec(cssText);
+  return m ? m[1].split(',')[0].trim().replace(/^["']|["']$/g, '').toLowerCase() : null;
+};
+const pairePage = { head: premiereFamille(/--head\s*:\s*([^;}]+)/i), sans: premiereFamille(/--sans\s*:\s*([^;}]+)/i) };
+const charteDeLaPage = [charteInstallee, CHARTE_ANTERIEURE].filter(Boolean)
+  .find((c) => c.head === pairePage.head && c.sans === pairePage.sans) || null;
+const POLICES_CHARTE_SOCLE = charteDeLaPage ? charteDeLaPage.familles : [];
+const auSocleDigitAi = Boolean(charteDeLaPage);
 if (auSocleDigitAi) {
-  NON_JUGE.push('S3 : page déclarant la charte du socle digit-ai (jetons `--head` → Roboto et `--sans` → DM Sans) — ces DEUX familles y sont prescrites par le socle et vérifiées par son propre contrôle ; elles sont exemptées et le constat est rendu en `info`. Toute autre famille réflexe reste jugée (TF-0857)');
+  NON_JUGE.push(`S3 : page déclarant la charte du socle digit-ai (jetons \`--head\` → ${pairePage.head}, \`--sans\` → ${pairePage.sans} ; ${charteDeLaPage.source}) — les familles de ses piles y sont prescrites par le socle ; elles sont exemptées et le constat est rendu en \`info\`. Toute autre famille réflexe reste jugée (TF-0857, TF-1023)`);
+}
+if (!charteInstallee) {
+  NON_JUGE.push('S3 : socle digit-ai-page-html introuvable sur ce poste — seule la charte ANTÉRIEURE (Roboto / DM Sans) est reconnue ; une page au socle courant y sera jugée comme une page sans charte');
 }
 {
   const vus = new Set();

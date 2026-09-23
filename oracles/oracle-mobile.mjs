@@ -15,10 +15,17 @@
 // au breakpoint) est déclaré non jugé et délégué à render_page.py.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
-// Usage : node oracle-mobile.mjs <fichier.html> [--json-only]
+// Usage : node oracle-mobile.mjs <fichier.html> [--json-only] [--si-cible-mobile [--mobile]]
+//
+// --si-cible-mobile (TF-1322, 23/09/2026) : ne juge que si la page est une CIBLE MOBILE au sens de
+// lib/cible-mobile.mjs — la règle du point d'entrée de cette forge — et rend sinon SKIP, exit 2,
+// avec le motif « sans objet ». C'est l'option que le registre de quality-oracles passe au lanceur
+// général : sans elle, il jugeait toute page HTML contre un contrat tactile qui ne la visait pas.
+// Appelé sans l'option, l'oracle juge comme avant : le point d'entrée a déjà décidé pour lui.
 
 import fs from 'node:fs';
 import { parse as parseHtml, arbres, elements, css, cssRulesDeep, lineOf } from './lib/html.mjs';
+import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
 
 const DOM = 'Cible mobile : contrat d\'usage tactile';
 const args = process.argv.slice(2);
@@ -50,6 +57,11 @@ function sortir(verdict, code) {
 if (!file || !fs.existsSync(file)) { NJ.push('fichier absent'); sortir('SKIP', 2); }
 
 const html = fs.readFileSync(file, 'utf8');
+if (args.includes('--si-cible-mobile') && !estCibleMobile(html, args)) {
+  add('info', '—', `SANS OBJET — ${MOTIF_SANS_OBJET}`, file);
+  NJ.push('contrat tactile non joué : la page n\'est pas une cible mobile (règle de lib/cible-mobile.mjs, partagée avec run-oracles-design)');
+  sortir('SKIP', 2);
+}
 const root = parseHtml(html);
 const cssText = css(html, root).replace(/\/\*[\s\S]*?\*\//g, ' ');
 const regles = cssRulesDeep(cssText);

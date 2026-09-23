@@ -909,6 +909,94 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1322 (D-13 (a) du 23/09/2026) — UNE PORTÉE, DEUX JUGES. Le lanceur général de quality-oracles
+// jouait oracle-mobile sur toute page HTML, là où ce point d'entrée le réserve aux cibles mobiles :
+// une page conforme du socle y échouait par les barres collées du gabarit lui-même. La règle vit
+// désormais dans lib/cible-mobile.mjs ; oracle-mobile la consulte sous `--si-cible-mobile`, l'option
+// que le registre de quality-oracles lui passe. Les sens tenus, chacun sur une page écrite ici :
+{
+  console.log(String.fromCharCode(10) + 'lib/cible-mobile.mjs (TF-1322) — le contrat tactile ne juge que les cibles mobiles, aux deux lanceurs');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'cible-mobile-'));
+  try {
+    const page = (tete) => `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">${tete}<title>t</title>`
+      + '<style>header.colle{position:sticky;top:0}</style></head><body><header class="colle">en-tete</header>'
+      + '<main><p>corps</p></main></body></html>';
+    const bureau = path.join(dossier, 'bureau.html');
+    const mobile = path.join(dossier, 'mobile.html');
+    fs.writeFileSync(bureau, page('<meta name="viewport" content="width=device-width, initial-scale=1.0">'), 'utf8');
+    fs.writeFileSync(mobile, page('<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">'), 'utf8');
+    const jouerMobile = (...a) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-mobile.mjs'), ...a, '--json-only'], { encoding: 'utf8' });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json };
+    };
+    const a = jouerMobile(bureau, '--si-cible-mobile');
+    ligne(a.code === 2 && a.json?.verdict === 'SKIP' && (a.json?.findings || []).some(f => /SANS OBJET/.test(f.msg || '')),
+      `sens rouge · page de bureau sous --si-cible-mobile : SKIP exit 2, motif « sans objet » écrit (obtenu ${a.json?.verdict}, exit ${a.code})`);
+    const b = jouerMobile(bureau);
+    ligne(b.json && b.json.verdict !== 'SKIP',
+      `sens vert · la même page SANS l'option est jugée comme avant — le point d'entrée a déjà décidé pour l'oracle (obtenu ${b.json?.verdict})`);
+    const c = jouerMobile(mobile, '--si-cible-mobile');
+    ligne(c.json && c.json.verdict !== 'SKIP',
+      `sens vert · page qui déclare son encoche (viewport-fit=cover) sous --si-cible-mobile : jugée (obtenu ${c.json?.verdict})`);
+    const d = jouerMobile(bureau, '--si-cible-mobile', '--mobile');
+    ligne(d.json && d.json.verdict !== 'SKIP',
+      `sens vert · --mobile force la cible, comme au point d'entrée (obtenu ${d.json?.verdict})`);
+    // ANTI-DÉRIVE — le motif n'a qu'un domicile. Un lanceur qui garderait sa copie dériverait au
+    // premier marqueur ajouté, en silence (la leçon de TF-1207).
+    for (const consommateur of ['run-oracles-design.mjs', 'oracle-mobile.mjs']) {
+      const code = fs.readFileSync(path.join(ici, consommateur), 'utf8');
+      ligne(/from '\.\/lib\/cible-mobile\.mjs'/.test(code) && !/viewport-fit\\s\*=\\s\*cover\|safe-area-inset/.test(code),
+        `anti-dérive · ${consommateur} importe lib/cible-mobile.mjs et ne recopie pas le motif`);
+    }
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// TF-1023 (D-11 (a) du 23/09/2026) — LA PAIRE DE POLICES DE LA CHARTE SE LIT DANS LE SOCLE INSTALLÉ.
+// oracle-slop exemptait de S3 une paire écrite en dur (Roboto, DM Sans) ; le socle a pris les polices
+// de la charte des présentations. Chaque sens est joué contre un socle D'ESSAI posé ici et désigné par
+// FORGE_SKILLS_INSTALLES — le socle réel du poste n'entre pas dans la preuve.
+{
+  console.log(String.fromCharCode(10) + 'oracle-slop S3 (TF-1023) — la charte de police est celle du socle installé, plus la paire antérieure datée');
+  const racineEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'charte-socle-'));
+  try {
+    const assets = path.join(racineEssai, 'digit-ai-page-html', 'assets');
+    fs.mkdirSync(assets, { recursive: true });
+    fs.writeFileSync(path.join(assets, 'boilerplate.html'), '<style>:root{--head: "Montserrat", "Roboto", system-ui, sans-serif;\n'
+      + '--sans: "Inter", "DM Sans", system-ui, sans-serif;}</style>', 'utf8');
+    // S3 lit les déclarations `font-family` LITTÉRALES : sur une page réelle, ce sont les replis écrits
+    // par les composants du socle (`var(--sans, "…", system-ui)`, infobulle.css) qui la déclenchent.
+    // La page d'essai en porte donc un, construit sur la même pile que ses jetons.
+    const page = (head, sans) => `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>t</title><style>:root{--head: ${head};--sans: ${sans};}`
+      + `h1{font-family:var(--head)}body{font-family:var(--sans)}.bulle{font-family:var(--sans, ${sans})}</style></head>`
+      + '<body><main><h1>Titre</h1><p class="bulle">corps</p></main></body></html>';
+    const juger = (nom, contenu, racine) => {
+      const f = path.join(racineEssai, nom);
+      fs.writeFileSync(f, contenu, 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-slop.mjs'), f, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, FORGE_SKILLS_INSTALLES: racine } });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible */ }
+      return (json?.findings || []).filter((x) => x.regle === 'S3');
+    };
+    const courante = juger('courante.html', page('"Montserrat", "Roboto", system-ui, sans-serif', '"Inter", "DM Sans", system-ui, sans-serif'), racineEssai);
+    ligne(courante.length > 0 && courante.every((x) => x.sev === 'info'),
+      `sens vert · page à la charte du socle installé (Montserrat / Inter) : S3 rendu en info seulement (${courante.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+    const hors = juger('hors-charte.html', page('"Poppins", system-ui, sans-serif', '"Inter", system-ui, sans-serif'), racineEssai);
+    ligne(hors.some((x) => x.sev === 'majeur' && /inter/i.test(x.msg)),
+      `sens rouge · Inter employé SANS déclarer la paire du socle : S3 majeur (${hors.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+    const anterieure = juger('anterieure.html', page('"Roboto", system-ui, sans-serif', '"DM Sans", system-ui, sans-serif'), racineEssai);
+    ligne(anterieure.length > 0 && anterieure.every((x) => x.sev === 'info'),
+      `sens vert · page livrée à la charte antérieure (Roboto / DM Sans) : toujours exemptée (${anterieure.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+    const sansSocle = juger('sans-socle.html', page('"Montserrat", "Roboto", system-ui, sans-serif', '"Inter", "DM Sans", system-ui, sans-serif'), path.join(racineEssai, 'vide'));
+    ligne(sansSocle.some((x) => x.sev === 'majeur'),
+      `limite déclarée · sans socle installé, la charte courante n'est pas reconnue et S3 juge la page (${sansSocle.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+  } finally {
+    fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
