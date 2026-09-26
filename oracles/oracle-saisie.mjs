@@ -17,7 +17,7 @@
 // dates) mais sans borne max : deux conventions dans un produit, aucun référentiel pour
 // trancher. Cet oracle tranche, et se mesure — attributs et câblage, pas jugement.
 //
-// Six règles, décidables sur le fichier seul :
+// Sept règles, décidables sur le fichier seul :
 //   SA1  TYPÉ       — un champ dont le sens désigne un format connu (date, e-mail, téléphone,
 //                     URL, nombre, mot de passe, heure, couleur) est rendu avec le type d'entrée
 //                     natif correspondant, jamais en type=text. Échappatoire déclarée :
@@ -38,6 +38,11 @@
 //   SA6  ATTEIGNABLE (clavier) — le mode de saisie alternatif reste ouvert : pas de readonly
 //                     posé sur un champ temporel pour forcer le sélecteur, pas de preventDefault
 //                     dans un écouteur keydown qui confisquerait la frappe.
+//   SA7  COMPILABLE  — tout attribut pattern compile sous le drapeau v
+//                     (`new RegExp('^(?:' + p + ')$', 'v')`) : un motif qui ne compile pas est
+//                     ignoré par le navigateur — le champ accepte tout, silencieusement, et la
+//                     contrainte déclarée n'existe pas (TF-1343). Aucune échappatoire : un motif
+//                     qui ne compile pas n'est jamais un choix délibéré.
 //
 // Ce que cet oracle NE juge PAS (déclaré en non_juge, jamais supposé) :
 //   - la JUSTESSE de la valeur proposée (fin de période = aujourd'hui, début = dernière position
@@ -45,7 +50,13 @@
 //   - la surface de geste RÉELLE en pixels : mesurable au rendu seulement (render_page.py) ;
 //   - la garde serveur symétrique des bornes : hors périmètre d'un fichier HTML ;
 //   - les champs rendus par un script externe (src=…) ou un framework ;
-//   - le support navigateur effectif de showPicker() et son refus hors geste utilisateur.
+//   - le support navigateur effectif de showPicker() et son refus hors geste utilisateur ;
+//   - la PERTINENCE métier du motif une fois compilé sous v (est-ce la bonne contrainte) :
+//     la compilation est décidable, la justesse de ce qu'il matche non (même logique que la
+//     valeur proposée, SA2) ;
+//   - un pattern posé par le JS inline sur la propriété .pattern plutôt que par l'attribut HTML
+//     statique : non tracé, comme le reste de l'oracle ne trace que value/valueAsDate/
+//     valueAsNumber/defaultValue posés par le JS.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-saisie.mjs <fichier.html> [--json-only]
@@ -64,6 +75,8 @@ const NON_JUGE = [
   'garde serveur symétrique des bornes min/max — hors périmètre d\'un fichier HTML autonome, à exiger au contrat du produit',
   'champs rendus par un <script src="…"> externe ou un framework (React/Vue/Web Components) — analyse statique limitée au DOM et au JS inline',
   'support navigateur effectif de showPicker() et son refus hors geste utilisateur — comportement runtime, non observable sur le fichier',
+  'pertinence métier du motif pattern une fois compilé sous v (est-ce la bonne contrainte, ex. un IBAN vs un simple alphanumérique) — la compilation est décidable sur le fichier, la justesse métier non, même logique que la valeur proposée (SA2)',
+  'pattern posé par le JS inline sur la propriété .pattern plutôt que par l\'attribut HTML statique — non tracé, comme le reste de l\'oracle ne trace que value/valueAsDate/valueAsNumber/defaultValue posés par le JS',
 ];
 
 const F = [];
@@ -72,7 +85,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-saisie', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'SA1–SA6 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'SA1–SA7 sans écart', where: file }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -199,7 +212,7 @@ const PROMESSES = [
     tenue: el => at(el, 'min').trim() !== '' },
 ];
 
-// ── SA1–SA4 et SA6/readonly, arbre par arbre (DOM statique + gabarits JS) ──
+// ── SA1–SA4, SA6/readonly et SA7, arbre par arbre (DOM statique + gabarits JS) ──
 const toutesSaisies = [];
 const temporels = [];
 
@@ -279,6 +292,23 @@ for (const tree of TOUS_ARBRES) {
         ou(el));
     }
   }
+
+  // ── SA7 · COMPILABLE (TF-1343) ───────────────────────────────────────────
+  // Un pattern qui ne compile pas sous le drapeau v est ignoré par le navigateur : le champ
+  // accepte tout, silencieusement, et la contrainte déclarée n'existe pas. Aucune échappatoire
+  // déclarative — data-*-motive n'a pas de sens ici : un motif qui ne compile pas n'est jamais
+  // un choix délibéré, contrairement à un vide ou une borne absente.
+  for (const el of saisies) {
+    if (el.tag !== 'input' || !aAttr(el, 'pattern')) continue;
+    const p = at(el, 'pattern');
+    try {
+      new RegExp('^(?:' + p + ')$', 'v');
+    } catch (e) {
+      add('bloquant', 'SA7',
+        `champ « ${nomDe(el)} » : pattern="${p}" ne compile pas sous le drapeau v (${e.message}) — un motif qui ne compile pas est ignoré par le navigateur, le champ accepte tout, la contrainte déclarée n'existe pas`,
+        ou(el));
+    }
+  }
 }
 
 // ── SA5 · ATTEIGNABLE (surface de geste) ───────────────────────────────────
@@ -311,11 +341,11 @@ if (temporels.length && /addEventListener\(\s*['"]keydown['"][\s\S]{0,300}?preve
 
 // ── Verdict ────────────────────────────────────────────────────────────────
 if (toutesSaisies.length === 0) {
-  NON_JUGE.push('aucun champ de saisie dans le document : SA1–SA6 sans objet ici, jamais PASS par défaut sur un domaine absent');
+  NON_JUGE.push('aucun champ de saisie dans le document : SA1–SA7 sans objet ici, jamais PASS par défaut sur un domaine absent');
 }
 const RANG = { bloquant: 0, majeur: 1, avertissement: 2, info: 3 };
 F.sort((x, y) => RANG[x.sev] - RANG[y.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — SA1–SA6 sans écart\n');
+if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — SA1–SA7 sans écart\n');
 if (durs.length) sortir('FAIL', 1);
 sortir('PASS', 0);

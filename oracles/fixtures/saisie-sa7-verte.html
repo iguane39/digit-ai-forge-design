@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — pattern valide sous le drapeau v</title>
+<!-- TF-1343 : même contrainte, même champ, un seul caractère de différence — le tiret
+     n'est plus échappé (\-) puisqu'il n'a aucun sens spécial hors d'une classe de
+     caractères. new RegExp('^(?:' + p + ')$', 'v') compile sans lever. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Créer un coffre</h1>
+  <form>
+    <p>
+      <label for="suffixe">Suffixe du coffre</label>
+      <input type="text" id="suffixe" name="suffixe" pattern="[A-Za-z0-9]+(-[A-Za-z0-9]+)*">
+    </p>
+    <button type="submit">Créer</button>
+  </form>
+</main>
+</body>
+</html>

@@ -447,6 +447,18 @@ const CAS = [
     rouge: [fx('saisie-runtime-rouge.html')],
   },
   {
+    // TF-1343, mesuré le 23/09/2026 sur un champ « Suffixe du coffre » : le motif
+    // [A-Za-z0-9]+(\-[A-Za-z0-9]+)* échappe un tiret HORS d'une classe de caractères — refusé
+    // par new RegExp(p, 'v') (SyntaxError). Rejoué dans Chromium 148 : « --!!-- » et « a b »
+    // rendent validity.valid vrai et patternMismatch faux ; oracle-saisie rendait PASS avant
+    // SA7 — la contrainte déclarée n'existait pas pour aucun référentiel. Les deux fixtures ne
+    // diffèrent QUE par le tiret : échappé (rouge, ne compile pas) ou nu (verte, compile).
+    oracle: 'oracle-saisie.mjs',
+    regles: ['SA7'],
+    verte: [fx('saisie-sa7-verte.html')],
+    rouge: [fx('saisie-sa7-rouge.html')],
+  },
+  {
     // TF-0707 + TF-0708 (lot Produit-12, 16/08, inspection utilisateur en production) : un écran
     // affichait SIMULTANÉMENT les champs des deux modes d'un même flux, derrière un encart replié
     // toujours présent sous la liste qu'il alimentait. L'utilisateur en a déduit une alternative

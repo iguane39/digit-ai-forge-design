@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — pattern qui ne compile pas sous le drapeau v</title>
+<!-- TF-1343, mesuré le 23/09/2026 sur un champ « Suffixe du coffre » : le motif
+     [A-Za-z0-9]+(\-[A-Za-z0-9]+)* échappe un tiret HORS d'une classe de caractères —
+     refusé par new RegExp('^(?:' + p + ')$', 'v') (SyntaxError « Invalid escape »).
+     Rejoué dans Chromium 148 : « --!!-- » et « a b » rendent validity.valid vrai et
+     patternMismatch faux ; la console porte « Pattern attribute value ... is not a
+     valid regular expression » ; la contrainte déclarée n'existe pas — SA7 la juge. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Créer un coffre</h1>
+  <form>
+    <p>
+      <label for="suffixe">Suffixe du coffre</label>
+      <input type="text" id="suffixe" name="suffixe" pattern="[A-Za-z0-9]+(\-[A-Za-z0-9]+)*">
+    </p>
+    <button type="submit">Créer</button>
+  </form>
+</main>
+</body>
+</html>
