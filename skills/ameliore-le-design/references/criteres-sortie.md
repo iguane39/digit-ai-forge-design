@@ -19,7 +19,7 @@
 | C13 | Les 3 parcours de bout en bout sont cliquables, trace jointe | parcours exécuté | bloquant |
 | C14 | Textes d'application au plancher E-12 : erreur = cause + réparation, état vide = invitation à agir, libellé = ce que la personne contrôle (T4-1…T4-4) | `oracle-textes-application` — **joué sur la maquette AVANT C15** | bloquant |
 | C15 | Un CTA = une cible : `href` réel, `data-action` ou `type=submit` ; même libellé même écran ⇒ même cible | `check_maquette.py` | bloquant |
-| C16 | Champs **typés, proposés, bornés, atteignables** (SA1–SA6) | `oracle-saisie` — **si le document porte des champs** | bloquant |
+| C16 | Champs **typés, proposés, bornés, atteignables, compilables** (SA1–SA7) | `oracle-saisie` — **si le document porte des champs** | bloquant |
 | C17 | Choix exclusif posé avant ses champs, panneau de tâche hors de sa liste, motif de création justifié (PA1–PA6) | `oracle-panneau-tache` — **si un panneau de création est balisé** | bloquant |
 
 `check_maquette.py` juge ce qui est décidable sur le fichier. Ce qui exige un

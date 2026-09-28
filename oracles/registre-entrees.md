@@ -209,9 +209,20 @@ Comme pour `oracle-motion` (TF-0321), l'injection dans
 poste**, à faire par un humain ou par un mandat qui le nomme : écrire ici dans une copie
 installée recréerait la divergence que TF-0290 a soldée. Les lignes ci-dessous sont prêtes.
 
+**Ajout du 24/09/2026 — SA7 (TF-1343).** `oracle-saisie` jugeait la présence d'un `pattern`
+(aucune règle ne l'exigeait), jamais sa compilation. Mesuré le 23/09/2026 sur un champ
+« Suffixe du coffre » d'une page livrée : `pattern="[A-Za-z0-9]+(\-[A-Za-z0-9]+)*"` — le `\-`
+hors d'une classe de caractères est refusé par la grammaire du drapeau `v`, celui que le
+navigateur applique réellement pour juger `validity.valid`. Dans Chromium, la console signale
+la `SyntaxError` mais `validity.valid` reste vrai : le champ accepte tout, silencieusement.
+SA7 compile chaque `pattern` par `new RegExp('^(?:'+p+')$', 'v')`, sans échappatoire — un motif
+cassé n'est jamais une intention. Dépend du support du drapeau `v` par le Node du poste
+(≥ 20, ECMAScript 2024) : mesuré au lancement de l'oracle, jamais supposé ; sur un poste plus
+ancien, SA7 se déclare `non_juge` au lieu de rendre un faux verdict.
+
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Champs de saisie : typé, proposé, borné, atteignable | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format connu non typé natif, SA2 champ temporel sans valeur proposée, SA3 champ temporel ou numérique sans borne, SA4 promesse d'aide (valeur ou borne) non câblée dans le champ, SA5 cible de geste réduite à l'icône native (aucun `showPicker()` global), SA6 saisie clavier confisquée (`readonly` posé pour forcer le sélecteur, ou `preventDefault` sur `keydown`) | cli | ✅ |
+| Champs de saisie : typé, proposé, borné, atteignable | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format connu non typé natif, SA2 champ temporel sans valeur proposée, SA3 champ temporel ou numérique sans borne, SA4 promesse d'aide (valeur ou borne) non câblée dans le champ, SA5 cible de geste réduite à l'icône native (aucun `showPicker()` global), SA6 saisie clavier confisquée (`readonly` posé pour forcer le sélecteur, ou `preventDefault` sur `keydown`), SA7 attribut `pattern` qui ne compile pas sous le drapeau `v` (celui que le navigateur applique réellement — un motif cassé est ignoré en silence, `validity.valid` reste vrai) | cli | ✅ |
 | Écran de création : choix exclusif, branches, coexistence | `node c:/dev/digit-ai-forge-design/oracles/oracle-panneau-tache.mjs <page.html>` — PA1 branches exclusives sans sélecteur qui les commande, PA2 sélecteur placé après les champs qu'il gouverne, PA3 plusieurs branches rendues simultanément, PA4 même renseignement demandé deux fois, PA5 tâche à branches en formulaire replié coexistant avec sa liste, PA6 panneau adressable dont la route n'est pointée par rien | cli | ✅ |
 
 ```json
@@ -225,15 +236,17 @@ installée recréerait la divergence que TF-0290 a soldée. Les lignes ci-dessou
     "content_patterns": ["<input", "<textarea", "<select"],
     "fixtures": {
       "verte": "oracles/fixtures/saisie-verte.html",
-      "rouge": "oracles/fixtures/saisie-rouge.html"
+      "rouge": "oracles/fixtures/saisie-rouge.html",
+      "verte_sa7": "oracles/fixtures/saisie-sa7-verte.html",
+      "rouge_sa7": "oracles/fixtures/saisie-sa7-rouge.html"
     },
     "provenance": {
       "chantier": "forge-design",
       "date": "2026-09-02",
-      "mandat": "TF-0736 + TF-0739",
-      "amont": "retours utilisateur Produit-12 des 2026-08-31 et 2026-09-01, captures à l'appui"
+      "mandat": "TF-0736 + TF-0739 ; TF-1343, 2026-09-24 : SA7 ajoutée (pattern non compilable sous le drapeau v), fixtures saisie-sa7-{verte,rouge}.html",
+      "amont": "retours utilisateur Produit-12 des 2026-08-31 et 2026-09-01, captures à l'appui ; SA7 mesurée le 2026-09-23 sur un champ « Suffixe du coffre » d'une page livrée"
     },
-    "regles": 6
+    "regles": 7
   },
   {
     "domaine": "Écran de création : choix exclusif, branches, coexistence",
@@ -271,6 +284,9 @@ installée recréerait la divergence que TF-0290 a soldée. Les lignes ci-dessou
   attribut. Ce qui est mécanisé, c'est l'ordre du choix et la coexistence, pas le sens.
 - Les branches **non balisées** : un formulaire qui n'annote pas ses groupes exclusifs par
   `data-branche` n'est pas jugé exclusif, et l'oracle le déclare au lieu de le supposer.
+- La **pertinence métier** d'un `pattern` qui compile sous `v` : un motif trop permissif ou
+  trop strict n'est pas un défaut de compilation. SA7 (`oracle-saisie`) ne juge que la
+  compilation, jamais l'intention.
 
 ## Entrée du 05/09/2026 — oracle-surcouche (TF-0796)
 

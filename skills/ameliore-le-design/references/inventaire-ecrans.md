@@ -21,10 +21,10 @@ secteur et **l'hypothèse est nommée** dans la note de partis pris.
 
 **Tout écran porteur d'un formulaire** — connexion, CRUD, filtres, paramètres,
 facturation, assistant multi-étapes — applique la grille **TYPÉ, PROPOSÉ, BORNÉ,
-ATTEIGNABLE** à chacun de ses champs, et le critère de choix des deux motifs de
+ATTEIGNABLE, COMPILABLE** à chacun de ses champs, et le critère de choix des deux motifs de
 création à son panneau. Ces deux règles ne sont pas propres à l'écran 4 : elles valent
 pour tous les formats de champ et tous les contextes (TF-0736, mandat de généralisation
-explicite). Doctrine : `patterns-interaction.md` ; contrôles : `oracle-saisie` SA1–SA6
+explicite). Doctrine : `patterns-interaction.md` ; contrôles : `oracle-saisie` SA1–SA7
 et `oracle-panneau-tache` PA1–PA6 (C16, C17 de `criteres-sortie.md`).
 
 ## Complémentaires

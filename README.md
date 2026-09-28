@@ -80,7 +80,7 @@ node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode co
 
 node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # sync DTCG → CSS
 
-node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA6 : typé, proposé, borné, atteignable
+node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA7 : typé, proposé, borné, atteignable, compilable
 node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
 node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
 node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
@@ -175,7 +175,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
 | `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée |
-| `oracle-saisie` | SA1–SA6 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier) |
+| `oracle-saisie` | SA1–SA7 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4 | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème |
 | `oracle-declencheurs` | DE1–DE3 | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès |
@@ -194,11 +194,13 @@ référentiel de la forge, parce que tous jugeaient la **présence** de l'afford
 jamais sa **valeur**, sa **borne**, sa **surface utile** ni l'**ordre** dans lequel
 elle demande de choisir.
 
-- `oracle-saisie` (SA1–SA6) : un champ au format connu est typé natif, porte la
+- `oracle-saisie` (SA1–SA7) : un champ au format connu est typé natif, porte la
   meilleure hypothèse du système comme valeur, des bornes posées par son sens, et une
   cible de geste qui couvre **tout** le composant — pas l'icône de vingt pixels au
   bord droit. Toute promesse écrite dans l'aide (« la période part de la dernière
-  lecture ») est câblée dans le champ, sinon elle n'existe pas.
+  lecture ») est câblée dans le champ, sinon elle n'existe pas. Un `pattern` qui ne
+  compile pas sous le drapeau `v` — celui que le navigateur applique réellement — est
+  ignoré en silence : la contrainte déclarée n'existe pas non plus (SA7, TF-1343).
 - `oracle-panneau-tache` (PA1–PA6) : un choix exclusif se pose **avant** les champs
   qu'il commande ; un panneau de tâche ne coexiste pas avec la liste qu'il alimente ;
   une seule branche est rendue. Deux motifs de création restent légitimes — formulaire

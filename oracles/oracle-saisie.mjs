@@ -56,7 +56,8 @@
 //     valeur proposée, SA2) ;
 //   - un pattern posé par le JS inline sur la propriété .pattern plutôt que par l'attribut HTML
 //     statique : non tracé, comme le reste de l'oracle ne trace que value/valueAsDate/
-//     valueAsNumber/defaultValue posés par le JS.
+//     valueAsNumber/defaultValue posés par le JS ;
+//   - SA7 elle-même, sur un Node antérieur au drapeau v (< 20) : déclarée, jamais devinée.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-saisie.mjs <fichier.html> [--json-only]
@@ -78,6 +79,16 @@ const NON_JUGE = [
   'pertinence métier du motif pattern une fois compilé sous v (est-ce la bonne contrainte, ex. un IBAN vs un simple alphanumérique) — la compilation est décidable sur le fichier, la justesse métier non, même logique que la valeur proposée (SA2)',
   'pattern posé par le JS inline sur la propriété .pattern plutôt que par l\'attribut HTML statique — non tracé, comme le reste de l\'oracle ne trace que value/valueAsDate/valueAsNumber/defaultValue posés par le JS',
 ];
+
+// SA7 dépend du support du drapeau v par CE Node (ECMAScript 2024, Node ≥ 20). Un Node plus
+// ancien lève « Invalid flags » sur TOUT motif, une faute différente d'un motif réellement
+// cassé : sans cette mesure, SA7 rendrait un bloquant sur chaque champ `pattern`, valide ou non.
+// Mesuré au lancement, jamais supposé (report du 28/09/2026 de la variante du 24/09, TF-1343).
+let SUPPORT_V = true;
+try { new RegExp('a', 'v'); } catch { SUPPORT_V = false; }
+if (!SUPPORT_V) {
+  NON_JUGE.push('SA7 (pattern compilable sous le drapeau v) non exécutée : le Node de ce poste ne supporte pas le drapeau v (requiert Node ≥ 20, ECMAScript 2024) — mesuré au lancement, jamais supposé');
+}
 
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
@@ -297,16 +308,19 @@ for (const tree of TOUS_ARBRES) {
   // Un pattern qui ne compile pas sous le drapeau v est ignoré par le navigateur : le champ
   // accepte tout, silencieusement, et la contrainte déclarée n'existe pas. Aucune échappatoire
   // déclarative — data-*-motive n'a pas de sens ici : un motif qui ne compile pas n'est jamais
-  // un choix délibéré, contrairement à un vide ou une borne absente.
-  for (const el of saisies) {
-    if (el.tag !== 'input' || !aAttr(el, 'pattern')) continue;
-    const p = at(el, 'pattern');
-    try {
-      new RegExp('^(?:' + p + ')$', 'v');
-    } catch (e) {
-      add('bloquant', 'SA7',
-        `champ « ${nomDe(el)} » : pattern="${p}" ne compile pas sous le drapeau v (${e.message}) — un motif qui ne compile pas est ignoré par le navigateur, le champ accepte tout, la contrainte déclarée n'existe pas`,
-        ou(el));
+  // un choix délibéré, contrairement à un vide ou une borne absente. Sans support du drapeau v
+  // par ce Node, la règle ne s'exécute pas : elle est déclarée au non_juge (voir SUPPORT_V).
+  if (SUPPORT_V) {
+    for (const el of saisies) {
+      if (el.tag !== 'input' || !aAttr(el, 'pattern')) continue;
+      const p = at(el, 'pattern');
+      try {
+        new RegExp('^(?:' + p + ')$', 'v');
+      } catch (e) {
+        add('bloquant', 'SA7',
+          `champ « ${nomDe(el)} » : pattern="${p}" ne compile pas sous le drapeau v (${e.message}) — un motif qui ne compile pas est ignoré par le navigateur, le champ accepte tout, la contrainte déclarée n'existe pas`,
+          ou(el));
+      }
     }
   }
 }

@@ -95,13 +95,14 @@ Sans `data-fonctionnalite`, l'oracle rend le **registre** de la page — chaque 
 avec sa nature mesurée — et déclare que la couverture des fonctionnalités n'a pas été
 jugée. Il ne devine pas un regroupement à partir des libellés : un contrôle qui devine ment.
 
-## Champs de saisie — TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE
+## Champs de saisie — TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE, COMPILABLE
 
-Quatre volets, pour **tout** champ, quel que soit son format et son contexte
+Cinq volets, pour **tout** champ, quel que soit son format et son contexte
 (TF-0736 et TF-0739, deux retours utilisateur en deux jours sur le même composant
 d'un écran **livré et audité** : la campagne de tests le mesurait câblé, et il
-l'était — le défaut n'était mesurable par aucun référentiel). Contrôle exécutable :
-`oracle-saisie` (SA1–SA6).
+l'était — le défaut n'était mesurable par aucun référentiel ; COMPILABLE en vient
+d'un troisième, TF-1343, même défaut de fond : l'affordance mesurée câblée, la
+contrainte réelle absente). Contrôle exécutable : `oracle-saisie` (SA1–SA7).
 
 **TYPÉ** — tout format connu prend son type d'entrée natif : `date`,
 `datetime-local`, `month`, `week`, `time`, `email`, `tel`, `url`, `number`,
@@ -140,6 +141,16 @@ pose une fois pour tout le fichier : voir le snippet de référence dans
 `contrat-technique.md`. Interdits : `readonly` posé pour forcer le sélecteur,
 `preventDefault()` sur `keydown` — Tab n'ouvre rien, Échap ferme, le champ reste
 éditable.
+
+**COMPILABLE** — un attribut `pattern` se COMPILE sous le drapeau `v`, celui que le
+navigateur applique réellement pour juger `validity.valid`
+(`new RegExp('^(?:'+pattern+')$', 'v')`, HTML Standard §4.10.5.3.4). Un motif invalide
+sous ce drapeau — `\-` hors d'une classe de caractères, par exemple — est ignoré EN
+SILENCE : la console affiche la `SyntaxError`, mais le champ accepte tout, sans borne
+ni format. TF-1343, mesuré le 23/09/2026 sur un champ « Suffixe du coffre » :
+`[A-Za-z0-9]+(\-[A-Za-z0-9]+)*` cassait ainsi ; `[A-Za-z0-9]+(-[A-Za-z0-9]+)*` — sans
+l'antislash — dit exactement la même chose et compile. Aucune échappatoire : un motif
+qui ne compile pas n'est jamais une intention.
 
 **Toute promesse écrite dans l'aide est câblée dans le champ.** « La période part de
 la dernière lecture » exige une `value` ; « jusqu'à aujourd'hui au plus tard » exige

@@ -9,7 +9,7 @@ node oracles/oracle-taste.mjs   <cible.html>          # TA1–TA4
 node oracles/oracle-mobile.mjs  <cible.html>          # si cible mobile
 node oracles/oracle-images.mjs  <cible.html>          # si visuels générés
 node oracles/oracle-restitution.mjs <cible.html>      # si data-restitution (RL, TF-0235)
-node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA6, si champs de saisie (TF-0736/0739)
+node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA7, si champs de saisie (TF-0736/0739, TF-1343)
 node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
 node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, si dialog/popover/role=dialog (TF-0796)
 node oracles/oracle-declencheurs.mjs <cible.html>     # DE1–DE3 + registre des déclencheurs (TF-0797)
@@ -112,7 +112,7 @@ RF8 et RF9 viennent de trois retours utilisateur en deux semaines sur des écran
 passait l'audit d'interface : l'affordance existait et elle était câblée. Ce qui
 manquait — la valeur proposée, la borne, la surface de geste, l'ordre du choix — ne
 figurait dans aucune grille. D6 Interaction s'instruit désormais avec `oracle-saisie`
-(SA1–SA6) et `oracle-panneau-tache` (PA1–PA6) ; une dimension D6 notée sans avoir
+(SA1–SA7) et `oracle-panneau-tache` (PA1–PA6) ; une dimension D6 notée sans avoir
 lancé ces deux-là, sur une page qui porte des champs ou un panneau, est `non_juge`.
 
 RF10 vient du même genre de fait, un cran plus tard dans la chaîne (TF-0796, produit 02,
