@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fixture verte — oracle-mobile M9</title>
+<!-- TF-1355 : même bandeau sticky collé en haut, mais raisonnable — 3 onglets tiennent sur
+     une seule rangée à 390/360/414px. M9 doit PASSER : moins d'un quart de l'écran retiré. -->
+<style>
+  .bandeau-onglets {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .onglet { min-height: 44px; min-width: 44px; padding: 10px 16px; }
+  .ecran { min-height: 100dvh; }
+</style>
+</head>
+<body>
+  <nav class="bandeau-onglets">
+    <a class="onglet" href="#t1">Accueil</a>
+    <a class="onglet" href="#t2">Dossiers</a>
+    <a class="onglet" href="#t3">Profil</a>
+  </nav>
+  <div class="ecran">
+    <button class="onglet">Action</button>
+    <p>Contenu sous le bandeau — rien n'est recouvert après défilement.</p>
+  </div>
+</body>
+</html>

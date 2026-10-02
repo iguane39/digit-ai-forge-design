@@ -228,6 +228,18 @@ const CAS = [
     rouge: [fx('mobile-rouge.html')],
   },
   {
+    // TF-1355 — M9 ajoutée. Un bandeau sticky mesuré sur un livrable réel : 717px de hauteur
+    // sur 844px disponibles à 390px de large (85 % de l'écran) — WCAG 2.2 2.4.11 (AA) en jeu,
+    // M1-M8 rendaient PASS. Les deux fixtures portent le MÊME bandeau collé en haut (sticky,
+    // top:0) ; elles ne diffèrent que par le nombre d'onglets qu'il porte — 14, qui se replient
+    // sur plusieurs rangs à largeur de téléphone (390/360/414px) et dépassent le seuil de 25 %
+    // de la hauteur de viewport, contre 3, qui tiennent sur une seule rangée.
+    oracle: 'oracle-mobile.mjs',
+    regles: ['M9'],
+    verte: [fx('mobile-m9-verte.html')],
+    rouge: [fx('mobile-m9-rouge.html')],
+  },
+  {
     oracle: 'oracle-images.mjs',
     regles: ['I1', 'I2', 'I3', 'I4', 'I5', 'I6'],
     verte: [fx('images-verte.html')],

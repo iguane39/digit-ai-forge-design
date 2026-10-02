@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // oracle-mobile — Domaine « Cible mobile : contrat d'usage tactile » (déterministe).
 //
-// Règles M1–M8, décidables sur le fichier :
+// Règles M1–M9, décidables sur le fichier :
 //   M1  viewport déclaré, zoom non bridé
 //   M2  cibles tactiles déclarées ≥ 44 px sur les éléments interactifs
 //   M3  safe-area-inset utilisé dès qu'une barre fixe borde l'écran
@@ -10,6 +10,8 @@
 //   M6  prefers-reduced-motion respecté dès qu'il y a du mouvement
 //   M7  un état saisi survit à la navigation qui recharge le document
 //   M8  une barre basse hors flux vit dans une coquille défilante
+//   M9  un bandeau collé en haut d'écran ne retire pas plus d'un quart de l'écran
+//       une fois le défilement passé (TF-1355)
 //
 // Ce qui exige un rendu réel (taille effective après cascade, gestes, débordements
 // au breakpoint) est déclaré non jugé et délégué à render_page.py.
@@ -26,6 +28,7 @@
 import fs from 'node:fs';
 import { parse as parseHtml, arbres, elements, css, cssRulesDeep, lineOf } from './lib/html.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
+import { correspond } from './lib/selecteurs.mjs';
 
 const DOM = 'Cible mobile : contrat d\'usage tactile';
 const args = process.argv.slice(2);
@@ -41,6 +44,10 @@ const NJ = [
   // navigateur, sur le produit RENDU, jamais sur la maquette mono-fichier où la navigation ne
   // recharge rien. M7 juge le support déclaré ; le parcours C13 joué sur le produit fait foi.
   'survie effective de l\'état saisi après navigation — parcours C13 exécuté au navigateur sur le PRODUIT RENDU, pas sur la maquette mono-fichier',
+  // TF-1355 : M9 lit la hauteur DÉCLARÉE ou, à défaut, une ESTIMATION par rangées — jamais la
+  // hauteur réelle (wrap exact du texte, métriques de police, cascade), et jamais la preuve
+  // qu'un élément focus est effectivement recouvert après un défilement réel.
+  'hauteur réelle d\'un bandeau collant après rendu (wrap exact, métriques de police, cascade) et confirmation qu\'un élément reçoit effectivement le focus sous lui après défilement (WCAG 2.2 2.4.11) — déléguer à render_page.py et à un parcours clavier exécuté au navigateur',
 ];
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
@@ -269,6 +276,98 @@ const regles = cssRulesDeep(cssText);
         + 'ni réserve de place sous le contenu : elle recouvre le bas du dernier bloc à toutes les '
         + 'largeurs (V4). Poser la coquille — un écran borné (100dvh) dont le contenu défile dans '
         + 'une zone à overflow-y: auto — ou réserver la hauteur de la barre en bas du contenu',
+        'feuille de style');
+    }
+  }
+}
+
+// ── M9 · bandeau collant : part d'écran retirée après défilement ──────────
+// TF-1355 (mesuré sur un livrable réel) : un bandeau position:sticky collé en haut d'écran
+// mesurait 717px de hauteur sur 844px disponibles à 390px de large (85 % de l'écran, mesure
+// RÉELLE au navigateur) — M1-M8 rendaient PASS alors que l'élément qui reçoit le focus après
+// ce bandeau est caché sous lui une fois le défilement passé : WCAG 2.2 2.4.11 « Focus not
+// obscured » (AA) est en jeu. Aucune règle ne rapprochait « collé en haut d'écran » de
+// « combien de place ça prend ».
+//
+// Un sticky top:0 devient PINNÉ dès qu'on défile au-delà de son origine — nul besoin de
+// rejouer un défilement pour SAVOIR qu'il va se fixer, c'est la définition même de la
+// propriété. Ce qui reste INDÉCIDABLE sur le fichier, c'est sa hauteur une fois fixé : elle
+// dépend de la cascade, du wrap réel du texte, des métriques de police — même doctrine que
+// M2 pour la taille tactile EFFECTIVE, déléguée à render_page.py. M9 juge donc ce qui EST
+// décidable sur le fichier : la hauteur EXPLICITEMENT déclarée (height/min-height), et à
+// défaut une ESTIMATION du nombre de rangées d'un bandeau en flex-wrap à partir du nombre
+// d'items qu'il porte — une estimation déclarée comme telle, jamais confondue avec une mesure.
+//
+// Largeurs de téléphone : 390 — la plus petite largeur de corpus/grille-viewports.json (la
+// seule grille catalographiée de cette forge, lue par run-oracles-design.mjs) — complétée de
+// 360 et 414, les deux autres largeurs les plus courantes du parc (Android médian, iPhone
+// Plus/Max) : cette forge ne catalogue pas de grille mobile dédiée, ces trois largeurs sont
+// donc écrites ici, au même titre que le seuil de 768px que M4 porte en dur.
+// Hauteur de viewport : 844px, celle du cas mesuré (iPhone à 390×844) — aucune grille de
+// hauteurs n'existe côté corpus, cette forge ne rend jamais réellement l'écran.
+// Seuil : 25 % de la hauteur de viewport (211px). Un bandeau logo + une rangée d'onglets
+// tient en 10 à 15 % ; au-delà d'un quart d'écran, l'espace de lecture utile recule au point
+// où un élément qui reçoit le focus a de bonnes chances d'être recouvert après le défilement
+// qui l'amène en vue — le cas mesuré (85 %) est très au-dessus de ce seuil, qui laisse une
+// marge généreuse à un bandeau raisonnable.
+{
+  const LARGEURS_TEL = [390, 360, 414];
+  const HAUTEUR_VP = 844;
+  const SEUIL = 0.25;
+  const LARGEUR_ITEM_EST = 110; // cible tactile 44px (M2/M8) + libellé court
+  const RANGEE_HAUTEUR_EST = 52; // cible tactile 44px + espacement 8px (doctrine mobile)
+
+  const estAncreHaut = r => /position\s*:\s*(fixed|sticky)/.test(r.body)
+    && /(^|[;{\s])top\s*:\s*0(?![0-9.])/.test(r.body);
+  const bandeaux = regles.filter(estAncreHaut);
+
+  if (bandeaux.length) {
+    const ARBRES = arbres(html, root);
+    const INTERACTIF_ITEM = /^(a|button|li)$/;
+    let hauteurCumulee = 0;
+    let estimee = false;
+    const detail = [];
+
+    for (const r of bandeaux) {
+      let h = null;
+      for (const m of r.body.matchAll(/(?:^|[;{\s])(height|min-height)\s*:\s*([\d.]+)px/g)) h = parseFloat(m[2]);
+      if (h !== null) {
+        hauteurCumulee += h;
+        detail.push(`« ${r.selector.slice(0, 40)} » : ${h}px déclaré(e)s`);
+        continue;
+      }
+      if (!/display\s*:\s*flex/.test(r.body) || !/flex-wrap\s*:\s*wrap/.test(r.body)) continue;
+      // Pas de hauteur déclarée, mais un flex-wrap : estimer le nombre de rangées à partir
+      // du nombre d'items que le bandeau porte dans le DOM (statique + gabarits JS).
+      const parts = String(r.selector).split(',').map(s => s.trim());
+      let items = 0;
+      for (const arbre of ARBRES) {
+        for (const el of elements(arbre)) {
+          if (!parts.some(p => correspond(el, p))) continue;
+          items += (el.children || []).filter(c => !c.tag.startsWith('#') && INTERACTIF_ITEM.test(c.tag)).length;
+        }
+      }
+      if (!items) continue;
+      estimee = true;
+      let hPireCas = null;
+      for (const largeur of LARGEURS_TEL) {
+        const parRangee = Math.max(1, Math.floor(largeur / LARGEUR_ITEM_EST));
+        const rangees = Math.ceil(items / parRangee);
+        const hEst = rangees * RANGEE_HAUTEUR_EST;
+        if (hPireCas === null || hEst > hPireCas) hPireCas = hEst;
+      }
+      hauteurCumulee += hPireCas;
+      detail.push(`« ${r.selector.slice(0, 40)} » : ${items} item(s) en flex-wrap, ~${hPireCas}px estimé(e)s `
+        + `(pire cas des largeurs ${LARGEURS_TEL.join('/')} px)`);
+    }
+
+    const pourcentage = hauteurCumulee / HAUTEUR_VP;
+    if (hauteurCumulee > 0 && pourcentage > SEUIL) {
+      add('bloquant', 'M9',
+        `bandeau(x) collé(s) en haut d'écran : ${Math.round(hauteurCumulee)}px cumulés sur ${HAUTEUR_VP}px `
+        + `(${Math.round(pourcentage * 100)} %, seuil ${Math.round(SEUIL * 100)} %) une fois le défilement passé`
+        + `${estimee ? ' (estimation par rangées, hauteur réelle non rendue ici)' : ''} — ${detail.join(' ; ')}. `
+        + 'Un élément qui reçoit le focus sous ce bandeau risque d\'être recouvert (WCAG 2.2 2.4.11 AA)',
         'feuille de style');
     }
   }

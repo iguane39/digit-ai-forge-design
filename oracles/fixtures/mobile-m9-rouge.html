@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fixture rouge — oracle-mobile M9</title>
+<!-- TF-1355 : bandeau sticky à 14 onglets, replié sur plusieurs rangs à largeur de
+     téléphone (390/360/414px), sans hauteur déclarée. M1-M8 restent verts (cibles ≥44px,
+     safe-area posée, aucune table/champ/barre basse/mouvement) : seule M9 doit tomber, sur
+     la part d'écran que ce bandeau retire une fois collé en haut après défilement. -->
+<style>
+  .bandeau-onglets {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .onglet { min-height: 44px; min-width: 44px; padding: 10px 16px; }
+  .ecran { min-height: 100dvh; }
+</style>
+</head>
+<body>
+  <nav class="bandeau-onglets">
+    <a class="onglet" href="#t1">Onglet 1</a>
+    <a class="onglet" href="#t2">Onglet 2</a>
+    <a class="onglet" href="#t3">Onglet 3</a>
+    <a class="onglet" href="#t4">Onglet 4</a>
+    <a class="onglet" href="#t5">Onglet 5</a>
+    <a class="onglet" href="#t6">Onglet 6</a>
+    <a class="onglet" href="#t7">Onglet 7</a>
+    <a class="onglet" href="#t8">Onglet 8</a>
+    <a class="onglet" href="#t9">Onglet 9</a>
+    <a class="onglet" href="#t10">Onglet 10</a>
+    <a class="onglet" href="#t11">Onglet 11</a>
+    <a class="onglet" href="#t12">Onglet 12</a>
+    <a class="onglet" href="#t13">Onglet 13</a>
+    <a class="onglet" href="#t14">Onglet 14</a>
+  </nav>
+  <div class="ecran">
+    <button class="onglet">Action</button>
+    <p>Contenu sous le bandeau — le premier élément focusable y est recouvert après défilement.</p>
+  </div>
+</body>
+</html>
