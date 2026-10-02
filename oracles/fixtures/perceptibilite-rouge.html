@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — oracle-perceptibilite</title>
+<!-- TF-1219 : le cas reel du bouton "Panier" — cable (une ancre fonctionnelle, data-exigence
+     posee), mais invisible. Hors-flux (position absolue a -9999px), 2x2px, contraste quasi
+     nul entre le texte et le fond, aucun retour visuel (ni :hover/:focus, ni mutation
+     scriptee). Doit declencher PC1, PC2 (largeur et hauteur), PC3 et PC4. -->
+<style>
+  .panier-fantome {
+    position: absolute;
+    left: -9999px;
+    top: -9999px;
+    width: 2px;
+    height: 2px;
+    color: #201020;
+    background: #221022;
+    border: none;
+  }
+</style>
+</head>
+<body>
+  <button class="panier-fantome" data-exigence="EX-PANIER-42" type="button" onclick="ajouterAuPanier()">Panier</button>
+  <script>
+    function ajouterAuPanier() {
+      // cable, mais ne change jamais rien a l'ecran ni ne touche a l'element lui-meme.
+      console.log('panier mis a jour');
+    }
+  </script>
+</body>
+</html>

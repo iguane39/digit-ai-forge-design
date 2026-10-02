@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-perceptibilite</title>
+<!-- TF-1219 : la meme action, correctement perceptible — en flux normal, 180x44px (au-dessus
+     du seuil WCAG 2.2 2.5.8), contraste blanc sur bleu nuit largement superieur a 4.5:1, et un
+     retour visuel double : un anneau de focus au clavier ET une mutation de classe cablee au
+     clic. PC1-PC4 doivent tous PASSER. -->
+<style>
+  .action-panier {
+    width: 180px;
+    height: 44px;
+    color: #ffffff;
+    background: #1a1a2e;
+    border: none;
+  }
+  .action-panier:focus-visible {
+    outline: 3px solid #ffd60a;
+    outline-offset: 2px;
+  }
+  .action-panier.actif {
+    background: #2c2c54;
+  }
+</style>
+</head>
+<body>
+  <button id="btn-panier" class="action-panier" data-exigence="EX-PANIER-42" type="button">Ajouter au panier</button>
+  <script>
+    document.getElementById('btn-panier').addEventListener('click', function () {
+      document.getElementById('btn-panier').classList.toggle('actif');
+    });
+  </script>
+</body>
+</html>

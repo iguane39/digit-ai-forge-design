@@ -543,6 +543,20 @@ const CAS = [
     rouge: [fx('surcouche-rouge.html')],
   },
   {
+    // TF-1219 — loi n°1 du pilot (« toute affordance est câblée ou n'existe pas ») sans aucun
+    // contrôle de PERCEPTIBILITÉ : un bouton « Panier » câblé (une ancre fonctionnelle), sans
+    // contraste ni taille ni position suffisants, a été déclaré « inactif » par un humain. Les
+    // deux fixtures portent la MÊME action nommée par une exigence (data-exigence="EX-PANIER-42"
+    // — convention posée par ce chantier faute d'existant côté EXIGENCES.json/fiche de cadrage) ;
+    // la rouge la pose hors-flux (position absolute, -9999px), à 2x2px, sans contraste ni retour
+    // visuel ; la verte la pose en flux normal, à 180x44px, contraste blanc sur bleu nuit, et un
+    // double retour visuel (anneau de focus clavier + mutation de classe câblée au clic).
+    oracle: 'oracle-perceptibilite.mjs',
+    regles: ['PC1', 'PC2', 'PC3', 'PC4'],
+    verte: [fx('perceptibilite-verte.html')],
+    rouge: [fx('perceptibilite-rouge.html')],
+  },
+  {
     // TF-0830 (lot Produit-12, 06/09) : TROIS pages neuves et conformes — check_html PASS sur
     // 36 règles, render_page PASS aux quatre largeurs — sortaient de l'agrégateur en FAIL avec
     // 19 à 20 écarts durs CHACUNE. Les vingt étaient portés par le seul `table-filters.css` du

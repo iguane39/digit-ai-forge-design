@@ -343,6 +343,9 @@ const aUnPanneau = /data-panneau-tache|data-branche\s*=/i.test(html);
 // la page. Une page sans déclencheur, elle, n'a pas de déclencheur mal formé.
 const aUnDeclencheur = /<button[\s>]|<a[\s>]|<summary[\s>]|data-action|onclick|role\s*=\s*["'](button|link)["']/i.test(html);
 const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(html);
+// TF-1219 : une action nommée par une exigence (data-exigence="<id>", convention posée au
+// 10e oracle) — une page sans aucune action nommée n'a rien à juger en perceptibilité.
+const aUneActionNommee = /data-exigence\s*=/i.test(html);
 // TF-1322 (23/09/2026) : la règle vit dans lib/cible-mobile.mjs, que le lanceur général de
 // quality-oracles consulte aussi (par oracle-mobile --si-cible-mobile) — une portée, deux juges.
 const estMobile = estCibleMobile(html, args);
@@ -357,7 +360,7 @@ function passeFichier(fichier, { muet = false } = {}) {
   // les autres : ils ne sont pas sans objet, ils n'ont simplement pas été demandés.
   if (seul) {
     const script = `oracle-${seul}.mjs`;
-    const avecTokens = ['oracle-tokens.mjs', 'oracle-declencheurs.mjs', 'oracle-surcouche.mjs'].includes(script);
+    const avecTokens = ['oracle-tokens.mjs', 'oracle-declencheurs.mjs', 'oracle-surcouche.mjs', 'oracle-perceptibilite.mjs'].includes(script);
     return [lancer(script, avecTokens && opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier])];
   }
   const out = [];
@@ -386,6 +389,10 @@ function passeFichier(fichier, { muet = false } = {}) {
   if (aUneSurcouche) {
     out.push(lancer('oracle-surcouche.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
   } else if (!muet) sansObjet.push('oracle-surcouche : SANS OBJET — aucun composant en sur-couche (<dialog>, [popover], role="dialog") dans le document');
+
+  if (aUneActionNommee) {
+    out.push(lancer('oracle-perceptibilite.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
+  } else if (!muet) sansObjet.push('oracle-perceptibilite : SANS OBJET — aucune action nommée par une exigence (data-exigence) dans le document');
 
   return out;
 }
