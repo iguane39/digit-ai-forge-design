@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — champ téléphone rendu en type text</title>
+<!-- RT-123 (Produit-02, D-55 (a) du 03/10) : le placeholder est un exemple de contenu, pas un
+     indice de format. Le vrai positif subsiste : le name désigne un téléphone, rendu en type=text. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rechercher</h1>
+  <form>
+    <p>
+      <label for="tel">Votre numéro</label>
+      <input type="text" id="tel" name="telephone" placeholder="ex. mobile">
+    </p>
+    <button type="submit">Envoyer</button>
+  </form>
+</main>
+</body>
+</html>

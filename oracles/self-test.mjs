@@ -471,6 +471,17 @@ const CAS = [
     rouge: [fx('saisie-sa7-rouge.html')],
   },
   {
+    // RT-123 (Produit-02, D-55 (a) du 03/10) : faux positif SA1 sur un champ de recherche plein
+    // texte (type=search, name=q-t-resa) dont le placeholder « ex. mobile, réservation » cite
+    // l'appareil des visiteurs. Le placeholder n'est qu'un exemple de contenu : il ne suffit
+    // plus seul à inférer un format (indices forts : name, id, libellé, autocomplete). La rouge
+    // garde le vrai positif : name="telephone" rendu en type=text.
+    oracle: 'oracle-saisie.mjs',
+    regles: ['SA1'],
+    verte: [fx('saisie-placeholder-verte.html')],
+    rouge: [fx('saisie-placeholder-rouge.html')],
+  },
+  {
     // TF-0707 + TF-0708 (lot Produit-12, 16/08, inspection utilisateur en production) : un écran
     // affichait SIMULTANÉMENT les champs des deux modes d'un même flux, derrière un encart replié
     // toujours présent sous la liste qu'il alimentait. L'utilisateur en a déduit une alternative

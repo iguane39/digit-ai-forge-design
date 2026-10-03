@@ -242,7 +242,9 @@ for (const tree of TOUS_ARBRES) {
     const t = typeDe(el);
     if (t !== 'text' && t !== 'search') continue;
     if (at(el, 'data-type-motive').trim() !== '') continue;
-    const foin = [at(el, 'name'), at(el, 'id'), at(el, 'placeholder'), libelleDe(el)].join(' | ');
+    // Le placeholder n'est qu'un exemple de contenu (« ex. mobile, réservation » dans une recherche
+    // plein texte) : il ne suffit jamais seul. Indices forts : name, id, libellé, autocomplete.
+    const foin = [at(el, 'name'), at(el, 'id'), libelleDe(el), at(el, 'autocomplete')].join(' | ');
     const trouve = FORMATS.find(f => f.motif.test(foin));
     if (!trouve) continue;
     add('bloquant', 'SA1',

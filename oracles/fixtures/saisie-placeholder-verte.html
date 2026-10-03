@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — recherche plein texte dont le placeholder dit mobile</title>
+<!-- RT-123 (Produit-02, D-55 (a) du 03/10) : le placeholder est un exemple de contenu, pas un
+     indice de format. Un champ type=search dont seul le placeholder évoque « mobile » (l'appareil des visiteurs) ne doit rien produire. -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Rechercher</h1>
+  <form>
+    <p>
+      <label for="q-t-resa">Rechercher</label>
+      <input type="search" id="q-t-resa" name="q-t-resa" placeholder="ex. mobile, réservation">
+    </p>
+    <button type="submit">Envoyer</button>
+  </form>
+</main>
+</body>
+</html>
