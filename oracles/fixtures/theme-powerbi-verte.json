@@ -17,22 +17,22 @@
   "neutral": "#D97706",
   "textClasses": {
     "callout": {
-      "fontFace": "Roboto",
+      "fontFace": "Montserrat",
       "fontSize": 28,
       "color": "#0F172A"
     },
     "title": {
-      "fontFace": "Roboto",
+      "fontFace": "Montserrat",
       "fontSize": 14,
       "color": "#0F172A"
     },
     "header": {
-      "fontFace": "Roboto",
+      "fontFace": "Montserrat",
       "fontSize": 12,
       "color": "#0F172A"
     },
     "label": {
-      "fontFace": "DM Sans",
+      "fontFace": "Inter",
       "fontSize": 10,
       "color": "#0F172A"
     }
@@ -78,7 +78,7 @@
         ],
         "title": [
           {
-            "fontFamily": "Roboto",
+            "fontFamily": "Montserrat",
             "fontSize": 12,
             "fontColor": {
               "solid": {
