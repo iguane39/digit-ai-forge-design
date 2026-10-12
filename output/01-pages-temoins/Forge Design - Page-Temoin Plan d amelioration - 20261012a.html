@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script>
+(function () {
+  var stocke = null;
+  try { stocke = localStorage.getItem('digitai-theme'); } catch (e) {}
+  var theme = stocke === 'dark' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', theme);
+  /* RV-9 (14/08) : `color-scheme` SUIT le thème effectif. Laissé à « light dark », le
+     navigateur peignait ses propres surfaces (ascenseurs, contrôles de formulaire) en
+     sombre dès que le poste l'était — un corps clair bordé de chrome sombre, alors même
+     que la règle dit « clair par défaut ». Le figer à « light » aurait produit l'inverse
+     après bascule. Il suit donc, et reste juste dans les deux états. */
+  var meta = document.querySelector('meta[name="color-scheme"]');
+  if (meta) { meta.setAttribute('content', theme); }
+})();
+</script>
+  
+  <title>Digit-AI — Plan d’amélioration · Produit-Essai — 20261012a</title>
+  <meta name="description" content="Plan d’amélioration post-audit de Produit-Essai : 9 fiches, décisions fermées, jonction avec les remédiations de l’audit et trajectoire.">
+  <meta name="ai-generated" content="Claude Code">
+  <meta name="theme-color" content="#2563EB">
+  
+  <meta name="color-scheme" content="light">
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3Ctext x='32' y='44' font-family='Segoe UI,Roboto,sans-serif' font-size='38' font-weight='700' fill='white' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+
+  
+
+  <style>
+    :root {
+      /* Couleurs — marque & surfaces */
+      --blue: #2563EB;
+      --bg: #FAFBFF;
+      --surface: #FFFFFF;
+      --card: #FFFFFF;
+      /* Focus — PRESCRIT par token, consomme par toute affordance (RGAA 10.7, WCAG 2.4.7) :
+         un anneau improvise par chaque auteur n'est pas une charte. */
+      --focus-anneau: 2px solid var(--blue);
+      --focus-decalage: 2px;
+      /* Couleurs — encres */
+      --ink: #0F172A;
+      --muted: #64748B;
+      --faint: #94A3B8;
+      --line: #E6EAF2;
+      /* Accents sémantiques */
+      --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8;
+      --teal:  #0E9488; --teal-fill:  #EFFDFB; --teal-line:  #C7F0EA;
+      --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD;
+      /* TF-0755 (02/09) : le QUATRIEME registre, employe par les livrables de la maison et
+         documente nulle part. Un rapport de conformite qui a eu besoin d'un « refus / non
+         declare » ne l'a pas trouve dans le socle et l'a INVENTE — alors que le livrable
+         conforme de reference portait deja ces trois valeurs exactes. Une palette dont un
+         registre entier n'est ecrit nulle part se fait reinventer, et deux reinventions donnent
+         deux rouges dans deux livrables de la meme maison. */
+      --red:   #B91C1C; --red-fill:   #FEF2F2; --red-line:   #F6CFCF;
+      /* TF-0754 (02/09) : hauteur de l'EN-TETE COLLANT. Le socle a tranche — l'en-tete garde le
+         bord haut, le thead collant et le sommaire lateral se decalent de var(--hh). Un token
+         consomme sans etre pose vaudrait 0 et ramenerait la collision (controle L29). */
+      --hh: 64px;
+      /* TF-0929 (08/09, troisieme retour humain sur l'en-tete collant en deux jours) — `--hh`
+         est un TOKEN, et un token ne suit pas une hauteur qui change avec la largeur. Des que
+         l'en-tete passe sur deux lignes, ou qu'une bande de sommaire colle SOUS lui, ce qui
+         colle au-dessus du thead est plus haut que 64 px, et le thead se range DERRIERE eux —
+         mesure a 1 370 px : 115 px d'en-tete masques ; a 1 600 px, aucun defaut. Les deux
+         valeurs sont donc MESUREES au chargement, au redimensionnement et aux polices chargees
+         (voir poserHauteurs() en pied de page) ; ce qui est ecrit ici est le REPLI, celui qui
+         sert avant la premiere mesure et si le script ne s'execute pas.
+         --hh     : bas de l'en-tete collant — ce qui colle directement sous lui l'emploie ;
+         --hh-tab : bas du DERNIER collant au-dessus d'un tableau (en-tete + bande de sommaire
+                    collante s'il y en a une) — le thead collant emploie celui-la. */
+      --hh-tab: 64px;
+      /* Rayons */
+      --r: 12px; --r-sm: 8px;
+      /* Largeur du conteneur et largeur de lecture — cf. regle L2.
+         Le conteneur occupe 75-100 % de la fenetre A TOUTE TAILLE (decision 13/08) :
+         92vw sous ~1826px, plafond confort 1680px, plancher 75vw au-dela. */
+      /* TF-0450 : `--prose: 75ch` retire. Il n'etait plus consomme nulle part depuis que
+         TF-0421 a retire la bride `p, li { max-width: var(--prose) }` — un token declare et
+         jamais lu n'est pas neutre, c'est la trace visible d'une doctrine abandonnee, en tete
+         du fichier que tout auteur de page copie. Le prochain le rebrancherait. */
+      --w: clamp(75vw, 1680px, 92vw);
+      /* Familles (repli système obligatoire) — charte des présentations (D-5 (a), D-11 (a)) */
+      --head: "Montserrat", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --sans: "Inter", "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: "JetBrains Mono", ui-monospace, "Consolas", monospace;
+      /* Année de référence (token isolé) */
+      --annee-ref: "2026";
+    }
+
+    /* S-G1 (2/4, R-30) — tokens sombres : une source, deux projections. bg/surface
+       s'assombrissent vers une base marine ; ink/muted/faint s'éclaircissent en
+       dégradé inverse ; line reste un filet proche du fond ; chaque accent
+       sémantique éclaircit sa teinte de base (lisible sur fond sombre) et assombrit
+       son -fill/-line en griffe basse de la même teinte. */
+    :root[data-theme="dark"] {
+      --bg: #0B1220; --surface: #121B2E; --card: #121B2E;
+      --ink: #EEF2F8; --muted: #A9B4C4; --faint: #7C8AA0; --line: #263248;
+      --blue: #7DA2F5;
+      --amber: #FBBF6D; --amber-fill: #2B2210; --amber-line: #4A3A18;
+      --teal:  #5FE6D6; --teal-fill:  #0E2A27; --teal-line:  #164E48;
+      --green: #7BE0A0; --green-fill: #0F2A1B; --green-line: #1C4A30;
+      --red:   #F5A3A3; --red-fill:   #2C1416; --red-line:   #4C1F22;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.55;
+      font-size: 16px;
+    }
+    /* TF-0733 (31/08, lot produit) — LE VOILE INVISIBLE AUX SEIZE ORACLES. Un panneau masque
+       par l'attribut `hidden` mais style par un `display: flex` explicite : la regle CSS
+       l'emporte sur le display:none que l'attribut tient de la feuille de l'agent utilisateur,
+       et un rectangle TRANSPARENT couvre l'ecran en interceptant chaque clic — invisible en
+       capture (transparent), invisible a la lecture (syntaxiquement correct), trouve par
+       document.elementFromPoint. Cette ligne rend l'attribut SOUVERAIN : un composant masque
+       le reste, quel que soit le display que sa classe pose. Elle est OBLIGATOIRE de charte
+       sur toute page qui emploie `hidden` (controle L23 de check_html.py). */
+    [hidden] { display: none !important; }
+
+    /* Regle L2 (corrigee, TF-0421 — lot Produit-05 20260820a) : la mesure de lecture est portee
+       par le CONTENEUR, jamais par le paragraphe. L'ancienne doctrine (« conteneur relatif,
+       prose bornee en ch ») bridait chaque <p> a 75ch : a 1 800 px, 60 % de la fenetre vide,
+       livre vert, refuse par le client. Deux gabarits de chapitre NOMMES remplacent la bride :
+         .chap.lire  — un PASSAGE de lecture (~1 080 px centres) INSERE dans une mise en page
+                       large — JAMAIS l'enveloppe d'un chapitre entier : employe comme
+                       enveloppe, il place tout le document a 56 % d'une fenetre de 1 920 px,
+                       sous le plancher de largeur que ce squelette enonce, et render_page L2
+                       le refuse a bon droit (TF-0724 D2, constate par le destinataire humain) ;
+         .chap.duo   — grille 7/5 texte + encart utile (KPI, legende, figure), repli < 1 100 px.
+       Un <p> seul sur une largeur de 1 680 px reste illisible : c'est le CHAPITRE qu'on
+       retrecit (.chap.lire), pas la ligne. render_page.py L2 juge quelle que soit la propriete. */
+    .wrap { max-width: var(--w); margin: 0 auto; padding: 32px 24px 64px; }
+    /* TF-0930 (retour humain du 08/09, « augmente la largeur complete du document ») — une
+       page qui se DECLARE page de donnees echappe au plafond de confort : `--w` la bridait a
+       1 260 px dans une fenetre de 1 370 et a 1 680 dans une fenetre de 1 920, alors que I1 et
+       L26 disent « pleine largeur adaptative ». Sept colonnes de mapping n'entrent pas dans
+       1 260 px ; la place existe, la page doit la prendre. La colonne de lecture reste
+       accessible a la PROSE par `.chap.lire`, qui n'est pas touche ici.
+       Mesure : .wrap 1 370/1 370 px et 1 920/1 920 px apres, contre 1 260 et 1 680 avant.
+       Controle : famille `conteneur_bride_donnees` de render_page.py (>= 96 % a >= 1 280 px). */
+    [data-page="donnees"] .wrap,
+    .wrap[data-page="donnees"] { max-width: none; padding: 20px 28px 48px; }
+    /* TF-0932 — l'entrée en matière d'un chapitre : ce qu'il contient, puis ses termes. */
+    /* TF-1238 (22/09/2026) — LE REPLI LITTÉRAL EST RETIRÉ, ET IL ÉTAIT PIRE QUE REDONDANT.
+       `var(--muted, #475569)` promettait de secourir un jeton absent ; or `--muted` est posé
+       sans condition au `:root` de cette coquille, donc le repli ne pouvait jamais servir — et
+       sa valeur ne correspondait PAS au jeton : `#475569` contre `#64748B`. En thème sombre le
+       jeton devient `#A9B4C4`, que le repli aurait contredit plus franchement encore. Une
+       valeur de secours qui ne peut pas s'exécuter et qui ment sur ce qu'elle secourt est une
+       dette pure : elle fait échouer le contrôle des jetons sans rien garantir en échange. */
+    .contenu { margin: .2em 0 .8em; color: var(--muted); }
+    .termes { margin: 0 0 1em; font-size: .92em; color: var(--muted); }
+    .termes dfn { font-style: normal; font-weight: 600; color: var(--ink); }
+    .chap.lire { max-width: 1080px; margin-left: auto; margin-right: auto; }
+    .chap.duo { display: grid; grid-template-columns: 7fr 5fr; gap: 32px; align-items: start; }
+    @media (max-width: 1100px) { .chap.duo { grid-template-columns: 1fr; } }
+
+    /* ── Tableaux, et leur repli en cartes (TF-0442, composants.md §6) ──────────────────
+       Le socle ne portait AUCUN style de tableau : chaque page en reinventait, et le repli en
+       cartes — seule parade reelle au debordement — n'existait qu'en exemple dans un
+       referentiel. Mesure du 21/08 sur une page dont TOUS les tableaux etaient deja dans un
+       conteneur `overflow-x: auto` : 26 defauts V1 BLOQUANTS a 390 px (25 causes, 935
+       elements), 4 a 768 px, et ZERO apres repli. Un conteneur qui defile rend un tableau
+       CONSULTABLE ; il ne le rend pas lisible et ne fait pas passer V1, qui compare le bord
+       droit au viewport sans regarder si un ancetre defile.
+
+       Seuil a 900 px et non 640 : le calibrage de composants.md (~130 px de largeur utile par
+       colonne de prose) place le repli d'un tableau de 4 colonnes textuelles au-dessus de
+       640 px. Verifie au rendu sur le squelette de rapport de donnees du pilot — PASS a
+       1280 / 768 / 390.
+
+       `thead { display: none }` et non un masquage hors ecran : la version « position
+       absolue + clip » a ete essayee D'ABORD et REFUSEE par render_page — les `<th>` gardent
+       leur largeur naturelle et debordent (3 BLOQUANTS mesures a 390 px). Le libelle de colonne
+       n'est pas perdu, il est rendu par `td::before` depuis `data-label`.
+
+       Chaque `<td>` porte `data-label="<en-tete de sa colonne>"`. Un tableau qui n'en porte
+       pas ne se replie pas — c'est voulu : le repli sans etiquette rendrait des valeurs nues. */
+    /* ── TF-0900 (08/09/2026) : LE CONTENEUR DEFILANT NE VIT QUE SOUS 900 px ────────────
+       Un ancetre dont l'`overflow` n'est pas `visible` DEVIENT la boite de defilement de tout
+       `position: sticky` de son sous-arbre. `.table-hote { overflow-x: auto }` pose partout
+       DEFAISAIT donc, a lui seul, le geste L29 pose vingt lignes plus bas : le thead se figeait
+       sous le haut de SON TABLEAU au lieu de l'en-tete de page. Mesure du 07/09 sur quatre
+       tableaux sans filtres : th a 404 px au repos pour 337 attendus (+67), une ligne recouverte
+       en permanence, -96 px apres 200 px de defilement — le thead quittait l'ecran avec son
+       tableau. Deux lignes du MEME gabarit se contredisaient, et un produit a du trancher seul.
+
+       ARBITRAGE : au-dessus de 900 px le conteneur ne defile PAS. Il n'y servait a rien — la
+       regle « tableau rogne » (render_page, famille rognage_donnees) refuse deja qu'un tableau
+       soit coupe dans un conteneur defilant sur une page de donnees, et V1 ne regarde pas si un
+       ancetre defile. Sous 900 px il reprend son role : c'est la que le repli en cartes masque
+       le thead (`table.repli-cartes thead { display: none }`), donc plus aucun sticky a casser,
+       et qu'un tableau NON repliable a besoin d'etre consultable a defaut d'etre lisible.
+       Reste declare : un tableau sans `data-label` (donc sans repli) ET porteur de `thead.colle`
+       perd son collage sous 900 px — c'est la seule largeur ou le socle prefere la consultation
+       au collage, et lisibilite.md L29 le dit. */
+    .table-hote { overflow-x: visible; }
+    table { width: 100%; border-collapse: collapse; }
+    caption { text-align: left; color: var(--muted); font-size: .85rem; padding: 8px 0; }
+    /* TF-0724 D1 (31/08, lot produit) — `overflow-wrap: anywhere` NE VIT PLUS sur `th, td` :
+       pose la, la coupure s'appliquait a TOUTE cellule de prose, et L19 — le controle qui
+       accompagne ce squelette — refusait precisement cela. Tout document bati sur le socle et
+       portant un tableau de texte echouait SANS QUE SON AUTEUR AIT RIEN ECRIT (deux echecs
+       mesures sur un livrable, imputables au seul CSS du socle ; la surcharge ne suffisait
+       pas, l'oracle lisant la declaration et non la cascade). La coupure vit desormais aux
+       DEUX seuls endroits legitimes : le repli en cartes (composants.md §6, palier oblige,
+       tolere par L19 depuis TF-0554) et la classe explicite `.cellule-code` pour les cellules
+       d'identifiants techniques — une classe qui DIT son usage, comme L19 le demande. */
+    th, td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { font-family: var(--head); font-weight: 700; }
+    td.cellule-code, th.cellule-code { font-family: var(--mono); overflow-wrap: anywhere; }
+    @media (max-width: 900px) {
+      /* TF-0900 : c'est ICI que le conteneur defilant sert — le thead est masque par le repli
+         en cartes (ligne suivante), donc aucun sticky ne peut etre casse, et un tableau non
+         repliable reste consultable au doigt. */
+      .table-hote { overflow-x: auto; }
+      table.repli-cartes thead { display: none; }
+      table.repli-cartes tr { display: block; border: 1px solid var(--line); border-radius: 8px; margin: 0 0 12px; padding: 8px 12px; break-inside: avoid; }
+      table.repli-cartes td { display: grid; grid-template-columns: minmax(9ch, 38%) 1fr; gap: 8px; border: 0; padding: 4px 0; }
+      table.repli-cartes td::before { content: attr(data-label); font-weight: 700; color: var(--muted); }
+      table.repli-cartes td:not([data-label])::before { content: none; }
+    }
+
+    h1, h2, h3, h4 { font-family: var(--head); font-weight: 800; color: var(--ink); line-height: 1.2; }
+    h1 { font-size: 2rem; margin: 0 0 .25em; }
+    h2 { font-size: 1.4rem; font-weight: 700; margin: 2em 0 .5em; }
+    h3 { font-size: 1.1rem; font-weight: 700; margin: 1.5em 0 .4em; }
+    /* TF-0724 D3 : le socle s'arretait a h3 — un document au quatrieme niveau devait le styler
+       lui-meme, et declenchait « saut de hierarchie » s'il n'intercalait pas un h3. Le niveau 4
+       existe ; au-dela, c'est un composant, pas un titre. */
+    h4 { font-size: 1rem; font-weight: 700; margin: 1.2em 0 .3em; }
+    p, li { margin: 0 0 1em; }
+    a { color: var(--blue); }
+    code, pre { font-family: var(--mono); }
+
+    header.doc {
+      border-bottom: 2px solid var(--blue);
+      padding-bottom: 16px; margin-bottom: 24px;
+    }
+    /* ── B1 contre B6 : l'ARBITRAGE, en deux lignes (TF-0754, 02/09) ──────────────────
+       « header sticky » et « thead sticky » se superposaient sur toute page longue a
+       tableaux : le thead se collait au bord haut DERRIERE l'en-tete et devenait illisible,
+       ou bien on lui donnait un decalage au jugé et il flottait au-dessus des premieres
+       lignes de son propre tableau. Aucun des deux textes du socle ne disait lequel cede, ni
+       ne fournissait le decalage — un PRODUIT a fini par trancher, apres deux cycles de
+       rendu. L'en-tete garde le bord haut (c'est lui qui porte l'identite du livrable) ; ce
+       qui colle SOUS lui consomme --hh. Le sommaire lateral (L25) prend le meme repere. */
+    header.doc.colle { position: sticky; top: 0; z-index: 20; background: var(--bg); }
+    thead.colle th   { position: sticky; top: var(--hh-tab, var(--hh)); z-index: 10; background: var(--surface); }
+    nav.toc.colle    { position: sticky; top: var(--hh); z-index: 10; }
+    @media (max-width: 900px) { nav.toc.colle { position: static; } }
+    .eyebrow { color: var(--muted); font-size: .85rem; letter-spacing: .04em; text-transform: uppercase; }
+
+    /* S-G1 (3/4, R-30) — bouton de bascule, en-tête, haut à droite */
+    .theme-toggle { appearance: none; border: 1px solid var(--line); background: var(--surface);
+      color: var(--ink); border-radius: 999px; width: 36px; height: 36px; flex: none; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .theme-toggle:focus-visible { outline: var(--focus-anneau); outline-offset: var(--focus-decalage); }
+    .theme-toggle .icon-sun { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+    :root[data-theme="dark"] .theme-toggle .icon-sun { display: inline; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--r);
+      padding: 20px 24px;
+      margin: 16px 0;
+    }
+
+    footer.doc {
+      margin-top: 48px; padding-top: 16px;
+      border-top: 1px solid var(--line);
+      color: var(--muted); font-size: .85rem;
+    }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .wrap { padding: 24px 16px 48px; }
+      h1 { font-size: 1.6rem; }
+    }
+
+    /* Respect du mouvement réduit (a11y) */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+    }
+
+    /* Export PDF / impression */
+    @page { size: A4; margin: 18mm 16mm; }
+    @page :first { margin-top: 22mm; }
+    @media print {
+      /* S-G1 (2/4 suite, R-30.2) — impression toujours claire, quel que soit le
+         thème affiché à l'écran au moment d'imprimer. */
+      :root, :root[data-theme="dark"] {
+        --bg:#FFFFFF; --surface:#FFFFFF; --card:#FFFFFF; --ink:#0F172A;
+        --muted:#64748B; --faint:#94A3B8; --line:#E6EAF2; --blue:#2563EB;
+        --amber:#D97706; --amber-fill:#FFFBEB; --amber-line:#FDE9C8;
+        --teal:#0E9488;  --teal-fill:#EFFDFB;  --teal-line:#C7F0EA;
+        --green:#15803D; --green-fill:#F2FCF5; --green-line:#CFEEDD;
+        --red:#B91C1C;   --red-fill:#FEF2F2;    --red-line:#F6CFCF;
+      }
+      body { background: var(--surface); }
+      .wrap { max-width: none; padding: 0; }
+      .card { break-inside: avoid; page-break-inside: avoid; }
+      a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .85em; color: var(--muted); }
+      .theme-toggle { display: none; }
+    }
+  </style>
+<!-- COMPOSANT-EMBARQUE:DEBUT table-filters.css — copie du socle digit-ai-page-html/assets/table-filters.css,
+     posée par digit-ai-page-html/scripts/embarquer-composants.mjs. NE PAS ÉDITER ICI : la SOURCE fait foi.
+     La copie se régénère (--ecrire) et sa dérive est refusée (--constat, oracle-parite-assets). -->
+<style data-composant="table-filters.css" data-empreinte="sha256:36a64400e5c944a5dbbdfbed124f8cd27baee82db16795997024bbc6bc8e84aa">
+/* table-filters.css — habillage charté du composant de filtres de colonne (D-12).
+   TF-0176 (13/08) : un composant se livre AVEC son CSS — livré nu, il sort en rendu brut
+   navigateur chez tous ses hôtes (constaté sur le dashboard forge-tests du 13/08, refusé
+   par son destinataire). À inliner dans le bloc de style de la page, à côté du script du
+   composant — JAMAIS de balise écrite en toutes lettres dans ce commentaire (même famille
+   de piège que RA-1 : un « script » ouvrant en commentaire fausse toute lecture paresseuse
+   du document). Ne consomme que les tokens :root du socle (--surface, --ink, --muted,
+   --line, --blue, --r-sm) : aucune couleur en dur, les deux thèmes sont servis. TF-1059
+   (11/09) : deux couleurs en dur restaient (texte du bouton actif, repli du survol), treize
+   espacements sortaient de l'échelle 4pt et quatre anneaux de focus n'étaient pas prescrits —
+   corrigés ici, à la source, plutôt que dans chaque produit. */
+
+.tf-btn {
+  font: inherit; font-size: .72rem; line-height: 1;
+  color: var(--blue); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 4px 8px; margin-left: 8px; cursor: pointer; vertical-align: middle;
+}
+.tf-btn:hover { border-color: var(--blue); }
+.tf-btn:focus-visible { outline: var(--focus-anneau, 2px solid var(--blue)); outline-offset: var(--focus-decalage, 1px); }
+/* filtre ACTIF : l'état se voit sans ouvrir le panneau */
+.tf-btn.tf-on { background: var(--blue); color: var(--surface); border-color: var(--blue); }
+
+.tf-panel {
+  position: absolute; z-index: 30; top: calc(100% + 4px); left: 0;
+  min-width: 230px; max-width: 320px; max-height: 320px; overflow: auto;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, .16);
+  padding: 12px; text-align: left; text-transform: none;
+  font-family: var(--sans); font-size: .85rem; font-weight: 400;
+  letter-spacing: normal; cursor: default;
+}
+.tf-search {
+  width: 100%; font: inherit; color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 8px 12px; margin: 0 0 8px;
+}
+.tf-search:focus-visible { outline: var(--focus-anneau, 2px solid var(--blue)); outline-offset: var(--focus-decalage, 1px); }
+.tf-actions {
+  display: flex; gap: 16px; border-bottom: 1px solid var(--line);
+  padding-bottom: 8px; margin-bottom: 8px;
+}
+.tf-actions button {
+  font: inherit; font-weight: 600; color: var(--blue);
+  background: none; border: none; cursor: pointer; padding: 0 4px;
+}
+.tf-actions button:focus-visible { outline: var(--focus-anneau, 2px solid var(--blue)); outline-offset: var(--focus-decalage, 1px); }
+.tf-opts { display: flex; flex-direction: column; gap: 4px; }
+.tf-opts label {
+  display: flex; align-items: center; gap: 8px;
+  padding: 4px; border-radius: 4px; cursor: pointer;
+}
+.tf-opts label:hover { background: var(--bg); }
+.tf-opts input[type="checkbox"] { accent-color: var(--blue); }
+/* TF-0782 (02/09) : la cardinalite decide de la FORME du panneau, pas de son existence — et
+   une forme qui change sans le dire est une affordance muette. Le panneau ouvert sur sa
+   recherche (plus de 15 valeurs) ou reduit a une valeur unique porte sa note. */
+.tf-forme-note { margin: 0 0 8px; color: var(--muted); font-size: .78rem; font-style: italic; }
+/* TF-1051 (08/09) : une colonne a valeur UNIQUE le dit dans son en-tete, la ou on la lit —
+   repliee dans le panneau, la note n'etait vue par personne et le lecteur concluait a une panne. */
+.tf-unique {
+  display: block; margin-top: 4px; color: var(--muted);
+  font-size: .72rem; font-weight: 400; font-style: italic; text-transform: none;
+}
+
+/* TF-0431 : panneau aligne a droite quand la place manque (choisi par le composant) ;
+   le conteneur defilant porteur d'un panneau ouvert ne rogne plus (data-tf-ouvert). */
+.tf-panel.tf-droite { left: auto; right: 0; }
+[data-tf-ouvert] { overflow: visible !important; }
+
+/* TF-0430 : etat vide — un filtre qui ne laisse rien le DIT dans le tableau, et offre la
+   seule action utile a ce moment. */
+tr[data-tf-empty] td {
+  padding: 16px 12px; text-align: center; color: var(--muted);
+  font-style: italic; border-bottom: 1px solid var(--line);
+}
+.tf-reset {
+  font: inherit; font-style: normal; font-weight: 600; color: var(--blue);
+  background: none; border: 1px solid var(--line); border-radius: var(--r-sm);
+  padding: 4px 12px; margin-left: 12px; cursor: pointer;
+}
+.tf-reset:hover { border-color: var(--blue); }
+.tf-reset:focus-visible { outline: var(--focus-anneau, 2px solid var(--blue)); outline-offset: var(--focus-decalage, 1px); }
+
+@media print { .tf-btn, .tf-panel, tr[data-tf-empty] { display: none; } }
+</style>
+<!-- COMPOSANT-EMBARQUE:FIN table-filters.css -->
+  <style>
+    nav.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin:0 0 20px;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm)}
+    nav.toc a{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--ink)}
+    nav.toc a:hover{text-decoration:underline}
+    nav.toc a strong{font-size:.85rem;font-weight:600}
+    .toc-d{color:var(--muted);font-size:.72rem;font-weight:400}
+    nav.barre{display:none}
+    @media (max-width:900px){
+      nav.barre{display:flex;flex-wrap:wrap;gap:4px 16px;position:sticky;top:var(--hh);z-index:15;background:var(--bg);border-bottom:1px solid var(--line);padding:8px 16px;margin:0 0 20px}
+      nav.barre a{flex:0 0 auto;white-space:nowrap;text-decoration:none;color:var(--ink);font-size:.8rem;font-weight:600}
+    }
+    .ch-apprend{margin:0 0 16px;color:var(--muted)}
+    main > section{margin:0 0 40px}
+    .find-bar{display:flex;flex-direction:column;gap:4px;margin:0 0 20px}
+    .find-bar label{font-size:.78rem;color:var(--muted);font-weight:600}
+    .find-bar input{font:inherit;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink)}
+    .find-count{margin-top:4px;font-size:.72rem;color:var(--muted);min-height:1em}
+    .find-count.zero{color:var(--red)}
+    .tf-count{margin:8px 0 20px;font-size:.72rem;color:var(--muted);min-height:1em}
+    mark.find-hit{background:var(--amber-fill);color:var(--ink);border-radius:2px;display:inline;padding:0;margin:0}
+    ol.decisions{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px}
+    ol.decisions h3{font-size:1rem;margin:0 0 8px}
+    /* Dans une carte de décision, l'étiquette passe AU-DESSUS de sa valeur : la grille à deux
+       colonnes de la fiche y coupait « Ce qu'elle coûte » sur deux lignes (revue du 12/10/2026). */
+    ol.decisions dl.champs{grid-template-columns:1fr;gap:0}
+    ol.decisions dl.champs dd{margin:0 0 8px}
+    dl.champs{display:grid;grid-template-columns:minmax(12ch,18%) 1fr;gap:4px 16px;margin:0}
+    dl.champs dt{font-weight:600;color:var(--muted)}
+    dl.champs dd{margin:0}
+    ul.options,ul.chiffres{margin:0;padding-left:20px}
+    ul.options li,ul.chiffres li{margin:0 0 4px}
+    .source{display:block;color:var(--muted);font-size:.85rem}
+    .badge{display:inline-flex;align-items:center;gap:8px;font-size:.78rem;font-weight:600;color:var(--ink);padding:4px 12px;border-radius:999px;border:1px solid var(--line)}
+    .badge::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--_dot,var(--muted))}
+    /* Fond PARTAGÉ : l'état se lit au libellé et à la puce pleine, jamais au seul fond (V16 de render_page :
+       les fonds -fill du socle sont trop proches pour porter seuls un état). */
+    .badge{background:var(--surface)}
+    .badge.ok{--_dot:var(--green)}
+    .badge.part{--_dot:var(--amber)}
+    .badge.info{--_dot:var(--teal)}
+    .td-btn{font:inherit;color:var(--blue);background:none;border:1px solid var(--line);border-radius:var(--r-sm);width:24px;height:24px;cursor:pointer;transition:transform .15s}
+    .td-btn:focus-visible{outline:var(--focus-anneau);outline-offset:var(--focus-decalage)}
+    .td-btn[aria-expanded="true"]{transform:rotate(90deg)}
+    tr[data-detail] td{background:var(--bg);border-bottom:1px solid var(--line);padding:12px 16px 12px 44px}
+    .trajectoire{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .horizon h3{font-size:1rem;margin:0 0 8px;padding:0 0 8px;border-bottom:2px solid var(--line)}
+    .lot h4{font-size:.95rem;margin:0 0 8px}
+    .lot-ligne{margin:0 0 4px;font-size:.9rem}
+    .vide{color:var(--muted)}
+    @media (max-width:900px){.trajectoire{grid-template-columns:1fr}dl.champs{grid-template-columns:1fr}}
+    main code{overflow-wrap:anywhere}
+    @media print{tr[data-detail][hidden]{display:table-row}.td-btn{display:none}tr[data-tf-hidden]{display:table-row !important}.find-bar{display:none}nav.barre{display:none}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="doc" style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px">
+      <div>
+        <p class="eyebrow">Digit-AI · Plan d’amélioration</p>
+        <h1>Plan d'amélioration post-audit — Produit-Essai</h1>
+        <p class="meta">Indice 20261012a · 2026-10-12 · vue générée depuis le fichier de données, ne pas éditer</p>
+      </div>
+      
+      <button id="theme-toggle" class="theme-toggle" type="button"
+              aria-label="Bascule thème sombre" aria-pressed="false">
+        <svg class="icon-moon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>
+        </svg>
+        <svg class="icon-sun" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="12" r="4.5"/>
+          <path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"
+                stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </header>
+
+    <main>
+<nav class="toc colle" aria-label="Sommaire">
+      <a href="#decisions"><strong>Les décisions à prendre</strong> <span class="toc-d">Chapitre 1 sur 8</span></a>
+      <a href="#synthese"><strong>Synthèse par domaine et par horizon</strong> <span class="toc-d">Chapitre 2 sur 8</span></a>
+      <a href="#fiches"><strong>Toutes les fiches</strong> <span class="toc-d">Chapitre 3 sur 8</span></a>
+      <a href="#couverture"><strong>Couverture des domaines et plans existants</strong> <span class="toc-d">Chapitre 4 sur 8</span></a>
+      <a href="#jonction"><strong>Jonction avec les remédiations de l’audit</strong> <span class="toc-d">Chapitre 5 sur 8</span></a>
+      <a href="#trajectoire"><strong>Trajectoire en lots et horizons</strong> <span class="toc-d">Chapitre 6 sur 8</span></a>
+      <a href="#mesure"><strong>Plan de mesure</strong> <span class="toc-d">Chapitre 7 sur 8</span></a>
+      <a href="#methode"><strong>Méthode, sources et statut des chiffres</strong> <span class="toc-d">Chapitre 8 sur 8</span></a>
+    </nav>
+<nav class="barre" aria-label="Sommaire permanent"><a href="#decisions">1. Décisions</a><a href="#synthese">2. Synthèse</a><a href="#fiches">3. Fiches</a><a href="#couverture">4. Couverture</a><a href="#jonction">5. Jonction</a><a href="#trajectoire">6. Trajectoire</a><a href="#mesure">7. Mesure</a><a href="#methode">8. Méthode</a></nav>
+<div class="find-bar">
+      <label for="find">Rechercher dans le plan</label>
+      <input id="find" type="search" placeholder="Rechercher une fiche, un domaine, une source…">
+      <p id="findCount" class="find-count" aria-live="polite"></p>
+    </div>
+<section id="decisions">
+<h2>Les décisions à prendre</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Les 9 premières décisions du plan, chacune en choix fermé, avec son coût, son gain et ce qui se passe si rien n'est décidé.</p>
+<p class="contenu">Ce chapitre contient les décisions fermées tirées des fiches les mieux classées ; le détail de chaque fiche se lit au chapitre 3.</p></div>
+<ol class="decisions">
+<li class="card decision">
+<h3>Décision 1 — Poser les tests de contrat front-back maintenant ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui, au lot L1</li><li>non, rester sur les tests de bout en bout</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité moyenne, durée courte</dd>
+<dt>Ce qu'elle rapporte</dt><dd>ruptures vues avant livraison</dd>
+<dt>Si rien n'est décidé</dt><dd>les ruptures restent vues en production</dd>
+<dt>Fiches</dt><dd><a href="#AM-QUA-01">AM-QUA-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 2 — Conserver les critères de recherche dans le profil ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui</li><li>non</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité simple, durée courte</dd>
+<dt>Ce qu'elle rapporte</dt><dd>moins de ressaisie</dd>
+<dt>Si rien n'est décidé</dt><dd>les recherches interrompues restent perdues</dd>
+<dt>Fiches</dt><dd><a href="#AM-FON-01">AM-FON-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 3 — Écrire l'objectif de temps de réponse avant d'optimiser ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui, objectif puis instrument</li><li>optimiser d'emblée</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité moyenne, durée courte</dd>
+<dt>Ce qu'elle rapporte</dt><dd>un gain constatable</dd>
+<dt>Si rien n'est décidé</dt><dd>toute optimisation reste invérifiable</dd>
+<dt>Fiches</dt><dd><a href="#AM-PERF-01">AM-PERF-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 4 — Exiger un script de retour par migration ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui, joué en intégration continue</li><li>non, sauvegarde avant migration</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité moyenne, durée moyenne</dd>
+<dt>Ce qu'elle rapporte</dt><dd>retour arrière possible</dd>
+<dt>Si rien n'est décidé</dt><dd>une migration ratée bloque une instance</dd>
+<dt>Fiches</dt><dd><a href="#AM-BACK-01">AM-BACK-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 5 — Converger sur une seule bibliothèque de champs ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui</li><li>habiller la seconde</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité moyenne, durée moyenne</dd>
+<dt>Ce qu'elle rapporte</dt><dd>un seul comportement d'erreur</dd>
+<dt>Si rien n'est décidé</dt><dd>deux comportements coexistent</dd>
+<dt>Fiches</dt><dd><a href="#AM-FRONT-01">AM-FRONT-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 6 — Écrire le connecteur SFTP ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui, sur le contrat existant</li><li>passerelle tierce</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité moyenne, durée moyenne</dd>
+<dt>Ce qu'elle rapporte</dt><dd>clients SFTP branchés</dd>
+<dt>Si rien n'est décidé</dt><dd>ces clients restent hors d'atteinte</dd>
+<dt>Fiches</dt><dd><a href="#AM-CNX-01">AM-CNX-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 7 — Scripter l'installation d'un client après la remédiation des logs ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui, au lot L2</li><li>former une seconde personne</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité complexe, durée moyenne</dd>
+<dt>Ce qu'elle rapporte</dt><dd>installation reproductible</dd>
+<dt>Si rien n'est décidé</dt><dd>l'installation dépend d'une seule personne</dd>
+<dt>Fiches</dt><dd><a href="#AM-EXP-01">AM-EXP-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 8 — Ouvrir la décision structurante de mutualisation ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>ouvrir l'instruction</li><li>garder une instance par client</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité très complexe, durée longue</dd>
+<dt>Ce qu'elle rapporte</dt><dd>coût par client maîtrisé</dd>
+<dt>Si rien n'est décidé</dt><dd>le coût croît avec chaque petit client</dd>
+<dt>Fiches</dt><dd><a href="#AM-ARC-01">AM-ARC-01</a></dd>
+</dl>
+</li>
+<li class="card decision">
+<h3>Décision 9 — Ventiler le coût d'usage des modèles par client ?</h3>
+<dl class="champs">
+<dt>Options</dt><dd><ul class="options"><li>oui, étiquetage des appels</li><li>prorata des utilisateurs</li></ul></dd>
+<dt>Ce qu'elle coûte</dt><dd>complexité simple, durée courte</dd>
+<dt>Ce qu'elle rapporte</dt><dd>marge par client calculable</dd>
+<dt>Si rien n'est décidé</dt><dd>les clients à fort usage restent invisibles</dd>
+<dt>Fiches</dt><dd><a href="#AM-COUT-01">AM-COUT-01</a></dd>
+</dl>
+</li>
+</ol>
+</section>
+
+<section id="synthese">
+<h2>Synthèse par domaine et par horizon</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Où se concentrent les améliorations : 9 fiches sur 13 domaines, réparties en 4 à court terme, 4 à moyen terme et 1 à long terme.</p>
+<p class="contenu">Ce chapitre contient un tableau d’une ligne par domaine de la base, avec le nombre de fiches par horizon et l’état de couverture du domaine.</p></div>
+<div class="chap lire" data-mesure-lecture><p class="exemple-lecture">Exemple de lecture : la ligne « Fonctionnel et parcours des utilisateurs » compte 1 fiche(s), dont AM-FON-01 à l’horizon court.</p></div>
+<div class="table-hote"><table id="tab-domaines" class="repli-cartes" data-filterable>
+<caption>Nombre de fiches par domaine et par horizon ; un domaine sans fiche porte une ligne motivée au chapitre 4.</caption>
+<thead><tr><th scope="col">Domaine</th><th scope="col">Code</th><th scope="col">Court terme</th><th scope="col">Moyen terme</th><th scope="col">Long terme</th><th scope="col">Couverture</th></tr></thead>
+<tbody>
+<tr><td data-label="Domaine">Fonctionnel et parcours des utilisateurs</td><td data-label="Code"><code>FON</code></td><td data-label="Court terme"><span data-v="1">1</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Architecture et modularité</td><td data-label="Code"><code>ARC</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="1">1</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Performances et capacité</td><td data-label="Code"><code>PERF</code></td><td data-label="Court terme"><span data-v="1">1</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Front : ergonomie, accessibilité, système de design</td><td data-label="Code"><code>FRONT</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="1">1</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Back : services, API, modèle de données, migrations</td><td data-label="Code"><code>BACK</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="1">1</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Connectivités : connecteurs de sources, intégrations tierces, fédération d'identité</td><td data-label="Code"><code>CNX</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="1">1</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">IA et recherche documentaire</td><td data-label="Code"><code>IA</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge info" aria-describedby="leg-couverture">ligne motivée</span></td></tr>
+<tr><td data-label="Domaine">Dette d'un fork et des dépendances amont</td><td data-label="Code"><code>FORK</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge info" aria-describedby="leg-couverture">ligne motivée</span></td></tr>
+<tr><td data-label="Domaine">Exploitation : installation, déploiement, sauvegarde, observabilité</td><td data-label="Code"><code>EXP</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="1">1</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Qualité et tests</td><td data-label="Code"><code>QUA</code></td><td data-label="Court terme"><span data-v="1">1</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Sécurité et conformité au-delà du référentiel d'audit</td><td data-label="Code"><code>SEC</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge info" aria-describedby="leg-couverture">ligne motivée</span></td></tr>
+<tr><td data-label="Domaine">Coûts : hébergement, licences, usage des modèles</td><td data-label="Code"><code>COUT</code></td><td data-label="Court terme"><span data-v="1">1</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge ok" aria-describedby="leg-couverture">1 fiche</span></td></tr>
+<tr><td data-label="Domaine">Documentation et expérience du développeur</td><td data-label="Code"><code>DOC</code></td><td data-label="Court terme"><span data-v="0">0</span></td><td data-label="Moyen terme"><span data-v="0">0</span></td><td data-label="Long terme"><span data-v="0">0</span></td><td data-label="Couverture"><span class="badge info" aria-describedby="leg-couverture">ligne motivée</span></td></tr>
+</tbody></table></div>
+<p class="tf-count" data-tf-count-for="tab-domaines" aria-live="polite"></p><div class="chap lire" data-mesure-lecture><p class="legende" id="leg-couverture">Couverture : « n fiches » quand le domaine porte au moins une amélioration ; « ligne motivée » quand il n’en porte aucune et dit pourquoi, au chapitre 4 ; « non couvert » quand il ne dit rien, ce que le contrat refuse.</p></div>
+</section>
+
+<section id="fiches">
+<h2>Toutes les fiches</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Chaque amélioration en une ligne, triable et filtrable par colonne ; le chevron déplie la fiche sur ses dix champs, ses chiffres et leur statut.</p>
+<p class="contenu">Ce chapitre contient une ligne par fiche, dans l’ordre du rang ; le chevron ouvre ses dix champs, ce que le chapitre 1 résume en décisions.</p></div>
+<div class="chap lire" data-mesure-lecture><p class="exemple-lecture">Exemple de lecture : la fiche de rang 1, AM-QUA-01, relève du domaine « Qualité et tests », vise l’horizon court et coûte une complexité moyenne · durée courte.</p></div>
+<div class="table-hote"><table id="tab-fiches" class="repli-cartes" data-filterable>
+<caption>Les fiches du plan, dans l’ordre de leur rang.</caption>
+<thead><tr><th scope="col">Rang</th><th scope="col">Fiche</th><th scope="col">Domaine</th><th scope="col">Horizon</th><th scope="col">Effort</th><th scope="col">Statut</th></tr></thead>
+<tbody>
+<tr id="AM-QUA-01"><td data-label="Rang" data-v="1">1</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-QUA-01" aria-label="Déplier la fiche AM-QUA-01">›</button> <code>AM-QUA-01</code> Tester les contrats entre le front et le back</td><td data-label="Domaine">Qualité et tests</td><td data-label="Horizon">court</td><td data-label="Effort">complexité moyenne · durée courte</td><td data-label="Statut">Neuve</td></tr>
+<tr data-detail id="det-AM-QUA-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>Les appels du front au back ne sont couverts par aucun test de contrat. <span class="source">Source : tests/ (relevé : aucun dossier de contrat)</span></dd>
+<dt>Cible servie</dt><dd>livrer le front et le back indépendamment <span class="source">Source : docs/decisions/ADR-0007-deploiement-separe.md l.6</span></dd>
+<dt>Proposition</dt><dd>Poser des tests de contrat consommateur sur les routes appelées par le front. <span class="source">Alternative écartée : tests de bout en bout seuls, parce que lents, et ils ne localisent pas la rupture.</span></dd>
+<dt>Gain attendu</dt><dd>une rupture de contrat vue avant la livraison <span class="source">Constaté par : un changement de route incompatible fait échouer le pipeline</span></dd>
+<dt>Effort</dt><dd>complexité moyenne · durée courte</dd>
+<dt>Dépendances</dt><dd>aucune</dd>
+<dt>Statut</dt><dd>Neuve</dd>
+<dt>Preuve de clôture</dt><dd>pipeline rouge sur une rupture de contrat provoquée</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>tests de contrat → livraisons indépendantes (ADR-0007) → livrer plus souvent sans régression</dd>
+</dl></td></tr>
+<tr id="AM-FON-01"><td data-label="Rang" data-v="2">2</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-FON-01" aria-label="Déplier la fiche AM-FON-01">›</button> <code>AM-FON-01</code> Reprendre une recherche interrompue sans tout ressaisir</td><td data-label="Domaine">Fonctionnel et parcours des utilisateurs</td><td data-label="Horizon">court</td><td data-label="Effort">complexité simple · durée courte</td><td data-label="Statut">Neuve</td></tr>
+<tr data-detail id="det-AM-FON-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>Le parcours de recherche repart d'un formulaire vide après une déconnexion : les critères saisis sont perdus. <span class="source">Source : src/front/recherche/Formulaire.tsx l.88-112</span></dd>
+<dt>Cible servie</dt><dd>« Un utilisateur retrouve son travail là où il l'a laissé. » <span class="source">Source : docs/product/vision.md l.14</span></dd>
+<dt>Proposition</dt><dd>Conserver les critères de la dernière recherche dans le profil et les proposer à la reconnexion. <span class="source">Alternative écartée : stockage dans le navigateur seul, parce que perdu au changement de poste, qui est le cas courant décrit par la vision.</span></dd>
+<dt>Gain attendu</dt><dd>moins de recherches abandonnées après une reconnexion <span class="source">Constaté par : compteur de recherches relancées depuis un critère conservé, relevé après mise en service</span></dd>
+<dt>Effort</dt><dd>complexité simple · durée courte</dd>
+<dt>Dépendances</dt><dd>aucune</dd>
+<dt>Statut</dt><dd>Neuve</dd>
+<dt>Preuve de clôture</dt><dd>une reconnexion après déconnexion forcée retrouve les critères (test de bout en bout vert)</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>critères conservés → travail retrouvé (vision l.14) → moins de ressaisie → investir là où l'usage se perd</dd>
+</dl></td></tr>
+<tr id="AM-PERF-01"><td data-label="Rang" data-v="3">3</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-PERF-01" aria-label="Déplier la fiche AM-PERF-01">›</button> <code>AM-PERF-01</code> Fixer un objectif de temps de réponse de la recherche, avant de l'optimiser</td><td data-label="Domaine">Performances et capacité</td><td data-label="Horizon">court</td><td data-label="Effort">complexité moyenne · durée courte</td><td data-label="Statut">Neuve</td></tr>
+<tr data-detail id="det-AM-PERF-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>Aucun objectif de temps de réponse n'est écrit ; la documentation cite un ressenti de lenteur sur les gros corpus. <span class="source">Source : docs/product/retours-utilisateurs.md l.31</span></dd>
+<dt>Cible servie</dt><dd>« La recherche répond avant que l'utilisateur ne se demande si elle répond. » <span class="source">Source : docs/product/vision.md l.22</span></dd>
+<dt>Proposition</dt><dd>Écrire l'objectif (95e centile sous 800 ms, hypothèse à confirmer) et l'instrumenter avant toute optimisation. <span class="source">Alternative écartée : optimiser d'emblée l'index, parce que sans mesure de base, le gain ne serait pas constatable.</span></dd>
+<dt>Gain attendu</dt><dd>une cible chiffrée partagée et un écart mesuré à elle <span class="source">Constaté par : tableau de bord du 95e centile après instrumentation</span></dd>
+<dt>Effort</dt><dd>complexité moyenne · durée courte</dd>
+<dt>Dépendances</dt><dd><code>REM-D06-003</code></dd>
+<dt>Statut</dt><dd>Neuve</dd>
+<dt>Preuve de clôture</dt><dd>objectif écrit dans la documentation et instrument posé (sonde versionnée)</dd>
+<dt>Chiffres</dt><dd><ul class="chiffres"><li><strong>800 ms</strong> — <span aria-describedby="leg-chiffres" class="badge part">Hypothèse</span> ordre de grandeur usuel d'une recherche interactive, à confirmer par le plan de mesure</li></ul></dd>
+<dt>Test rétro</dt><dd>objectif écrit → réponse perçue comme immédiate (vision l.22) → investir sur la recherche à bon escient</dd>
+</dl></td></tr>
+<tr id="AM-BACK-01"><td data-label="Rang" data-v="4">4</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-BACK-01" aria-label="Déplier la fiche AM-BACK-01">›</button> <code>AM-BACK-01</code> Rendre les migrations de schéma réversibles</td><td data-label="Domaine">Back : services, API, modèle de données, migrations</td><td data-label="Horizon">moyen</td><td data-label="Effort">complexité moyenne · durée moyenne</td><td data-label="Statut">Neuve</td></tr>
+<tr data-detail id="det-AM-BACK-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>Les migrations du schéma n'ont pas de chemin de retour écrit. <span class="source">Source : db/migrations/ (relevé des fichiers : aucun script de retour)</span></dd>
+<dt>Cible servie</dt><dd>livrer une version sans risquer de bloquer une instance cliente <span class="source">Source : réponse Q3 du porteur</span></dd>
+<dt>Proposition</dt><dd>Exiger un script de retour par migration, joué en intégration continue. <span class="source">Alternative écartée : sauvegarde complète avant chaque migration, parce que plus lente à restaurer et sans test de retour.</span></dd>
+<dt>Gain attendu</dt><dd>un retour arrière possible sur toute migration <span class="source">Constaté par : le pipeline joue montée puis descente sur chaque migration</span></dd>
+<dt>Effort</dt><dd>complexité moyenne · durée moyenne</dd>
+<dt>Dépendances</dt><dd>aucune</dd>
+<dt>Statut</dt><dd>Neuve</dd>
+<dt>Preuve de clôture</dt><dd>étape de pipeline montée-descente verte sur toutes les migrations</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>migrations réversibles → livrer sans bloquer un client (Q3) → investir sans risque de régression</dd>
+</dl></td></tr>
+<tr id="AM-FRONT-01"><td data-label="Rang" data-v="5">5</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-FRONT-01" aria-label="Déplier la fiche AM-FRONT-01">›</button> <code>AM-FRONT-01</code> Unifier les composants de formulaire de la console d'administration</td><td data-label="Domaine">Front : ergonomie, accessibilité, système de design</td><td data-label="Horizon">moyen</td><td data-label="Effort">complexité moyenne · durée moyenne</td><td data-label="Statut">Déjà planifiée</td></tr>
+<tr data-detail id="det-AM-FRONT-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>La console emploie deux bibliothèques de champs aux états d'erreur différents. <span class="source">Source : src/admin/package.json l.12-19</span></dd>
+<dt>Cible servie</dt><dd>« Une console qu'un nouvel administrateur prend en main sans formation. » <span class="source">Source : docs/product/vision.md l.30</span></dd>
+<dt>Proposition</dt><dd>Converger sur une seule bibliothèque, alignée sur le système de design du produit. <span class="source">Alternative écartée : habiller la seconde bibliothèque aux couleurs de la première, parce que deux comportements d'erreur resteraient.</span></dd>
+<dt>Gain attendu</dt><dd>un seul comportement d'erreur dans la console <span class="source">Constaté par : inventaire des composants de champ : une seule bibliothèque importée</span></dd>
+<dt>Effort</dt><dd>complexité moyenne · durée moyenne</dd>
+<dt>Dépendances</dt><dd>aucune</dd>
+<dt>Statut</dt><dd>Déjà planifiée — référence docs/product/sprints/sprint-14.md l.5</dd>
+<dt>Preuve de clôture</dt><dd>le manifeste de la console n'importe plus qu'une bibliothèque de champs</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>un seul comportement → prise en main sans formation (vision l.30) → coût d'adoption réduit</dd>
+</dl></td></tr>
+<tr id="AM-CNX-01"><td data-label="Rang" data-v="6">6</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-CNX-01" aria-label="Déplier la fiche AM-CNX-01">›</button> <code>AM-CNX-01</code> Ajouter un connecteur de source SFTP</td><td data-label="Domaine">Connectivités : connecteurs de sources, intégrations tierces, fédération d'identité</td><td data-label="Horizon">moyen</td><td data-label="Effort">complexité moyenne · durée moyenne</td><td data-label="Statut">Déjà planifiée</td></tr>
+<tr data-detail id="det-AM-CNX-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>Seuls les connecteurs S3 et SMB existent ; la feuille de route promet le SFTP. <span class="source">Source : docs/product/feuille-de-route.md l.40</span></dd>
+<dt>Cible servie</dt><dd>« Brancher les sources que nos clients ont déjà. » <span class="source">Source : docs/product/vision.md l.18</span></dd>
+<dt>Proposition</dt><dd>Écrire le connecteur SFTP sur le contrat des connecteurs existants. <span class="source">Alternative écartée : passerelle tierce de synchronisation, parce que une dépendance de plus à exploiter chez chaque client.</span></dd>
+<dt>Gain attendu</dt><dd>les clients sous SFTP branchent leur source sans passerelle <span class="source">Constaté par : recette du connecteur sur une source d'essai</span></dd>
+<dt>Effort</dt><dd>complexité moyenne · durée moyenne</dd>
+<dt>Dépendances</dt><dd><a href="#AM-BACK-01">AM-BACK-01</a></dd>
+<dt>Statut</dt><dd>Déjà planifiée — référence docs/product/feuille-de-route.md l.40</dd>
+<dt>Preuve de clôture</dt><dd>recette du connecteur SFTP verte</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>connecteur SFTP → sources déjà en place (vision l.18) → élargir la base de clients</dd>
+</dl></td></tr>
+<tr id="AM-EXP-01"><td data-label="Rang" data-v="7">7</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-EXP-01" aria-label="Déplier la fiche AM-EXP-01">›</button> <code>AM-EXP-01</code> Industrialiser l'installation d'un nouveau client</td><td data-label="Domaine">Exploitation : installation, déploiement, sauvegarde, observabilité</td><td data-label="Horizon">moyen</td><td data-label="Effort">complexité complexe · durée moyenne</td><td data-label="Statut">Neuve</td></tr>
+<tr data-detail id="det-AM-EXP-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>L'installation d'un client suit un runbook manuel de vingt-deux étapes. <span class="source">Source : docs/runbooks/installation-client.md l.1-140</span></dd>
+<dt>Cible servie</dt><dd>installer un client sans intervention experte <span class="source">Source : réponse Q1 du porteur</span></dd>
+<dt>Proposition</dt><dd>Scripter l'installation, une fois les logs structurés (remédiation REM-D10-002) en place. <span class="source">Alternative écartée : former une seconde personne au runbook, parce que ne retire pas l'erreur de saisie, cause relevée du dernier incident.</span></dd>
+<dt>Gain attendu</dt><dd>une installation reproductible <span class="source">Constaté par : une installation d'essai jouée deux fois donne le même état</span></dd>
+<dt>Effort</dt><dd>complexité complexe · durée moyenne</dd>
+<dt>Dépendances</dt><dd><code>REM-D10-002</code></dd>
+<dt>Statut</dt><dd>Neuve</dd>
+<dt>Preuve de clôture</dt><dd>installation scriptée jouée de bout en bout sur une instance d'essai</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>installation scriptée → sans intervention experte (Q1) → coût d'ouverture d'un client réduit</dd>
+</dl></td></tr>
+<tr id="AM-ARC-01"><td data-label="Rang" data-v="8">8</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-ARC-01" aria-label="Déplier la fiche AM-ARC-01">›</button> <code>AM-ARC-01</code> Mutualiser l'instance des petits clients</td><td data-label="Domaine">Architecture et modularité</td><td data-label="Horizon">long</td><td data-label="Effort">complexité très complexe · durée longue</td><td data-label="Statut">Contraire à une décision</td></tr>
+<tr data-detail id="det-AM-ARC-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>Chaque client reçoit une instance complète, y compris les clients au plus faible usage. <span class="source">Source : docs/decisions/ADR-0003-instance-par-client.md l.9</span></dd>
+<dt>Cible servie</dt><dd>réduire le coût d'exploitation par client sans dégrader l'isolement des données <span class="source">Source : réponse Q3 du porteur</span></dd>
+<dt>Proposition</dt><dd>Ouvrir une décision structurante : mutualiser les petits clients sur une instance à cloisonnement logique, au-delà d'un seuil d'usage à mesurer. <span class="source">Alternative écartée : statu quo d'une instance par client, parce que le coût croît avec le nombre de clients, que Q4 laisse inconnu.</span></dd>
+<dt>Gain attendu</dt><dd>un coût d'hébergement qui ne croît plus linéairement avec le nombre de petits clients <span class="source">Constaté par : facture d'hébergement rapportée au nombre de clients, avant et après</span></dd>
+<dt>Effort</dt><dd>complexité très complexe · durée longue</dd>
+<dt>Dépendances</dt><dd><a href="#AM-EXP-01">AM-EXP-01</a></dd>
+<dt>Statut</dt><dd>Contraire à une décision — référence ADR-0003 — l'ADR fixe une instance par client ; la fiche la remet en cause par décision structurante argumentée, conformément à Q3</dd>
+<dt>Preuve de clôture</dt><dd>décision enregistrée (nouvel ADR) acceptant ou refusant la mutualisation</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>mutualisation → coût par client maîtrisé (Q3) → décider où investir quand le nombre de clients croît</dd>
+</dl></td></tr>
+<tr id="AM-COUT-01"><td data-label="Rang" data-v="9">9</td><td data-label="Fiche"><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-AM-COUT-01" aria-label="Déplier la fiche AM-COUT-01">›</button> <code>AM-COUT-01</code> Attribuer le coût d'usage des modèles à chaque client</td><td data-label="Domaine">Coûts : hébergement, licences, usage des modèles</td><td data-label="Horizon">court</td><td data-label="Effort">complexité simple · durée courte</td><td data-label="Statut">Neuve</td></tr>
+<tr data-detail id="det-AM-COUT-01" hidden><td colspan="6"><dl class="champs">
+<dt>Constat</dt><dd>La facture du fournisseur de modèles arrive en un seul montant, sans ventilation par client. <span class="source">Source : docs/exploitation/couts.md l.8</span></dd>
+<dt>Cible servie</dt><dd>connaître la marge par client <span class="source">Source : réponse Q1 du porteur</span></dd>
+<dt>Proposition</dt><dd>Étiqueter chaque appel de modèle par client et agréger chaque mois. <span class="source">Alternative écartée : répartition au prorata des utilisateurs, parce que masque les clients à fort usage.</span></dd>
+<dt>Gain attendu</dt><dd>une marge par client calculable <span class="source">Constaté par : rapport mensuel du coût d'usage par client</span></dd>
+<dt>Effort</dt><dd>complexité simple · durée courte</dd>
+<dt>Dépendances</dt><dd>aucune</dd>
+<dt>Statut</dt><dd>Neuve</dd>
+<dt>Preuve de clôture</dt><dd>premier rapport mensuel ventilé par client produit</dd>
+<dt>Chiffres</dt><dd>aucun chiffre</dd>
+<dt>Test rétro</dt><dd>coût par client → marge connue (Q1) → décider où investir</dd>
+</dl></td></tr>
+</tbody></table></div>
+<p class="tf-count" data-tf-count-for="tab-fiches" aria-live="polite"></p><div class="chap lire" data-mesure-lecture><p class="legende" id="leg-chiffres">Statut d’un chiffre : « Mesuré » porte la commande et sa sortie ; « Lu » cite le document et la ligne ; « Hypothèse » est déclarée comme telle et attend sa mesure.</p></div>
+</section>
+
+<section id="couverture">
+<h2>Couverture des domaines et plans existants</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Ce qui a été regardé dans les domaines restés sans fiche, et comment chaque entrée des plans déjà écrits du produit se rattache au plan.</p>
+<p class="contenu">Ce chapitre contient les domaines sans fiche avec leur motif, les ajustements de la base de domaines et la correspondance avec les plans existants du produit.</p></div>
+<h3>Domaines sans fiche</h3>
+<div class="table-hote"><table id="tab-sans-fiche" class="repli-cartes">
+<caption>Chaque domaine sans fiche dit pourquoi et ce qui a été regardé.</caption>
+<thead><tr><th scope="col">Domaine</th><th scope="col">Motif</th><th scope="col">Ce qui a été regardé</th></tr></thead>
+<tbody>
+<tr><td data-label="Domaine">IA et recherche documentaire</td><td data-label="Motif">aucun écart à une ambition documentée : l'évaluation des réponses est déjà outillée et suivie</td><td data-label="Ce qui a été regardé">docs/product/evaluation-ia.md ; tests/evaluation/ (relevé du jeu d'évaluation)</td></tr>
+<tr><td data-label="Domaine">Dette d'un fork et des dépendances amont</td><td data-label="Motif">sans objet : le produit ne maintient aucun fork d'un projet amont</td><td data-label="Ce qui a été regardé">package.json et dépendances : aucune dépendance tirée d'un fork maison</td></tr>
+<tr><td data-label="Domaine">Sécurité et conformité au-delà du référentiel d'audit</td><td data-label="Motif">tout écart relevé est rattaché à un contrôle du référentiel d'audit : il vit dans le plan de remédiation (REM-D03-001)</td><td data-label="Ce qui a été regardé">rapport d'audit, dimensions D02 à D04 ; liste des contrôles évalués</td></tr>
+<tr><td data-label="Domaine">Documentation et expérience du développeur</td><td data-label="Motif">le contrôle de documentation est conforme et aucune ambition supplémentaire n'est écrite</td><td data-label="Ce qui a été regardé">docs/ ; contrôle CTL-D13-01 du rapport d'audit</td></tr>
+</tbody></table></div>
+<h3>Ajustements de la base</h3>
+<p>La base de domaines est appliquée sans ajustement.</p>
+<h3>Correspondance avec les plans existants</h3>
+<div class="table-hote"><table id="tab-plans" class="repli-cartes">
+<caption>Chaque entrée d’un plan existant est rattachée à une fiche ou déclarée hors sujet.</caption>
+<thead><tr><th scope="col">Entrée du plan existant</th><th scope="col">Source</th><th scope="col">Rattachement</th></tr></thead>
+<tbody>
+<tr><td data-label="Entrée du plan existant">Sprint 14 — unifier les formulaires de la console</td><td data-label="Source">docs/product/sprints/sprint-14.md l.5</td><td data-label="Rattachement"><a href="#AM-FRONT-01">AM-FRONT-01</a></td></tr>
+<tr><td data-label="Entrée du plan existant">Feuille de route — connecteur SFTP</td><td data-label="Source">docs/product/feuille-de-route.md l.40</td><td data-label="Rattachement"><a href="#AM-CNX-01">AM-CNX-01</a></td></tr>
+<tr><td data-label="Entrée du plan existant">Feuille de route — refonte du logo</td><td data-label="Source">docs/product/feuille-de-route.md l.44</td><td data-label="Rattachement">hors sujet : identité visuelle : hors du périmètre d'un plan d'amélioration applicative</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="jonction">
+<h2>Jonction avec les remédiations de l’audit</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Les liens entre les remédiations de l’audit <code>ESSAI-AUD-2026-10</code> et les améliorations : on ne paie pas deux fois une même correction.</p>
+<p class="contenu">Ce chapitre contient la table de jonction entre remédiations et améliorations, puis les remédiations de l’audit qui ne touchent aucune fiche.</p></div>
+<div class="table-hote"><table id="tab-jonction" class="repli-cartes">
+<caption>Une remédiation qui rend caduque, modifie ou conditionne une amélioration.</caption>
+<thead><tr><th scope="col">Remédiation</th><th scope="col">Action de l’audit</th><th scope="col">Gravité</th><th scope="col">Relation</th><th scope="col">Amélioration</th><th scope="col">Commentaire</th></tr></thead>
+<tbody>
+<tr><td data-label="Remédiation"><code>REM-D06-003</code></td><td data-label="Action de l’audit">Écrire et jouer un test de charge sur le parcours de recherche</td><td data-label="Gravité">Majeur</td><td data-label="Relation">conditionne</td><td data-label="Amélioration"><a href="#AM-PERF-01">AM-PERF-01</a></td><td data-label="Commentaire">le test de charge de la remédiation fournit la mesure de base de l'objectif</td></tr>
+<tr><td data-label="Remédiation"><code>REM-D10-002</code></td><td data-label="Action de l’audit">Structurer les logs applicatifs et corréler les traces</td><td data-label="Gravité">Bloquant</td><td data-label="Relation">conditionne</td><td data-label="Amélioration"><a href="#AM-EXP-01">AM-EXP-01</a></td><td data-label="Commentaire">l'installation scriptée s'appuie sur des logs structurés</td></tr>
+</tbody></table></div>
+<div class="chap lire" data-mesure-lecture><p>Remédiations de l’audit sans lien avec une amélioration : <code>REM-D03-001</code> (Purger les secrets de l'historique et brancher le scan en CI). Elles suivent le plan de remédiation tel quel.</p></div>
+</section>
+
+<section id="trajectoire">
+<h2>Trajectoire en lots et horizons</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Dans quel ordre corriger et améliorer : remédiations et améliorations lotis ensemble, chaque lot dit ce qui le rend utile, utilisable et utilisé.</p>
+<p class="contenu">Ce chapitre contient les lots du plan rangés en trois colonnes, du court au long terme, chacun avec ses remédiations et ses améliorations.</p></div>
+<div class="trajectoire" role="list">
+<div class="horizon" role="listitem"><h3>Court terme</h3><article class="card lot">
+<h4>L1 — Sécuriser et mesurer</h4>
+<p class="lot-ligne"><strong>Remédiations</strong> <code>REM-D03-001</code>, <code>REM-D06-003</code></p>
+<p class="lot-ligne"><strong>Améliorations</strong> <a href="#AM-QUA-01">AM-QUA-01</a>, <a href="#AM-FON-01">AM-FON-01</a>, <a href="#AM-PERF-01">AM-PERF-01</a></p>
+<p class="lot-ligne"><strong>Utile</strong> le produit livre sans régression de contrat</p>
+<p class="lot-ligne"><strong>Utilisable</strong> les critères de recherche survivent à une déconnexion</p>
+<p class="lot-ligne"><strong>Utilisé</strong> relances de recherche comptées</p>
+</article></div>
+<div class="horizon" role="listitem"><h3>Moyen terme</h3><article class="card lot">
+<h4>L2 — Fiabiliser la livraison et l'exploitation</h4>
+<p class="lot-ligne"><strong>Remédiations</strong> <code>REM-D10-002</code></p>
+<p class="lot-ligne"><strong>Améliorations</strong> <a href="#AM-BACK-01">AM-BACK-01</a>, <a href="#AM-FRONT-01">AM-FRONT-01</a>, <a href="#AM-CNX-01">AM-CNX-01</a>, <a href="#AM-EXP-01">AM-EXP-01</a></p>
+<p class="lot-ligne"><strong>Utile</strong> toute migration se défait</p>
+<p class="lot-ligne"><strong>Utilisable</strong> un client s'installe sans expert</p>
+<p class="lot-ligne"><strong>Utilisé</strong> installations scriptées comptées</p>
+</article></div>
+<div class="horizon" role="listitem"><h3>Long terme</h3><article class="card lot">
+<h4>L3 — Décider du modèle d'hébergement et des marges</h4>
+<p class="lot-ligne"><strong>Remédiations</strong> aucune</p>
+<p class="lot-ligne"><strong>Améliorations</strong> <a href="#AM-ARC-01">AM-ARC-01</a>, <a href="#AM-COUT-01">AM-COUT-01</a></p>
+<p class="lot-ligne"><strong>Utile</strong> le coût par client est connu</p>
+<p class="lot-ligne"><strong>Utilisable</strong> la décision de mutualisation est instruite</p>
+<p class="lot-ligne"><strong>Utilisé</strong> rapport de marge lu au comité</p>
+</article></div>
+</div>
+</section>
+
+<section id="mesure">
+<h2>Plan de mesure</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Ce qui reste à mesurer avant de conclure, là où aucune instance n’a pu être mesurée : quoi, comment, et le seuil visé.</p>
+<p class="contenu">Ce chapitre contient les mesures à prendre avant toute conclusion chiffrée, domaine par domaine, avec la méthode et le seuil visé.</p></div>
+<div class="table-hote"><table id="tab-mesure" class="repli-cartes">
+<caption>Les mesures à prendre avant toute conclusion chiffrée.</caption>
+<thead><tr><th scope="col">Domaine</th><th scope="col">Quoi mesurer</th><th scope="col">Comment</th><th scope="col">Seuil visé</th></tr></thead>
+<tbody>
+<tr><td data-label="Domaine">Performances et capacité</td><td data-label="Quoi mesurer">95e centile du temps de réponse de la recherche, par taille de corpus</td><td data-label="Comment">sonde de synthèse sur une instance d'essai, une fois Q5 levée</td><td data-label="Seuil visé">à fixer après la première mesure de base ; hypothèse de départ écrite à la fiche AM-PERF-01</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="methode">
+<h2>Méthode, sources et statut des chiffres</h2>
+<div class="chap lire" data-mesure-lecture><p class="ch-apprend">Comment le plan a été construit : la frontière avec l’audit, la base de domaines, les réponses aux questions d’ouverture et le statut de chaque chiffre cité.</p>
+<p class="contenu">Ce chapitre contient l’intention validée, la frontière avec l’audit, les réponses aux cinq questions d’ouverture et la table des chiffres cités.</p></div>
+<div class="chap lire" data-mesure-lecture>
+<p><strong>Intention.</strong> Disposer d'une trajectoire unique et priorisée — ce qu'il faut corriger, ce qu'il vaut la peine d'améliorer, dans quel ordre et pour quel gain — afin de décider où investir sur le produit. Validée le 2026-10-12.</p>
+<p><strong>Frontière.</strong> écart à une norme = remédiation (citée par son identifiant) ; écart à une ambition = amélioration (fiche)</p>
+<p><strong>Base de domaines.</strong> references/domaines.json 1.0.0 (vérifié le 2026-10-12).</p>
+<p><strong>Statut d’un chiffre.</strong> mesuré (commande et sortie), lu (document et ligne), hypothèse (déclarée)</p>
+<p><strong>Audit joint.</strong> <code>ESSAI-AUD-2026-10</code>, rapport audit/rapport-audit.html.</p>
+</div>
+<h3>Questions d’ouverture</h3>
+<div class="table-hote"><table id="tab-questions" class="repli-cartes">
+<caption>Les cinq questions posées en ouverture, et la réponse retenue pour chacune.</caption>
+<thead><tr><th scope="col">Question</th><th scope="col">Libellé</th><th scope="col">Réponse retenue</th><th scope="col">Origine</th></tr></thead>
+<tbody>
+<tr><td data-label="Question"><code>Q1</code></td><td data-label="Libellé">Lecteur du plan ?</td><td data-label="Réponse retenue">le porteur seul</td><td data-label="Origine">défaut appliqué</td></tr>
+<tr><td data-label="Question"><code>Q2</code></td><td data-label="Libellé">Horizon et capacité ?</td><td data-label="Réponse retenue">trois horizons, sans hypothèse de capacité ; efforts en complexité × durée</td><td data-label="Origine">défaut appliqué</td></tr>
+<tr><td data-label="Question"><code>Q3</code></td><td data-label="Libellé">Invariants ?</td><td data-label="Réponse retenue">une instance par client et l'hébergement actuel ne se remettent en cause que par une fiche de décision structurante</td><td data-label="Origine">réponse du porteur, séance d'ouverture</td></tr>
+<tr><td data-label="Question"><code>Q4</code></td><td data-label="Libellé">Nombre d'instances clientes visé à douze mois ?</td><td data-label="Réponse retenue">inconnu : le plan donne les seuils où une recommandation change</td><td data-label="Origine">défaut appliqué</td></tr>
+<tr><td data-label="Question"><code>Q5</code></td><td data-label="Libellé">Une instance de test est-elle joignable pour mesurer ?</td><td data-label="Réponse retenue">non</td><td data-label="Origine">défaut appliqué</td></tr>
+</tbody></table></div>
+<h3>Chiffres cités et leur statut</h3>
+<div class="table-hote"><table id="tab-chiffres" class="repli-cartes">
+<caption>Tout chiffre du plan, avec son statut : mesuré, lu ou hypothèse.</caption>
+<thead><tr><th scope="col">Fiche</th><th scope="col">Valeur</th><th scope="col">Statut</th><th scope="col">Source ou commande</th></tr></thead>
+<tbody>
+<tr><td data-label="Fiche"><a href="#AM-PERF-01">AM-PERF-01</a></td><td data-label="Valeur">800 ms</td><td data-label="Statut">Hypothèse</td><td data-label="Source ou commande">ordre de grandeur usuel d'une recherche interactive, à confirmer par le plan de mesure</td></tr>
+</tbody></table></div>
+</section>
+    </main>
+
+    <footer class="doc">
+      Digit-AI — Plan d’amélioration · Produit-Essai — 20261012a · vue générée par le skill plan-d-amelioration
+    </footer>
+  </div>
+
+  
+  <script>
+  (function () {
+    var bouton = document.getElementById('theme-toggle');
+    var racine = document.documentElement;
+    function appliquer(theme) {
+      racine.setAttribute('data-theme', theme);
+      localStorage.setItem('digitai-theme', theme);
+      bouton.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+    }
+    bouton.setAttribute('aria-pressed', racine.getAttribute('data-theme') === 'dark' ? 'true' : 'false');
+    bouton.addEventListener('click', function () {
+      appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  })();
+  </script>
+  
+  <script>
+  (function () {
+    function poserHauteurs() {
+      var racine = document.documentElement;
+      var enTete = document.querySelector('header.doc.colle');
+      var hh = enTete ? Math.ceil(enTete.getBoundingClientRect().height) : 0;
+      if (hh > 0) racine.style.setProperty('--hh', hh + 'px');
+      /* Ce qui colle SOUS l'en-tete et surplombe les tableaux : la bande de sommaire, quand
+         elle est effectivement collante a cette largeur (sous 900 px elle repasse `static`,
+         et elle ne masque alors plus rien). */
+      var bas = hh;
+      var toc = document.querySelector('nav.toc.colle');
+      if (toc && getComputedStyle(toc).position === 'sticky') {
+        var r = toc.getBoundingClientRect();
+        if (r.height > 0 && r.width > 0) bas = Math.max(bas, hh + Math.ceil(r.height));
+      }
+      racine.style.setProperty('--hh-tab', bas + 'px');
+    }
+    window.addEventListener('resize', poserHauteurs);
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(poserHauteurs);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', poserHauteurs);
+    } else {
+      poserHauteurs();
+    }
+    window.addEventListener('load', poserHauteurs);
+    window.poserHauteurs = poserHauteurs;
+  })();
+  </script>
+<!-- COMPOSANT-EMBARQUE:DEBUT table-filters.js — copie du socle digit-ai-page-html/assets/table-filters.js,
+     posée par digit-ai-page-html/scripts/embarquer-composants.mjs. NE PAS ÉDITER ICI : la SOURCE fait foi.
+     La copie se régénère (--ecrire) et sa dérive est refusée (--constat, oracle-parite-assets). -->
+<script data-composant="table-filters.js" data-empreinte="sha256:9af4ae15d11d04634690232aa93e99aa8ab8c68545144f65f3386404a9cbacf9">
+/* Digit-AI — Filtres de colonne sur tableaux de données.
+   Socle commun : voir references/composant-filtres-tableau.md (checklist G1-G9).
+   Viewer-only : le JS ne s'exécute pas à l'export WeasyPrint, la regle @media print
+   du livrable doit reafficher tr[data-tf-hidden].
+   Lot Produit-05 20260820b (TF-0429/0430/0431, 21/08) : rappel apresFiltrage et instance
+   enveloppable, etat vide avec « tout reafficher », panneau qui choisit son cote et
+   neutralise le rognage de son conteneur defilant tant qu'il est ouvert.
+
+   Lot Produit-02 20260902b/d (TF-0768/0769/0781/0782, 02/09) — L'ORDRE ET L'EXISTENCE.
+   Quatre defauts d'une meme famille : le composant lisait le TEXTE RENDU la ou il fallait lire
+   une VALEUR, et decidait de l'existence d'une facette la ou il ne devait decider que de sa
+   forme. Une console de donnees livree a du rearmer son propre tri et relire ses cases dans le
+   DOM pour compenser :
+     · TF-0768 — `parseFloat` sur « 1 000 » vaut 1 : les separateurs de milliers fr-FR (espace,
+       insecable, insecable etroite) arretent l'analyse au premier caractere non chiffre, et
+       TOUTE page en francais triait faux, en silence. Le tri et l'ordre des facettes lisent
+       desormais `data-v` / `data-sort` quand la cellule en porte, sinon le nombre se lit APRES
+       retrait des espaces et des signes.
+     · TF-0781 — `Object.keys(valeurs).sort()` rangeait les mois par ordre alphabetique
+       (« aout 2025, avr. 2026, dec. 2025 »). Une facette s'ordonne sur sa CLE, donc
+       chronologiquement des que la cellule porte un `data-v` ISO.
+     · TF-0782 — l'heuristique `1 < n < lignes` privait de facette la colonne CLE (huit marches
+       distincts sur huit lignes : aucun filtre la ou le lecteur en attendait un). La
+       cardinalite decide desormais de la FORME du panneau, jamais de son EXISTENCE ; la seule
+       sortie est une exemption DECLAREE (`data-filter-col="off"` + `data-filter-reason`).
+     · TF-0769 — `data-tf-ready` bloquait tout second `init` en rendant `null`, et la selection
+       vivait dans une fermeture inaccessible : une page qui re-rend ses tableaux perdait ses
+       filtres et devait les relire dans le DOM. L'etat est desormais LISIBLE et REJOUABLE —
+       `api.etat()`, `init(table, { etat })`, `api.rafraichir()`. */
+(function (root) {
+  'use strict';
+
+  /* ARBITRAGE PARTAGE DE LA VISIBILITE (TF-0953, 08/09/2026) — optionnel, jamais obligatoire :
+     un composant du socle ne cesse pas de fonctionner parce qu'un autre fichier manque. */
+  function arbitrage() { return root.DigitAIRowVisibility || null; }
+
+  var SEUIL_LIGNES = 8;
+  /* Au-dela de ce nombre de valeurs distinctes, la liste de cases n'est plus parcourable a
+     l'oeil : le panneau s'ouvre SUR SA RECHERCHE et le dit. C'est la FORME qui change — la
+     facette, elle, existe toujours (TF-0782). */
+  var SEUIL_RECHERCHE = 15;
+  var LIBELLE_VIDE = 'Aucune ligne ne correspond aux filtres.';
+  var LIBELLE_TOUT = 'Tout réafficher';
+
+  /* Les espaces qui separent les milliers en fr-FR : espace, insecable (U+00A0), insecable
+     etroite (U+202F), fine (U+2009), figure (U+2007). parseFloat s'arrete au premier. */
+  var RE_ESPACES = /\s/g;   /* \s couvre l'insecable U+00A0 et l'insecable etroite U+202F */
+  var RE_SIGNES = /[%€$£]/g;
+  var RE_NOMBRE = /^[+-]?\d+(?:[.,]\d+)?$/;
+
+  function norm(s) {
+    return String(s == null ? '' : s)
+      .normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+  }
+
+  /* TF-0768 : un nombre affiche a un habillage (milliers, unite, pourcentage). On le retire
+     AVANT l'analyse, et on n'accepte que ce qui est ENTIEREMENT numerique — « 12 mars » n'est
+     pas 12, et le laisser passer trierait une colonne de dates comme une colonne de nombres. */
+  function nombre(v) {
+    var s = String(v == null ? '' : v).replace(RE_ESPACES, '').replace(RE_SIGNES, '');
+    if (s.indexOf(',') !== -1 && s.indexOf('.') === -1) s = s.replace(',', '.');
+    return RE_NOMBRE.test(s) ? parseFloat(s) : NaN;
+  }
+
+  function corps(table) {
+    var tb = table.tBodies && table.tBodies[0];
+    /* TF-0175 : une ligne [data-detail] est le DÉPLIANT pleine largeur de la ligne qui la
+       précède — elle ne porte pas de données de colonnes et ne compte ni ne se filtre.
+       TF-0430 : la ligne d'état vide [data-tf-empty] est un message du composant, pas une donnée. */
+    return tb ? Array.prototype.slice.call(tb.rows).filter(function (tr) {
+      return !tr.hasAttribute('data-detail') && !tr.hasAttribute('data-tf-empty');
+    }) : [];
+  }
+
+  /* Le LIBELLE d'une cellule : ce que le lecteur voit, et ce qu'il coche. */
+  function valeur(tr, i) {
+    var td = tr.cells[i];
+    return td ? td.textContent.trim() : '';
+  }
+
+  /* La CLE D'ORDRE d'une cellule (TF-0768/0781) : `data-v`, sinon `data-sort`, sinon le texte
+     rendu. C'est la seule facon de dire « aout 2025 se range avant avr. 2026 » — un libelle de
+     mois n'a aucun ordre lisible, et une valeur formatee n'a pas d'ordre numerique. */
+  function cle(tr, i) {
+    var td = tr.cells[i];
+    if (!td) return '';
+    var d = td.getAttribute('data-v');
+    if (d === null) d = td.getAttribute('data-sort');
+    return d === null ? td.textContent.trim() : String(d).trim();
+  }
+
+  /* Comparateur unique du composant — tri de lignes ET ordre des valeurs de facette.
+     Deux nombres se comparent en nombres ; une date ISO (`2025-08`, `2025-08-14`) se compare en
+     texte, ce qui EST son ordre chronologique ; le vide passe en fin de liste. */
+  function comparer(a, b) {
+    var na = nombre(a), nb = nombre(b);
+    if (!isNaN(na) && !isNaN(nb)) return na < nb ? -1 : (na > nb ? 1 : 0);
+    if (a === '') return b === '' ? 0 : 1;
+    if (b === '') return -1;
+    var xa = norm(a), xb = norm(b);
+    return xa < xb ? -1 : (xa > xb ? 1 : 0);
+  }
+
+  function nbColonnes(table) {
+    var ths = table.tHead ? Array.prototype.slice.call(table.tHead.rows[0].cells) : [];
+    var n = 0;
+    ths.forEach(function (th) { n += th.colSpan || 1; });
+    if (!n) { var l = corps(table)[0]; n = l ? l.cells.length : 1; }
+    return n;
+  }
+
+  /* TF-0782 — CHAQUE en-tete recoit sa facette. L'heuristique de cardinalite ne decide plus que
+     de la FORME du panneau (`liste`, `recherche` quand les valeurs sont trop nombreuses pour
+     etre parcourues, `unique` quand la colonne n'en porte qu'une). La seule sortie est une
+     exemption DECLAREE sur le `<th>` : `data-filter-col="off"` + `data-filter-reason="…"`.
+     Sans motif, l'exemption est rendue au journal (`api.exemptions`) et l'oracle la refuse. */
+  function colonnes(table, lignes) {
+    var ths = table.tHead ? Array.prototype.slice.call(table.tHead.rows[0].cells) : [];
+    var cols = [], exemptions = [];
+    ths.forEach(function (th, i) {
+      /* L'INTITULE SE FIGE AU PREMIER PASSAGE (TF-0769). Apres `init`, le `<th>` contient le
+         declencheur ET le panneau : son `textContent` vaut alors « Statut›TousAucun livre en
+         cours… ». Relire l'intitule apres coup donnait une AUTRE cle de colonne, et la
+         selection conservee se retrouvait rangee sous un nom que plus personne ne demandait —
+         le rafraichissement perdait les filtres qu'il devait sauver. `data-col` rend
+         l'identite de la colonne stable, et lisible par un oracle. */
+      var libelle = (th.getAttribute('data-col') || th.textContent || '').trim();
+      if (!th.hasAttribute('data-col')) th.setAttribute('data-col', libelle);
+      if (th.getAttribute('data-filter-col') === 'off') {
+        exemptions.push({ colonne: libelle, index: i,
+                          motif: (th.getAttribute('data-filter-reason') || '').trim() });
+        return;
+      }
+      var ordres = {}, n = 0;
+      lignes.forEach(function (tr) {
+        var v = valeur(tr, i);
+        if (!(v in ordres)) { ordres[v] = cle(tr, i); n++; }
+      });
+      var valeurs = Object.keys(ordres).sort(function (x, y) {
+        return comparer(ordres[x], ordres[y]);
+      });
+      var forme = n <= 1 ? 'unique' : (n > SEUIL_RECHERCHE ? 'recherche' : 'liste');
+      cols.push({ th: th, index: i, libelle: libelle, valeurs: valeurs,
+                  ordres: ordres, forme: forme });
+    });
+    return { cols: cols, exemptions: exemptions };
+  }
+
+  function bouton(col, id) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tf-btn';
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-controls', id);
+    b.setAttribute('aria-label', 'Filtrer ' + col.libelle);
+    b.textContent = '›';               /* chevron simple (TF-0435) : present dans toute pile de repli */
+    return b;
+  }
+
+  function panneau(col, id) {
+    var p = document.createElement('div');
+    p.className = 'tf-panel';
+    p.id = id;
+    p.hidden = true;
+    p.setAttribute('role', 'group');
+    p.setAttribute('aria-label', 'Filtrer ' + col.libelle);
+    /* La forme est LISIBLE dans le marquage : un oracle de rendu et un test d'interactions
+       peuvent dire laquelle a ete choisie, et pourquoi (TF-0782). */
+    p.setAttribute('data-tf-forme', col.forme);
+
+    var rech = document.createElement('input');
+    rech.type = 'search';
+    rech.className = 'tf-search';
+    rech.placeholder = 'Rechercher…';
+    rech.setAttribute('aria-label', 'Rechercher une valeur');
+
+    var actions = document.createElement('div');
+    actions.className = 'tf-actions';
+    var tous = document.createElement('button');
+    tous.type = 'button'; tous.className = 'tf-all'; tous.textContent = 'Tous';
+    var aucun = document.createElement('button');
+    aucun.type = 'button'; aucun.className = 'tf-none'; aucun.textContent = 'Aucun';
+    actions.appendChild(tous); actions.appendChild(aucun);
+
+    var opts = document.createElement('div');
+    opts.className = 'tf-opts';
+    col.valeurs.forEach(function (v) {
+      var lab = document.createElement('label');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.className = 'tf-opt';
+      cb.value = v;
+      cb.checked = true;                    /* etat initial : tout coche, aucun filtre actif */
+      lab.appendChild(cb);
+      lab.appendChild(document.createTextNode(' ' + (v === '' ? '(vide)' : v)));
+      opts.appendChild(lab);
+    });
+
+    p.appendChild(rech); p.appendChild(actions); p.appendChild(opts);
+    /* Une forme qui change sans le dire est une affordance muette (loi n° 3) : le panneau
+       ANNONCE pourquoi il s'ouvre sur sa recherche, ou pourquoi il n'offre qu'une valeur. */
+    if (col.forme !== 'liste') {
+      var note = document.createElement('p');
+      note.className = 'tf-forme-note';
+      note.textContent = col.forme === 'recherche'
+        ? col.valeurs.length + ' valeurs distinctes — chercher puis « Tous ».'
+        : 'Une seule valeur dans cette colonne.';
+      p.insertBefore(note, opts);
+    }
+    return { panneau: p, recherche: rech, tous: tous, aucun: aucun, options: opts };
+  }
+
+  /* TF-0431 : le conteneur defilant le plus proche (overflow-x auto|scroll) rogne un panneau
+     absolu et gagne un ascenseur horizontal des qu'il s'ouvre. Tant qu'un panneau est ouvert,
+     son rognage est neutralise ; a la fermeture, l'etat inline d'origine est retabli. */
+  function conteneurDefilant(el) {
+    var p = el.parentElement;
+    while (p && p !== document.body) {
+      var o = getComputedStyle(p).overflowX;
+      if (o === 'auto' || o === 'scroll') return p;
+      p = p.parentElement;
+    }
+    return null;
+  }
+
+  /* RA-5 (14/08, revu TF-0768/0782 le 02/09) : le tri est ARME PAR DEFAUT — la règle L4 exige
+     « filtre, tri et recherche », et une page qui arme le sien le declare (`{ tri: false }` ou
+     `data-tf-tri="off"` sur la table). La cle de tri est celle de `cle()` : `data-v`/`data-sort`
+     d'abord, sinon le texte, lu comme un nombre APRES retrait des espaces de milliers. Les clics
+     sur .tf-btn/.tf-panel sont ignores, les lignes [data-detail] voyagent avec leur ligne mere.
+     Rend une fonction de DESARMEMENT : sans elle, un second init empilerait ses ecouteurs. */
+  function armerTri(table) {
+    var ths = table.tHead ? Array.prototype.slice.call(table.tHead.rows[0].cells) : [];
+    corps(table).forEach(function (tr) {
+      var d = tr.nextElementSibling;
+      tr.__tfDetail = (d && d.hasAttribute('data-detail')) ? d : null;
+    });
+    var poses = [];
+    ths.forEach(function (th, i) {
+      if (th.getAttribute('data-sort-col') === 'off') return;
+      if (!th.style.cursor) th.style.cursor = 'pointer';
+      var handler = function (ev) {
+        if (ev.target.closest && ev.target.closest('.tf-btn, .tf-panel')) return;
+        var sens = th.getAttribute('aria-sort') === 'ascending' ? -1 : 1;
+        ths.forEach(function (t) {
+          t.removeAttribute('aria-sort');
+          var m = t.querySelector('.tf-tri'); if (m) m.remove();
+        });
+        th.setAttribute('aria-sort', sens === 1 ? 'ascending' : 'descending');
+        var marque = document.createElement('span');
+        marque.className = 'tf-tri';
+        marque.textContent = sens === 1 ? ' ↑' : ' ↓';
+        th.appendChild(marque);
+        var tb = table.tBodies[0];
+        var tris = corps(table).slice();
+        tris.forEach(function (tr) {
+          var d = tr.nextElementSibling;
+          tr.__tfDetail = (d && d.hasAttribute('data-detail')) ? d : tr.__tfDetail;
+        });
+        tris.sort(function (a, b) { return comparer(cle(a, i), cle(b, i)) * sens; });
+        tris.forEach(function (tr) {
+          tb.appendChild(tr);
+          if (tr.__tfDetail) tb.appendChild(tr.__tfDetail);
+        });
+      };
+      th.addEventListener('click', handler);
+      poses.push({ th: th, handler: handler });
+    });
+    return function desarmer() {
+      poses.forEach(function (p) {
+        p.th.removeEventListener('click', p.handler);
+        var m = p.th.querySelector('.tf-tri'); if (m) m.remove();
+        p.th.removeAttribute('aria-sort');
+      });
+    };
+  }
+
+  /* init(table, opts) — opts.tri (bool, defaut VRAI) · opts.etat (etat rendu par api.etat())
+     · opts.reinit (bool) · opts.apresFiltrage(table, visibles, total) : rappel appele a la fin
+     de CHAQUE filtrage, y compris ceux declenches par les cases, Tous/Aucun et la recherche
+     (TF-0429 : avant, seul l'appel manuel a instance.appliquer etait observable, envelopper
+     l'instance etait silencieusement sans effet). Les gestionnaires internes passent par
+     api.appliquer : remplacer instance.appliquer est desormais honore.
+
+     TF-0769 — un second appel n'est plus un NON-EVENEMENT : sans `etat` ni `reinit`, il rend
+     l'instance deja construite (l'appelant peut donc la piloter sans l'avoir gardee) ; avec, il
+     detruit l'ancienne et reconstruit. */
+  function init(table, opts) {
+    opts = opts || {};
+    if (!table) return null;
+    if (table.getAttribute('data-filterable') === 'off') return null;
+    if (table.getAttribute('data-tf-ready') === '1') {
+      var deja = table.__tfApi || null;
+      if (!opts.etat && !opts.reinit) return deja;
+      if (deja && deja.detruire) deja.detruire();
+    }
+
+    /* DECLARER SON ATTRIBUT a l'arbitrage partage, jamais deviner ceux des autres. */
+    var V = arbitrage();
+    if (V) { V.register('data-tf-hidden'); }
+
+    var lignes = corps(table);
+    var scan = colonnes(table, lignes);
+    var cols = scan.cols;
+    if (!cols.length) return null;
+
+    var id = table.id || ('tf-' + Math.random().toString(36).slice(2, 8));
+    table.id = id;
+    var compteur = document.querySelector('[data-tf-count-for="' + id + '"]');
+    var etats = [];
+    var api = {};
+    var defilant = conteneurDefilant(table);
+    var overflowOrigine = null;
+    /* La selection vit HORS des fermetures de colonne (TF-0769) : elle survit a un
+       rafraichissement, se lit par api.etat() et se rejoue par init(table, { etat }). */
+    var selections = {};
+    var desarmerTri = null;
+    var surDocument = function (ev) { if (!table.contains(ev.target)) fermerTout(); };
+
+    /* TF-0430 : etat vide — une ligne de message pleine largeur et la seule action utile a ce
+       moment, « tout reafficher ». Libelle surchargeable par data-tf-vide sur la table. */
+    function ligneVide() {
+      var tb = table.tBodies[0];
+      var tr = tb.querySelector('tr[data-tf-empty]');
+      if (tr) return tr;
+      tr = document.createElement('tr');
+      tr.setAttribute('data-tf-empty', '');
+      tr.className = 'tf-vide';
+      var td = document.createElement('td');
+      td.colSpan = nbColonnes(table);
+      var msg = document.createElement('span');
+      msg.className = 'tf-vide-msg';
+      msg.textContent = table.getAttribute('data-tf-vide') || LIBELLE_VIDE;
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'tf-reset';
+      b.textContent = LIBELLE_TOUT;
+      b.addEventListener('click', function () { toutReafficher(); });
+      td.appendChild(msg); td.appendChild(document.createTextNode(' ')); td.appendChild(b);
+      tr.appendChild(td);
+      tb.appendChild(tr);
+      return tr;
+    }
+
+    function toutReafficher() {
+      etats.forEach(function (e) {
+        Object.keys(e.selection).forEach(function (k) { e.selection[k] = true; });
+        var p = document.getElementById(e.bouton.getAttribute('aria-controls'));
+        if (p) Array.prototype.forEach.call(p.querySelectorAll('.tf-opt'), function (cb) { cb.checked = true; });
+      });
+      api.appliquer();
+    }
+
+    function appliquer() {
+      var visibles = 0;
+      lignes.forEach(function (tr) {
+        var ok = etats.every(function (e) {
+          return e.selection[valeur(tr, e.col.index)] !== false;
+        });
+        if (ok) {
+          tr.removeAttribute('data-tf-hidden');
+          /* LA VISIBILITE EST UNE DISJONCTION (TF-0953, 08/09/2026). Passer CE filtre ne suffit
+             pas a rendre une ligne visible : un autre mecanisme DECLARE a l'arbitrage peut
+             encore la masquer. Forcer `display: ''` ici ecrasait ce mecanisme sans un mot — et
+             c'est ce qui a oblige un produit a poser un MutationObserver sur `hidden` pour
+             reappliquer son pliage d'arbre apres chaque passage des filtres, puis a deplier
+             tout l'arbre a chaque changement de filtre pour ne jamais cacher un resultat.
+             Sans arbitrage charge, `masquee` n'est pas consultee et le comportement est
+             exactement celui d'avant. */
+          var autre = V ? V.masquee(tr, 'data-tf-hidden') : false;
+          tr.style.display = autre ? 'none' : '';
+          if (!autre) { visibles++; }
+        }
+        else {
+          tr.setAttribute('data-tf-hidden', ''); tr.style.display = 'none';
+          /* la ligne de détail suit le sort de sa ligne mère : masquée ET repliée */
+          var det = tr.nextElementSibling;
+          if (det && det.hasAttribute('data-detail')) { det.hidden = true; }
+        }
+        if (V) { V.apply(tr); }
+      });
+      etats.forEach(function (e) {
+        var actif = Object.keys(e.selection).some(function (k) { return !e.selection[k]; });
+        e.bouton.classList.toggle('tf-on', actif);
+      });
+      if (compteur) {
+        compteur.textContent = visibles + ' ligne' + (visibles > 1 ? 's' : '') +
+          ' sur ' + lignes.length;
+        compteur.classList.toggle('zero', visibles === 0);
+      }
+      var vide = table.tBodies[0].querySelector('tr[data-tf-empty]');
+      if (visibles === 0 && lignes.length) { ligneVide().hidden = false; }
+      else if (vide) { vide.hidden = true; }
+      if (typeof opts.apresFiltrage === 'function') opts.apresFiltrage(table, visibles, lignes.length);
+    }
+
+    function placer(b, p) {
+      /* TF-0431 : cote d'ouverture selon la place mesuree — a droite du bouton par defaut,
+         aligne sur le bord droit quand le panneau sortirait de la fenetre ou du conteneur. */
+      p.classList.remove('tf-droite');
+      var limite = defilant ? defilant.getBoundingClientRect().right : (window.innerWidth || document.documentElement.clientWidth);
+      var r = b.getBoundingClientRect();
+      var largeur = p.offsetWidth || 240;
+      if (r.left + largeur > limite - 8) p.classList.add('tf-droite');
+      if (defilant && overflowOrigine === null) {
+        overflowOrigine = defilant.style.overflow || '';
+        defilant.setAttribute('data-tf-ouvert', '');
+        defilant.style.overflow = 'visible';
+      }
+    }
+
+    function retirerUI() {
+      etats.forEach(function (e) {
+        if (e.bouton && e.bouton.parentNode) e.bouton.parentNode.removeChild(e.bouton);
+        var p = document.getElementById(e.bouton.getAttribute('aria-controls'));
+        if (p && p.parentNode) p.parentNode.removeChild(p);
+        var th = e.col && e.col.th;
+        if (th) {
+          th.removeAttribute('data-tf-forme');
+          var u = th.querySelector('.tf-unique'); if (u) u.parentNode.removeChild(u);
+        }
+      });
+      etats.length = 0;
+    }
+
+    function construireColonnes() {
+      cols.forEach(function (col, k) {
+        var pid = id + '-tf-' + k;
+        var b = bouton(col, pid);
+        var ui = panneau(col, pid);
+        var selection = selections[col.libelle] || (selections[col.libelle] = {});
+        /* une valeur neuve entre COCHEE (aucun filtre implicite) ; une valeur disparue du
+           tableau sort de la selection, sinon elle masquerait des lignes sans etre visible. */
+        col.valeurs.forEach(function (v) { if (!(v in selection)) selection[v] = true; });
+        Object.keys(selection).forEach(function (v) {
+          if (col.valeurs.indexOf(v) === -1) delete selection[v];
+        });
+        var etat = { col: col, bouton: b, selection: selection };
+        etats.push(etat);
+
+        /* TF-0899 (08/09/2026) — LE PANNEAU A BESOIN D UN ANCETRE POSITIONNE, PAS DE `relative`.
+           `.tf-panel` est un `position:absolute` : il lui faut un ancetre positionne, et le
+           `<th>` est le bon. Mais poser `relative` EN LIGNE ecrasait le geste L29 du socle
+           (`thead.colle th { position: sticky; top: var(--hh) }`) : le `top` restait, applique
+           a un `relative` — donc un DECALAGE PERMANENT de --hh. Mesure Playwright du 07/09 sur
+           quatre tableaux filtrables : `<th>` a 441 px pour 337 attendus (+104 = --hh), une a
+           deux lignes recouvertes a tout defilement, `<th>` a -59 px apres 200 px de
+           defilement — l en-tete ne collait JAMAIS. Un `<th>` deja positionne (sticky, relative,
+           absolute, fixed) ancre DEJA un absolu : on ne pose donc que sur un `<th>` `static`. */
+        var posThCalculee = 'static';
+        try {
+          posThCalculee = (window.getComputedStyle(col.th).position || 'static');
+        } catch (e) { posThCalculee = col.th.style.position || 'static'; }
+        if (posThCalculee === 'static') col.th.style.position = 'relative';
+        /* TF-1052 (08/09) : la forme se publie AUSSI sur le `<th>`, la ou un oracle et un test
+           cherchent la colonne — posee sur le seul panneau, une sonde de l'en-tete lisait `null`
+           sur 9 colonnes sur 9. TF-1051 : une colonne a valeur UNIQUE le dit dans l'en-tete,
+           sans clic — un destinataire a lu vingt fois la meme chaine et conclu a une panne. */
+        col.th.setAttribute('data-tf-forme', col.forme);
+        if (col.forme === 'unique') {
+          var u = document.createElement('span');
+          u.className = 'tf-unique';
+          u.textContent = 'une seule valeur';
+          col.th.appendChild(u);
+        }
+        col.th.appendChild(b);
+        col.th.appendChild(ui.panneau);
+        Array.prototype.forEach.call(ui.options.querySelectorAll('.tf-opt'), function (cb) {
+          cb.checked = selection[cb.value] !== false;
+        });
+
+        b.addEventListener('click', function () {
+          var ouvert = b.getAttribute('aria-expanded') === 'true';
+          fermerTout();
+          if (!ouvert) {
+            b.setAttribute('aria-expanded', 'true'); ui.panneau.hidden = false;
+            placer(b, ui.panneau);
+            ui.recherche.focus();
+          }
+        });
+
+        ui.recherche.addEventListener('input', function () {
+          var q = norm(ui.recherche.value);
+          Array.prototype.forEach.call(ui.options.children, function (lab) {
+            lab.hidden = q !== '' && norm(lab.textContent).indexOf(q) === -1;
+          });
+        });
+
+        /* Tous / Aucun portent sur les valeurs actuellement visibles dans la liste. */
+        function masse(valeurCible) {
+          Array.prototype.forEach.call(ui.options.children, function (lab) {
+            if (lab.hidden) return;
+            var cb = lab.querySelector('.tf-opt');
+            cb.checked = valeurCible;
+            selection[cb.value] = valeurCible;
+          });
+          api.appliquer();
+        }
+        ui.tous.addEventListener('click', function () { masse(true); });
+        ui.aucun.addEventListener('click', function () { masse(false); });
+
+        ui.options.addEventListener('change', function (ev) {
+          var cb = ev.target;
+          if (!cb.classList.contains('tf-opt')) return;
+          selection[cb.value] = cb.checked;
+          api.appliquer();
+        });
+
+        ui.panneau.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Escape') { fermerTout(); b.focus(); }
+        });
+      });
+    }
+
+    function fermerTout() {
+      etats.forEach(function (e) {
+        e.bouton.setAttribute('aria-expanded', 'false');
+        var p = document.getElementById(e.bouton.getAttribute('aria-controls'));
+        if (p) { p.hidden = true; p.classList.remove('tf-droite'); }
+      });
+      if (defilant && overflowOrigine !== null) {
+        defilant.style.overflow = overflowOrigine;
+        defilant.removeAttribute('data-tf-ouvert');
+        overflowOrigine = null;
+      }
+    }
+
+    if (opts.tri !== false && table.getAttribute('data-tf-tri') !== 'off') {
+      desarmerTri = armerTri(table);
+    }
+    construireColonnes();
+    document.addEventListener('click', surDocument);
+
+    table.setAttribute('data-tf-ready', '1');
+    table.__tfApi = api;
+    api.table = table;
+    api.appliquer = appliquer;
+    api.fermerTout = fermerTout;
+    api.toutReafficher = toutReafficher;
+    api.exemptions = scan.exemptions;
+
+    /* TF-0769 — L'ETAT SE LIT ET SE REJOUE. Il est nomme par LIBELLE de colonne, pas par
+       index : une colonne peut se deplacer entre deux rendus, son intitule reste le meme.
+       Ne sont listees que les valeurs EXCLUES — un etat vide veut dire « aucun filtre », ce
+       qui reste vrai si le tableau gagne des valeurs entre deux rendus. */
+    api.etat = function () {
+      var out = { version: 1, colonnes: {} };
+      etats.forEach(function (e) {
+        var exclues = Object.keys(e.selection).filter(function (v) { return e.selection[v] === false; });
+        if (exclues.length) out.colonnes[e.col.libelle] = { exclues: exclues };
+      });
+      return out;
+    };
+
+    api.restaurer = function (etat) {
+      if (!etat || !etat.colonnes) return api;
+      etats.forEach(function (e) {
+        var voulu = etat.colonnes[e.col.libelle];
+        var exclues = (voulu && voulu.exclues) || [];
+        Object.keys(e.selection).forEach(function (v) {
+          e.selection[v] = exclues.indexOf(v) === -1;
+        });
+        var p = document.getElementById(e.bouton.getAttribute('aria-controls'));
+        if (p) Array.prototype.forEach.call(p.querySelectorAll('.tf-opt'), function (cb) {
+          cb.checked = e.selection[cb.value] !== false;
+        });
+      });
+      api.appliquer();
+      return api;
+    };
+
+    /* La page a re-rendu son tableau : on relit ses lignes et ses valeurs, on retire les
+       panneaux devenus faux et on reconstruit SUR LA SELECTION CONSERVEE. Sans cette
+       fonction, la seule voie etait de relire les cases dans le DOM et de les rejouer par
+       des evenements `change` — ce qu'une console livree a effectivement du ecrire. */
+    api.rafraichir = function () {
+      /* Les panneaux partent AVANT le re-balayage : sans cela, le scan relirait ses propres
+         injections comme du contenu de colonne. */
+      retirerUI();
+      lignes = corps(table);
+      var neuf = colonnes(table, lignes);
+      cols = neuf.cols;
+      api.exemptions = neuf.exemptions;
+      construireColonnes();
+      api.appliquer();
+      return api;
+    };
+
+    api.detruire = function () {
+      retirerUI();
+      document.removeEventListener('click', surDocument);
+      if (desarmerTri) { desarmerTri(); desarmerTri = null; }
+      var vide = table.tBodies[0] && table.tBodies[0].querySelector('tr[data-tf-empty]');
+      if (vide && vide.parentNode) vide.parentNode.removeChild(vide);
+      lignes.forEach(function (tr) {
+        tr.removeAttribute('data-tf-hidden');
+        /* Detruire CE composant ne demasque que CE qu'il masquait : une ligne cachee par un
+           autre mecanisme declare le reste. */
+        var encore = V ? V.masquee(tr, 'data-tf-hidden') : false;
+        tr.style.display = encore ? 'none' : '';
+        if (V) { V.apply(tr); }
+      });
+      table.removeAttribute('data-tf-ready');
+      try { delete table.__tfApi; } catch (e) { table.__tfApi = null; }
+    };
+
+    if (opts.etat) api.restaurer(opts.etat);
+    else api.appliquer();
+    return api;
+  }
+
+  function initAll(racine, opts) {
+    var scope = racine || document;
+    return Array.prototype.map.call(
+      scope.querySelectorAll('table[data-filterable]'),
+      function (t) { return init(t, opts); }
+    );
+  }
+
+  root.DigitAITableFilters = { init: init, initAll: initAll, SEUIL_LIGNES: SEUIL_LIGNES,
+                               SEUIL_RECHERCHE: SEUIL_RECHERCHE, nombre: nombre,
+                               comparer: comparer };
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<!-- COMPOSANT-EMBARQUE:FIN table-filters.js -->
+<!-- COMPOSANT-EMBARQUE:DEBUT find-in-page.js — copie du socle digit-ai-page-html/assets/find-in-page.js,
+     posée par digit-ai-page-html/scripts/embarquer-composants.mjs. NE PAS ÉDITER ICI : la SOURCE fait foi.
+     La copie se régénère (--ecrire) et sa dérive est refusée (--constat, oracle-parite-assets). -->
+<script data-composant="find-in-page.js" data-empreinte="sha256:721208e18a0c5de4899a498c8ebef8ebbb6677155f13a27d479988d7142ff908">
+/* find-in-page.js — Recherche dans un conteneur + compteur d'occurrences · socle Digit-AI
+ *
+ * Surligne les correspondances (<mark class="find-hit">) dans un conteneur et affiche
+ * un compteur d'occurrences mis à jour à chaque frappe. Insensible aux accents.
+ *
+ * ⚠️ La classe du surlignage est `find-hit`, JAMAIS `find`. `find` est le nom que prend
+ * naturellement le conteneur du champ de recherche dans un livrable ; quand les deux
+ * partagent la classe, une règle `.find { display: flex }` écrite pour le conteneur
+ * s'applique aussi au <mark> et casse le mot surligné (défaut mesuré en production :
+ * le « s » de « clics » rejeté à 606 px du mot). Les trois classes du composant sont
+ * disjointes : `find-hit` (surlignage), `find-count` (compteur), et ce que le livrable
+ * veut pour son conteneur.
+ *
+ * ⚠️ Viewer-only : le JS ne s'exécute pas à l'export PDF (WeasyPrint). Si le livrable
+ * vise aussi le PDF, prévoir un équivalent statique de l'information.
+ *
+ * ⚠️ LE CONTENEUR N'EST JAMAIS RÉÉCRIT (TF-1340, 23/09/2026). La recherche réaffectait
+ * `container.innerHTML` à chaque frappe : les attributs survivaient, les écouteurs posés par
+ * les autres composants du socle (table-filters.js, table-detail.js, infobulle.js) non. Mesuré
+ * au navigateur : après une recherche puis son effacement, un bouton de filtre n'ouvrait plus
+ * son panneau (0 au lieu de 1). Le surlignage ENVELOPPE désormais les nœuds texte trouvés, et
+ * la frappe suivante les DÉSENVELOPPE : aucun élément du conteneur n'est remplacé. `getHTML`
+ * et `refresh()` ne sont plus nécessaires (la recherche lit le contenu vivant) ; ils restent
+ * acceptés, sans effet, pour les pages déjà câblées.
+ *
+ * ⚠️ DANS UN SCHÉMA SVG, LE SURLIGNAGE EST UN <tspan> (TF-1353, 24/09/2026). SVG ne peint pas
+ * un <mark> HTML : le mot trouvé DISPARAISSAIT du schéma pendant la recherche (mesuré le 24/09
+ * dans Chromium : getNumberOfChars() de 93 à 87 ; rejoué sur la fixture du banc : de 74 à 67).
+ * Un nœud texte dont le parent est dans l'espace de noms SVG reçoit un <tspan class="find-hit"> ;
+ * le HTML d'un <foreignObject> garde son <mark>.
+ *
+ * Câblage minimal (RA-1, 13/08 : la balise FERMANTE de script est ÉCHAPPÉE en <\/script> dans
+ * ce commentaire — cet asset s'inline (règle A1), et une fermante nue dans un commentaire
+ * fermerait la balise hôte au milieu du fichier : composant tronqué, silencieusement).
+ * TF-1062 (11/09) : ce commentaire l'écrivait lui-même EN CLAIR. Une copie inlinée à la main
+ * était coupée ici, et le câblage ci-dessous devenait du vrai DOM — trois identifiants
+ * dupliqués, que oracle-a11y a comptés à juste titre. Cette explication ne cite plus la
+ * séquence ; self_test.py vérifie qu'aucun asset inlinable ne la porte :
+ *   <input id="find" type="text" placeholder="Rechercher…">
+ *   <div id="findCount" class="find-count" aria-live="polite"></div>
+ *   <div id="content"> … contenu à fouiller … </div>
+ *   <script src="find-in-page.js"><\/script>
+ *   <script>
+ *     DigitAIFindInPage.init(
+ *       document.getElementById('find'),
+ *       document.getElementById('content'),
+ *       document.getElementById('findCount')
+ *     );
+ *   <\/script>
+ *
+ * CSS attendu (à adapter aux tokens du livrable) :
+ *   mark.find-hit { background: #fde9c8; color: inherit; display: inline; padding: 0; margin: 0; }
+ *   tspan.find-hit { fill: #9a3412; text-decoration: underline; }   (texte d'un schéma SVG)
+ *   .find-count { margin-top: 4px; font-size: .72rem; color: var(--muted); min-height: 1em; }
+ *   .find-count.zero { color: #c0392b; }
+ */
+(function (global) {
+  'use strict';
+
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // Regex insensible aux accents et à la casse à partir d'une saisie libre.
+  function buildRegex(q) {
+    q = (q || '').trim();
+    if (!q) return null;
+    var map = { a: 'aàâäá', e: 'eéèêëế', i: 'iîïí', o: 'oôöó', u: 'uùûüú', c: 'cç', n: 'nñ', y: 'yÿ' };
+    var pat = '';
+    for (var i = 0; i < q.length; i++) {
+      var ch = q[i], low = ch.toLowerCase();
+      if (map[low]) pat += '[' + map[low] + map[low].toUpperCase() + ']';
+      else if (/[a-z0-9]/i.test(ch)) pat += ch;
+      else pat += '\\' + ch; // échappe les caractères spéciaux regex
+    }
+    try { return new RegExp(pat, 'gi'); } catch (e) { return null; }
+  }
+
+  // Le BLOC d'un nœud texte : l'ancêtre le plus proche qui n'est pas un élément EN LIGNE. Dans un
+  // schéma SVG, le bloc est le <text> qui le porte (un <tspan> y est en ligne). Une phrase coupée
+  // par une mise en gras, un code ou un lien reste ainsi UN texte à fouiller (TF-1342).
+  function blocDe(el, root) {
+    if (el.namespaceURI === SVG_NS) {
+      var t = el.closest ? el.closest('text') : null;
+      return t && root.contains(t) ? t : el;
+    }
+    var b = el;
+    while (b !== root && b.parentNode && b.nodeType === 1) {
+      var d = getComputedStyle(b).display;
+      if (d !== 'inline' && d !== 'contents') break;
+      b = b.parentNode;
+    }
+    return b;
+  }
+
+  // Surligne les correspondances dans root et renvoie le nombre d'occurrences. Enveloppe les
+  // nœuds texte trouvés, sans remplacer aucun élément (TF-1340) ; dans un texte SVG, l'enveloppe
+  // est un <tspan>, que SVG peint, et non un <mark>, qu'il ignore (TF-1353). Les noms d'éléments
+  // se comparent sans casse : le <style> et le <script> d'un SVG s'écrivent en minuscules.
+  //
+  // TF-1342 (lot Produit-64 20260923b, RD-19) — LE MOTIF S'APPLIQUAIT NŒUD TEXTE PAR NŒUD TEXTE :
+  // « application <strong>laissée arrêtée</strong> » figurait dans le texte de la page et restait
+  // introuvable (3 occurrences dans le texte, 2 comptées, mesuré sur un livrable servi). Le motif
+  // se cherche désormais dans le texte CONTINU d'un bloc (les nœuds texte consécutifs d'un même
+  // paragraphe, cellule, bloc de code, titre…), puis chaque correspondance est posée par PLAGES sur
+  // les nœuds qu'elle traverse : une occurrence à cheval sur trois nœuds donne trois enveloppes
+  // et compte UNE fois.
+  function highlight(root, re) {
+    var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var groupes = [], courant = null, n;
+    while ((n = walker.nextNode())) {
+      var parent = n.parentNode;
+      if (!parent || /^(MARK|SCRIPT|STYLE)$/i.test(parent.nodeName)
+          || (parent.getAttribute && parent.getAttribute('class') === 'find-hit')) {
+        courant = null;           // un nœud écarté coupe le texte continu
+        continue;
+      }
+      var bloc = blocDe(parent, root);
+      if (!courant || courant.bloc !== bloc) { courant = { bloc: bloc, noeuds: [] }; groupes.push(courant); }
+      courant.noeuds.push(n);
+    }
+    var count = 0;
+    for (var g = 0; g < groupes.length; g++) {
+      var noeuds = groupes[g].noeuds, texte = '', debuts = [];
+      for (var k = 0; k < noeuds.length; k++) { debuts.push(texte.length); texte += noeuds[k].nodeValue; }
+      var plages = [], m;
+      re.lastIndex = 0;
+      while ((m = re.exec(texte))) {
+        if (m[0].length) plages.push([m.index, m.index + m[0].length]);
+        if (m.index === re.lastIndex) re.lastIndex++; // évite les boucles sur match vide
+      }
+      if (!plages.length) continue;
+      count += plages.length;
+      for (var j = 0; j < noeuds.length; j++) {
+        var tn = noeuds[j], txt = tn.nodeValue, d0 = debuts[j], d1 = d0 + txt.length;
+        var morceaux = [];
+        for (var p = 0; p < plages.length; p++) {
+          var a = Math.max(plages[p][0], d0), b = Math.min(plages[p][1], d1);
+          if (a < b) morceaux.push([a - d0, b - d0]);
+        }
+        if (!morceaux.length) continue;
+        var svg = tn.parentNode.namespaceURI === SVG_NS;
+        var frag = document.createDocumentFragment(), last = 0;
+        for (var q = 0; q < morceaux.length; q++) {
+          if (morceaux[q][0] > last) frag.appendChild(document.createTextNode(txt.slice(last, morceaux[q][0])));
+          var mk = svg ? document.createElementNS(SVG_NS, 'tspan') : document.createElement('mark');
+          mk.setAttribute('class', 'find-hit');   // jamais 'find' : cf. avertissement en tête de fichier
+          mk.textContent = txt.slice(morceaux[q][0], morceaux[q][1]);
+          frag.appendChild(mk);
+          last = morceaux[q][1];
+        }
+        if (last < txt.length) frag.appendChild(document.createTextNode(txt.slice(last)));
+        tn.parentNode.replaceChild(frag, tn);
+      }
+    }
+    return count;
+  }
+
+  // Retire le surlignage : chaque enveloppe redevient son texte, et les textes voisins se
+  // RECOLLENT (normalize) — sans quoi un terme à cheval sur une ancienne coupure ne serait plus
+  // trouvé à la frappe suivante. Seuls les nœuds texte bougent : les éléments, et les écouteurs
+  // que d'autres composants y ont posés, restent en place (TF-1340).
+  function unhighlight(root) {
+    var hits = root.querySelectorAll('mark.find-hit, tspan.find-hit');
+    var parents = [];
+    for (var i = 0; i < hits.length; i++) {
+      var h = hits[i], p = h.parentNode;
+      if (!p) continue;
+      p.replaceChild(document.createTextNode(h.textContent), h);
+      if (parents.indexOf(p) === -1) parents.push(p);
+    }
+    for (var j = 0; j < parents.length; j++) parents[j].normalize();
+  }
+
+  /* Branche la recherche live sur un champ.
+   * input, container, counter : éléments DOM (counter optionnel).
+   * getHTML (optionnel) : n'est plus nécessaire depuis TF-1340 — la recherche lit le contenu
+   *   VIVANT du conteneur, qui n'est jamais réécrit. Accepté, sans effet, pour les pages câblées.
+   * Retourne { run, refresh } : run() relance la recherche ; refresh() est conservé, sans
+   *   effet (il n'y a plus de HTML capturé à rafraîchir). */
+  function init(input, container, counter, getHTML) {
+    if (!input || !container) return null;
+    function run() {
+      unhighlight(container);
+      var re = buildRegex(input.value);
+      if (!re) {
+        if (counter) { counter.textContent = ''; counter.classList.remove('zero'); }
+        return;
+      }
+      var nb = highlight(container, re);
+      if (counter) {
+        counter.textContent = nb === 0 ? 'Aucune occurrence' : (nb + ' occurrence' + (nb > 1 ? 's' : ''));
+        counter.classList.toggle('zero', nb === 0);
+      }
+    }
+    input.addEventListener('input', run);
+    return {
+      run: run,
+      refresh: function () {}
+    };
+  }
+
+  global.DigitAIFindInPage = { init: init, buildRegex: buildRegex, highlight: highlight,
+                               unhighlight: unhighlight };
+})(window);
+</script>
+<!-- COMPOSANT-EMBARQUE:FIN find-in-page.js -->
+<!-- COMPOSANT-EMBARQUE:DEBUT table-detail.js — copie du socle digit-ai-page-html/assets/table-detail.js,
+     posée par digit-ai-page-html/scripts/embarquer-composants.mjs. NE PAS ÉDITER ICI : la SOURCE fait foi.
+     La copie se régénère (--ecrire) et sa dérive est refusée (--constat, oracle-parite-assets). -->
+<script data-composant="table-detail.js" data-empreinte="sha256:01c776363c9e69b148089ba2a20f1fa9b83b3498fb76281f17be0a54c0d97a5d">
+/* Digit-AI — Ligne de tableau depliable (TF-0432, lot Produit-05 20260820b, 21/08).
+   La convention data-detail existait cote CONSOMMATEUR (table-filters exclut tr[data-detail]
+   du comptage et la fait voyager avec sa ligne mere) ; ce composant la PRODUIT.
+   Contrat de marquage :
+     <tr><td><button type="button" class="td-btn" aria-expanded="false" aria-controls="det-1">›</button> Libelle</td>…</tr>
+     <tr data-detail id="det-1" hidden><td colspan="N">… detail …</td></tr>
+   Comportement : clic = bascule aria-expanded + hidden ; a l'impression TOUTES les lignes de
+   detail sont visibles (regle @media print du livrable — L17 la juge) ; un #hash qui vise un
+   element dans une ligne de detail fermee l'ouvre ; le filtrage (table-filters) masque la ligne
+   de detail avec sa ligne mere. Le chevron est U+203A, present dans toute pile de repli (TF-0435). */
+(function (root) {
+  'use strict';
+
+  function detailDe(btn) { return document.getElementById(btn.getAttribute('aria-controls') || ''); }
+
+  function basculer(btn, ouvrir) {
+    var det = detailDe(btn);
+    if (!det) return;
+    var etat = typeof ouvrir === 'boolean' ? ouvrir : btn.getAttribute('aria-expanded') !== 'true';
+    btn.setAttribute('aria-expanded', etat ? 'true' : 'false');
+    det.hidden = !etat;
+    var mere = btn.closest ? btn.closest('tr') : null;
+    if (mere) mere.classList.toggle('td-ouverte', etat);
+  }
+
+  function init(table) {
+    if (!table || table.getAttribute('data-td-ready') === '1') return null;
+    var boutons = Array.prototype.slice.call(table.querySelectorAll('button[aria-controls]')).filter(function (b) {
+      var d = detailDe(b);
+      return d && d.hasAttribute('data-detail');
+    });
+    if (!boutons.length) return null;
+    boutons.forEach(function (b) {
+      if (!b.classList.contains('td-btn')) b.classList.add('td-btn');
+      if (!b.textContent.trim()) b.textContent = '›';
+      b.addEventListener('click', function () { basculer(b); });
+      var det = detailDe(b);
+      det.hidden = b.getAttribute('aria-expanded') !== 'true';
+    });
+
+    function ouvrirDepuisHash() {
+      var h = location.hash ? location.hash.slice(1) : '';
+      if (!h) return;
+      var cible = document.getElementById(h);
+      if (!cible) return;
+      var det = cible.closest ? cible.closest('tr[data-detail]') : null;
+      if (!det || !table.contains(det)) return;
+      var b = boutons.filter(function (x) { return detailDe(x) === det; })[0];
+      if (b) { basculer(b, true); if (cible.scrollIntoView) cible.scrollIntoView(); }
+    }
+    window.addEventListener('hashchange', ouvrirDepuisHash);
+    ouvrirDepuisHash();
+
+    table.setAttribute('data-td-ready', '1');
+    return { ouvrirTout: function () { boutons.forEach(function (b) { basculer(b, true); }); },
+             fermerTout: function () { boutons.forEach(function (b) { basculer(b, false); }); } };
+  }
+
+  function initAll(racine) {
+    var scope = racine || document;
+    return Array.prototype.map.call(scope.querySelectorAll('table'), init).filter(Boolean);
+  }
+
+  root.DigitAITableDetail = { init: init, initAll: initAll };
+})(typeof window !== 'undefined' ? window : this);
+</script>
+<!-- COMPOSANT-EMBARQUE:FIN table-detail.js -->
+  <script>
+    DigitAITableFilters.initAll(document);
+    DigitAITableDetail.initAll();
+    DigitAIFindInPage.init(document.getElementById('find'), document.querySelector('main'), document.getElementById('findCount'));
+  </script>
+</body>
+</html>
