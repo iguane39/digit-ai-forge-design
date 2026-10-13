@@ -1046,6 +1046,39 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1629 (retour Produit-79 du 07/10, décidé le 13/10/2026) — LA POLICE DE MARQUE SE DÉCLARE.
+// S3 jugeait « réflexe » une police de titre prescrite par la charte de marque d'un produit, sans voie
+// de déclaration. La page la déclare par data-police-de-marque ; l'exemption ne couvre que les familles
+// listées. Pages inline, socle d'essai vide : le socle réel du poste n'entre pas dans la preuve.
+{
+  console.log(String.fromCharCode(10) + 'oracle-slop S3 (TF-1629) — la police de marque se déclare sur la page, et seulement elle');
+  const racineEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'marque-s3-'));
+  try {
+    const page = (attr, extra) => `<!DOCTYPE html><html lang="fr"${attr}><head><meta charset="UTF-8"><title>t</title><style>`
+      + 'h1{font-family:"Cormorant Garamond", Georgia, serif}body{font-family:Georgia, serif}' + extra
+      + '</style></head><body><main><h1>Titre</h1><p class="a">corps</p></main></body></html>';
+    const juger = (nom, contenu) => {
+      const f = path.join(racineEssai, nom);
+      fs.writeFileSync(f, contenu, 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-slop.mjs'), f, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, FORGE_SKILLS_INSTALLES: path.join(racineEssai, 'vide') } });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible */ }
+      return (json?.findings || []).filter((x) => x.regle === 'S3');
+    };
+    const declaree = juger('declaree.html', page(' data-police-de-marque="Cormorant Garamond"', ''));
+    ligne(declaree.length > 0 && declaree.every((x) => x.sev === 'info'),
+      `sens vert · police de titre déclarée par data-police-de-marque : S3 rendu en info seulement (${declaree.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+    const muette = juger('muette.html', page('', ''));
+    ligne(muette.some((x) => x.sev === 'majeur' && /cormorant/i.test(x.msg)),
+      `sens rouge · même police SANS déclaration : S3 majeur (${muette.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+    const debord = juger('debord.html', page(' data-police-de-marque="Cormorant Garamond"', '.a{font-family:Inter, sans-serif}'));
+    ligne(debord.some((x) => x.sev === 'majeur' && /inter/i.test(x.msg)) && debord.some((x) => x.sev === 'info' && /cormorant/i.test(x.msg)),
+      `sens rouge · la déclaration ne couvre pas une autre famille réflexe (Inter reste majeur, Cormorant en info) : ${debord.map((x) => x.sev).join(', ') || 'aucun constat'}`);
+  } finally {
+    fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
