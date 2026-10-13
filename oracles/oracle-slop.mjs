@@ -156,11 +156,34 @@ if (auSocleDigitAi) {
 if (!charteInstallee) {
   NON_JUGE.push('S3 : socle digit-ai-page-html introuvable sur ce poste — seule la charte ANTÉRIEURE (Roboto / DM Sans) est reconnue ; une page au socle courant y sera jugée comme une page sans charte');
 }
+// TF-1629 (retour Produit-79 du 07/10, décidé le 13/10/2026) — LA POLICE DE MARQUE SE DÉCLARE.
+// Une charte de marque de produit peut prescrire une famille de la liste réflexe (Cormorant Garamond en
+// police de titre, par exemple) : S3 la jugeait « réflexe » sans voie de déclaration, et le FAIL
+// passait au carnet des écarts. La page la déclare elle-même par l'attribut `data-police-de-marque`
+// (liste de familles séparées par des virgules, posé sur <html>, <body> ou tout élément), comme elle
+// déclare la charte du socle par ses jetons. L'exemption est étroite : elle ne porte QUE sur les
+// familles listées, rendues en `info` avec leur provenance ; toute autre famille réflexe reste un
+// majeur. Limite déclarée : l'oracle ne lit pas le dossier de marque du produit pour contrôler que la
+// famille déclarée y figure (le jugement de la déclaration reste humain).
+const POLICES_DE_MARQUE = new Set();
+for (const m of html.matchAll(/\bdata-police-de-marque\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)) {
+  for (const fam of (m[1] ?? m[2]).split(',')) {
+    const n = fam.trim().replace(/^["']|["']$/g, '').toLowerCase();
+    if (n) POLICES_DE_MARQUE.add(n);
+  }
+}
+if (POLICES_DE_MARQUE.size) {
+  NON_JUGE.push(`S3 : page déclarant sa/ses police(s) de marque par data-police-de-marque (${[...POLICES_DE_MARQUE].join(', ')}) — exemptée(s) et rendue(s) en \`info\` ; la présence de ces familles dans le dossier de marque du produit n'est pas vérifiée (TF-1629). Toute autre famille réflexe reste jugée`);
+}
 {
   const vus = new Set();
   const constater = (n, libelle, ou) => {
     if (auSocleDigitAi && POLICES_CHARTE_SOCLE.includes(n)) {
       add('info', 'S3', `police « ${libelle} » : famille réflexe, mais PRESCRITE par la charte du socle digit-ai que cette page déclare (jetons --head / --sans) — exemptée, TF-0857`, ou);
+      return;
+    }
+    if (POLICES_DE_MARQUE.has(n)) {
+      add('info', 'S3', `police « ${libelle} » : famille réflexe, mais déclarée police de marque par la page (data-police-de-marque) — exemptée, TF-1629`, ou);
       return;
     }
     add('majeur', 'S3', `police réflexe « ${libelle} » — famille bannie par impeccable, monoculture inter-projets`, ou);
@@ -188,6 +211,8 @@ if (!charteInstallee) {
         vus.add(n);
         if (auSocleDigitAi && POLICES_CHARTE_SOCLE.includes(n))
           add('info', 'S3', `police « ${n} » importée depuis Google Fonts : famille réflexe, mais PRESCRITE par la charte du socle digit-ai que cette page déclare — exemptée, TF-0857`, L(l.start));
+        else if (POLICES_DE_MARQUE.has(n))
+          add('info', 'S3', `police « ${n} » importée depuis Google Fonts : famille réflexe, mais déclarée police de marque par la page (data-police-de-marque) — exemptée, TF-1629`, L(l.start));
         else add('majeur', 'S3', `police réflexe « ${n} » importée depuis Google Fonts`, L(l.start));
       }
     }
