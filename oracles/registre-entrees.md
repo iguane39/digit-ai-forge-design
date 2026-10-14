@@ -489,3 +489,59 @@ critère **C14** de `criteres-sortie.md`, avant C15.
   contrat de voix et à la relecture, comme avant.
 - Les formes **ICU** (pluriels, genres, variables) : la variante rendue à l'utilisateur
   dépend de la donnée, pas du fichier.
+
+## Entrée du 14/10/2026 — oracle-exploitabilite (TF-1654, TF-1674)
+
+**Remontée §4 à forge-agents : À FAIRE.** Écrite, exécutée et verrouillée au banc local
+(`self-test.mjs` : 5 règles, plus un bloc d'instance servie derrière une connexion), elle
+n'est pas injectée au registre de `quality-oracles`. Statut global : `candidat`.
+
+Le domaine que rien ne couvrait : **l'exploitabilité d'un écran d'application au volume
+réel de ses données**. Le 12/10/2026, les écrans d'une application avaient passé la
+critique d'implémentation, `render_page.py` aux 7 largeurs et 3 000 tests, tous sur le jeu
+de démonstration. À la première alimentation réelle, la fiche mesurait 5 220 px en quatre
+colonnes déséquilibrées, la complétude 20 630 px, et des énumérations s'affichaient
+brutes. Le produit a écrit son propre juge, lié à ses écrans et à sa connexion ; celui-ci
+en est la forme générique. Il se joue sur l'écran **rendu**, de préférence contre
+l'instance servie et alimentée, et la critique d'implémentation se rejoue avec lui après la
+première alimentation réelle. Il n'est pas enrôlé dans `run-oracles-design.mjs`, qui juge un
+fichier sans navigateur par défaut, ni appelé par un skill : son enrôlement dans la méthode
+de `critique-le-design` (mode aval) est un reste déclaré.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes | cli | candidat (remontée §4 à faire) |
+
+```json
+[
+  {
+    "domaine": "Écran d'application : exploitabilité au volume réel des données",
+    "oracle": "oracles/oracle-exploitabilite.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/exploitabilite-verte.html",
+      "rouge": "oracles/fixtures/exploitabilite-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-10-14",
+      "mandat": "TF-1654, TF-1674",
+      "amont": "juge d'exploitabilité écrit par un produit (X1 à X5, seuils mesurés chez lui), rendu générique"
+    },
+    "regles": 6
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- Le **volume** lui-même : il mesure l'écran qu'il reçoit. Joué sur un jeu de
+  démonstration, il ne prouve rien de l'écran alimenté.
+- La **pertinence** du contenu : un écran court et vide passe X1.
+- Le **jugement esthétique** : critique d'implémentation et `render_page.py`.
+- Une valeur machine d'une autre forme que le snake_case ou la sérialisation
+  « clé : valeur ; » (camelCase, identifiant opaque).
+- La **validité** d'un état de connexion au-delà du constat X0 : une session périmée qui
+  redirige est dite, une session périmée qui sert une page vide ne l'est pas.

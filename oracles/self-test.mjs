@@ -6,7 +6,7 @@
 //
 // Usage : node self-test.mjs   ·   exit 0 = tout vert, 1 = régression.
 
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -708,6 +708,18 @@ const CAS = [
     verte: ['--avant', fx('comparatif-apres.html'), '--apres', fx('comparatif-avant.html')],
     rouge: ['--avant', fx('comparatif-avant.html'), '--apres', fx('comparatif-apres.html')],
   },
+  {
+    // TF-1654 (retour du 12/10/2026) — les écrans d'une application avaient passé critique,
+    // render_page et 3 000 tests sur le jeu de démonstration ; alimentés, la fiche mesurait 5 220 px
+    // en colonnes déséquilibrées et des énumérations s'affichaient brutes. Les deux fixtures sont le
+    // MÊME écran : la verte à faible volume et aux libellés traduits, la rouge au volume réel, qui
+    // porte les cinq défauts mesurés. Dépend de l'outillage de rendu — saut motivé s'il manque.
+    rendu: true,
+    oracle: 'oracle-exploitabilite.mjs',
+    regles: ['X1', 'X2', 'X3', 'X4', 'X5'],
+    verte: [fx('exploitabilite-verte.html')],
+    rouge: [fx('exploitabilite-rouge.html')],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
@@ -1144,6 +1156,56 @@ for (const cas of CAS) {
   const d = choisirInterpreteur({ python: () => ({ present: false, playwright: false }), uv: () => ({ present: true, executable: null }) });
   ligne(d.python === null && /introuvable/.test(d.manques[0]) && /n'importe pas playwright/.test(d.manques[0]),
     'sens rouge · aucun Python et uv sans playwright : SKIP motivé, jamais un interpréteur deviné');
+}
+
+// TF-1674 + TF-1654 — UNE APPLICATION SERVIE DERRIÈRE UNE CONNEXION. Une instance d'essai est
+// servie ici : l'écran au volume réel (la fixture rouge) n'est rendu qu'à une session ouverte, toute
+// autre visite est redirigée vers une page de connexion. Sans état de connexion, l'oracle mesure la
+// page de connexion — la redirection doit être DITE, sinon son PASS se lirait « écran exploitable ».
+// Avec l'état (storageState Playwright), c'est l'écran lui-même qui est jugé, et il échoue.
+{
+  console.log(String.fromCharCode(10) + 'oracle-exploitabilite (TF-1674) — instance servie derrière une connexion, deux sens');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'instance-connectee-'));
+    const code = `const http=require('http');const fs=require('fs');const ecran=fs.readFileSync(${JSON.stringify(fx('exploitabilite-rouge.html'))},'utf8');`
+      + `const s=http.createServer((q,r)=>{if(q.url==='/connexion'){r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});`
+      + `return r.end('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Connexion</title></head><body><main><h1>Connexion</h1><button>Se connecter</button></main></body></html>');}`
+      + `if(/session=ouverte/.test(q.headers.cookie||'')){r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return r.end(ecran);}`
+      + `r.writeHead(302,{Location:'/connexion'});r.end();});s.listen(0,'127.0.0.1',()=>console.log(s.address().port));`;
+    const serveur = spawn(process.execPath, ['-e', code], { stdio: ['ignore', 'pipe', 'ignore'] });
+    try {
+      const port = await new Promise((ok, ko) => {
+        serveur.stdout.once('data', d => ok(Number(String(d).trim())));
+        serveur.once('exit', () => ko(new Error('serveur d\'essai arrêté')));
+      });
+      const etat = path.join(dossier, 'etat.json');
+      fs.writeFileSync(etat, JSON.stringify({ cookies: [{ name: 'session', value: 'ouverte', domain: '127.0.0.1', path: '/', expires: -1, httpOnly: false, secure: false, sameSite: 'Lax' }], origins: [] }), 'utf8');
+      const jouer = (...a) => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'oracle-exploitabilite.mjs'), `http://127.0.0.1:${port}/ecran`, ...a, '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        return { code: r.status, json };
+      };
+      const sans = jouer();
+      ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && (sans.json?.findings || []).some(f => f.regle === 'X0' && /redirigé vers .*\/connexion/.test(f.msg)),
+        `sens rouge · sans état de connexion, la redirection est dite (X0) et l'écran non jugé : SKIP exit 2, jamais un PASS sur la page de connexion (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+      const avec = jouer('--etat-connexion', etat);
+      const regles = new Set((avec.json?.findings || []).map(f => f.regle));
+      ligne(avec.code === 1 && !regles.has('X0') && ['X1', 'X2', 'X3', 'X4', 'X5'].every(x => regles.has(x)),
+        `sens vert · avec l'état de connexion, l'écran servi est jugé lui-même : X1 à X5, aucune redirection (obtenu ${avec.json?.verdict}, ${[...regles].join(' ')})`);
+      const sombre = jouer('--etat-connexion', etat, '--theme', 'dark');
+      ligne(sombre.json?.theme === 'dark' && sombre.code === 1 && (sombre.json?.non_juge || []).some(n => /thème sombre forcé/.test(n)),
+        `--theme dark · mesuré sur l'instance elle-même, limite dite au non_juge (obtenu ${sombre.json?.verdict}, thème ${sombre.json?.theme})`);
+      const perime = jouer('--etat-connexion', path.join(dossier, 'absent.json'));
+      ligne(perime.code === 2 && perime.json?.verdict === 'SKIP',
+        `sens rouge · état de connexion introuvable : SKIP exit 2, jamais un jugement de la page de connexion (obtenu ${perime.json?.verdict}, exit ${perime.code})`);
+    } finally {
+      serveur.kill();
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
 }
 
 // TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en

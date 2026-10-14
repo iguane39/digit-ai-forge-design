@@ -84,6 +84,9 @@ node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA7 : typ�
 node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
 node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
 node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
+node oracles/oracle-exploitabilite.mjs <page.html|url>… \
+  [--etat-connexion etat.json] [--theme dark] [--largeur N]   # X0–X5 : écran rendu au volume réel (TF-1654) ;
+# URL servie derrière une connexion : état Playwright (storageState) du produit (TF-1674)
 
 node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
