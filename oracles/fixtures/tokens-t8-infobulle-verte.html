@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T8, surface d'infobulle inerte écartée de l'anneau</title>
+<!--
+  TF-1662 (retour du 13/10/2026). --focus-anneau (#2563EB) tient ≥ 3:1 contre les
+  surfaces où un élément focalisable peut se poser (--fond 5.17:1, --fond-carte
+  4.57:1). --tt-bg (2.83:1) et --tt-code-bg (2.00:1) ne sont posés QUE par une
+  infobulle en pointer-events: none et par son descendant : rien ne s'y focalise.
+  Aucun jeton n'est déclaré --surfaces-hors-focus : c'est la structure du CSS qui
+  écarte ces deux surfaces, pas une déclaration ni un nom.
+
+  Attendu : PASS, exit 0. Différence UNIQUE avec la rouge jumelle : la
+  déclaration « pointer-events: none » de .infobulle.
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --fond-carte: #eef1f6;
+    --texte: #1b1f26;
+    --focus-anneau: #2563EB;
+    --focus-decalage: 2px;
+    --tt-bg: #1e293b;
+    --tt-code-bg: #334155;
+    --tt-texte: #f8fafc;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police-corps); margin: 0; padding: 32px; }
+  .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
+  .bouton:focus-visible { outline: 3px solid var(--focus-anneau); outline-offset: var(--focus-decalage); }
+  .infobulle { position: absolute; pointer-events: none; background: var(--tt-bg); color: var(--tt-texte); padding: 8px; }
+  .infobulle code { background: var(--tt-code-bg); color: var(--tt-texte); }
+</style>
+</head>
+<body>
+  <h1>Réglages du rapport</h1>
+  <div class="carte">
+    <button class="bouton" type="button" aria-describedby="aide">Exporter</button>
+    <div class="infobulle" id="aide" role="tooltip">Exporte au format <code>csv</code></div>
+  </div>
+</body>
+</html>

@@ -12,6 +12,8 @@
 //   T7  contraste NON TEXTUEL ≥ 3:1 des paires d'interface posées (WCAG 1.4.11, GL03)
 //   T8  focus PRESCRIT et contrasté : --focus-anneau / --focus-decalage existent,
 //       l'anneau tient ≥ 3:1 contre les surfaces de la page (RGAA 10.7, WCAG 2.4.7)
+//       — hors surfaces posées seulement sur un pseudo-élément ou dans un sous-arbre en
+//       pointer-events: none (TF-1662) ; T5 écarte de même un ::before/::after sans texte
 //
 // T7 et T8 (TF-0409, option O4 de l'étude RGAA) réutilisent l'appariement de T5 : mêmes
 // poses relevées dans le CSS, même héritage, même échappatoire déclarative — seul le seuil
@@ -177,6 +179,31 @@ const PROP_FOND = /(^|[;{\s])background(?:-color)?\s*:\s*([^;]+)/gi;
 const EST_AMBIANCE = s => s.split(',').some(x => /^\s*(:root|html|body|\*)\s*$/i.test(x));
 const varsDe = val => [...val.matchAll(/var\(\s*(--[\w-]+)/g)].map(m => m[1]);
 
+// TF-1662 (retour du 13/10/2026) — UN PSEUDO-ÉLÉMENT SANS CONTENU NE PORTE AUCUN TEXTE. Un
+// `::before { content: ""; background: var(--trait) }` dessine une pastille ou un filet : T5 y
+// présumait le texte hérité de l'ancêtre (« --encre sur --trait ») et en faisait un majeur, sur
+// une paire qui n'existe nulle part au rendu. Une pose sur ::before/::after dont TOUTES les
+// valeurs de `content` (sur ce même pseudo-élément) sont vides, `none`, `normal` ou une seule
+// image `url()` — ou qui n'en a aucune — est écartée de T5. Un pseudo-élément qui porte un texte
+// (chaîne non vide, attr(), counter()) reste jugé.
+const EST_PSEUDO_GENERE = /::?(?:before|after)\s*$/i;
+const decouper = s => s.split(',').map(x => x.trim()).filter(Boolean);
+const contenusPseudo = new Map();
+for (const r of regles) {
+  const m = /(^|[;{\s])content\s*:\s*([^;]+)/i.exec(r.body);
+  if (!m) continue;
+  for (const p of decouper(r.selector)) {
+    if (EST_PSEUDO_GENERE.test(p)) contenusPseudo.set(p, [...(contenusPseudo.get(p) || []), m[2].trim()]);
+  }
+}
+const contenuSansTexte = v => {
+  const t = v.replace(/url\([^)]*\)/gi, '').replace(/!important/i, '').trim();
+  return !t || /^(?:none|normal)$/i.test(t) || /^(?:""|'')(?:\s+(?:""|''))*$/.test(t);
+};
+const pseudoSansTexte = sel => decouper(sel).length > 0 && decouper(sel)
+  .every(p => EST_PSEUDO_GENERE.test(p) && (contenusPseudo.get(p) || []).every(contenuSansTexte));
+let posesPseudoVides = 0;
+
 // 1. Relevé des poses : ce que chaque règle met en texte et en fond.
 const poses = [];
 const ambiance = { texte: new Set(), fond: new Set() };
@@ -191,6 +218,7 @@ for (const r of regles) {
   PROP_FOND.lastIndex = 0;
   while ((m = PROP_FOND.exec(r.body))) f.push(...varsDe(m[2]));
   if (!t.length && !f.length) continue;
+  if (pseudoSansTexte(r.selector)) { posesPseudoVides++; continue; }
   if (EST_AMBIANCE(r.selector)) { for (const x of t) ambiance.texte.add(x); for (const x of f) ambiance.fond.add(x); }
   poses.push({ sel: r.selector, t, f });
 }
@@ -275,6 +303,9 @@ if (pairesTestees === 0) {
   add('avertissement', 'T5', 'aucune paire texte/fond posée par le CSS : AUCUN contraste n\'a été mesuré. Poser les couleurs par var(--token), déclarer les paires par --paires-contraste, ou mesurer par render_page.py V2',
     'CSS du document');
   NJ.push('T5 : contraste non mesuré faute de paire posée — le PASS de cet oracle ne vaut pas validation du contraste');
+}
+if (posesPseudoVides > 0) {
+  NJ.push(`T5 : ${posesPseudoVides} pose(s) sur un pseudo-élément ::before/::after sans contenu textuel écartée(s) (TF-1662) — aucun texte n'y est rendu, aucune paire n'y est présumée`);
 }
 if (pairesComposees > 0) {
   NJ.push(`T5 : ${pairesComposees} paire(s) écartée(s) car un token est semi-transparent — contraste composé indécidable sur le fichier, à mesurer par render_page.py V2`);
@@ -408,6 +439,42 @@ for (const table of [tokens.clair, tokens.sombre]) {
   }
 }
 
+// TF-1662 (retour du 13/10/2026) — UNE SURFACE QUE RIEN NE PEUT FOCALISER N'EST PAS UN FOND
+// D'ANNEAU. T8 confrontait l'anneau à --tt-bg et --tt-code-bg, consommés par une seule infobulle
+// en `pointer-events: none` : aucune des 11 couleurs calculées ne tenait 3:1 à la fois sur les
+// fonds pastel et sur ce fond sombre, et T8 restait rouge quelle que soit la charte. Le rôle d'une
+// surface n'est pas lisible par son NOM (TF-1058 l'a établi), mais il l'est ici par la STRUCTURE
+// du CSS : une surface dont CHAQUE pose en fond (directe, ou par un jeton qui la reprend) tombe sur
+// un pseudo-élément, ou dans un sous-arbre en `pointer-events: none` que rien ne réactive, ne
+// reçoit aucun élément focalisable. Elle est écartée et nommée au non_juge. Une surface jamais
+// posée reste jugée comme avant ; une seule pose dans un contexte focalisable suffit à la juger.
+const POINTEUR_NUL = /(^|[;{\s])pointer-events\s*:\s*none\b/i;
+const POINTEUR_ACTIF = /(^|[;{\s])pointer-events\s*:\s*(?!none\b)[a-z]/i;
+const EST_PSEUDO_INERTE = /::?(?:before|after|backdrop|marker|placeholder|selection|first-line|first-letter)\b/i;
+const inertes = regles.filter(r => POINTEUR_NUL.test(r.body)).flatMap(r => morceaux(r.selector));
+const reactives = regles.filter(r => POINTEUR_ACTIF.test(r.body)).flatMap(r => morceaux(r.selector));
+const horsFocusParStructure = p => {
+  if (EST_PSEUDO_INERTE.test(p)) return true;
+  const a = inertes.find(x => x === p || estAncetre(x, p));
+  return !!a && !reactives.some(b => b === a || b === p || estAncetre(a, b));
+};
+const posesFond = new Map(); // jeton -> morceaux de sélecteur qui le posent en fond
+for (const r of regles) {
+  let m;
+  PROP_FOND.lastIndex = 0;
+  while ((m = PROP_FOND.exec(r.body))) {
+    for (const v of varsDe(m[2])) posesFond.set(v, [...(posesFond.get(v) || []), ...morceaux(r.selector)]);
+  }
+}
+const ecartesParStructure = new Set();
+const surfaceInerte = (k, table) => {
+  const sels = [...(posesFond.get(k) || [])];
+  for (const [alias, v] of table) if (alias !== k && varsDe(v).includes(k)) sels.push(...(posesFond.get(alias) || []));
+  if (!sels.length || !sels.every(horsFocusParStructure)) return false;
+  ecartesParStructure.add(k);
+  return true;
+};
+
 const reglesFocus = regles.filter(r => REGLE_FOCUS.test(r.selector));
 let focusImprovise = 0;
 for (const r of reglesFocus) {
@@ -436,7 +503,7 @@ if (tokenAnneau) {
     const ca = color(resoudreVar(extraireCouleurRaccourci(va), [n => table.get(n)]));
     if (!ca || ca.a !== 1) { NJ.push(`T8 : ${tokenAnneau[0]} semi-transparent ou illisible en thème ${theme} — contraste de l'anneau non décidable sur le fichier`); continue; }
     const surfaces = [...table]
-      .filter(([k]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k))
+      .filter(([k]) => EST_SURFACE.test(k) && !surfaceHorsFocus.has(k) && !surfaceInerte(k, table))
       .map(([k, v]) => [k, resoudreVar(v, [n => table.get(n)])])
       .filter(([, v]) => color(v) && color(v).a === 1);
     if (!surfaces.length) { NJ.push(`T8 : aucune surface nommée en thème ${theme} — l'anneau de focus n'a été confronté à rien`); continue; }
@@ -463,6 +530,9 @@ if (tokenAnneau) {
         'bloc de tokens');
     }
   }
+}
+if (ecartesParStructure.size > 0) {
+  NJ.push(`T8 : surface(s) posée(s) seulement sur un pseudo-élément ou dans un sous-arbre en pointer-events: none, écartée(s) de la confrontation à l'anneau (TF-1662) : ${[...ecartesParStructure].join(', ')} — un élément focalisable placé là au clavier malgré tout n'est pas vu par le CSS`);
 }
 if (surfaceHorsFocus.size > 0) {
   NJ.push(`T8 : surface(s) déclarée(s) --surfaces-hors-focus, écartée(s) de la confrontation à l'anneau (TF-1058) : ${[...surfaceHorsFocus].join(', ')}`);

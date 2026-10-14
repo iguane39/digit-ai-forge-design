@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture ROUGE — oracle-tokens T5, pseudo-élément ::before qui porte un texte</title>
+<!--
+  TF-1662 (retour du 13/10/2026). Même document que la verte jumelle, mais le
+  ::before porte un mot (« Nouveau ») : le texte hérité de .legende (--texte)
+  est bel et bien rendu sur --trait-violet, à 2.90:1. L'écart des pseudo-éléments
+  vides ne doit pas couvrir ce cas.
+
+  Attendu : FAIL, exit 1, sur T5 (majeur, texte hérité de l'ancêtre CSS).
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --texte: #1b1f26;
+    --trait-violet: #7c3aed;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police-corps); margin: 0; padding: 32px; }
+  .legende { background: var(--fond); color: var(--texte); padding: 16px; }
+  .legende .puce::before { content: "Nouveau"; display: inline-block; width: 12px; height: 12px; margin-right: 8px; background: var(--trait-violet); }
+</style>
+</head>
+<body>
+  <h1>Répartition des demandes</h1>
+  <p class="legende"><span class="puce">Demandes ouvertes</span></p>
+</body>
+</html>

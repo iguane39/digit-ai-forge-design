@@ -162,6 +162,26 @@ const CAS = [
     rouge: [fx('tokens-t8-badge-rouge.html')],
   },
   {
+    // TF-1662 (retour du 13/10/2026) — T8 confrontait l'anneau à des surfaces qu'aucun élément
+    // focalisable ne peut occuper : celles d'une infobulle en pointer-events: none. Aucune couleur
+    // ne tenait 3:1 sur ces fonds sombres ET sur les fonds pastel, la règle était irréparable sans
+    // changer la charte. Les deux fixtures ne diffèrent QUE par « pointer-events: none » : la verte
+    // écarte --tt-bg et --tt-code-bg par la structure du CSS, la rouge, surface interactive, les juge.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T8'],
+    verte: [fx('tokens-t8-infobulle-verte.html')],
+    rouge: [fx('tokens-t8-infobulle-rouge.html')],
+  },
+  {
+    // TF-1662, seconde moitié — T5 présumait un texte hérité sur le fond d'un ::before à content
+    // vide : une pastille, aucune lettre rendue. Les deux fixtures ne diffèrent QUE par la valeur
+    // de content : vide (verte, PASS), un mot (rouge, T5 majeur — le texte y est bien rendu).
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-t5-pseudo-verte.html')],
+    rouge: [fx('tokens-t5-pseudo-rouge.html')],
+  },
+  {
     // TF-1106 (14/09/2026) — oracle-tokens ne résolvait pas les alias var() avant de parser
     // une couleur : --focus-anneau: var(--blue), la forme que le contrat de tokens.css de
     // cette forge prescrit et que scripts/generer-tokens-css.mjs émet, publiait « semi-
@@ -1102,6 +1122,25 @@ for (const cas of CAS) {
     'sens vert · page figée : B-T1 rendu en avertissement, comme check_html.py G1');
   ligne((j?.non_juge || []).some(n => /B-T2, B-T3, B-T4 non jugées : rendu figé/.test(n)),
     'limite déclarée · B-T2 à B-T4 portées au non_juge, jamais approuvées en silence');
+}
+
+// TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en
+// pointer-events: none dont un descendant repasse en pointer-events: auto peut porter un lien
+// focalisable : ses surfaces redeviennent des fonds d'anneau. Page écrite ici, dérivée de la verte.
+{
+  console.log(String.fromCharCode(10) + 'oracle-tokens T8 (TF-1662) — un sous-arbre inerte réactivé redevient jugé');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 't8-reactive-'));
+  try {
+    const page = path.join(dossier, 'reactive.html');
+    fs.writeFileSync(page, fs.readFileSync(fx('tokens-t8-infobulle-verte.html'), 'utf8')
+      .replace('</style>', '  .infobulle code a { pointer-events: auto; }\n</style>'), 'utf8');
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-tokens.mjs'), page, '--json-only'], { encoding: 'utf8' });
+    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    ligne(r.status === 1 && (j?.findings || []).some(f => f.regle === 'T8' && f.sev === 'majeur' && /--tt-code-bg/.test(f.msg)),
+      `sens rouge · descendant réactivé (pointer-events: auto) : --tt-code-bg de nouveau confronté à l'anneau, T8 majeur (obtenu ${j?.verdict}, exit ${r.status})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

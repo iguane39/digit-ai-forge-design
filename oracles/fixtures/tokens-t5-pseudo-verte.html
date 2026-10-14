@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — oracle-tokens T5, pastille ::before sans contenu textuel</title>
+<!--
+  TF-1662 (retour du 13/10/2026). La pastille de légende est un ::before à
+  content vide, peint en --trait-violet. Le texte de .legende (--texte) n'y est
+  jamais posé : aucune lettre n'est rendue dans ce pseudo-élément. T5 présumait
+  pourtant « --texte sur --trait-violet » (2.90:1) par héritage de l'ancêtre CSS.
+
+  Attendu : PASS, exit 0. Différence UNIQUE avec la rouge jumelle : la valeur
+  de content (vide ici, un mot dans la rouge).
+-->
+<style>
+  :root {
+    --fond: #ffffff;
+    --texte: #1b1f26;
+    --trait-violet: #7c3aed;
+    --police-corps: "Source Serif 4", Georgia, serif;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police-corps); margin: 0; padding: 32px; }
+  .legende { background: var(--fond); color: var(--texte); padding: 16px; }
+  .legende .puce::before { content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 8px; background: var(--trait-violet); }
+</style>
+</head>
+<body>
+  <h1>Répartition des demandes</h1>
+  <p class="legende"><span class="puce">Demandes ouvertes</span></p>
+</body>
+</html>
