@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- FIXTURE ROUGE — oracle-bascule, palette sombre déclarée sans bascule (TF-1661).
+     Même page que bascule-figee-verte.html, plus un bloc :root[data-theme="dark"] complet.
+     Dès qu'une palette sombre est déclarée, la page n'est plus un rendu figé : le lecteur doit
+     pouvoir la choisir et retrouver son choix. Attendu : FAIL, exit 1, B-T1 (aucun bouton) et
+     B-T3 (aucune persistance) bloquants. B-T4 reste verte : la palette est dérivée et complète. -->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture oracle-bascule (rouge, palette sombre sans bascule)</title>
+  <style>
+    :root {
+      --bg: #FAFBFF; --ink: #0F172A; --muted: #64748B; --surface: #FFFFFF; --line: #E6EAF2;
+    }
+    :root[data-theme="dark"] {
+      --bg: #0B1220; --ink: #EEF2F8; --muted: #A9B4C4; --surface: #121B2E; --line: #263248;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: sans-serif; }
+    header.doc { padding: 16px; border-bottom: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header class="doc">
+    <h1>Note figée, imprimable</h1>
+  </header>
+  <main><p>Un livrable figé n'a aucune bascule à proposer.</p></main>
+</body>
+</html>

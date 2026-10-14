@@ -395,6 +395,18 @@ const CAS = [
     rouge: [fx('bascule-deleguee-morte-rouge.html')],
   },
   {
+    // TF-1661 (retour du 13/10/2026) : LE RENDU FIGÉ. Une page claire seule, sans bouton ni
+    // palette sombre ni script de thème, sortait B-T1, B-T3 et B-T4 en bloquant alors que
+    // oracle-tokens T4 la déclare conforme et que check_html.py G1 n'en fait qu'un avertissement.
+    // Les deux fixtures ne diffèrent QUE par le bloc :root[data-theme="dark"] : la verte, figée,
+    // passe avec B-T1 en avertissement (vérifié à part en fin de recette) ; la rouge déclare une
+    // palette sombre que le lecteur ne peut ni choisir ni retrouver — B-T1 et B-T3 restent durs.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T1', 'B-T3'],
+    verte: [fx('bascule-figee-verte.html')],
+    rouge: [fx('bascule-figee-rouge.html')],
+  },
+  {
     // TF-0235 (campagne pilot du 15/08) : restitution lisible — une page déclarée
     // data-restitution porte verdict, KPIs complets, questions de graphiques,
     // chemins de lecteurs et manifeste d'écarts. RL-2/5/6/7/8 déclarées non jugées
@@ -1077,6 +1089,19 @@ for (const cas of CAS) {
   } finally {
     fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
   }
+}
+
+// TF-1661 (retour du 13/10/2026) — LE VERT DU RENDU FIGÉ N'EST PAS UN SILENCE. Le cas du harnais
+// prouve PASS sur la verte ; ce bloc prouve qu'elle passe POUR LA BONNE RAISON : l'absence de
+// bascule y est dite en avertissement, et les trois règles non jugées le sont au non_juge.
+{
+  console.log(String.fromCharCode(10) + 'oracle-bascule (TF-1661) — rendu figé : avertissement dit, règles non jugées déclarées');
+  const r = spawnSync(process.execPath, [path.join(ici, 'oracle-bascule.mjs'), fx('bascule-figee-verte.html'), '--json-only'], { encoding: 'utf8' });
+  let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : les lignes le diront */ }
+  ligne((j?.findings || []).some(f => f.regle === 'B-T1' && f.sev === 'avertissement'),
+    'sens vert · page figée : B-T1 rendu en avertissement, comme check_html.py G1');
+  ligne((j?.non_juge || []).some(n => /B-T2, B-T3, B-T4 non jugées : rendu figé/.test(n)),
+    'limite déclarée · B-T2 à B-T4 portées au non_juge, jamais approuvées en silence');
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

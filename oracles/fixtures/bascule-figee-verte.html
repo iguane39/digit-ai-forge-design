@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<!-- FIXTURE VERTE — oracle-bascule, rendu figé (TF-1661).
+     Page claire seule : aucun bouton de bascule, aucune palette sombre, aucun script de thème.
+     check_html.py G1 n'en fait qu'un avertissement (« un rendu figé n'a légitimement aucune
+     bascule ») et oracle-tokens T4 la déclare conforme (« sombre optionnel »). Attendu : PASS,
+     exit 0, avec un constat B-T1 en AVERTISSEMENT et B-T2 à B-T4 portées au non_juge.
+     Différence UNIQUE avec bascule-figee-rouge.html : le bloc :root[data-theme="dark"]. -->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture oracle-bascule (verte, rendu figé en thème clair)</title>
+  <style>
+    :root {
+      --bg: #FAFBFF; --ink: #0F172A; --muted: #64748B; --surface: #FFFFFF; --line: #E6EAF2;
+    }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: sans-serif; }
+    header.doc { padding: 16px; border-bottom: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+  <header class="doc">
+    <h1>Note figée, imprimable</h1>
+  </header>
+  <main><p>Un livrable figé n'a aucune bascule à proposer.</p></main>
+</body>
+</html>

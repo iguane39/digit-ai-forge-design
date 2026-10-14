@@ -174,7 +174,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-images` | I1–I7 | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
-| `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée |
+| `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée ; un rendu figé (ni bouton, ni palette sombre, ni script de thème) n'est qu'un avertissement, comme G1 du socle (TF-1661) |
 | `oracle-saisie` | SA1–SA7 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4 | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème |

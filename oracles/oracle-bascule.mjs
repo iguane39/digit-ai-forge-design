@@ -6,7 +6,9 @@
 // observable est un défaut), persistée, et une palette sombre dérivée des mêmes tokens
 // (jamais une seconde charte). Quatre règles, décidables sur le fichier seul :
 //   B-T1  bouton .theme-toggle ou [data-theme-toggle] présent, en zone d'en-tête
-//         (ancêtre <header>, ou classe header/entete/topbar/navbar/app-bar)
+//         (ancêtre <header>, ou classe header/entete/topbar/navbar/app-bar). Rendu figé —
+//         ni bouton, ni palette sombre, ni script de thème : AVERTISSEMENT seul, B-T2 à B-T4
+//         non jugées, même lecture que check_html.py G1 et oracle-tokens T4 (TF-1661)
 //   B-T2  câblé — un écouteur de clic atteint CE bouton (attachement direct par
 //         getElementById / querySelector + addEventListener ou onclick=, attribut
 //         onclick inline, ou DÉLÉGATION : addEventListener('click') sur
@@ -102,10 +104,42 @@ function enZoneEntete(el) {
   return false;
 }
 
+// TF-1661 (retour du 13/10/2026, mesuré sur une même page dans une même exécution de
+// run-oracles-design.mjs) — LE RENDU FIGÉ N'EST PAS UNE BASCULE ABSENTE. Une page claire seule,
+// sans bouton, sans palette sombre et sans script de thème, sortait B-T1, B-T3 et B-T4 en
+// bloquant, alors que oracle-tokens T4 la déclare conforme (« sombre optionnel ») et que la règle
+// G1 de check_html.py, qui tient le contrôle exécutable de R-30, n'en fait qu'un avertissement
+// (« un rendu figé n'a légitimement aucune bascule »). Trois juges, deux verdicts : l'agrégateur
+// restait FAIL sur une page que le socle dit conforme. Cet oracle s'aligne sur G1 : la bascule
+// n'est jugée que si la page en DÉCLARE une — un bouton, une palette sombre, ou un script qui
+// mute data-theme. Dès qu'un seul de ces signes existe, les quatre règles redeviennent dures :
+// une bascule à moitié posée reste le défaut qu'elle était.
+const sombreDeclare = (() => {
+  const texteCss = css(html, root).replace(/\/\*[\s\S]*?\*\//g, ' ');
+  return cssRulesDeep(texteCss).some(r =>
+    /:root|\[data-theme|^html(\.|:)|\.theme-/i.test(r.selector)
+    && (r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) || /dark/i.test(r.selector))
+    && /--[\w-]+\s*:/.test(r.body));
+})();
+const scriptDeTheme = elements(root, 'script')
+  .filter(s => !(s.attrs && Object.prototype.hasOwnProperty.call(s.attrs, 'src')))
+  .flatMap(s => s.children.filter(c => c.tag === '#raw').map(c => c.text))
+  .some(t => /setAttribute\(\s*['"]data-theme['"]|dataset\.theme\s*=/i.test(t));
+
 const boutons = elements(root).filter(estBoutonBascule);
 let bouton = null;
-if (boutons.length === 0) {
-  add('bloquant', 'B-T1', 'aucun bouton de bascule détecté (sélecteur .theme-toggle ou [data-theme-toggle])', file);
+let renduFige = false;
+if (boutons.length === 0 && !sombreDeclare && !scriptDeTheme) {
+  renduFige = true;
+  add('avertissement', 'B-T1',
+    'aucune bascule déclarée (ni bouton .theme-toggle / [data-theme-toggle], ni palette sombre, ni script ' +
+    'de thème) : rendu figé en thème clair. Avertissement R-30, pas un défaut bloquant — même lecture que ' +
+    'check_html.py G1 et oracle-tokens T4 (sombre optionnel). Si la page est un livrable interactif, poser ' +
+    'la bascule S-G1 ; sinon consigner la révocation au PARAMETRAGE.md du projet (R-30 §3).', file);
+  NON_JUGE.push('B-T2, B-T3, B-T4 non jugées : rendu figé, aucune bascule déclarée (TF-1661) — elles redeviennent bloquantes dès qu\'un bouton, une palette sombre ou un script de thème apparaît');
+} else if (boutons.length === 0) {
+  add('bloquant', 'B-T1', 'aucun bouton de bascule détecté (sélecteur .theme-toggle ou [data-theme-toggle])' +
+    (sombreDeclare ? ' alors qu\'une palette sombre est déclarée : le lecteur ne peut pas la choisir' : ' alors qu\'un script mute data-theme'), file);
 } else {
   bouton = boutons.find(enZoneEntete) || boutons[0];
   if (!enZoneEntete(bouton)) {
@@ -205,9 +239,12 @@ if (bouton) {
   } else if (!mutationTrouvee) {
     add('bloquant', 'B-T2', 'écouteur de clic détecté sur le bouton, mais aucune mutation de data-theme sur la racine (<html>) trouvée dans le JS inline : bascule inopérante — loi n° 1', 'JS inline');
   }
-} else {
+} else if (!renduFige) {
   NON_JUGE.push('câblage (B-T2) non jugé : bouton absent (voir B-T1)');
 }
+
+// Rendu figé (TF-1661) : rien de déclaré, donc ni persistance ni palette à juger.
+if (renduFige) conclure();
 
 // ── B-T3 · persistance localStorage déclarée ────────────────────────────────
 // TF-0800, second motif : LA CLÉ EN CONSTANTE. `localStorage.setItem(CLE, theme)` avec
@@ -291,8 +328,11 @@ if (tokensSombres.size === 0) {
 }
 
 // ── Verdict ──────────────────────────────────────────────────────────────
+conclure();
+function conclure() {
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
 if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — B-T1–B-T4 sans écart\n');
 if (durs.length) sortir('FAIL', 1);
 sortir('PASS', 0);
+}
