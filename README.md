@@ -130,7 +130,7 @@ Options de `run-oracles-design.mjs` :
 | `--racine <chemin>` | force la racine de forge, prioritaire sur `$FORGE_DESIGN_ROOT` et sur le `.env` |
 | `--corpus <dossier>` | bascule en mode corpus : lance uniquement `oracle-corpus` sur le dossier donné |
 | `--dtcg <source.tokens.json> <tokens.css>` | bascule en mode pipeline de tokens : lance uniquement `oracle-dtcg`, qui régénère le CSS depuis la source DTCG et le compare au fichier livré |
-| `--rendu` | si l'outillage est détecté (Python, `playwright`, `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
+| `--rendu` | si l'outillage est détecté (Python du PATH avec `playwright`, à défaut l'interpréteur que `uv run python` désigne dans le dossier courant (TF-1674), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`
 du `.env` voisin → dossier parent du script.

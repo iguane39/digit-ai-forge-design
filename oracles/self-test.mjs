@@ -1124,6 +1124,28 @@ for (const cas of CAS) {
     'limite déclarée · B-T2 à B-T4 portées au non_juge, jamais approuvées en silence');
 }
 
+// TF-1674 (retour du 12/10/2026) — LE PYTHON D'UN ENVIRONNEMENT uv EST UN PYTHON. `--rendu`
+// rendait SKIP chez un produit dont playwright vit dans son environnement uv. La décision est
+// jouée sur sondes injectées : la preuve ne dépend pas de ce que le poste a installé.
+{
+  console.log(String.fromCharCode(10) + 'lib/rendu.mjs choisirInterpreteur (TF-1674) — uv en second recours, deux sens');
+  const { choisirInterpreteur } = await import('./lib/rendu.mjs');
+  const sansPlaywright = () => ({ present: true, playwright: false });
+  let sondeUv = 0;
+  const a = choisirInterpreteur({ python: () => ({ present: true, playwright: true }), uv: () => { sondeUv++; return { present: true, executable: 'X' }; } });
+  ligne(a.python === 'python' && a.via === 'PATH' && a.manques.length === 0 && sondeUv === 0,
+    `sens vert · Python du PATH avec playwright : retenu, uv jamais sondé (obtenu ${a.python} via ${a.via}, ${sondeUv} sonde uv)`);
+  const b = choisirInterpreteur({ python: sansPlaywright, uv: () => ({ present: true, executable: 'C:/produit/.venv/Scripts/python.exe' }) });
+  ligne(b.python === 'C:/produit/.venv/Scripts/python.exe' && b.via === 'uv' && b.manques.length === 0,
+    `sens vert · playwright seulement dans l'environnement uv du produit : son interpréteur est retenu (obtenu ${b.python} via ${b.via})`);
+  const c = choisirInterpreteur({ python: sansPlaywright, uv: () => ({ present: false, executable: null }) });
+  ligne(c.manques.length === 1 && /playwright non importable/.test(c.manques[0]) && /uv` absent/.test(c.manques[0]),
+    `sens rouge · ni le PATH ni uv ne portent playwright : manque motivé, uv nommé (${c.manques[0]?.slice(0, 60)}…)`);
+  const d = choisirInterpreteur({ python: () => ({ present: false, playwright: false }), uv: () => ({ present: true, executable: null }) });
+  ligne(d.python === null && /introuvable/.test(d.manques[0]) && /n'importe pas playwright/.test(d.manques[0]),
+    'sens rouge · aucun Python et uv sans playwright : SKIP motivé, jamais un interpréteur deviné');
+}
+
 // TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en
 // pointer-events: none dont un descendant repasse en pointer-events: auto peut porter un lien
 // focalisable : ses surfaces redeviennent des fonds d'anneau. Page écrite ici, dérivée de la verte.
