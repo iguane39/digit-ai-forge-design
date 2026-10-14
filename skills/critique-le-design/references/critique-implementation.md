@@ -31,7 +31,7 @@ sans les deux colonnes, il n'y a pas d'écart à relever, seulement une opinion.
 Sans artefacts de référence (produit hors forge), le mode dégrade en critique classique et le
 déclare — jamais de conformité jugée sans référentiel.
 
-## Méthode (7 contrôles, chacun avec preuve)
+## Méthode (8 contrôles, chacun avec preuve)
 
 1. **Tokens** : diff entre le `tokens.css` de référence et le CSS servi — toute divergence de
    valeur est nommée (token, valeur attendue, valeur constatée). Un token absent ou une couleur
@@ -66,10 +66,22 @@ déclare — jamais de conformité jugée sans référentiel.
    porte son habillage complet depuis les jetons — voir le volet ci-dessous. Oracle :
    `oracle-surcouche` (SC1–SC4), lancé d'office par `run-oracles-design.mjs` dès qu'un
    `<dialog>`, un `[popover]` ou un `role="dialog"` est détecté dans la page ou ses gabarits.
+8. **Exploitabilité au volume réel** (TF-1654, TF-1687) : chaque écran clé se rejoue sur une
+   instance **alimentée au volume réel**, jamais sur le seul jeu de démonstration —
+   `run-oracles-design.mjs <page> --instance <url|page rendue> [--etat-connexion etat.json]`,
+   ou `oracle-exploitabilite.mjs <url>…` en direct. Oracle : `oracle-exploitabilite` (X0–X5 :
+   hauteur, densité des lignes, valeurs machine, colonnes déséquilibrées, libellés). Une
+   application derrière une connexion se juge avec l'état Playwright (storageState) produit
+   par son script de connexion (`--etat-connexion`) : sans lui, l'oracle mesure la page de
+   connexion, le dit (X0) et ne juge pas l'écran. *Mesure qui l'impose* : des écrans passés
+   à la critique, à `render_page.py` et à 3 000 tests sur le jeu de démonstration mesuraient,
+   alimentés, 5 220 px en colonnes déséquilibrées. Sans instance alimentée, le contrôle est
+   **NON JOUÉ** et se déclare au rapport, jamais vert ; il se rejoue après la première
+   alimentation réelle.
 
 ## Volet « livré à l'écran » — ce que la page ne dessine pas elle-même
 
-Les six contrôles ci-dessus jugent ce que le produit dessine. Il reste une part de l'écran
+Les contrôles 1 à 6 et 8 jugent ce que le produit dessine. Il reste une part de l'écran
 que **le navigateur** dessine à sa place, et que personne ne regardait : la boîte d'un
 `dialog` en top-layer, son voile `::backdrop`, les contrôles de formulaire natifs, les barres
 de défilement, l'autofill. Cette part suit `color-scheme`, et `color-scheme` seul.
@@ -113,7 +125,7 @@ Livrer / Renforcer / Refondre, relevé d'oracles, « ce qui n'a pas été jugé 
 section « Écarts à la promesse » où chaque écart est un retour prêt à consigner :
 
 ```
-- ecart: <tokens|ecran|cta|rendu|voix>
+- ecart: <tokens|ecran|cta|rendu|voix|exploitabilite>
   ancrage: <écran, sélecteur/ligne, breakpoint, thème>
   attendu: <ce que la référence promet, avec sa source>
   constate: <ce que le produit montre, avec sa preuve>

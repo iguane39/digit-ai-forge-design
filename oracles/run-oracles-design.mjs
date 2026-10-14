@@ -27,6 +27,12 @@
 // lance oracle-a11y.py sur l'original — jamais d'écriture à côté du fichier
 // cible. Sans --rendu, comportement strictement inchangé. Outillage manquant
 // ⇒ SKIP motivé dans les résultats, jamais une erreur.
+//
+// --instance <url|page.html> [--instance …] [--etat-connexion etat.json] (TF-1687) : enrôle
+// oracle-exploitabilite (X0–X5) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
+// rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
+// est déclaré SANS OBJET à voix haute et ne pèse pas sur le verdict d'un projet sans instance.
+// --etat-connexion passe l'état Playwright (storageState) d'une application derrière une connexion.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -50,7 +56,11 @@ const LARGEUR_CONCEPTION = GRILLE.largeurConception;
 const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus'
-  && args[args.indexOf(a) - 1] !== '--oracle');
+  && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
+  && args[args.indexOf(a) - 1] !== '--etat-connexion');
+// TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
+const instances = args.filter((a, i) => args[i - 1] === '--instance');
+const etatConnexion = opt('--etat-connexion');
 
 // ── TF-1241 (22/09/2026) · UN SEUL JUGE, AVEC LA PASSE DU SOCLE, À LA FORME DU LANCEUR GÉNÉRAL ──
 // Le lanceur général de quality-oracles (`run-oracles.mjs`) indexait oracle-slop et oracle-tokens
@@ -452,6 +462,22 @@ if (socle.verifies.length) {
     try { fs.unlinkSync(tmp); } catch { /* best-effort */ }
   }
   socleExempte.verifies = socle.verifies.map(b => ({ nom: b.nom, socle: b.socle, empreinte: `sha256:${b.empreinte}` }));
+}
+
+// ── TF-1687 · l'exploitabilité au volume réel, sur l'instance alimentée seulement ──
+// oracle-exploitabilite juge l'écran que l'utilisateur subit quand les données ont leur volume
+// réel (TF-1654). Joué sur le fichier de conception, il ne prouverait rien : il n'entre donc dans
+// la passe que sur une instance FOURNIE, hors de la passe du socle (le socle ne vit pas dans
+// l'instance). Sans instance, il n'est ni lancé ni en échec : il est dit SANS OBJET, à voix haute.
+if (!seul) {
+  if (instances.length) {
+    resultats.push(lancer('oracle-exploitabilite.mjs',
+      [...instances, ...(etatConnexion ? ['--etat-connexion', etatConnexion] : [])]));
+  } else {
+    sansObjet.push('oracle-exploitabilite : SANS OBJET — aucune instance alimentée fournie '
+      + '(--instance <url|page rendue au volume réel> [--etat-connexion etat.json]) : l\'exploitabilité '
+      + 'au volume réel ne se juge pas sur le fichier de conception, elle se rejoue après la première alimentation réelle');
+  }
 }
 
 if (rendu) resultats.push(...lancerRendu(cible));

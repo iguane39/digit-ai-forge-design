@@ -74,7 +74,9 @@ Aucune séquence n'est imposée : c'est ce qui distingue une forge d'un pipeline
 node oracles/self-test.mjs                                   # non-régression, toutes fixtures vertes/rouges
 
 node oracles/run-oracles-design.mjs <page.html> \
-  [--mobile] [--tokens tokens.css] [--json-only] [--racine <chemin>]   # point d'entrée unique
+  [--mobile] [--tokens tokens.css] [--json-only] [--racine <chemin>] \
+  [--instance <url|page alimentée>… [--etat-connexion etat.json]]      # point d'entrée unique ;
+# --instance : exploitabilité X0–X5 en opt-in (TF-1687), SANS OBJET dit sans instance
 
 node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode corpus (oracle-corpus seul)
 

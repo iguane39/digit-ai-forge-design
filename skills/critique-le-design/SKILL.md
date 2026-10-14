@@ -1,7 +1,7 @@
 ---
 name: critique-le-design
 description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en huit dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Critique le design
@@ -111,7 +111,8 @@ Détail des barèmes, red flags et règle de verdict : `references/grille.md`.
 Après l'étape development d'un run forge : comparer le produit implémenté à SA promesse design
 (tokens, écrans, états, CTA, voix du run) et produire des **retours consommables par le
 développement**. Entrées doubles (artefacts design du run + instance servie ou gabarits du
-produit), cinq contrôles avec preuve, restitution en écarts ancrés prêts pour le ledger — tout
-est dans `references/critique-implementation.md`. Frontière : le câblage fonctionnel des
+produit), huit contrôles avec preuve — dont l'exploitabilité rejouée sur une instance alimentée
+au volume réel (`oracle-exploitabilite`, `--etat-connexion` derrière une connexion) —,
+restitution en écarts ancrés prêts pour le ledger — tout est dans `references/critique-implementation.md`. Frontière : le câblage fonctionnel des
 affordances reste à forge-tests (pan `interface`) ; ici on juge la forme contre la promesse.
 Sans artefacts de référence, le mode dégrade en critique classique et le déclare.

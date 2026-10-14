@@ -492,9 +492,12 @@ critère **C14** de `criteres-sortie.md`, avant C15.
 
 ## Entrée du 14/10/2026 — oracle-exploitabilite (TF-1654, TF-1674)
 
-**Remontée §4 à forge-agents : À FAIRE.** Écrite, exécutée et verrouillée au banc local
-(`self-test.mjs` : 5 règles, plus un bloc d'instance servie derrière une connexion), elle
-n'est pas injectée au registre de `quality-oracles`. Statut global : `candidat`.
+**Statut d'usage de la forge : `ok` depuis le 14/10/2026 (TF-1687, décision humaine
+« Traite A1 »).** Écrite, exécutée et verrouillée au banc local (`self-test.mjs` : 5 règles,
+un bloc d'instance servie derrière une connexion, un bloc d'enrôlement en opt-in), elle est
+sur le chemin du producteur : `run-oracles-design.mjs --instance` et le contrôle 8 de la
+méthode aval de `critique-le-design`. Son inscription au registre de `quality-oracles`
+relève de la part forge-agents du même item : ce fichier ne dit pas qu'elle est faite.
 
 Le domaine que rien ne couvrait : **l'exploitabilité d'un écran d'application au volume
 réel de ses données**. Le 12/10/2026, les écrans d'une application avaient passé la
@@ -504,13 +507,16 @@ colonnes déséquilibrées, la complétude 20 630 px, et des énumérations s'af
 brutes. Le produit a écrit son propre juge, lié à ses écrans et à sa connexion ; celui-ci
 en est la forme générique. Il se joue sur l'écran **rendu**, de préférence contre
 l'instance servie et alimentée, et la critique d'implémentation se rejoue avec lui après la
-première alimentation réelle. Il n'est pas enrôlé dans `run-oracles-design.mjs`, qui juge un
-fichier sans navigateur par défaut, ni appelé par un skill : son enrôlement dans la méthode
-de `critique-le-design` (mode aval) est un reste déclaré.
+première alimentation réelle. Il est enrôlé dans `run-oracles-design.mjs` **en opt-in**
+(TF-1687) : `--instance <url|page rendue au volume réel>`, répétable, avec
+`--etat-connexion etat.json` transmis tel quel. Sans instance fournie, il est déclaré
+`SANS OBJET` au `non_juge` et ne pèse pas sur le verdict : un projet sans instance n'échoue
+jamais par lui. Une instance fournie mais injugeable (outillage de rendu absent, état de
+connexion introuvable, redirection) rend le point d'entrée indéterminé, jamais PASS.
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes | cli | candidat (remontée §4 à faire) |
+| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes ; enrôlé en opt-in par `run-oracles-design.mjs <page.html> --instance <url\|page> [--etat-connexion etat.json]` | cli | ✅ |
 
 ```json
 [
@@ -518,7 +524,7 @@ de `critique-le-design` (mode aval) est un reste déclaré.
     "domaine": "Écran d'application : exploitabilité au volume réel des données",
     "oracle": "oracles/oracle-exploitabilite.mjs",
     "type": "cli",
-    "statut": "candidat",
+    "statut": "ok",
     "extensions": [".html"],
     "fixtures": {
       "verte": "oracles/fixtures/exploitabilite-verte.html",
@@ -527,7 +533,7 @@ de `critique-le-design` (mode aval) est un reste déclaré.
     "provenance": {
       "chantier": "forge-design",
       "date": "2026-10-14",
-      "mandat": "TF-1654, TF-1674",
+      "mandat": "TF-1654, TF-1674, TF-1687",
       "amont": "juge d'exploitabilité écrit par un produit (X1 à X5, seuils mesurés chez lui), rendu générique"
     },
     "regles": 6

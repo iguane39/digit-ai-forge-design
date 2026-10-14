@@ -1208,6 +1208,42 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1687 — UN ORACLE QUI N'EST SUR AUCUN CHEMIN N'EST JAMAIS JOUÉ. oracle-exploitabilite est
+// enrôlé dans le point d'entrée en OPT-IN : il ne juge que l'instance alimentée qu'on lui fournit
+// (--instance). La même page, toute verte par ailleurs (motion-verte.html), sert aux trois sens :
+// sans instance, l'oracle est dit SANS OBJET et le verdict reste PASS ; avec l'écran au volume réel
+// (la fixture rouge), c'est lui SEUL qui fait tomber le verdict ; avec l'écran léger, il passe.
+// L'état de connexion est transmis tel quel : un état introuvable rend SKIP, jamais PASS.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design --instance (TF-1687) — exploitabilité en opt-in, deux sens');
+  const jouer = (...a) => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), ...a, '--json-only'],
+      { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+    let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, json, explo: (json?.oracles || []).find(o => o.oracle === 'oracle-exploitabilite') };
+  };
+  const sans = jouer();
+  ligne(sans.code === 0 && sans.json?.verdict === 'PASS' && !sans.explo
+    && (sans.json?.non_juge || []).some(n => /^oracle-exploitabilite : SANS OBJET — aucune instance alimentée/.test(n)),
+    `sans instance · oracle-exploitabilite SANS OBJET dit au non_juge, non lancé, verdict PASS exit 0 — jamais un FAIL sur un projet sans instance (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+  const perime = jouer('--instance', fx('exploitabilite-verte.html'), '--etat-connexion', path.join(os.tmpdir(), 'etat-absent-tf1687.json'));
+  ligne(perime.code === 2 && perime.json?.verdict === 'SKIP' && perime.explo?.verdict === 'SKIP',
+    `--etat-connexion transmis · état introuvable : l'oracle rend SKIP et le point d'entrée INDÉTERMINÉ exit 2, jamais PASS (obtenu ${perime.json?.verdict}, exit ${perime.code})`);
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  instance jugée : outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const rouge = jouer('--instance', fx('exploitabilite-rouge.html'));
+    const regles = new Set((rouge.explo?.findings || []).map(f => f.regle));
+    const autresEnEchec = (rouge.json?.oracles || []).filter(o => o.verdict === 'FAIL' && o.oracle !== 'oracle-exploitabilite');
+    ligne(rouge.code === 1 && rouge.json?.verdict === 'FAIL' && rouge.explo?.verdict === 'FAIL' && autresEnEchec.length === 0
+      && ['X1', 'X2', 'X3', 'X4', 'X5'].every(x => regles.has(x)),
+      `sens rouge · instance au volume réel : oracle-exploitabilite FAIL (X1 à X5), seul en échec, verdict FAIL exit 1 (obtenu ${rouge.json?.verdict}, exit ${rouge.code}, ${[...regles].join(' ')})`);
+    const verte = jouer('--instance', fx('exploitabilite-verte.html'));
+    ligne(verte.code === 0 && verte.json?.verdict === 'PASS' && verte.explo?.verdict === 'PASS',
+      `sens vert · instance légère : oracle-exploitabilite lancé et PASS, verdict PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code})`);
+  }
+}
+
 // TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en
 // pointer-events: none dont un descendant repasse en pointer-events: auto peut porter un lien
 // focalisable : ses surfaces redeviennent des fonds d'anneau. Page écrite ici, dérivée de la verte.
