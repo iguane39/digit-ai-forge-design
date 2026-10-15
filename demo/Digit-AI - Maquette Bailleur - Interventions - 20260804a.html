@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Maquette — Suivi des demandes d'intervention</title>
+<title>Maquette — Suivi des demandes d'intervention — 20260804a</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23305DB0'/%3E%3Ctext x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EB%3C/text%3E%3C/svg%3E">
 <style>
 /* ============================================================
@@ -93,10 +93,12 @@ body {
   font-size: var(--texte-md);
   line-height: 1.55;
 }
-h1, h2, h3 { font-family: var(--police-titre); line-height: 1.2; margin: 0; }
-h1 { font-size: var(--texte-2xl); letter-spacing: -0.02em; }
-h2 { font-size: var(--texte-xl); }
-h3 { font-size: var(--texte-lg); }
+/* Un seul h1, le nom de l’application dans le chrome ; chaque écran s’ouvre sur un h2 (contrat
+   technique, TF-1776). Les tailles suivent le RÔLE, pas le niveau : le titre d’écran garde la taille d’affiche. */
+h1, h2, h3, h4 { font-family: var(--police-titre); line-height: 1.2; margin: 0; }
+h1, .entete-page h2 { font-size: var(--texte-2xl); letter-spacing: -0.02em; }
+h2, h3 { font-size: var(--texte-xl); }
+h4 { font-size: var(--texte-lg); }
 p { margin: 0; max-width: 68ch; }
 a { color: var(--accent); }
 code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
@@ -131,7 +133,7 @@ code, .mono { font-family: var(--police-mono); font-size: var(--texte-sm); }
   padding: var(--espace-lg) var(--espace-md);
   padding-left: max(var(--espace-md), env(safe-area-inset-left, 0px));
 }
-.marque { font-family: var(--police-titre); font-size: var(--texte-lg); margin-bottom: var(--espace-lg); }
+.marque { font-family: var(--police-titre); font-size: var(--texte-lg); letter-spacing: normal; margin-bottom: var(--espace-lg); }
 .rail nav { display: flex; flex-direction: column; gap: var(--espace-xs); }
 .rail nav a {
   display: flex; align-items: center; gap: var(--espace-sm);
@@ -267,7 +269,7 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
 
 /* ------------------------------ états ------------------------------ */
 .etat-vide { text-align: center; padding: var(--espace-2xl) var(--espace-md); }
-.etat-vide h3 { margin-bottom: var(--espace-sm); }
+.etat-vide h3, .etat-vide h4 { margin-bottom: var(--espace-sm); font-size: var(--texte-lg); }
 .etat-vide p { color: var(--texte-faible); margin: 0 auto var(--espace-md); }
 .squelette { background: var(--fond-creux); border-radius: var(--rayon-sm); height: 16px; margin-bottom: var(--espace-sm); }
 .grille-composants { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--espace-lg); }
@@ -295,7 +297,7 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
   td::before { content: attr(data-libelle); color: var(--texte-faible); font-weight: 600; }
 }
 @media (max-width: 480px) {
-  h1 { font-size: var(--texte-xl); }
+  .entete-page h2 { font-size: var(--texte-xl); }
   .contenu { padding: var(--espace-sm); }
 }
 @media (orientation: landscape) and (max-height: 480px) {
@@ -327,25 +329,25 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
 <div class="enveloppe">
   <aside class="rail">
     <header class="rail-entete">
-      <div class="marque">Bailleur — Interventions</div>
+      <h1 class="marque">Bailleur — Interventions</h1>
       <button class="btn btn-discret theme-toggle" id="bascule-theme" type="button" data-action="basculer-theme"
               data-theme-toggle aria-pressed="false"
               aria-label="Basculer le thème (clair, sombre)">Thème : light</button>
     </header>
-    <nav aria-label="Navigation principale">
-      <a href="#tableau-de-bord" data-nav="tableau-de-bord">Tableau de bord</a>
-      <a href="#demandes" data-nav="demandes">Demandes</a>
-      <a href="#demande" data-nav="demande">Fiche demande</a>
-      <a href="#composants" data-nav="composants">Bibliothèque</a>
-      <a href="#etats" data-nav="etats">États système</a>
-      <a href="#mobile" data-nav="mobile">Vue mobile</a>
+    <nav role="tablist" aria-label="Écrans de l’application">
+      <a role="tab" id="onglet-tableau-de-bord" href="#tableau-de-bord" data-nav="tableau-de-bord" aria-controls="contenu-principal" aria-selected="false" aria-label="Ouvrir l’écran Tableau de bord">Tableau de bord</a>
+      <a role="tab" id="onglet-demandes" href="#demandes" data-nav="demandes" aria-controls="contenu-principal" aria-selected="false" aria-label="Ouvrir l’écran Demandes">Demandes</a>
+      <a role="tab" id="onglet-demande" href="#demande" data-nav="demande" aria-controls="contenu-principal" aria-selected="false" aria-label="Ouvrir l’écran Fiche demande">Fiche demande</a>
+      <a role="tab" id="onglet-composants" href="#composants" data-nav="composants" aria-controls="contenu-principal" aria-selected="false" aria-label="Ouvrir l’écran Bibliothèque">Bibliothèque</a>
+      <a role="tab" id="onglet-etats" href="#etats" data-nav="etats" aria-controls="contenu-principal" aria-selected="false" aria-label="Ouvrir l’écran États système">États système</a>
+      <a role="tab" id="onglet-mobile" href="#mobile" data-nav="mobile" aria-controls="contenu-principal" aria-selected="false" aria-label="Ouvrir l’écran Vue mobile">Vue mobile</a>
     </nav>
     <p>
       <button class="btn btn-discret" id="bascule-densite" type="button" data-action="densite-table">Densité : confortable</button>
     </p>
   </aside>
 
-  <main class="contenu" id="contenu-principal" tabindex="-1"></main>
+  <main class="contenu" id="contenu-principal" role="tabpanel" aria-labelledby="onglet-tableau-de-bord" tabindex="-1"></main>
 </div>
 
 <script>/* Motion 12.23.12 — MIT — vendoré, sha256:cbaccc5c5809cdaa… */
@@ -395,7 +397,7 @@ function courbe(valeurs, largeur, hauteur) {
 const ROUTES = {
   "tableau-de-bord": () => `
     <div class="entete-page">
-      <h1>Tableau de bord</h1>
+      <h2>Tableau de bord</h2>
       <p>Semaine du 28 juillet au 3 août 2026 — patrimoine de 1 240 logements.</p>
     </div>
     <section class="kpis" aria-label="Indicateurs">
@@ -405,7 +407,7 @@ const ROUTES = {
       <div class="kpi"><span class="libelle">Clôturées ce mois</span><span class="valeur">128</span><span class="tendance">+11 %</span></div>
     </section>
     <section class="panneau">
-      <h2>Volume hebdomadaire</h2>
+      <h3>Volume hebdomadaire</h3>
       <p>Demandes reçues sur les sept dernières semaines.</p>
       <svg class="graphe" viewBox="0 0 640 200" role="img" aria-labelledby="titre-volume">
         <title id="titre-volume">Volume de demandes par semaine : 18, 24, 21, 33, 29, 41 puis 37</title>
@@ -416,7 +418,7 @@ const ROUTES = {
       </svg>
     </section>
     <section class="panneau">
-      <h2>Ce qui demande une décision</h2>
+      <h3>Ce qui demande une décision</h3>
       <div class="alerte-bloc">
         <div>
           <strong>3 demandes urgentes sans intervenant assigné.</strong>
@@ -430,7 +432,7 @@ const ROUTES = {
     const lignes = lignesFiltrees();
     if (!lignes.length) {
       return `
-        <div class="entete-page"><h1>Demandes</h1></div>
+        <div class="entete-page"><h2>Demandes</h2></div>
         ${barreTable()}
         <section class="panneau">
           <div class="etat-vide">
@@ -442,7 +444,7 @@ const ROUTES = {
     }
     return `
       <div class="entete-page">
-        <h1>Demandes</h1>
+        <h2>Demandes</h2>
         <p>${lignes.length} demande(s) affichée(s) sur ${DEMANDES.length}.</p>
       </div>
       ${barreTable()}
@@ -474,15 +476,15 @@ const ROUTES = {
 
   "demande": () => `
     <div class="entete-page">
-      <h1>DI-4821 — Fuite sous évier</h1>
+      <h2>DI-4821 — Fuite sous évier</h2>
       <p>Résidence Lilas — B12 · ouverte le 28 juillet 2026 · <span class="etiquette etiquette-urgente">Urgente</span></p>
     </div>
     <section class="panneau">
-      <h2>Ce qui a été signalé</h2>
+      <h3>Ce qui a été signalé</h3>
       <p>Écoulement continu sous l'évier de la cuisine, constaté par le locataire. Coupure d'eau partielle effectuée par le gardien.</p>
     </section>
     <section class="panneau">
-      <h2>Suivi</h2>
+      <h3>Suivi</h3>
       <ol>
         <li>28/07 — signalement reçu par téléphone, qualifié urgent.</li>
         <li>28/07 — passage du gardien, coupure partielle.</li>
@@ -492,7 +494,7 @@ const ROUTES = {
          <button class="btn btn-fantome" type="button" data-action="ajouter-suivi">Ajouter au suivi</button></p>
     </section>
     <section class="panneau">
-      <h2>Pièces jointes</h2>
+      <h3>Pièces jointes</h3>
       <div class="alerte-bloc">
         <div>
           <strong>Le devis n'a pas pu être joint.</strong>
@@ -503,32 +505,32 @@ const ROUTES = {
 
   "composants": () => `
     <div class="entete-page">
-      <h1>Bibliothèque</h1>
+      <h2>Bibliothèque</h2>
       <p>Chaque composant est montré en fonctionnement, avec ses états.</p>
     </div>
     <div class="grille-composants">
       <section class="panneau">
-        <h2>Actions</h2>
+        <h3>Actions</h3>
         <p><button class="btn" type="button" data-action="essayer-composant">Principal</button></p>
         <p><button class="btn btn-fantome" type="button" data-action="essayer-composant">Secondaire</button></p>
         <p><button class="btn btn-discret" type="button" data-action="essayer-composant">Discret</button></p>
         <p><button class="btn" type="button" disabled>Désactivé</button></p>
       </section>
       <section class="panneau">
-        <h2>Saisie</h2>
+        <h3>Saisie</h3>
         <p><label for="ex-champ">Référence</label><br>
            <input class="champ" id="ex-champ" type="text" placeholder="DI-0000"></p>
         <p><label for="ex-select">Urgence</label><br>
            <select class="champ" id="ex-select"><option>Normale</option><option>Urgente</option></select></p>
       </section>
       <section class="panneau">
-        <h2>Statuts</h2>
+        <h3>Statuts</h3>
         <p><span class="etiquette">Planifiée</span>
            <span class="etiquette etiquette-urgente">Urgente</span>
            <span class="etiquette etiquette-close">Clôturée</span></p>
       </section>
       <section class="panneau">
-        <h2>Chargement</h2>
+        <h3>Chargement</h3>
         <div class="squelette"></div>
         <div class="squelette"></div>
         <div class="squelette"></div>
@@ -536,17 +538,17 @@ const ROUTES = {
     </div>`,
 
   "etats": () => `
-    <div class="entete-page"><h1>États système</h1></div>
+    <div class="entete-page"><h2>États système</h2></div>
     <section class="panneau">
-      <h2>Vide</h2>
+      <h3>Vide</h3>
       <div class="etat-vide">
-        <h3>Aucune demande sur ce logement</h3>
+        <h4>Aucune demande sur ce logement</h4>
         <p>C'est plutôt bon signe. Tu peux quand même en créer une.</p>
         <button class="btn" type="button" data-action="creer-demande">Créer une demande</button>
       </div>
     </section>
     <section class="panneau">
-      <h2>Erreur</h2>
+      <h3>Erreur</h3>
       <div class="alerte-bloc">
         <div>
           <strong>La liste n'a pas pu être chargée.</strong>
@@ -556,20 +558,20 @@ const ROUTES = {
       </div>
     </section>
     <section class="panneau">
-      <h2>Accès refusé</h2>
+      <h3>Accès refusé</h3>
       <p>Ton profil « gardien » ne donne pas accès aux montants. Demande l'accès à ton responsable de secteur.</p>
     </section>`,
 
   "mobile": () => `
     <div class="entete-page">
-      <h1>Vue mobile</h1>
+      <h2>Vue mobile</h2>
       <p>Simulée dans un châssis. Le rendu système réel, les gestes natifs et la performance sur appareil ne sont pas reproduits.</p>
     </div>
     <div class="chassis">
       <div class="chassis-encoche" aria-hidden="true"></div>
       <div class="chassis-etat" aria-hidden="true"><span>9:41</span><span>100 %</span></div>
       <div class="chassis-vue">
-        <h2>Mes demandes</h2>
+        <h3>Mes demandes</h3>
         <p>3 en cours, 1 planifiée.</p>
         ${lignesFiltrees().slice(0, 4).map((d) => `
           <div class="panneau">
@@ -583,7 +585,7 @@ const ROUTES = {
       <button class="voile" type="button" data-action="feuille-fermer" aria-label="Fermer le filtre"></button>
       <div class="feuille" role="dialog" aria-modal="true" aria-label="Filtrer les demandes">
         <div class="feuille-poignee" aria-hidden="true"></div>
-        <h3>Filtrer</h3>
+        <h4>Filtrer</h4>
         <p><button class="btn btn-fantome" type="button" data-action="filtrer-urgentes">Urgentes seulement</button></p>
         <p><button class="btn btn-fantome" type="button" data-action="filtrer-non-assignees">Non assignées</button></p>
         <p><button class="btn" type="button" data-action="feuille-fermer">Fermer</button></p>
@@ -614,9 +616,11 @@ function route() {
 function rendre() {
   const r = route();
   document.querySelector("main").innerHTML = ROUTES[r]();
+  document.querySelector("main").setAttribute("aria-labelledby", "onglet-" + r);
   document.querySelectorAll("[data-nav]").forEach((a) => {
     if (a.getAttribute("data-nav") === r) a.setAttribute("aria-current", "page");
     else a.removeAttribute("aria-current");
+    a.setAttribute("aria-selected", a.getAttribute("data-nav") === r ? "true" : "false");
   });
   document.documentElement.style.setProperty("--densite", ETAT.densite === "compact" ? "4px" : "12px");
   animerEntree();
