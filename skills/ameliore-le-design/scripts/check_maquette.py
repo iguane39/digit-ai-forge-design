@@ -301,11 +301,22 @@ def controler(chemin, plafond_mo):
 
     # Deux themes
     a_bascule = bool(re.search(r"data-theme|classList\.toggle\(\s*['\"]dark", html))
-    a_sombre = bool(re.search(r"prefers-color-scheme\s*:\s*dark|\[data-theme=['\"]?dark", html))
+    # R-30 du pilot (clair par defaut strict, amendement TF-0158) : le sombre se CHOISIT par la
+    # bascule et se declare sous [data-theme="dark"]. Un @media (prefers-color-scheme: dark) ne
+    # compte plus comme styles sombres (check_html G1 le refuse) et se signale (suite TF-1771).
+    css_actif = re.sub(r"/\*.*?\*/", " ", re.sub(r"<!--.*?-->", " ", html, flags=re.S), flags=re.S)
+    a_sombre = bool(re.search(r"\[data-theme\s*=\s*['\"]?dark", css_actif))
     if not (a_bascule and a_sombre):
         findings.append({
             "critere": "C1", "gravite": "bloquant", "ou": "themes",
-            "constat": "theme sombre incomplet (bascule=%s, styles=%s)" % (a_bascule, a_sombre),
+            "constat": "theme sombre incomplet (bascule=%s, styles [data-theme=\"dark\"]=%s)" % (a_bascule, a_sombre),
+        })
+    if re.search(r"prefers-color-scheme\s*:\s*dark", css_actif):
+        findings.append({
+            "critere": "C1", "gravite": "avertissement", "ou": "themes",
+            "constat": "auto-sombre herite de l'OS : @media (prefers-color-scheme: dark) - R-30 (clair "
+                       "par defaut strict) le retire et check_html G1 le refuse ; declarer le sombre "
+                       "sous :root[data-theme=\"dark\"] seul",
         })
 
     # Plancher d'accessibilite decidable statiquement

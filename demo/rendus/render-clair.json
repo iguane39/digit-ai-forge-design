@@ -1,9 +1,19 @@
 {
   "file": "demo\\rendus\\maquette.html",
+  "url": "file:///C:/dev/digit-ai-forge-design/demo/rendus/maquette.html",
+  "servie": false,
+  "origine": "file://",
   "png_dir": "demo\\rendus",
   "breakpoints": {
     "1920": {
       "png": "demo\\rendus\\maquette-w1920.png",
+      "capture": {
+        "faite": true,
+        "motif": "",
+        "hauteur_css": 1223,
+        "hauteur_max": 50000,
+        "ratio": 0.64
+      },
       "issues": {
         "v1_overflow": [],
         "v2_contrast": [],
@@ -17,12 +27,40 @@
         ],
         "l2_width": [],
         "l2_gouttiere": [],
-        "unmeasured": []
+        "l2_conteneur": [],
+        "l2_filet": [],
+        "l2_freres": [],
+        "contenu_rogne": [],
+        "controles_desalignes": [],
+        "rognage_donnees": [],
+        "prose_etroite": [],
+        "sommaire_perdu": [],
+        "etats_indiscernables": [],
+        "conteneur_bride_donnees": [],
+        "overlap_en_bloc": [],
+        "mot_coupe": [],
+        "decor_sur_ancetre": [],
+        "entete_desaligne": [],
+        "unmeasured": [],
+        "entete_pose_sur_lignes": [],
+        "entete_ne_colle_pas": [],
+        "entete_masque_par_collants": [],
+        "entete_bride_par_tableau": [],
+        "v18_prose_etiree": [],
+        "v18_tableau_etrique": [],
+        "v9_actif_invisible": []
       },
       "blocking": 0
     },
     "1440": {
       "png": "demo\\rendus\\maquette-w1440.png",
+      "capture": {
+        "faite": true,
+        "motif": "",
+        "hauteur_css": 1073,
+        "hauteur_max": 50000,
+        "ratio": 0.75
+      },
       "issues": {
         "v1_overflow": [],
         "v2_contrast": [],
@@ -36,12 +74,40 @@
         ],
         "l2_width": [],
         "l2_gouttiere": [],
-        "unmeasured": []
+        "l2_conteneur": [],
+        "l2_filet": [],
+        "l2_freres": [],
+        "contenu_rogne": [],
+        "controles_desalignes": [],
+        "rognage_donnees": [],
+        "prose_etroite": [],
+        "sommaire_perdu": [],
+        "etats_indiscernables": [],
+        "conteneur_bride_donnees": [],
+        "overlap_en_bloc": [],
+        "mot_coupe": [],
+        "decor_sur_ancetre": [],
+        "entete_desaligne": [],
+        "unmeasured": [],
+        "entete_pose_sur_lignes": [],
+        "entete_ne_colle_pas": [],
+        "entete_masque_par_collants": [],
+        "entete_bride_par_tableau": [],
+        "v18_prose_etiree": [],
+        "v18_tableau_etrique": [],
+        "v9_actif_invisible": []
       },
       "blocking": 0
     },
     "1024": {
       "png": "demo\\rendus\\maquette-w1024.png",
+      "capture": {
+        "faite": true,
+        "motif": "",
+        "hauteur_css": 1166,
+        "hauteur_max": 50000,
+        "ratio": 1.14
+      },
       "issues": {
         "v1_overflow": [],
         "v2_contrast": [],
@@ -55,12 +121,40 @@
         ],
         "l2_width": [],
         "l2_gouttiere": [],
-        "unmeasured": []
+        "l2_conteneur": [],
+        "l2_filet": [],
+        "l2_freres": [],
+        "contenu_rogne": [],
+        "controles_desalignes": [],
+        "rognage_donnees": [],
+        "prose_etroite": [],
+        "sommaire_perdu": [],
+        "etats_indiscernables": [],
+        "conteneur_bride_donnees": [],
+        "overlap_en_bloc": [],
+        "mot_coupe": [],
+        "decor_sur_ancetre": [],
+        "entete_desaligne": [],
+        "unmeasured": [],
+        "entete_pose_sur_lignes": [],
+        "entete_ne_colle_pas": [],
+        "entete_masque_par_collants": [],
+        "entete_bride_par_tableau": [],
+        "v18_prose_etiree": [],
+        "v18_tableau_etrique": [],
+        "v9_actif_invisible": []
       },
       "blocking": 0
     },
     "768": {
       "png": "demo\\rendus\\maquette-w768.png",
+      "capture": {
+        "faite": true,
+        "motif": "",
+        "hauteur_css": 1407,
+        "hauteur_max": 50000,
+        "ratio": 1.83
+      },
       "issues": {
         "v1_overflow": [],
         "v2_contrast": [],
@@ -74,12 +168,45 @@
         ],
         "l2_width": [],
         "l2_gouttiere": [],
-        "unmeasured": []
+        "l2_conteneur": [],
+        "l2_filet": [],
+        "l2_freres": [],
+        "contenu_rogne": [],
+        "controles_desalignes": [],
+        "rognage_donnees": [],
+        "prose_etroite": [],
+        "sommaire_perdu": [],
+        "etats_indiscernables": [],
+        "conteneur_bride_donnees": [],
+        "overlap_en_bloc": [],
+        "mot_coupe": [],
+        "decor_sur_ancetre": [],
+        "entete_desaligne": [],
+        "unmeasured": [],
+        "entete_pose_sur_lignes": [],
+        "entete_ne_colle_pas": [],
+        "entete_masque_par_collants": [],
+        "entete_bride_par_tableau": [],
+        "v18_prose_etiree": [],
+        "v18_tableau_etrique": [],
+        "v9_actif_invisible": []
       },
       "blocking": 0
     },
     "390": {
       "png": "demo\\rendus\\maquette-w390.png",
+      "capture": {
+        "faite": true,
+        "motif": "",
+        "hauteur_css": 1879,
+        "hauteur_max": 50000,
+        "ratio": 4.82,
+        "tuiles": [
+          "maquette-w390-ecran01.png",
+          "maquette-w390-ecran02.png",
+          "maquette-w390-ecran03.png"
+        ]
+      },
       "issues": {
         "v1_overflow": [],
         "v2_contrast": [],
@@ -93,10 +220,45 @@
         ],
         "l2_width": [],
         "l2_gouttiere": [],
-        "unmeasured": []
+        "l2_conteneur": [],
+        "l2_filet": [],
+        "l2_freres": [],
+        "contenu_rogne": [],
+        "controles_desalignes": [],
+        "rognage_donnees": [],
+        "prose_etroite": [],
+        "sommaire_perdu": [],
+        "etats_indiscernables": [],
+        "conteneur_bride_donnees": [],
+        "overlap_en_bloc": [],
+        "mot_coupe": [],
+        "decor_sur_ancetre": [],
+        "entete_desaligne": [],
+        "unmeasured": [],
+        "entete_pose_sur_lignes": [],
+        "entete_ne_colle_pas": [],
+        "entete_masque_par_collants": [],
+        "entete_bride_par_tableau": [],
+        "v18_prose_etiree": [],
+        "v18_tableau_etrique": [],
+        "v9_actif_invisible": []
       },
       "blocking": 0
     }
   },
-  "verdict": "PASS"
+  "verdict": "PASS",
+  "non_juge": [
+    "OUVERTE EN `file://` : les actifs references en chemin ABSOLU (`/…`) ne resolvent pas ici et disparaissent sans bruit, et tout comportement garde par `location.protocol` ne s'execute pas. Ne pas lire ce PASS comme un verdict sur le livrable SERVI : le rejouer sur une instance servie (TF-1093)",
+    "THEME RENDU : clair uniquement (prefers-color-scheme). L'autre schema de couleurs n'est ni rendu ni mesure ici : le rejouer avec --theme sombre si la page en porte un (TF-1674)",
+    "ETAT DE LA PAGE : seul l'etat INITIAL (tel que la page se charge) est rendu et mesure ici — aucune interaction n'est rejouee sur cette execution (--etats-ouverts, --matrice-etats, --matrice-paires rejouent des etats DECLARES, aucun n'est actif). Une page a plusieurs vues (onglets, etapes, accordeons) dont le changement depend d'un script garde ses AUTRES vues NI RENDUES NI MESUREES, meme sur un verdict PASS (TF-1370)",
+    "V5 croisements et V6 images : a inspecter sur les PNG produits",
+    "HAUTEUR : seuil de jugement visuel 50000 px CSS, non atteint (1223 px a 1920 px, 1073 px a 1440 px, 1166 px a 1024 px, 1407 px a 768 px, 1879 px a 390 px). Au-dela, aucune capture n est tentee et le constat est rendu immediatement — le remede est de decouper la page. `--hauteur-max` deplace la borne",
+    "V18 NON JOUEE : aucune largeur >= 2560 px dans cette grille. La prose etiree et le tableau principal etrique du 4K ne sont pas juges — ne pas lire ce silence comme une page verifiee jusqu a 3840 px (regle E5)",
+    "V9 : un actif visuel dont le contraste vit ENTRE 1,2 et 3,0 contre son fond n'est PAS juge — sous 1,2 il est indiscernable et c'est un bloquant, au-dela de 3,0 il tient le seuil WCAG 1.4.11 ; entre les deux, savoir si l'actif porte du sens ou decore est un jugement humain. Ne pas lire ce silence comme un vert",
+    "V9 : les elements `position: sticky | fixed` qui ne sont ni un ancetre ni un descendant de l'actif sont rendus invisibles LE TEMPS de sa capture, puis restaures — un bandeau collant peint a la hauteur d'un schema dans la capture n'est pas le fond de ce schema, et aucun lecteur ne le voit ainsi (TF-1192). L'actif POSE DANS un bandeau collant garde le sien : c'est bien son fond. Ce qu'un element collant masque a l'ECRAN reste, lui, un jugement humain",
+    "LES 22 ORACLES DE `digit-ai-forge-design` LUS SUR LE DISQUE (C:/dev/digit-ai-forge-design/oracles) JUGENT CETTE MÊME PAGE ET N'ONT PAS ÉTÉ JOUÉS ICI (liste RELUE à chaque appel, jamais figée — TF-1290) : oracle-barre-externe · oracle-bascule · oracle-baseline · oracle-coherence-promesse · oracle-corpus · oracle-declencheurs · oracle-dtcg · oracle-exploitabilite · oracle-images · oracle-liste-demande · oracle-mobile · oracle-motion · oracle-panneau-tache · oracle-perceptibilite · oracle-restitution · oracle-saisie · oracle-slop · oracle-surcouche · oracle-taste · oracle-textes-application · oracle-theme-powerbi · oracle-tokens. Les jouer, d'un coup : `node C:/dev/digit-ai-forge-design/oracles/run-oracles-design.mjs <page.html>`, ou un par un : `node C:/dev/digit-ai-forge-design/oracles/<oracle>.mjs <page.html>`"
+  ],
+  "theme": "clair (defaut du navigateur)",
+  "captures_manquees": [],
+  "hauteur_max": 50000
 }

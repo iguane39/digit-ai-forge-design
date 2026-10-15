@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="fr" data-theme="auto">
+<html lang="fr" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -52,29 +52,8 @@
   --ease-sortie: cubic-bezier(.16, 1, .3, 1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --fond-page: oklch(0.17 0.010 250);
-    --fond-surface: oklch(0.22 0.014 250);
-    --fond-creux: oklch(0.26 0.016 250);
-    --texte-principal: oklch(0.96 0.006 250);
-    --texte-faible: oklch(0.76 0.012 250);
-    --trait: oklch(0.33 0.018 250);
-    --accent: oklch(0.72 0.130 250);
-    --accent-contraste: oklch(0.16 0.010 250);
-    --focus-anneau: oklch(0.72 0.130 250);
-    --focus-decalage: 2px;
-    --alerte: oklch(0.75 0.130 30);
-    --alerte-fond: oklch(0.27 0.030 30);
-    --succes: oklch(0.75 0.100 150);
-    --succes-fond: oklch(0.26 0.028 150);
-    --ombre: 0 2px 8px oklch(0.10 0.010 250 / 0.50);
-    --ombre-haute: 0 8px 24px oklch(0.10 0.010 250 / 0.60);
-    --voile-fond: oklch(0.08 0.008 250 / 0.60);
-  }
-}
-
+/* Thème sombre : CHOISI par la bascule, jamais hérité du système (R-30 du pilot, clair par
+   défaut strict, TF-0158) — aucun @media (prefers-color-scheme: dark), refusé par check_html G1. */
 :root[data-theme="dark"] {
   color-scheme: dark;
   --fond-page: oklch(0.17 0.010 250); --fond-surface: oklch(0.22 0.014 250);
@@ -347,7 +326,7 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
       <div class="marque">Bailleur — Interventions</div>
       <button class="btn btn-discret theme-toggle" id="bascule-theme" type="button"
               data-theme-toggle aria-pressed="false"
-              aria-label="Basculer le thème (auto, clair, sombre)">Thème : auto</button>
+              aria-label="Basculer le thème (clair, sombre)">Thème : light</button>
     </header>
     <nav aria-label="Navigation principale">
       <a href="#tableau-de-bord" data-nav="tableau-de-bord">Tableau de bord</a>
@@ -675,9 +654,9 @@ function appliquerTheme(theme, bouton) {
   const bouton = document.getElementById("bascule-theme");
   if (bouton) {
     bouton.addEventListener("click", function () {
-      const ordre = ["auto", "light", "dark"];
+      const ordre = ["light", "dark"];
       const courant = document.documentElement.getAttribute("data-theme");
-      appliquerTheme(ordre[(ordre.indexOf(courant) + 1) % 3], bouton);
+      appliquerTheme(ordre[(ordre.indexOf(courant) + 1) % ordre.length], bouton);
     });
   }
 })();

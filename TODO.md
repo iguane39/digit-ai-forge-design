@@ -126,3 +126,6 @@ appelle un producteur d'images tiers, et de refaire les cinq captures par largeu
 → **Reco : ne rien faire dans ce lot.** L'écart est de même nature que celui déjà
 déclaré pour `dist/` : le gabarit mène, l'artefact construit suit à la prochaine
 reconstruction mandatée. La règle, elle, est verrouillée par ses deux fixtures.
+→ **Soldé le 15/10/2026** (suite de TF-1771) : gabarit aligné sur R-30 (clair strict, plus
+d'auto-sombre ni d'état « auto »), `demo/build.mjs` rejoué (il n'appelle aucun producteur
+d'images : il inline Motion, empreinte vérifiée), `demo/rendus/` recapturé aux cinq largeurs.

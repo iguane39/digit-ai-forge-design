@@ -1471,6 +1471,35 @@ for (const cas of CAS) {
   }
 }
 
+// Seconde vague du 15/10 (suite de TF-1771) — check_maquette C1 acceptait un thème sombre porté par
+// le seul @media (prefers-color-scheme: dark), que R-30 retire et que check_html G1 refuse. Le sombre
+// se déclare sous :root[data-theme="dark"] ; l'auto-sombre est en plus signalé. Deux sens.
+{
+  console.log(String.fromCharCode(10) + 'check_maquette.py C1 — le sombre se déclare par data-theme, jamais par l\'OS (R-30)');
+  if (!PYTHON) {
+    console.log('  SKIP  interpréteur python introuvable dans le PATH (python / python3)');
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'maquette-c1-'));
+    try {
+      const hote = fs.readFileSync(fx('maquette-vendor-verte.html'), 'utf8');
+      const bloc = '[data-theme="dark"] { --fond: #101010; --texte: #f2f2f2; }';
+      const c1 = html => {
+        const f = path.join(dossier, 'p.html');
+        fs.writeFileSync(f, html, 'utf8');
+        const r = spawnSync(PYTHON, [skill('check_maquette.py'), f, '--json-only'], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        return (j?.findings || []).filter(x => x.critere === 'C1' && x.ou === 'themes');
+      };
+      ligne(hote.includes(bloc) && c1(hote).length === 0, 'sens vert · palette sombre sous [data-theme="dark"] : C1 thèmes muet');
+      const r = c1(hote.replace(bloc, '@media (prefers-color-scheme: dark) { :root { --fond: #101010; --texte: #f2f2f2; } }'));
+      ligne(r.some(x => x.gravite === 'bloquant') && r.some(x => /prefers-color-scheme/.test(x.constat)),
+        `sens rouge · sombre porté par prefers-color-scheme seul : C1 bloquant et auto-sombre signalé (obtenu ${r.map(x => x.gravite).join(' ') || 'rien'})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

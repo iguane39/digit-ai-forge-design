@@ -93,11 +93,11 @@
     "accent":         { "$value": "{couleur.clair.blue}" }
   },
   "$fraicheur": {
-    "verifie_le": "2026-09-14",
+    "verifie_le": "2026-10-15",
     "sources": [
       { "cle": "boilerplate:root-clair", "chemin": "~/.claude/skills/digit-ai-page-html/assets/boilerplate.html", "empreinte": "d985f79c3883c8b66069d3700fefd2b8d6a9e5236eea8ab968de9e6df674a4bb" },
       { "cle": "boilerplate:root-dark",  "chemin": "~/.claude/skills/digit-ai-page-html/assets/boilerplate.html", "empreinte": "4c9ba2cd38f00fcfc26e7bcfed92d0372093531417b2cd6e921e4ce6a07898be" },
-      { "cle": "charte:root-solid",      "chemin": "~/.claude/skills/digit-ai-page-html/references/charte-et-tokens.md", "empreinte": "d731995ab1d40ce093157623899421ea595c1899f68d224d59389f272b2e5a38" }
+      { "cle": "charte:root-solid",      "chemin": "~/.claude/skills/digit-ai-page-html/references/charte-et-tokens.md", "empreinte": "d009f0b1effbf81ecb4d67b702752708e039ba31f8a85e4ce59b0b3c4197cdd6" }
     ]
   }
 }
