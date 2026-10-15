@@ -78,11 +78,24 @@ export function choisirInterpreteur(sondes) {
  * « sombres » différents finiraient par se contredire.
  */
 export function injecterThemeSombre(html) {
+  let copie;
   if (/<html\b[^>]*\bdata-theme\s*=\s*"[^"]*"/i.test(html)) {
-    return html.replace(/(<html\b[^>]*\bdata-theme\s*=\s*")[^"]*(")/i, '$1dark$2');
+    copie = html.replace(/(<html\b[^>]*\bdata-theme\s*=\s*")[^"]*(")/i, '$1dark$2');
+  } else if (/<html\b[^>]*>/i.test(html)) {
+    copie = html.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs} data-theme="dark">`);
+  } else {
+    return html; // pas de <html> détecté — copie renvoyée telle quelle
   }
-  if (/<html\b[^>]*>/i.test(html)) {
-    return html.replace(/<html\b([^>]*)>/i, (m, attrs) => `<html${attrs} data-theme="dark">`);
-  }
-  return html; // pas de <html> détecté — copie renvoyée telle quelle
+  // TF-1775 (lot Produit-83 du 15/10/2026) — LE SOMBRE DEMANDÉ TIENT FACE AU SCRIPT DE LA PAGE.
+  // Une page au pattern S-G1 (R-30 : clair par défaut, choix lu en localStorage) réécrit
+  // data-theme au chargement : la copie « sombre » se rendait en clair, et la passe dite sombre
+  // mesurait le clair (render_page le publie depuis TF-1718 : « THEME DEMANDE NON RENDU »). Un
+  // observateur posé AVANT tout script de la page remet data-theme="dark" à chaque réécriture.
+  // Il ne vit que dans cette copie de rendu, jamais dans le livrable.
+  const garde = '<script data-forge-theme-force>(function(){var d=document.documentElement;'
+    + 'd.setAttribute("data-theme","dark");new MutationObserver(function(){'
+    + 'if(d.getAttribute("data-theme")!=="dark")d.setAttribute("data-theme","dark");})'
+    + '.observe(d,{attributes:true,attributeFilter:["data-theme"]});})();</script>';
+  if (/<head\b[^>]*>/i.test(copie)) return copie.replace(/<head\b[^>]*>/i, m => m + garde);
+  return copie.replace(/<html\b[^>]*>/i, m => m + garde);
 }

@@ -168,7 +168,7 @@ export function genererCss(dtcg, sourcePath = 'corpus/tokens-digit-ai.tokens.jso
 
   const aSombre = Object.keys(sombre).filter(k => !k.startsWith('$')).length > 0;
   const schemaSombre = aSombre ? 'color-scheme: dark; ' : '';
-  const blocSchemaSombre = aSombre ? '    color-scheme: dark;\n' : '';
+
 
   const sombreUneLigle = Object.entries(sombre).filter(([k]) => !k.startsWith('$'))
     .map(([nom, noeud]) => `--${nom}: ${valeurCss(noeud)};`).join(' ');
@@ -205,13 +205,8 @@ ${lignesAlias}
 ${lignesEspace}
 ${blocFocus}${blocMouvement}}
 
-/* --- Thème sombre, dérivé --- */
-@media (prefers-color-scheme: dark) {
-  :root {
-${blocSchemaSombre}${blocCouleurs(sombre)}
-  }
-}
-
+/* --- Thème sombre, dérivé : CHOISI par la bascule (data-theme sur <html>), jamais hérité
+       du système — R-30 du pilot, clair par défaut strict (TF-0158, TF-1771) --- */
 :root[data-theme="dark"] { ${schemaSombre}${sombreUneLigle} }
 
 :root[data-theme="light"] { color-scheme: light; ${clairUneLigne} }

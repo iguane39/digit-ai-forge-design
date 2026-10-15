@@ -87,33 +87,8 @@
   --echelle-entree: 0.96;
 }
 
-/* --- Thème sombre, dérivé --- */
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-  --bg: #0B1220;
-  --card: #121B2E;
-  --surface: #121B2E;
-  --ink: #EEF2F8;
-  --muted: #A9B4C4;
-  --faint: #7C8AA0;
-  --line: #263248;
-  --blue: #7DA2F5;
-  --green: #7BE0A0;
-  --green-fill: #0F2A1B;
-  --green-line: #1C4A30;
-  --amber: #FBBF6D;
-  --amber-fill: #2B2210;
-  --amber-line: #4A3A18;
-  --teal: #5FE6D6;
-  --teal-fill: #0E2A27;
-  --teal-line: #164E48;
-  --red: #F5A3A3;
-  --red-fill: #2C1416;
-  --red-line: #4C1F22;
-  }
-}
-
+/* --- Thème sombre, dérivé : CHOISI par la bascule (data-theme sur <html>), jamais hérité
+       du système — R-30 du pilot, clair par défaut strict (TF-0158, TF-1771) --- */
 :root[data-theme="dark"] { color-scheme: dark; --bg: #0B1220; --card: #121B2E; --surface: #121B2E; --ink: #EEF2F8; --muted: #A9B4C4; --faint: #7C8AA0; --line: #263248; --blue: #7DA2F5; --green: #7BE0A0; --green-fill: #0F2A1B; --green-line: #1C4A30; --amber: #FBBF6D; --amber-fill: #2B2210; --amber-line: #4A3A18; --teal: #5FE6D6; --teal-fill: #0E2A27; --teal-line: #164E48; --red: #F5A3A3; --red-fill: #2C1416; --red-line: #4C1F22; }
 
 :root[data-theme="light"] { color-scheme: light; --bg: #FAFBFF; --card: #FFFFFF; --surface: #FFFFFF; --ink: #0F172A; --muted: #64748B; --faint: #94A3B8; --line: #E6EAF2; --blue: #2563EB; --green: #15803D; --green-fill: #F2FCF5; --green-line: #CFEEDD; --amber: #D97706; --amber-fill: #FFFBEB; --amber-line: #FDE9C8; --teal: #0E9488; --teal-fill: #EFFDFB; --teal-line: #C7F0EA; --red: #B91C1C; --red-fill: #FEF2F2; --red-line: #F6CFCF; --green-solid: #166534; --teal-solid: #0F5F8F; --amber-solid: #92400E; --red-solid: #B91C1C; --slate-solid: #4B5563; --violet-solid: #7E22CE; }

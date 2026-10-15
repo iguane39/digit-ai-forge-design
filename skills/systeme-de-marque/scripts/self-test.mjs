@@ -278,6 +278,29 @@ try {
 
   const ri = lancer(["--tokens", join(atelier, "absent.css"), "--marque", marque, "--sortie", join(atelier, "x.md")]);
   ok("fichier de tokens introuvable → sortie non nulle, jamais un document vide", ri.status !== 0);
+
+  // --- TF-1777 (lot Produit-83 du 15/10) : le GABARIT de MARQUE.md (references/voix.md) ne
+  // prévoyait ni « Parti pris » ni « Voix », que ce générateur lit. Une marque écrite au gabarit
+  // perdait la dérivation de sa DA : DESIGN.md recevait une phrase générique, en silence.
+  const gabaritVoix = readFileSync(join(ICI, "..", "references", "voix.md"), "utf8");
+  const blocGabarit = (gabaritVoix.match(/```markdown\n([\s\S]*?)```/) || [, ""])[1];
+  ok("TF-1777 · le gabarit voix.md prévoit « ## Parti pris »", /^## Parti pris/m.test(blocGabarit));
+  ok("TF-1777 · le gabarit voix.md prévoit « ## Voix »", /^## Voix/m.test(blocGabarit));
+
+  const marqueAuGabarit = ecrire("MARQUE-gabarit.md", blocGabarit.replace("{Client}", "Atelier Ferrand"));
+  const sortieGabarit = join(atelier, "DESIGN-gabarit.md");
+  const rg = lancer(["--tokens", tokens, "--marque", marqueAuGabarit, "--sortie", sortieGabarit]);
+  ok("TF-1777 · sens vert : une marque écrite au gabarit génère sans avertissement de dérivation",
+    rg.status === 0 && !/AVERTISSEMENT/.test(rg.stderr), `exit ${rg.status} ${rg.stderr.slice(0, 160)}`);
+
+  const marqueSansDa = ecrire("MARQUE-sans-da.md", "# Marque — Atelier Ferrand\n\n## Ton\n\nSobre, précis, chaleureux.\n");
+  const sortieSansDa = join(atelier, "DESIGN-sans-da.md");
+  const rda = lancer(["--tokens", tokens, "--marque", marqueSansDa, "--sortie", sortieSansDa]);
+  ok("TF-1777 · sens rouge : sans « Parti pris » ni « Voix », un AVERTISSEMENT nomme les deux sections",
+    /AVERTISSEMENT/.test(rda.stderr) && rda.stderr.includes("Parti pris") && rda.stderr.includes("Voix"), rda.stderr.slice(0, 200));
+  const docSansDa = existsSync(sortieSansDa) ? readFileSync(sortieSansDa, "utf8") : "";
+  ok("TF-1777 · … et DESIGN.md écrit la limite au lieu d'un principe générique",
+    /## Principes\s+⚠/.test(docSansDa) && !docSansDa.includes("La référence spécifique prime sur l'adjectif"));
 } finally {
   rmSync(atelier, { recursive: true, force: true });
 }

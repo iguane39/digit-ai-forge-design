@@ -27,6 +27,12 @@
 //   T4-4  ERREUR QUI S'EXCUSE — « désolé », « oups », « sorry », « oops » : avertissement.
 //         L'excuse occupe la place de la cause et de la réparation.
 //
+// CE QUI N'EST PAS UN MESSAGE (TF-1762, TF-1773, 15/10/2026) — la négation du vide
+// (« non vide », « pas vide »), l'infobulle `title` d'un code lié (balise de code, ou élément
+// dont le texte est un identifiant « C2 », « E-020 »), une valeur de statut seule (« Échec »,
+// « Refusé »), une pastille de statut (classe badge, pastille, statut…) et un libellé de donnée
+// où le mot d'erreur est complément de nom (« Date du refus »). Un `role="alert"` reste jugé.
+//
 // POURQUOI T4-1…T4-4 ET NON TA1…TA4. Le lot du pilot nomme ces règles TA1 à TA4 ; ces
 // quatre identifiants sont DÉJÀ pris dans cette forge par `oracle-taste` (TA1 familles
 // d'accent, TA2 saturation, TA3 filets, TA4 systèmes cohabitants), et `grille.md` les cite
@@ -167,6 +173,15 @@ const RX_CAUSE = motif(INDICES_CAUSE);
 const RX_ACTION = motif(VERBES_ACTION);
 const RX_EXCUSE = motif(MARQUES_EXCUSE);
 
+// TF-1762 — la négation du vide (« non vide », « non-vide », « pas vide », « jamais vide »).
+const RX_VIDE_NIE = /(^|[^a-z0-9])(non|pas|jamais|plus|ni)[ -](vide|vides|empty)(?=[^a-z0-9]|$)/g;
+// TF-1773 — une valeur de statut seule (« Échec », « En erreur », « Refusé »). Le vide n'y
+// figure pas : « Vide » seul reste un état vide jugé par T4-2.
+const RX_STATUT_SEUL = /^(en )?(echec|echecs|echoue|echouee|erreur|erreurs|error|failed|failure|refus|refuse|refusee|refuses|refusees|rejete|rejetee|invalide)$/;
+// TF-1773 — le mot d'erreur en complément de nom d'un libellé (« Date du refus », « Taux
+// d'erreur », « Motif de l'échec ») : il nomme une donnée, il n'annonce pas un incident.
+const RX_COMPLEMENT_DE_NOM = /^[a-z0-9']+(?: [a-z0-9']+){0,3} (?:du|des|de la|de l'|de|d'|par|apres|avant|sans|au|aux|pour) ?(?:l')?(refus|refuses|echec|echecs|erreur|erreurs|error|errors|failure|rejet|rejets)$/;
+const court = t => !/[.!?…]/.test(t) && t.trim().split(/\s+/).length <= 5;
 // ── Jugement — fonction pure, testable sans fichier ─────────────────────────
 /**
  * @param {{cle:string, texte:string, contexte?:string, ou?:string}[]} entrees
@@ -187,11 +202,23 @@ export function juger(entrees) {
     const ou = e.ou || e.cle || '(sans clé)';
     const extrait = texte.length > 90 ? texte.slice(0, 90) + '…' : texte;
 
-    const estErreur = RX_ERREUR.test(signal);
+    // TF-1762, TF-1773 — UN LIBELLÉ DE DONNÉE N'EST PAS UN MESSAGE. Trois formes se lisaient
+    // en erreur ou en état vide, en bloquant, sans en être : la définition d'un code lié
+    // (infobulle « plan Terraform non vide » sur C2), la valeur d'un statut (tuile « Échec »,
+    // pastille « badge erreur ») et l'en-tête qui nomme une donnée (« Date du refus »). Un
+    // texte qui s'affiche comme une alerte (role="alert") reste toujours jugé.
+    const nuTexte = nTexte.replace(/[.!?…:;]+$/, '').trim();
+    const estAlerte = /(^| )alert( |$)/.test(normaliser(e.contexte || ''));
+    const libelleDeDonnee = !estAlerte && (e.definition || e.statut
+      || RX_STATUT_SEUL.test(nuTexte) || RX_COMPLEMENT_DE_NOM.test(nuTexte) && court(texte));
+    // « non vide », « pas vide », « jamais vide » : la négation du vide n'est pas un vide.
+    const signalVide = signal.replace(RX_VIDE_NIE, ' ');
+
+    const estErreur = !libelleDeDonnee && RX_ERREUR.test(signal);
     // Précédence assumée : une chaîne qui porte les deux marques est jugée comme une
     // ERREUR. « Aucune erreur » relève du message d'erreur, pas de l'état vide, et un
     // état vide accusé de ne pas réparer serait un faux positif bruyant.
-    const estVide = !estErreur && RX_VIDE.test(signal);
+    const estVide = !libelleDeDonnee && !estErreur && RX_VIDE.test(signalVide);
 
     if (estErreur) {
       erreurs++;
@@ -321,6 +348,9 @@ export function extraireProperties(brut) {
 
 const ATTRS_TEXTE = ['placeholder', 'title', 'aria-label', 'alt'];
 const BALISES_TEXTE = ['button', 'label', 'option'];
+const BALISES_CODE = ['abbr', 'code', 'dfn', 'kbd', 'samp', 'var'];
+const RX_IDENTIFIANT_CODE = /^[A-Z]{1,5}[-_]?\d{1,4}[a-z]?$/;
+const RX_CLASSE_PASTILLE = /(^|[ _-])(badge|pastille|chip|pill|tag|statut|status|etiquette)([ _-]|$)/;
 
 export function extraireHtml(brut) {
   const racine = parseHtml(brut);
@@ -336,17 +366,25 @@ export function extraireHtml(brut) {
 
   for (const el of elements(racine)) {
     if (el.tag === 'script' || el.tag === 'style') continue;
+    // TF-1762 — l'infobulle d'un CODE (balise de code, ou élément dont le texte est un
+    // identifiant comme « C2 », « E-020 ») est sa définition : elle décrit le code, elle
+    // n'est ni une erreur ni un état vide de l'écran.
+    const estCode = BALISES_CODE.includes(el.tag) || RX_IDENTIFIANT_CODE.test(texteDe(el));
     for (const a of ATTRS_TEXTE) {
       const v = at(el, a);
-      if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el) });
+      if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el),
+        ...(a === 'title' && estCode ? { definition: true } : {}) });
     }
     const classe = normaliser(at(el, 'class'));
     const estEtat = at(el, 'role') === 'alert'
       || /(^| )(error|erreur|empty|vide)([ -]|$)/.test(classe)
       || normaliser(at(el, 'data-etat')) === 'vide';
+    // TF-1773 — une pastille de statut (« badge erreur ») affiche une VALEUR, pas un message.
+    const estPastille = RX_CLASSE_PASTILLE.test(classe) && at(el, 'role') !== 'alert';
     if (BALISES_TEXTE.includes(el.tag) || estEtat) {
       const t = texteDe(el);
-      if (t) out.push({ cle: `<${el.tag}${at(el, 'class') ? ' class="' + at(el, 'class') + '"' : ''}>`, texte: t, contexte: marqueurs(el) });
+      if (t) out.push({ cle: `<${el.tag}${at(el, 'class') ? ' class="' + at(el, 'class') + '"' : ''}>`, texte: t, contexte: marqueurs(el),
+        ...(estPastille ? { statut: true } : {}) });
     }
   }
   return out;
@@ -449,6 +487,48 @@ if (args.includes('--self-test')) {
   check('BORNE — une chaîne sans lettre (« — », « 42 ») est ignorée', () => {
     const r = juger([{ cle: 'sep', texte: '—' }, { cle: 'compteur', texte: '42' }]);
     if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+
+  // ── TF-1762 (lot Produit-64 du 15/10) : « non vide » n'est pas un état vide ─
+  check('VERTE TF-1762 — « plan Terraform non vide, écart déclaré/constaté » : aucun T4-2', () => {
+    const r = un('aide.code_c2', 'plan Terraform non vide, écart déclaré/constaté');
+    if (regles(r).has('T4-2')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-1762 — l\'infobulle (title) d\'un code lié est une définition, pas un texte d\'état', () => {
+    const e = extraireHtml('<p><a href="#c2" title="Aucun plan tant que la chaîne n\'a pas tourné">C2</a>'
+      + ' <abbr title="Aucune donnée en entrée">E-020</abbr></p>');
+    const r = juger(e);
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-1762 — « Le plan est vide. » (affirmatif) reste un état vide bloquant', () => {
+    const r = un('plan.etat', 'Le plan est vide.');
+    if (!durs(r).some(f => f.regle === 'T4-2')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-1762 — le title d\'un bouton qui n\'est pas un code reste jugé', () => {
+    const r = juger(extraireHtml('<button title="Aucune donnée">Exporter le tableau</button>'));
+    if (!durs(r).some(f => f.regle === 'T4-2')) throw new Error(JSON.stringify(r.findings));
+  });
+
+  // ── TF-1773 (lot Produit-83 du 15/10) : un libellé de donnée n'est pas un message ─
+  check('VERTE TF-1773 — « Date du refus » (en-tête de colonne) : aucun T4-1', () => {
+    const r = un('colonnes.date_refus', 'Date du refus');
+    if (regles(r).has('T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-1773 — l\'état de tuile « Échec » : valeur de statut, aucun T4-1', () => {
+    const r = un('tuile.etat.echec', 'Échec');
+    if (regles(r).has('T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-1773 — <span class="badge erreur">Refusé</span> : pastille de statut, aucun constat', () => {
+    const r = juger(extraireHtml('<span class="badge erreur">Refusé</span>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-1773 — <p role="alert">Échec</p> reste une erreur sans cause ni réparation', () => {
+    const r = juger(extraireHtml('<p role="alert">Échec</p>'));
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-1773 — « Échec de l\'envoi » (le mot d\'erreur en tête) reste un message jugé', () => {
+    const r = un('envoi.resultat', "Échec de l'envoi");
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
   });
 
   // ── Extraction : un format, un cas, aucune supposition ────────────────────

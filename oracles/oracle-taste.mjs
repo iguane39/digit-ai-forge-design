@@ -33,7 +33,7 @@
 // prétendrait les vérifier statiquement mentirait.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
-// Usage : node oracle-taste.mjs <fichier.html> [--json-only]
+// Usage : node oracle-taste.mjs <fichier.html | http://localhost:…> [--json-only]
 
 import fs from 'node:fs';
 import { parse, arbres, elements, css, cssRules } from './lib/html.mjs';
@@ -95,11 +95,32 @@ function sortir(verdict, findings, code) {
   process.exit(code);
 }
 
-if (!file || !fs.existsSync(file)) sortir('SKIP', [{ sev: 'info', msg: 'fichier introuvable', where: String(file) }], 2);
-
+// TF-1797 — UNE INSTANCE SERVIE SE LIT AUSSI. Sur une URL, l'oracle rendait « fichier
+// introuvable » : la page livrée n'était jugée que si l'on en retrouvait le source. Une URL
+// LOCALE (localhost, 127.0.0.1, ::1) est désormais lue telle que le serveur la sert ; le
+// HTML reçu n'exécute aucun script, et cette borne se déclare en non_juge. Une origine
+// distante reste refusée, avec le geste : servir en local ou passer le fichier.
+const estUrl = !!file && /^https?:\/\//i.test(file);
 let html;
-try { html = fs.readFileSync(file, 'utf8'); }
-catch (e) { sortir('SKIP', [{ sev: 'info', msg: 'lecture impossible : ' + e.message, where: file }], 2); }
+if (estUrl) {
+  let hote = '';
+  try { hote = new URL(file).hostname.replace(/^\[|\]$/g, '').toLowerCase(); } catch { /* URL invalide */ }
+  if (!['localhost', '127.0.0.1', '::1'].includes(hote)) {
+    sortir('SKIP', [{ sev: 'info', msg: `origine non locale refusée (${hote || 'URL invalide'}) : oracle-taste lit une page servie EN LOCAL (http://localhost:…) ou un fichier HTML. Geste : servir la page en local, ou passer son fichier source`, where: file }], 2);
+  }
+  try {
+    const rep = await fetch(file, { redirect: 'follow' });
+    if (!rep.ok) sortir('SKIP', [{ sev: 'info', msg: `instance servie injoignable : HTTP ${rep.status}`, where: file }], 2);
+    html = await rep.text();
+  } catch (e) {
+    sortir('SKIP', [{ sev: 'info', msg: `instance servie injoignable (${e.cause?.code || e.message}) : démarrer le serveur, ou passer le fichier HTML source`, where: file }], 2);
+  }
+  NON_JUGE.push('HTML SERVI lu tel que reçu (TF-1797), sans exécuter ses scripts : le contenu qu\'une application monopage injecte après chargement, et les feuilles de style liées, ne sont pas lus ici — les juger au rendu (render_page.py, oracle-baseline sur la même URL)');
+} else {
+  if (!file || !fs.existsSync(file)) sortir('SKIP', [{ sev: 'info', msg: 'fichier introuvable — une instance servie se passe en URL locale http://localhost:… (TF-1797)', where: String(file) }], 2);
+  try { html = fs.readFileSync(file, 'utf8'); }
+  catch (e) { sortir('SKIP', [{ sev: 'info', msg: 'lecture impossible : ' + e.message, where: file }], 2); }
+}
 
 const root = parse(html);
 // Les commentaires CSS ne sont pas du design : un motif cité en commentaire ne

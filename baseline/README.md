@@ -13,12 +13,18 @@ baseline/<slug>/
 ## Utilisation
 
 ```bash
-# Juger le rendu courant d'une page contre sa baseline approuvée
-node oracles/oracle-baseline.mjs <page.html> --slug <nom>
+# Juger le rendu courant d'une page (fichier ou instance servie) contre sa baseline approuvée
+node oracles/oracle-baseline.mjs <page.html | http://localhost:…> --slug <nom> --racine <racine du produit>
 
 # Entériner une nouvelle baseline (hors boucle de jugement, jamais automatique)
-node oracles/oracle-baseline.mjs <page.html> --slug <nom> --approuver
+node oracles/oracle-baseline.mjs <page.html> --slug <nom> --racine <racine du produit> --approuver
 ```
+
+`approuver` et `juger` ne sont pas des sous-commandes : un mot d'action positionnel est
+refusé en B0 (TF-1770). Sans `--racine`, seule une page de la forge elle-même a sa
+baseline ici ; celle d'un produit vit chez le produit, `<racine>\baseline\<slug>\`,
+et l'oracle refuse de l'écrire dans ce dossier. Sur une URL, `--etat-session` et
+`--theme` sont transmis à `render_page.py` (TF-1797).
 
 Nécessite le même outillage que `--rendu` de `run-oracles-design.mjs` : Python,
 `playwright` (`pip install playwright && playwright install chromium`) et
@@ -36,7 +42,9 @@ la capture elle-même).
   `--approuver` explicite requis.
 - `--approuver` est **refusé** si le dernier jugement journalisé pour ce slug est
   un `FAIL` non encore corrigé (règle B3) — on ne fige pas une régression au lieu
-  de la corriger.
+  de la corriger. Un écart **voulu** (refonte décidée) s'approuve avec
+  `--approuver --motif "<ce qui change et pourquoi>"` : le motif est exigé, tracé à
+  `historique.jsonl` (`motif`, `apres_fail`) et à `PROVENANCE.json` (TF-1798).
 - Toute approbation est journalisée dans `historique.jsonl` (append-only).
 
 ## Règles

@@ -271,6 +271,27 @@ def controler(chemin, plafond_mo):
             "constat": "aucune route hash detectee - parcours non verifiable par script",
         })
 
+    # C16 - structure multi-ecrans au socle (TF-1776, lot Produit-83 du 15/10/2026).
+    # check_html juge la maquette comme une page : plus de trois h2 sans sommaire, L25
+    # bloquante ; un h1 par ecran, « il en faut exactement une ». L'issue existe au socle
+    # (TF-1626) : la navigation entre ecrans en barre d'onglets role="tablist", un onglet
+    # role="tab" par ecran qui vise sa section (aria-controls), un seul h1 dans le chrome.
+    # Avertissement ici, la regle bloquante vit au socle : ce controle l'annonce avant lui.
+    if len(declarees) >= 4 and not re.search(r'role\s*=\s*["\']tablist["\']', balisage, re.I):
+        findings.append({
+            "critere": "C16", "gravite": "avertissement", "ou": "navigation",
+            "constat": "%d ecrans navigues sans barre d'onglets role=\"tablist\" - check_html L25 "
+                       "refusera la maquette (sommaire exige au-dela de trois chapitres) ; "
+                       "geste : contrat-technique.md, Navigation entre ecrans" % len(declarees),
+        })
+    h1_maquette = len(re.findall(r"<h1[\s>]", balisage, re.I))
+    if h1_maquette > 1:
+        findings.append({
+            "critere": "C16", "gravite": "avertissement", "ou": "titres",
+            "constat": "%d <h1> dans le balisage - check_html exige un h1 unique : le titre de "
+                       "l'application dans le chrome, un h2 par ecran" % h1_maquette,
+        })
+
     # C6 - bandeau de donnees de demonstration
     if not re.search(r"d[ée]monstration|donn[ée]es fictives|non contractuel", html, re.I):
         findings.append({

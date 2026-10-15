@@ -21,7 +21,7 @@ ni passation développeur. Conception complète : [conception-forge-design.md](c
 | **Valider le design (oracles)** | vérifier mécaniquement charte, tokens, mobile, images et corpus | `node oracles\run-oracles-design.mjs <html> [--mobile] [--tokens t.css] [--json-only]` | prouvé (production) |
 | **Générer les visuels** | produire les images et visuels réels de mes maquettes | `producteur d'images (Gemini) — spécifié chez design, exercé via le pilot` | prouvé (experimental) |
 | **Tokens DTCG (source → dérivé)** | faire des tokens une source W3C interopérable, jamais éditée en CSS | `node scripts\generer-tokens-css.mjs · node oracles\oracle-dtcg.mjs <tokens.json> <css>` | prouvé (experimental) |
-| **Baseline de régression visuelle** | détecter toute régression visuelle contre une référence approuvée versionnée | `node oracles\oracle-baseline.mjs [approuver|juger]` | prouvé (experimental) |
+| **Baseline de régression visuelle** | détecter toute régression visuelle contre une référence approuvée versionnée | `node oracles\oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit> [--approuver [--motif "…"]]` | prouvé (experimental) |
 | **Rendu comparatif d'un correctif** | voir en une commande ce qu'un correctif ad hoc a changé au rendu, avant/après, et refuser mécaniquement ce qu'il a cassé | `node oracles\rendu-comparatif.mjs --avant <fichier\|url> --apres <fichier\|url> [--zone <sélecteur>]` | prouvé (experimental) |
 
 Le catalogue consolidé des dix forges vit chez le pilot :
@@ -90,7 +90,7 @@ node oracles/oracle-exploitabilite.mjs <page.html|url>… \
   [--etat-connexion etat.json] [--theme dark] [--largeur N]   # X0–X5 : écran rendu au volume réel (TF-1654) ;
 # URL servie derrière une connexion : état Playwright (storageState) du produit (TF-1674)
 
-node oracles/oracle-baseline.mjs <page.html> --slug <nom> [--approuver]       # régression visuelle
+node oracles/oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit> [--approuver [--motif "<écart voulu>"]]  # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)

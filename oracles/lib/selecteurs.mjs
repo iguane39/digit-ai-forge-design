@@ -63,6 +63,119 @@ export function correspond(el, part) {
   return true;
 }
 
+// ── TF-1774 · LA CASCADE, quand un oracle la demande ─────────────────────────
+// LE FAIT (lot Produit-83 du 15/10/2026). `declarationsPour` lit les règles dans l'ordre du
+// fichier et ne remonte pas les ancêtres : la couleur d'un `a.btn` du corps était lue dans
+// `.pied a` (le pied de page), et oracle-perceptibilite mesurait 1,22:1 à tort. Les fonctions
+// ci-dessous appliquent ce que le navigateur applique : le sélecteur ENTIER (combinateurs
+// descendant, enfant, frère adjacent et frère suivant, sur les liens parent du parseur), puis
+// la spécificité, puis l'ordre, avec `!important` au-dessus. `declarationsPour` reste tel quel
+// pour ses autres consommateurs, dont les recettes reposent sur son approximation déclarée.
+
+/** Découpe un sélecteur en compounds et combinateurs, sans casser [..] ni (..). */
+export function decouper(part) {
+  const compounds = [], combinateurs = [];
+  let cour = '', prof = 0, comb = null;
+  const pousser = () => {
+    if (!cour.trim()) return;
+    if (compounds.length) combinateurs.push(comb || ' ');
+    compounds.push(cour.trim()); cour = ''; comb = null;
+  };
+  for (const ch of String(part).trim()) {
+    if (ch === '[' || ch === '(') prof++;
+    if (ch === ']' || ch === ')') prof--;
+    if (prof === 0 && (ch === '>' || ch === '+' || ch === '~')) { pousser(); comb = ch; continue; }
+    if (prof === 0 && /\s/.test(ch)) { pousser(); continue; }
+    cour += ch;
+  }
+  pousser();
+  return { compounds, combinateurs };
+}
+
+/** Spécificité [ids, classes|attributs|pseudo-classes, balises|pseudo-éléments]. */
+export function specificite(part) {
+  const s = [0, 0, 0];
+  for (const c of decouper(part).compounds) {
+    for (const mo of c.match(MORCEAUX) || []) {
+      if (mo === '*') continue;
+      if (/^:where\(/i.test(mo)) continue;
+      if (mo.startsWith('#')) s[0]++;
+      else if (mo.startsWith('.') || mo.startsWith('[')) s[1]++;
+      else if (mo.startsWith('::')) s[2]++;
+      else if (mo.startsWith(':')) s[1]++;
+      else s[2]++;
+    }
+  }
+  return s;
+}
+
+const enfantsElements = p => (p && p.children ? p.children.filter(n => n.tag && !n.tag.startsWith('#')) : []);
+
+function tient(el, compounds, combinateurs, i) {
+  if (!el || !el.tag || el.tag.startsWith('#')) return false;
+  if (!correspond(el, compounds[i])) return false;
+  if (i === 0) return true;
+  const comb = combinateurs[i - 1];
+  if (comb === '>') return tient(el.parent, compounds, combinateurs, i - 1);
+  if (comb === ' ') {
+    for (let a = el.parent; a && a.tag !== '#root'; a = a.parent) if (tient(a, compounds, combinateurs, i - 1)) return true;
+    return false;
+  }
+  const freres = enfantsElements(el.parent);
+  const rang = freres.indexOf(el);
+  if (comb === '+') return rang > 0 && tient(freres[rang - 1], compounds, combinateurs, i - 1);
+  for (let k = rang - 1; k >= 0; k--) if (tient(freres[k], compounds, combinateurs, i - 1)) return true; // '~'
+  return false;
+}
+
+/** L'élément satisfait-il le sélecteur ENTIER, ancêtres et frères compris ? */
+export function correspondEnCascade(el, part) {
+  const { compounds, combinateurs } = decouper(part);
+  if (!compounds.length) return false;
+  return tient(el, compounds, combinateurs, compounds.length - 1);
+}
+
+const plusFort = (a, b) => {
+  if (a.imp !== b.imp) return a.imp > b.imp;
+  for (let k = 0; k < 4; k++) if (a.spec[k] !== b.spec[k]) return a.spec[k] > b.spec[k];
+  return a.ordre > b.ordre;
+};
+
+/**
+ * Les déclarations qui habillent l'élément AU REPOS après cascade : sélecteur entier, puis
+ * !important, spécificité, ordre ; le style en ligne compte comme une spécificité maximale.
+ * Mêmes exclusions que declarationsPour (pseudo-éléments et états écartés).
+ */
+export function declarationsEnCascade(el, regles) {
+  const gagnantes = new Map();
+  let ordre = 0;
+  const proposer = (prop, val, spec) => {
+    ordre++;
+    const imp = /!\s*important\s*$/i.test(val) ? 1 : 0;
+    const cand = { val: val.replace(/\s*!\s*important\s*$/i, '').trim(), imp, spec, ordre };
+    const actuelle = gagnantes.get(prop);
+    if (!actuelle || plusFort(cand, actuelle)) gagnantes.set(prop, cand);
+  };
+  for (const r of regles) {
+    let meilleure = null;
+    for (const part of String(r.selector).split(',')) {
+      const s = part.trim();
+      if (!s || s.includes('::') || ETAT.test(s)) continue;
+      if (!correspondEnCascade(el, s)) continue;
+      const sp = specificite(s);
+      if (!meilleure || sp[0] > meilleure[0] || (sp[0] === meilleure[0] && (sp[1] > meilleure[1] || (sp[1] === meilleure[1] && sp[2] > meilleure[2])))) meilleure = sp;
+    }
+    if (!meilleure) continue;
+    for (const m of r.body.matchAll(/(^|[;{\s])([-\w]+)\s*:\s*([^;]+)/g)) proposer(m[2].toLowerCase(), m[3].trim(), [0, ...meilleure]);
+  }
+  for (const m of String((el.attrs && el.attrs.style) || '').matchAll(/(^|[;\s])([-\w]+)\s*:\s*([^;]+)/g)) {
+    proposer(m[2].toLowerCase(), m[3].trim(), [1, 0, 0, 0]);
+  }
+  const decls = new Map();
+  for (const [p, c] of gagnantes) decls.set(p, c.val);
+  return decls;
+}
+
 /**
  * Les déclarations qui habillent l'élément, dans l'ordre des règles, le style en ligne en
  * dernier (il gagne). `pseudoElement` (par exemple '::backdrop') ne retient QUE les parts qui

@@ -55,8 +55,7 @@
   --echelle-entree: 0.96; /* d'où naît un élément — jamais scale(0) */
 }
 
-@media (prefers-color-scheme: dark) { :root { /* mêmes noms, autres valeurs */ } }
-:root[data-theme="dark"]  { /* bascule explicite, doit gagner sur la préférence */ }
+:root[data-theme="dark"]  { /* mêmes noms, autres valeurs : le sombre se CHOISIT par la bascule */ }
 :root[data-theme="light"] { /* idem, dans l'autre sens */ }
 ```
 
@@ -111,11 +110,9 @@ obligatoire**, mais évite d'improviser une couleur en dur qui violerait T1 :
   --texte-succes: oklch(0.45 0.14 145);
   --fond-succes: oklch(0.95 0.03 145);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --texte-erreur: oklch(0.75 0.15 25);  --fond-erreur: oklch(0.28 0.05 25);
-    --texte-succes: oklch(0.72 0.13 145); --fond-succes: oklch(0.26 0.04 145);
-  }
+:root[data-theme="dark"] {
+  --texte-erreur: oklch(0.75 0.15 25);  --fond-erreur: oklch(0.28 0.05 25);
+  --texte-succes: oklch(0.72 0.13 145); --fond-succes: oklch(0.26 0.04 145);
 }
 ```
 
@@ -222,10 +219,12 @@ D'où la règle, sans exception :
 1. **`color-scheme: light` au bloc `:root`** — clair strict par défaut, comme la
    doctrine du socle `digit-ai-page-html`. Une page qui ne déclare rien laisse le
    système décider à sa place.
-2. **`color-scheme: dark` dans chaque bloc de thème sombre** — le bloc
-   `@media (prefers-color-scheme: dark)` **et** `:root[data-theme="dark"]`, parce
-   que la bascule manuelle doit gagner sur la préférence système jusque sur les
-   composants natifs.
+2. **`color-scheme: dark` dans le bloc de thème sombre** `:root[data-theme="dark"]`,
+   seul bloc sombre du contrat : le sombre est un CHOIX du lecteur, jamais hérité
+   du système. Aucun `@media (prefers-color-scheme: dark)` : R-30 du pilot (clair
+   par défaut strict, amendement TF-0158) l'interdit, et `check_html.py` G1 le
+   refuse en bloquant (TF-1771, 15/10/2026 : le générateur l'émettait encore, et
+   toute page qui embarquait un `tokens.css` dérivé échouait au socle).
 3. **`<meta name="color-scheme">` ne suffit pas.** Il annonce ce que la page
    supporte, il ne suit pas la bascule : un `content="light dark"` laisse les
    widgets natifs en sombre quand l'utilisateur a choisi le thème clair.

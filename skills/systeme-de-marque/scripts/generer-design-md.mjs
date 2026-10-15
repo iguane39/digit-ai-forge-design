@@ -56,8 +56,9 @@ const varDans = (source, nomVar) =>
 const varDe = (nomVar) => varDans(bloc, nomVar);
 
 // Thème sombre : @media (prefers-color-scheme: dark) { :root { … } } ET/OU la bascule
-// explicite :root[data-theme="dark"]. Les deux formes cohabitent dans le contrat de tokens ;
-// une charte dont le sombre n'est déclaré que par la bascule reste un thème sombre livré.
+// explicite :root[data-theme="dark"]. Depuis TF-1771 (15/10/2026), le contrat de tokens n'émet
+// plus que la bascule (R-30, clair strict) ; la forme @media reste LUE pour les tokens.css
+// antérieurs. Une charte dont le sombre n'est déclaré que par la bascule reste un thème sombre livré.
 const blocsSombres = [
   ...css.matchAll(/@media[^{]*prefers-color-scheme\s*:\s*dark[^{]*{\s*:root\s*{([^}]*)}/gi),
   ...css.matchAll(/:root\s*\[\s*data-theme\s*=\s*["']?dark["']?\s*\]\s*{([^}]*)}/gi),
@@ -220,9 +221,23 @@ const section = (titre) => {
   const m = marque.match(new RegExp(`^##\\s+${titre}[^\\n]*\\n([\\s\\S]*?)(?=^##\\s|$(?![\\s\\S]))`, "mi"));
   return m ? m[1].trim().split("\n").filter((l) => l.trim()).slice(0, 6).join("\n") : null;
 };
-const principes = section("(?:Direction|Essence|Parti[s]? pris|Principes)") ||
-  "La référence spécifique prime sur l'adjectif : valeurs exactes, sobriété, accessibilité AA par défaut.";
+// TF-1777 (lot Produit-83 du 15/10/2026) : le gabarit de MARQUE.md (references/voix.md) ne
+// prévoyait ni « Parti pris » ni « Voix ». Une marque écrite au gabarit recevait ici une phrase
+// générique en guise de principes, sans que rien ne le dise : DESIGN.md perdait la dérivation de
+// la DA, et un rendu générique est un défaut (loi n° 6). Une section absente s'AVERTIT, et la
+// charte écrit la limite au lieu d'un principe qu'aucune marque n'a posé.
+const principesLus = section("(?:Direction|Essence|Parti[s]? pris|Principes)");
 const voix = section("Voix");
+const sectionsAbsentes = [!principesLus && "« ## Parti pris » (ou Direction, Essence, Principes)", !voix && "« ## Voix »"].filter(Boolean);
+if (sectionsAbsentes.length) {
+  console.error(`AVERTISSEMENT — ${marquePath} ne porte pas ${sectionsAbsentes.join(" ni ")} : `
+    + "DESIGN.md ne dérive pas la direction artistique de la marque. Gabarit : "
+    + "skills/systeme-de-marque/references/voix.md (TF-1777).");
+}
+const principes = principesLus ||
+  "⚠ `MARQUE.md` ne porte pas de section « Parti pris » : cette charte ne peut pas dire de quelle "
+  + "expérience client la direction artistique se dérive. À écrire dans `MARQUE.md` (gabarit : "
+  + "`references/voix.md`) puis régénérer.";
 
 // La section vient APRÈS les sections canoniques du format et AVANT « Voix » : le gate
 // design de forge-development linte `section-order` sur les sections qu'il connaît, et

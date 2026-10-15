@@ -44,15 +44,16 @@
 //   - la nature du déclencheur (bouton plein, lien, fantôme) — oracle-declencheurs ;
 //   - la traçabilité des couleurs employées à un token déclaré — oracle-tokens T1 ;
 //   - le contraste composé (opacité, superposition réelle) — render_page.py V2 ;
-//   - la partie ANCÊTRE d'un sélecteur descendant — seul le dernier compound est confronté à
-//     l'élément, l'arbre n'est pas remonté (lib/selecteurs.mjs, TF-0921).
+//   - la cascade complète : depuis TF-1774 (15/10/2026), ancêtres, spécificité, ordre et
+//     !important sont appliqués et la couleur s'hérite de l'ancêtre ; restent hors champ les
+//     raccourcis concurrents, @layer et :is()/:not() au-delà d'une approximation.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-perceptibilite.mjs <fichier.html> [--tokens tokens.css] [--json-only]
 
 import fs from 'node:fs';
 import { parse as parseHtml, elements, arbres, css, cssRulesDeep, visibleText } from './lib/html.mjs';
-import { declarationsPour as declarationsDe, correspond } from './lib/selecteurs.mjs';
+import { declarationsEnCascade, correspond } from './lib/selecteurs.mjs';
 import { parse as color, contrast, resoudreVar } from './lib/color.mjs';
 
 const DOM = 'Perceptibilité : une action nommée par une exigence se voit, se distingue et répond';
@@ -69,7 +70,7 @@ const NJ = [
   'nature du déclencheur (bouton plein, lien, fantôme) — oracle-declencheurs, non dupliqué ici',
   'traçabilité des couleurs employées à un token déclaré — oracle-tokens T1',
   'contraste composé (opacité, superposition réelle) — render_page.py V2',
-  'partie ANCÊTRE d\'un sélecteur descendant — seul le dernier compound est confronté à l\'élément, l\'arbre n\'est pas remonté (lib/selecteurs.mjs, TF-0921)',
+  'cascade complète du navigateur — ancêtres, spécificité, ordre et !important sont appliqués, la couleur s\'hérite de l\'ancêtre (TF-1774, lib/selecteurs.mjs declarationsEnCascade) ; restent hors champ les raccourcis concurrents à spécificités différentes (background contre background-color), @layer, et :is()/:not() au-delà d\'une approximation',
 ];
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
@@ -93,7 +94,17 @@ if (tokensArg && fs.existsSync(tokensArg)) {
   cssText = fs.readFileSync(tokensArg, 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ') + '\n' + cssText;
 }
 const regles = cssRulesDeep(cssText).filter(r => !r.atRules.some(a => /\bprint\b/i.test(a)));
-const declarationsPour = el => declarationsDe(el, regles);
+// TF-1774 — la CASCADE : sélecteur entier (ancêtres compris), spécificité, ordre, !important.
+const declarationsPour = el => declarationsEnCascade(el, regles);
+// La couleur du texte s'HÉRITE, le fond se VOIT à travers : sans valeur propre, l'élément prend
+// celle de son ancêtre le plus proche qui en déclare une, avant l'ambiance de la page.
+function heritee(el, props) {
+  for (let a = el.parent; a && a.tag !== '#root'; a = a.parent) {
+    const d = declarationsPour(a);
+    for (const p of props) if (d.get(p) !== undefined) return d.get(p);
+  }
+  return null;
+}
 
 // ── Les actions nommées par une exigence ───────────────────────────────────
 const actions = [];
@@ -237,8 +248,10 @@ for (const { el, exigence, provenance } of actions) {
   // PC3
   const texteVisible = visibleText(el).some(t => t.text.trim());
   const seuil = texteVisible ? 4.5 : 3;
-  const fg = couleurResolue(d.get('color')) || (texteVisible ? couleurResolue(ambiance.texte) : null);
-  const bg = couleurResolue(d.get('background') ?? d.get('background-color')) || couleurResolue(ambiance.fond);
+  const fg = couleurResolue(d.get('color'))
+    || (texteVisible ? couleurResolue(heritee(el, ['color'])) || couleurResolue(ambiance.texte) : null);
+  const bg = couleurResolue(d.get('background') ?? d.get('background-color'))
+    || couleurResolue(heritee(el, ['background', 'background-color'])) || couleurResolue(ambiance.fond);
   if (fg && bg) {
     const ratio = contrast(fg, bg);
     if (ratio < seuil) {

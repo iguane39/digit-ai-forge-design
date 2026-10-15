@@ -14,16 +14,27 @@
 //   · création/mise à jour uniquement via --approuver, hors boucle de jugement ;
 //     refusée si le dernier verdict journalisé pour ce slug est un FAIL non
 //     encore rejugé — on n'entérine pas une régression au lieu de la corriger ;
-//   · chaque approbation est journalisée dans baseline/<slug>/historique.jsonl.
+//   · chaque approbation est journalisée dans baseline/<slug>/historique.jsonl ;
+//   · TF-1798 — un ÉCART VOULU (refonte décidée, nouveau composant) s'approuve après
+//     un FAIL avec `--motif "<écart voulu>"` : le motif est exigé, tracé à
+//     l'historique et publié au rapport. Sans motif, B3 refuse et nomme ce remède.
 //
-// Règles B1–B2 :
+// Règles B0–B3 :
+//   B0  invocation ou rendu impossible : mot d'action positionnel (« approuver »,
+//       « juger »), option inconnue, baseline d'une page HORS de la forge sans
+//       --racine (elle s'écrirait dans digit-ai-forge-design), capture manquante
 //   B1  dimensions du rendu courant ≠ dimensions de la baseline approuvée
 //   B2  ratio de pixels divergents (> tolérance de canal) au-delà du seuil
+//   B3  --approuver après un FAIL journalisé, sans --motif
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage :
-//   node oracle-baseline.mjs <page.html> --slug <nom> [--widths <grille du corpus par défaut>]
-//     [--seuil 0.001] [--tolerance 24] [--approuver] [--json-only]
+//   node oracle-baseline.mjs <page.html | http://localhost:…> --slug <nom> --racine <racine du produit>
+//     [--widths <grille du corpus par défaut>] [--seuil 0.001] [--tolerance 24]
+//     [--approuver [--motif "<écart voulu>"]] [--etat-session <fichier>] [--theme clair|sombre]
+//     [--origine-distante] [--json-only]
+//   Une URL (instance servie, TF-1797) est rendue par le même moteur (render_page.py) ;
+//   --etat-session et --theme lui sont transmis tels quels.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -36,14 +47,34 @@ import { decoderPng, comparerPng } from './lib/png.mjs';
 
 const DOM = 'Régression visuelle : baseline versionnée';
 const args = process.argv.slice(2);
+const OPTS_VALEUR = ['--slug', '--widths', '--seuil', '--tolerance', '--racine', '--motif', '--etat-session', '--etat-connexion', '--theme'];
+const DRAPEAUX = ['--approuver', '--json-only', '--origine-distante'];
 const jsonOnly = args.includes('--json-only');
 const approuver = args.includes('--approuver');
 const opt = (n, def) => { const i = args.indexOf(n); return i === -1 ? def : args[i + 1]; };
-const file = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--slug'
-  && args[args.indexOf(a) - 1] !== '--widths' && args[args.indexOf(a) - 1] !== '--seuil'
-  && args[args.indexOf(a) - 1] !== '--tolerance' && args[args.indexOf(a) - 1] !== '--racine');
+// Positionnels : tout ce qui n'est ni une option, ni la valeur d'une option à valeur.
+const positionnels = [];
+const inconnues = [];
+for (let i = 0; i < args.length; i++) {
+  const a = args[i];
+  if (OPTS_VALEUR.includes(a)) { i++; continue; }
+  if (DRAPEAUX.includes(a)) continue;
+  if (a.startsWith('--')) { inconnues.push(a); continue; }
+  positionnels.push(a);
+}
+// TF-1770 — un mot d'action positionnel (« approuver », « juger ») était pris pour le
+// nom de la page : SKIP « fichier absent », exit 2, et l'approbation prescrite ne se
+// faisait jamais. Il se refuse désormais en nommant la syntaxe réelle.
+const MOTS_ACTION = ['approuver', 'approve', 'juger', 'judge', 'valider', 'comparer'];
+const actionPositionnelle = positionnels.find(p => MOTS_ACTION.includes(p.toLowerCase()));
+const file = positionnels.find(p => !MOTS_ACTION.includes(p.toLowerCase())) || null;
+const estUrl = !!file && /^https?:\/\//i.test(file);
 
-const RACINE = opt('--racine', path.join(path.dirname(fileURLToPath(import.meta.url)), '..'));
+const FORGE = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const racineDonnee = opt('--racine', null);
+const RACINE = racineDonnee ? path.resolve(racineDonnee) : FORGE;
+const MOTIF = (opt('--motif', '') || '').trim();
+const MOTIF_MIN = 12;
 // Grille par défaut — LUE au corpus (TF-1066), jamais écrite ici : `corpus\grille-viewports.json`
 // porte les largeurs, leur date, leur source et la raison du sous-ensemble de baseline.
 // La « grille réduite v0 (3 largeurs) » s'y est close le 12/09/2026 : une baseline
@@ -53,7 +84,7 @@ const GRILLE = lireGrille();
 const WIDTHS = opt('--widths', GRILLE.baselines);
 const SEUIL = parseFloat(opt('--seuil', '0.001'));
 const TOLERANCE = parseInt(opt('--tolerance', '24'), 10);
-const slug = opt('--slug', file ? path.basename(file, path.extname(file)) : null);
+const slug = opt('--slug', file && !estUrl ? path.basename(file, path.extname(file)) : null);
 
 const NJ = [
   'V5 (croisements de flèches) et V6 (images déformées) — inspection visuelle, pas de ce diff pixel',
@@ -72,8 +103,36 @@ function sortir(verdict, code) {
   process.exit(code);
 }
 
-if (!file || !fs.existsSync(file)) { NJ.push('fichier absent'); sortir('SKIP', 2); }
-if (!slug) { NJ.push('--slug requis (nom du dossier baseline/<slug>/)'); sortir('SKIP', 2); }
+const SYNTAXE = 'syntaxe : node oracle-baseline.mjs <page.html | url> --slug <nom> --racine <racine du produit> [--approuver [--motif "<écart voulu>"]]';
+// Erreurs d'invocation : FAIL B0, exit 1 — jamais un SKIP qu'une chaîne lirait comme « rien à juger ».
+if (actionPositionnelle) {
+  add('bloquant', 'B0', `mot d'action positionnel inconnu « ${actionPositionnelle} » : l'oracle n'a pas de sous-commande. `
+    + (actionPositionnelle.toLowerCase().startsWith('appro') || actionPositionnelle.toLowerCase() === 'valider'
+      ? 'Approuver s\'écrit avec le drapeau --approuver. ' : 'Juger est l\'action par défaut, sans mot. ')
+    + SYNTAXE, actionPositionnelle);
+}
+if (inconnues.length) add('bloquant', 'B0', `option(s) inconnue(s) : ${inconnues.join(', ')} — ${SYNTAXE}`, inconnues.join(' '));
+if (positionnels.filter(p => !MOTS_ACTION.includes(p.toLowerCase())).length > 1) {
+  add('bloquant', 'B0', `une seule page par appel, reçu : ${positionnels.join(' ; ')} — ${SYNTAXE}`, positionnels.join(' ; '));
+}
+if (args.includes('--motif') && !approuver) add('bloquant', 'B0', '--motif n\'a de sens qu\'avec --approuver (il trace un écart voulu)', '--motif');
+if (F.length) sortir('FAIL', 1);
+
+if (!file) { NJ.push(`aucune page désignée — ${SYNTAXE}`); sortir('SKIP', 2); }
+if (!estUrl && !fs.existsSync(file)) { NJ.push(`fichier absent : ${file} — une instance servie se passe en URL http://localhost:… (TF-1797)`); sortir('SKIP', 2); }
+if (!slug) {
+  add('bloquant', 'B0', `--slug requis${estUrl ? ' sur une URL (aucun nom de fichier dont le déduire)' : ''} : nom du dossier baseline/<slug>/`, file);
+  sortir('FAIL', 1);
+}
+// TF-1770 — sans --racine, la baseline d'une page de produit s'écrivait dans le baseline/
+// versionné de la forge. La racine par défaut ne vaut que pour une page de la forge.
+const dansLaForge = !estUrl && !path.relative(FORGE, path.resolve(file)).startsWith('..')
+  && !path.isAbsolute(path.relative(FORGE, path.resolve(file)));
+if (!racineDonnee && !dansLaForge) {
+  add('bloquant', 'B0', `--racine requis : la page n'est pas dans la forge, et sans --racine sa baseline s'écrirait dans ${path.join(FORGE, 'baseline', slug)}. `
+    + 'Passer --racine <racine du produit> (la baseline vit alors dans <racine>\\baseline\\<slug>\\, versionnée chez le produit)', file);
+  sortir('FAIL', 1);
+}
 
 const outillage = detecterOutillageRendu();
 if (!outillage.ok) {
@@ -87,18 +146,33 @@ const largeurs = WIDTHS.split(',').map(s => parseInt(s.trim(), 10)).filter(Boole
 
 function rendreVersTmp() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'forge-design-baseline-'));
+  const passe = [];
+  const session = opt('--etat-session', opt('--etat-connexion', null));
+  if (session) passe.push('--etat-session', session);
+  if (opt('--theme', null)) passe.push('--theme', opt('--theme', null));
+  if (args.includes('--origine-distante')) passe.push('--origine-distante');
   const r = spawnSync(outillage.python,
-    [outillage.renderPage, file, '--widths', largeurs.join(','), '--output', 'json', '--out', tmp],
+    [outillage.renderPage, file, '--widths', largeurs.join(','), '--output', 'json', '--out', tmp, ...passe],
     { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
   if (r.error || r.status === null) throw new Error('rendu impossible : ' + (r.error?.message || r.stderr));
+  if (!fs.readdirSync(tmp).some(n => /-w\d+\.png$/.test(n))) {
+    throw new Error(`render_page.py n'a produit aucune capture (exit ${r.status}) : ${(r.stderr || '').trim().split(/\r?\n/).slice(-2).join(' ')}`);
+  }
   return tmp;
+}
+
+// La capture principale d'une largeur : `<stem>-w<largeur>.png`. Sur une URL, le stem est
+// dérivé par render_page.py ; on cherche donc le suffixe exact (les captures d'états,
+// de sections ou de paires portent un suffixe de plus et ne correspondent pas).
+function capture(dir, w) {
+  const nom = fs.readdirSync(dir).find(n => n.endsWith(`-w${w}.png`));
+  return nom ? path.join(dir, nom) : path.join(dir, `absent-w${w}.png`);
 }
 
 function nettoyer(dir) {
   try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* best-effort */ }
 }
 
-const stem = path.basename(file, path.extname(file));
 let tmp;
 try {
   tmp = rendreVersTmp();
@@ -109,40 +183,52 @@ try {
 
 // ── --approuver : gouvernance hors boucle ───────────────────────────────────
 if (approuver) {
+  let apresFail = false;
   if (fs.existsSync(historique)) {
     try {
       const lignes = fs.readFileSync(historique, 'utf8').trim().split('\n').filter(Boolean);
       const derniere = JSON.parse(lignes[lignes.length - 1]);
-      if (derniere.action === 'jugement' && derniere.verdict === 'FAIL') {
-        add('bloquant', 'B3', '--approuver refusé : le dernier jugement journalisé pour ce slug est un FAIL — rejuger après correction avant d\'entériner une nouvelle baseline', historique);
-        nettoyer(tmp);
-        sortir('FAIL', 1);
-      }
+      if (derniere.action === 'jugement' && derniere.verdict === 'FAIL') apresFail = true;
     } catch { /* historique illisible : on n'en fait pas un blocage d'approbation */ }
+  }
+  // TF-1798 — B3 interdisait son propre remède : un écart VOULU (refonte décidée) ne
+  // pouvait jamais s'entériner, puisque le jugement qui le constate est un FAIL. Le
+  // remède est un motif écrit, exigé, tracé ; une régression subie se corrige toujours.
+  if (apresFail && MOTIF.length < MOTIF_MIN) {
+    add('bloquant', 'B3', '--approuver refusé : le dernier jugement journalisé pour ce slug est un FAIL. '
+      + 'Régression subie : corriger puis rejuger. Écart voulu : --approuver --motif "<ce qui change et pourquoi>"'
+      + (MOTIF ? ` (motif reçu trop court : ${MOTIF.length} caractères, ${MOTIF_MIN} au moins)` : ''), historique);
+    nettoyer(tmp);
+    sortir('FAIL', 1);
   }
   fs.mkdirSync(dossierBaseline, { recursive: true });
   const approuves = [];
   for (const w of largeurs) {
-    const src = path.join(tmp, `${stem}-w${w}.png`);
+    const src = capture(tmp, w);
     if (!fs.existsSync(src)) continue;
     const dst = path.join(dossierBaseline, `w${w}.png`);
     fs.copyFileSync(src, dst);
     approuves.push(`w${w}.png`);
   }
   fs.writeFileSync(path.join(dossierBaseline, 'PROVENANCE.json'), JSON.stringify({
-    date_iso: new Date().toISOString(), source_html: path.relative(RACINE, file),
+    date_iso: new Date().toISOString(), source_html: estUrl ? file : path.relative(RACINE, file),
     widths: largeurs, tolerance: TOLERANCE, seuil: SEUIL,
+    ...(MOTIF ? { motif: MOTIF } : {}),
   }, null, 2));
-  fs.appendFileSync(historique, JSON.stringify({ date_iso: new Date().toISOString(), action: 'approuver', captures: approuves }) + '\n');
+  fs.appendFileSync(historique, JSON.stringify({
+    date_iso: new Date().toISOString(), action: 'approuver', captures: approuves,
+    ...(MOTIF ? { motif: MOTIF } : {}), ...(apresFail ? { apres_fail: true } : {}),
+  }) + '\n');
   nettoyer(tmp);
   add('info', '—', `baseline approuvée hors boucle : ${approuves.join(', ')}`, dossierBaseline);
+  if (apresFail) add('info', 'B3', `écart voulu approuvé après un FAIL journalisé, motif tracé à l'historique : « ${MOTIF} »`, historique);
   sortir('PASS', 0);
 }
 
 // ── Jugement ─────────────────────────────────────────────────────────────────
 let juges = 0;
 for (const w of largeurs) {
-  const courantPath = path.join(tmp, `${stem}-w${w}.png`);
+  const courantPath = capture(tmp, w);
   const baselinePath = path.join(dossierBaseline, `w${w}.png`);
   if (!fs.existsSync(baselinePath)) {
     NJ.push(`baseline absente pour ${slug} à ${w}px — approuver hors boucle via --approuver avant tout jugement (${baselinePath})`);

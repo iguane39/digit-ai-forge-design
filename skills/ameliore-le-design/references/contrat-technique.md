@@ -6,7 +6,7 @@
 | Dépendances externes | **aucune** — zéro CDN, tout inline, fonctionne hors connexion |
 | Budget de poids | **≤ 10 Mo** (repère : 837 Ko pour un seul écran de données dense) |
 | Données | constante JS en tête de fichier, rendu dynamique |
-| Thèmes | clair et sombre, bascule persistée, `prefers-color-scheme` respecté au premier chargement |
+| Thèmes | clair et sombre, bascule persistée ; **clair par défaut strict** au premier chargement, `prefers-color-scheme` jamais suivi (R-30 du pilot, amendement TF-0158 ; `check_html.py` G1 le refuse, TF-1771) |
 | Routage | hash-based, historique navigateur fonctionnel, deep-link vers chaque écran |
 | Breakpoints | **1920 px = largeur de conception par défaut (Full HD)** ; grille de vérification 3840 / 2560 / 1920 / 1440 / 1024 / 768 / 390, portrait et paysage — règle **E5** de `references\BEST-PRACTICES-HTML.md` (pilot, décision humaine du 12/09/2026) |
 | Remplissage | aucune colonne vide latérale, aucun vide vertical > 1 écran, largeur de ligne de texte ~70ch |
@@ -121,6 +121,26 @@ Assumées, à annoncer dans la restitution plutôt qu'à masquer :
 
 Un seul point d'entrée `render(route)`. Les écrans sont des fonctions pures qui
 retournent du HTML : c'est ce qui rend le parcours vérifiable par script.
+
+## Navigation entre écrans : le balisage que le socle sait lire
+
+`check_html.py` du socle `digit-ai-page-html` juge la maquette comme une page. Une
+navigation en simple liste de liens fait refuser une maquette de plus de trois écrans par
+L25, en bloquant (« sommaire exigé au-delà de trois chapitres »), et un `<h1>` par écran
+par la règle du titre unique. Le socle prévoit l'issue depuis TF-1626 : une barre
+d'onglets est un sommaire. La maquette s'écrit donc ainsi (TF-1776, 15/10/2026) :
+
+- **un seul `<h1>`**, le nom de l'application, dans le chrome ; chaque écran s'ouvre sur
+  un `<h2>` ;
+- **la navigation entre écrans est une barre d'onglets** : `<nav role="tablist">`, un
+  `<a role="tab" href="#ecran-x" aria-controls="ecran-x" aria-label="Ouvrir l'écran X">`
+  par écran ; `href` garde le lien profond et la route que `check_maquette.py` C2 lit,
+  `aria-label` évite le lien muet de L8 ;
+- **chaque écran est une `<section id="ecran-x" role="tabpanel">`**.
+
+Mesuré le 15/10/2026 sur une maquette de cinq écrans ainsi écrite : ni L25, ni L6, ni
+L7, ni L9, ni le titre unique ne se déclenchent. `check_maquette.py` C16 avertit quand
+une maquette de quatre écrans ou plus s'en écarte.
 
 ## Performance
 

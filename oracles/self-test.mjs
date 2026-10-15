@@ -1263,6 +1263,214 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1772 (lot Produit-83 du 15/10) — UN COMMENTAIRE N'EST PAS UN COMPOSANT. Le mot « ::backdrop »
+// cité dans un commentaire de tokens.css faisait lancer oracle-surcouche sur une page sans aucune
+// sur-couche : SKIP, et le verdict agrégé tombait en SKIP exit 2. Deux sens : le commentaire ne
+// déclenche rien, la règle CSS réelle déclenche toujours.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design.mjs (TF-1772) — la détection de sur-couche ignore les commentaires');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'surcouche-commentaire-'));
+  try {
+    const base = fs.readFileSync(fx('tokens-verte.html'), 'utf8');
+    const commente = path.join(dossier, 'commente.html');
+    const reel = path.join(dossier, 'reel.html');
+    fs.writeFileSync(commente, base.replace('</style>', '  /* le voile ::backdrop des dialogues hérite de --fond ; <dialog> à venir */\n</style>'), 'utf8');
+    fs.writeFileSync(reel, base.replace('</style>', '  dialog::backdrop { background: rgba(0, 0, 0, .5); }\n</style>'), 'utf8');
+    const jouer = page => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), page, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return (j?.oracles || []).map(o => o.oracle);
+    };
+    const c = jouer(commente);
+    ligne(c.length > 0 && !c.includes('oracle-surcouche'), `sens vert · ::backdrop cité en commentaire : oracle-surcouche non lancé (lancés : ${c.join(' ')})`);
+    const r = jouer(reel);
+    ligne(r.includes('oracle-surcouche'), `sens rouge · règle dialog::backdrop réelle : oracle-surcouche lancé (lancés : ${r.join(' ')})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// TF-1774 (lot Produit-83 du 15/10) — LA CASCADE DÉCIDE, PAS L'ORDRE DU FICHIER. PC3 et PC2 lisaient
+// la couleur d'un `a.btn` hors du pied de page dans la règle `.pied a` (ancêtre non vérifié, ordre
+// source seul) : 1,22:1 à tort. Les pages sont écrites ici ; trois sens : ancêtre absent, règle moins
+// spécifique placée après, et la vraie faute (`.pied a.btn` sur un bouton DANS le pied) qui échoue.
+{
+  console.log(String.fromCharCode(10) + 'oracle-perceptibilite PC2/PC3 (TF-1774) — ancêtres et spécificité appliqués');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'perceptibilite-cascade-'));
+  try {
+    const page = (css, corps) => '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>cascade</title><style>'
+      + 'body { background: #ffffff; color: #111111; }\n'
+      + 'a.btn { color: #ffffff; background: #1d4ed8; min-width: 44px; min-height: 44px; }\n'
+      + 'a.btn:hover { background: #1e40af; }\n' + css + '</style></head><body>' + corps + '</body></html>';
+    const bouton = '<a class="btn" href="#commande" data-exigence="E-001">Commander</a>';
+    const cas = {
+      ancetre: page('.pied { background: #1e293b; }\n.pied a { color: #26303f; min-height: 16px; }\n',
+        `<main>${bouton}</main><footer class="pied"><a href="#mentions">Mentions</a></footer>`),
+      specificite: page('a { color: #1e3a8a; }\n', `<main>${bouton}</main>`),
+      faute: page('.pied a.btn { color: #26303f; }\n', `<footer class="pied">${bouton}</footer>`),
+    };
+    const jouer = nom => {
+      const f = path.join(dossier, nom + '.html');
+      fs.writeFileSync(f, cas[nom], 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-perceptibilite.mjs'), f, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, regles: (j?.findings || []).filter(x => x.sev === 'bloquant').map(x => x.regle) };
+    };
+    const a = jouer('ancetre');
+    ligne(a.code === 0 && !a.regles.includes('PC3') && !a.regles.includes('PC2'),
+      `sens vert · .pied a ne s'applique pas à un a.btn hors du pied : ni PC3 ni PC2 (exit ${a.code}, ${a.regles.join(' ') || 'aucun'})`);
+    const s = jouer('specificite');
+    ligne(s.code === 0 && !s.regles.includes('PC3'),
+      `sens vert · « a » placé après « a.btn » perd à la spécificité : pas de PC3 (exit ${s.code}, ${s.regles.join(' ') || 'aucun'})`);
+    const f = jouer('faute');
+    ligne(f.code === 1 && f.regles.includes('PC3'),
+      `sens rouge · .pied a.btn sur un bouton DANS le pied : PC3 bloquant (exit ${f.code}, ${f.regles.join(' ') || 'aucun'})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// TF-1771 (lot Produit-83 du 15/10) — DEUX RÈGLES DU SOCLE INCONCILIABLES. generer-tokens-css.mjs
+// émettait `@media (prefers-color-scheme: dark)`, que check_html G1 refuse en bloquant au nom de
+// R-30 (clair par défaut STRICT, amendement TF-0158 du 13/08) : tout tokens.css généré par la forge
+// faisait échouer la page qui l'embarque. C'est le générateur qui cède, la règle est décidée. Deux
+// sens : le dérivé ne pilote plus le thème par l'OS (et G1 ne le refuse plus, si le socle est là),
+// et la bascule manuelle garde sa palette sombre.
+{
+  console.log(String.fromCharCode(10) + 'scripts/generer-tokens-css.mjs (TF-1771) — clair strict, sombre par la bascule seule');
+  const { genererCss } = await import('../scripts/generer-tokens-css.mjs');
+  const source = fx('dtcg-verte.tokens.json');
+  const derive = genererCss(JSON.parse(fs.readFileSync(source, 'utf8')), source, fx('dtcg-verte.css'));
+  const actif = derive.replace(/\/\*[\s\S]*?\*\//g, ' ');
+  ligne(!/prefers-color-scheme/i.test(actif), 'sens vert · le dérivé ne contient aucun prefers-color-scheme actif (R-30, TF-0158)');
+  ligne(/:root\[data-theme="dark"\]\s*\{[^}]*color-scheme:\s*dark/.test(actif), 'sens rouge gardé · la palette sombre vit sous :root[data-theme="dark"], color-scheme: dark compris');
+  const checkHtml = path.join(os.homedir(), '.claude', 'skills', 'digit-ai-page-html', 'scripts', 'check_html.py');
+  if (!PYTHON || !fs.existsSync(checkHtml)) {
+    console.log('  SKIP  check_html.py G1 : socle digit-ai-page-html ou python absent');
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-g1-'));
+    try {
+      const page = path.join(dossier, 'page.html');
+      fs.writeFileSync(page, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Jetons</title><style>\n'
+        + derive + '\n</style></head><body><main><h1>Jetons</h1><p>Texte.</p></main></body></html>', 'utf8');
+      const r = spawnSync(PYTHON, [checkHtml, page, '--output', 'json', '--regles', 'charte'], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+      const auto = /G1 auto-sombre/.test(r.stdout || '');
+      ligne(!auto, `sens vert · check_html G1 ne refuse plus la page qui embarque le dérivé (auto-sombre ${auto ? 'refusé' : 'absent'})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
+// TF-1776 (lot Produit-83 du 15/10) — UNE MAQUETTE D'APPLICATION JUGÉE COMME UNE PAGE. check_html
+// refusait en bloquant (L25, h1 unique) une maquette multi-écrans écrite au contrat de cette forge,
+// qui ne disait pas l'issue que le socle prévoit (barre d'onglets role="tablist", TF-1626). C16 de
+// check_maquette l'annonce en avertissement, avant le socle. Deux sens, sur la même page hôte.
+{
+  console.log(String.fromCharCode(10) + 'check_maquette.py C16 (TF-1776) — structure multi-écrans au socle');
+  if (!PYTHON) {
+    console.log('  SKIP  interpréteur python introuvable dans le PATH (python / python3)');
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'maquette-c16-'));
+    try {
+      const hote = fs.readFileSync(fx('maquette-vendor-verte.html'), 'utf8');
+      const ecrans = ['tableau', 'dossiers', 'factures', 'clients'];
+      const sections = h => ecrans.map(e => `<section id="ecran-${e}" role="tabpanel"><${h}>Écran ${e}</${h}></section>`).join('');
+      const menu = ecrans.map(e => `<a href="#ecran-${e}" data-action="ouvrir">${e}</a>`).join('');
+      const onglets = ecrans.map(e => `<a role="tab" href="#ecran-${e}" aria-controls="ecran-${e}" aria-label="Ouvrir l'écran ${e}">${e}</a>`).join('');
+      const pages = {
+        rouge: hote.replace('</body>', `<nav aria-label="Menu">${menu}</nav>${sections('h1')}</body>`),
+        verte: hote.replace('</body>', `<nav role="tablist" aria-label="Écrans">${onglets}</nav>${sections('h2')}</body>`),
+      };
+      const c16 = nom => {
+        const f = path.join(dossier, nom + '.html');
+        fs.writeFileSync(f, pages[nom], 'utf8');
+        const r = spawnSync(PYTHON, [skill('check_maquette.py'), f, '--json-only'], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        return (j?.findings || []).filter(x => x.critere === 'C16');
+      };
+      const r = c16('rouge');
+      ligne(r.length === 2 && r.every(x => x.gravite === 'avertissement'),
+        `sens rouge · menu de liens et un h1 par écran : C16 ×2 en avertissement (obtenu ×${r.length})`);
+      const v = c16('verte');
+      ligne(v.length === 0, `sens vert · barre d'onglets role="tablist" et h2 par écran : C16 muet (obtenu ×${v.length})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
+// TF-1775 (lot Produit-83 du 15/10) — LE THÈME SOMBRE DEMANDÉ ÉTAIT NEUTRALISÉ PAR LA PAGE. La copie
+// « sombre » des passes de rendu posait data-theme="dark" sur <html> ; le script d'initialisation
+// d'une page au pattern S-G1 (R-30 : clair par défaut, choix lu en localStorage) le réécrivait en
+// "light" au chargement, et la passe dite sombre mesurait le clair. Oracle : render_page.py lui-même,
+// qui publie « THEME DEMANDE NON RENDU » quand la page a réécrit le thème (TF-1718). Deux sens.
+{
+  console.log(String.fromCharCode(10) + 'lib/rendu.mjs injecterThemeSombre (TF-1775) — le sombre tient face au script de la page');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const { injecterThemeSombre } = await import('./lib/rendu.mjs');
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'theme-force-'));
+    try {
+      const page = '<!doctype html><html lang="fr" data-theme="light"><head><meta charset="utf-8"><title>Thème</title>'
+        + '<script>document.documentElement.setAttribute("data-theme", localStorage.getItem("theme-x") || "light");</script>'
+        + '<style>:root{--fond:#ffffff;--texte:#111111}:root[data-theme="dark"]{--fond:#0b1220;--texte:#eef2f8}'
+        + 'body{background:var(--fond);color:var(--texte)}</style></head><body><main><h1>Thème</h1><p>Texte.</p></main></body></html>';
+      const jouer = (nom, html) => {
+        const f = path.join(dossier, nom + '.html');
+        fs.writeFileSync(f, html, 'utf8');
+        const r = spawnSync(OUTILLAGE_RENDU.python, [OUTILLAGE_RENDU.renderPage, f, '--widths', '600', '--output', 'json', '--theme', 'sombre', '--out', dossier],
+          { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        return (j?.non_juge || []).some(l => /THEME DEMANDE NON RENDU/.test(l));
+      };
+      ligne(jouer('brute', page), 'sens rouge · page brute : son script réécrit le thème, render_page le signale (témoin de la mesure)');
+      ligne(!jouer('copie', injecterThemeSombre(page)), 'sens vert · copie sombre de la forge : le thème sombre tient après le script de la page');
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
+// TF-1797 (lot Produit-83 du 15/10) — UNE INSTANCE SERVIE SE JUGE AUSSI. oracle-taste ne lisait qu'un
+// fichier : sur une URL, « fichier introuvable », SKIP. Il lit désormais une URL LOCALE telle que le
+// serveur la sert, et refuse une origine distante en nommant le geste. Trois sens sur les fixtures.
+{
+  console.log(String.fromCharCode(10) + 'oracle-taste.mjs (TF-1797) — une URL locale servie est lue');
+  const { spawn } = await import('node:child_process');
+  const port = 19000 + Math.floor(Math.random() * 900);
+  const code = 'const h=require("http"),f=require("fs"),p=require("path");'
+    + 'h.createServer((q,r)=>{const c=p.join(process.argv[1],p.basename(decodeURIComponent(q.url)));'
+    + 'f.readFile(c,(e,d)=>{if(e){r.writeHead(404);r.end();return;}r.writeHead(200,{"content-type":"text/html; charset=utf-8"});r.end(d);});})'
+    + '.listen(Number(process.argv[2]),"127.0.0.1");';
+  const serveur = spawn(process.execPath, ['-e', code, path.join(ici, 'fixtures'), String(port)], { stdio: 'ignore' });
+  try {
+    let pret = false;
+    for (let i = 0; i < 40 && !pret; i++) {
+      const s = spawnSync(process.execPath, ['-e', 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))', `http://127.0.0.1:${port}/taste-verte.html`]);
+      pret = s.status === 0;
+    }
+    const jouer = cible => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-taste.mjs'), cible, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, verdict: j?.verdict, findings: j?.findings || [] };
+    };
+    if (!pret) {
+      ligne(false, 'serveur local de recette indisponible');
+    } else {
+      const v = jouer(`http://127.0.0.1:${port}/taste-verte.html`);
+      ligne(v.code === 0 && v.verdict === 'PASS', `sens vert · URL locale de la fixture verte : PASS (obtenu ${v.verdict}, exit ${v.code})`);
+      const r = jouer(`http://127.0.0.1:${port}/taste-rouge.html`);
+      ligne(r.code === 1 && r.verdict === 'FAIL', `sens rouge · URL locale de la fixture rouge : FAIL (obtenu ${r.verdict}, exit ${r.code})`);
+    }
+    const d = jouer('https://exemple.invalid/page.html');
+    ligne(d.code === 2 && d.findings.some(f => /non locale/.test(f.msg || '')), `origine distante · SKIP qui nomme le geste (exit ${d.code})`);
+  } finally {
+    serveur.kill();
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

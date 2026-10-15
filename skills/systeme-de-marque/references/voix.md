@@ -8,6 +8,15 @@ de soin, et elle en reçoit rarement.
 ```markdown
 # Marque — {Client}
 
+## Parti pris
+L'expérience client visée, en deux à quatre phrases concrètes, et ce que la marque refuse.
+C'est d'elle que la direction artistique se dérive (loi n° 6 du pilot) : `generer-design-md.mjs`
+la reprend telle quelle en section « Principes » de DESIGN.md.
+
+## Voix
+La voix en une à trois lignes, reprise telle quelle en section « Voix » de DESIGN.md.
+Les sections suivantes la détaillent.
+
 ## Ton
 Trois mots concrets. Ni « moderne », ni « élégant », ni « professionnel ».
 

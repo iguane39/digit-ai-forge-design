@@ -208,9 +208,9 @@ const REPLI_INFO = { unmeasured: '—' };
 // famille elle-même sert de règle, jamais un code inventé.
 const codeDe = libelle => (/^([A-Z]+\d+)\b/.exec(libelle || '') || [, null])[1];
 
-function lancerRenderPage(tmpHtml, etiquette, outillage) {
+function lancerRenderPage(tmpHtml, etiquette, outillage, extra = []) {
   const r = spawnSync(outillage.python,
-    [outillage.renderPage, tmpHtml, '--widths', LARGEURS_RENDU, '--output', 'json'],
+    [outillage.renderPage, tmpHtml, '--widths', LARGEURS_RENDU, '--output', 'json', ...extra],
     { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
   if (r.error) {
     return { oracle: `render_page(${etiquette})`, verdict: 'SKIP',
@@ -248,6 +248,8 @@ function lancerRenderPage(tmpHtml, etiquette, outillage) {
       msg: `render_page rend FAIL sans constat bloquant propageable — relancer render_page.py sur ${path.basename(tmpHtml)} pour le détail` });
   }
   const nonJugeRendu = ['V5 croisements de flèches et V6 images déformées — inspection visuelle des PNG produits, non jugés ici'];
+  // TF-1775 — un thème demandé que la page a réécrit n'a pas été mesuré : le dire au rapport agrégé.
+  for (const l of j.non_juge || []) if (/THEME DEMANDE NON RENDU/.test(l)) nonJugeRendu.push(l);
   if (repliUtilise) {
     nonJugeRendu.push('`render_page.py --familles` indisponible (exécution impossible, ou schéma inattendu) : sévérités lues '
       + 'depuis la copie de repli de cet agrégateur, connue incomplète — une famille bloquante absente de ce repli '
@@ -305,7 +307,8 @@ function lancerRendu(cible) {
   const out = [];
   try {
     out.push(lancerRenderPage(tmpClair, 'clair', outillage));
-    out.push(lancerRenderPage(tmpSombre, 'sombre', outillage));
+    // TF-1775 : le schéma du navigateur suit le thème demandé, et render_page dit si la page l'a réécrit.
+    out.push(lancerRenderPage(tmpSombre, 'sombre', outillage, ['--theme', 'sombre']));
   } finally {
     nettoyerRendu(tmpClair);
     nettoyerRendu(tmpSombre);
@@ -352,7 +355,11 @@ const aUnPanneau = /data-panneau-tache|data-branche\s*=/i.test(html);
 // qui a l'air d'un lien coûte deux tours de retour utilisateur, quel que soit le domaine de
 // la page. Une page sans déclencheur, elle, n'a pas de déclencheur mal formé.
 const aUnDeclencheur = /<button[\s>]|<a[\s>]|<summary[\s>]|data-action|onclick|role\s*=\s*["'](button|link)["']/i.test(html);
-const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(html);
+// TF-1772 (lot Produit-83 du 15/10) : le mot « ::backdrop » cité dans un COMMENTAIRE de tokens.css
+// lançait oracle-surcouche sur une page sans sur-couche — SKIP, et l'agrégat tombait en SKIP exit 2.
+// La détection se fait sur le document sans ses commentaires HTML ni CSS : ce qui est cité n'agit pas.
+const htmlSansCommentaires = html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
+const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(htmlSansCommentaires);
 // TF-1219 : une action nommée par une exigence (data-exigence="<id>", convention posée au
 // 10e oracle) — une page sans aucune action nommée n'a rien à juger en perceptibilité.
 const aUneActionNommee = /data-exigence\s*=/i.test(html);

@@ -29,13 +29,8 @@
 
 }
 
-/* --- Thème sombre, dérivé --- */
-@media (prefers-color-scheme: dark) {
-  :root {
-
-  }
-}
-
+/* --- Thème sombre, dérivé : CHOISI par la bascule (data-theme sur <html>), jamais hérité
+       du système — R-30 du pilot, clair par défaut strict (TF-0158, TF-1771) --- */
 :root[data-theme="dark"] {  }
 
 :root[data-theme="light"] { color-scheme: light; --bg: #FFFFFF; --ink: #111111; }
