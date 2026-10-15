@@ -27,8 +27,7 @@
     --texte-sur-badge: #111827;
     --police-corps: "Source Serif 4", Georgia, serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
+  :root[data-theme="dark"] {
       --fond: #12151b;
       --fond-carte: #1c2029;
       --texte: #eef1f6;
@@ -37,7 +36,6 @@
       --badge-muted-bg: #9CA3AF;
       --texte-sur-badge: #111827;
     }
-  }
   body { background: var(--fond); color: var(--texte); font-family: var(--police-corps); margin: 0; padding: 32px; }
   .carte { background: var(--fond-carte); color: var(--texte); padding: 16px; }
   .pastille { display: inline-block; height: 20px; line-height: 20px; padding: 0 8px; border-radius: 10px; background: var(--badge-muted-bg); color: var(--texte-sur-badge); }

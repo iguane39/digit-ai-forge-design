@@ -2,21 +2,20 @@
 <html lang="fr">
 <head>
 <!-- S-G1 (1/4) — initialisation AVANT le <style> : pose data-theme avant la première
-     peinture (zéro flash). Choix persisté sinon prefers-color-scheme à la première visite.
+     peinture (zéro flash). Choix persisté, sinon clair (R-30 : clair par défaut strict, jamais l’OS).
      Volontairement SANS defer/async : un script différé peindrait d'abord le thème par
      défaut du CSS puis re-peindrait en sombre, c'est le flash que ce script évite. -->
 <script>
 (function () {
   var stocke = localStorage.getItem('digitai-theme');
-  var theme = stocke || (window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  var theme = stocke || 'light';
   document.documentElement.setAttribute('data-theme', theme);
 })();
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Digit-AI — Page-témoin bascule thème sombre (verte) · Forge Pilot</title>
-  <meta name="description" content="Fixture verte R-30 : bascule sombre câblée, persistée, prefers-color-scheme honoré, palette sombre dérivée, contraste AA tenu dans les deux thèmes, impression forcée claire.">
+  <meta name="description" content="Fixture verte R-30 : bascule sombre câblée, persistée, clair par défaut strict, palette sombre dérivée, contraste AA tenu dans les deux thèmes, impression forcée claire.">
   <meta name="theme-color" content="#2563EB">
   <meta name="color-scheme" content="light dark">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232563EB'/%3E%3C/svg%3E">

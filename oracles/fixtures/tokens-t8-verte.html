@@ -28,15 +28,13 @@
     --focus-decalage: 2px;
     --police-corps: "Source Serif 4", Georgia, serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
+  :root[data-theme="dark"] {
       --fond: #12151b;
       --fond-carte: #1c2029;
       --texte: #eef1f6;
       --focus-anneau: #7ea8ff;
       --focus-decalage: 2px;
     }
-  }
 
   body {
     background: var(--fond);

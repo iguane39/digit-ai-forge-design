@@ -26,8 +26,7 @@
     --trait-decor: #d9dde4;
     --police-corps: "Source Serif 4", Georgia, serif;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
+  :root[data-theme="dark"] {
       --fond: #12151b;
       --fond-carte: #1c2029;
       --texte: #eef1f6;
@@ -35,7 +34,6 @@
       --focus-decalage: 0px;
       --trait-decor: #2a2f3a;
     }
-  }
 
   body {
     background: var(--fond);

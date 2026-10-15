@@ -16,8 +16,7 @@
 <script>
 (function () {
   var stocke = localStorage.getItem('digitai-theme');
-  var theme = stocke || (window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  var theme = stocke || 'light';
   document.documentElement.setAttribute('data-theme', theme);
 })();
 </script>

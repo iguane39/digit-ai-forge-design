@@ -1500,6 +1500,51 @@ for (const cas of CAS) {
   }
 }
 
+// Troisième vague du 15/10 (suite de TF-1771) — oracle-tokens, oracle-bascule et oracle-surcouche
+// lisaient un bloc @media (prefers-color-scheme: dark) comme le thème sombre, contre R-30 (clair par
+// défaut strict) que check_html G1 joue. Le sombre se déclare sous [data-theme="dark"] ; la forme
+// auto-sombre ne compte plus comme thème et se signale en AVERTISSEMENT. Pages écrites ici, deux sens.
+{
+  console.log(String.fromCharCode(10) + 'oracle-tokens / oracle-bascule / oracle-surcouche — le sombre par data-theme seul (R-30)');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'auto-sombre-'));
+  try {
+    const SOMBRE = ':root[data-theme="dark"] { color-scheme: dark; --bg: #0b1220; --ink: #eef2f8; }';
+    const AUTO = '@media (prefers-color-scheme: dark) { :root { color-scheme: dark; --bg: #0b1220; --ink: #eef2f8; } }';
+    const page = (bloc, { dialogue = false, init = "s || 'light'" } = {}) => '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Thème</title>'
+      + `<script>(function(){var s=localStorage.getItem('digitai-theme');document.documentElement.setAttribute('data-theme', ${init});})();</script>`
+      + '<style>:root { color-scheme: light; --bg: #ffffff; --ink: #111111; }\n' + bloc + '\nbody { background: var(--bg); color: var(--ink); }</style></head><body>'
+      + '<header><button class="theme-toggle" id="bascule" type="button" aria-label="Basculer le thème">Thème</button></header>'
+      + (dialogue ? '<dialog id="d"><p>Dialogue</p></dialog>' : '') + '<main><h1>Thème</h1><p>Texte.</p></main>'
+      + '<script>document.getElementById("bascule").addEventListener("click", function () { var d = document.documentElement;'
+      + ' var n = d.getAttribute("data-theme") === "dark" ? "light" : "dark"; d.setAttribute("data-theme", n); localStorage.setItem("digitai-theme", n); });</script></body></html>';
+    const jouer = (oracle, nom, html) => {
+      const f = path.join(dossier, nom + '.html');
+      fs.writeFileSync(f, html, 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, oracle), f, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      const fs_ = j?.findings || [];
+      return { code: r.status, auto: fs_.filter(x => x.sev === 'avertissement' && /prefers-color-scheme/.test(x.msg || '')), durs: fs_.filter(x => x.sev === 'bloquant' || x.sev === 'majeur') };
+    };
+    const tv = jouer('oracle-tokens.mjs', 'tokens-vert', page(SOMBRE));
+    const tr = jouer('oracle-tokens.mjs', 'tokens-rouge', page(AUTO));
+    ligne(tv.auto.length === 0 && tr.auto.some(x => x.regle === 'T4'),
+      `oracle-tokens · data-theme muet, auto-sombre signalé en T4 avertissement (vert ×${tv.auto.length}, rouge ×${tr.auto.length})`);
+    const bv = jouer('oracle-bascule.mjs', 'bascule-vert', page(SOMBRE));
+    const br = jouer('oracle-bascule.mjs', 'bascule-rouge', page(AUTO));
+    const bj = jouer('oracle-bascule.mjs', 'bascule-js', page(SOMBRE, { init: "s || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')" }));
+    ligne(bv.code === 0 && bv.auto.length === 0, `oracle-bascule · sens vert : palette sous data-theme, PASS sans avertissement (exit ${bv.code})`);
+    ligne(br.durs.some(x => x.regle === 'B-T4') && br.auto.length > 0,
+      `oracle-bascule · sens rouge : palette sous @media seul, B-T4 dur et auto-sombre signalé (exit ${br.code})`);
+    ligne(bj.code === 0 && bj.auto.length > 0, `oracle-bascule · init par matchMedia : avertissement auto-sombre, sans bloquer (exit ${bj.code})`);
+    const sv = jouer('oracle-surcouche.mjs', 'surcouche-vert', page(SOMBRE, { dialogue: true }));
+    const sr = jouer('oracle-surcouche.mjs', 'surcouche-rouge', page(AUTO, { dialogue: true }));
+    ligne(sv.auto.length === 0 && !sv.durs.some(x => x.regle === 'SC4') && sr.auto.some(x => x.regle === 'SC4'),
+      `oracle-surcouche · SC4 : data-theme muet, auto-sombre signalé (vert ×${sv.auto.length}, rouge ×${sr.auto.length})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

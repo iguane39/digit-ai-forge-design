@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Maquette — Suivi des demandes d'intervention</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23305DB0'/%3E%3Ctext x='16' y='22' font-size='18' font-family='sans-serif' font-weight='700' text-anchor='middle' fill='white'%3EB%3C/text%3E%3C/svg%3E">
 <style>
 /* ============================================================
    Tokens — direction retenue : Tableau de bord dense (ST13)
@@ -218,6 +219,8 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
 
 /* ------------------------------ graphique ------------------------------ */
 .graphe { width: 100%; height: auto; }
+.annonce-demo { margin: 0; padding: 0 var(--espace-md); color: var(--texte-faible); font-size: var(--texte-sm); }
+.annonce-demo:empty { display: none; }
 .graphe .trace { fill: none; stroke: var(--accent); stroke-width: 2; }
 .graphe .axe { stroke: var(--trait); stroke-width: 1; }
 .graphe text { fill: var(--texte-faible); font-size: 11px; font-family: var(--police-corps); }
@@ -316,6 +319,7 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
 <body>
 <a class="evitement" href="#contenu-principal">Aller au contenu</a>
 
+<p class="annonce-demo" id="annonce-demo" role="status" aria-live="polite"></p>
 <div class="bandeau-demo" role="status">
   Données de démonstration — non contractuelles. Aucun montant réel, aucun locataire réel.
 </div>
@@ -324,7 +328,7 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
   <aside class="rail">
     <header class="rail-entete">
       <div class="marque">Bailleur — Interventions</div>
-      <button class="btn btn-discret theme-toggle" id="bascule-theme" type="button"
+      <button class="btn btn-discret theme-toggle" id="bascule-theme" type="button" data-action="basculer-theme"
               data-theme-toggle aria-pressed="false"
               aria-label="Basculer le thème (clair, sombre)">Thème : light</button>
     </header>
@@ -337,7 +341,7 @@ thead .filtre { display: block; margin-top: var(--espace-sm); width: 100%; min-h
       <a href="#mobile" data-nav="mobile">Vue mobile</a>
     </nav>
     <p>
-      <button class="btn btn-discret" id="bascule-densite" type="button">Densité : confortable</button>
+      <button class="btn btn-discret" id="bascule-densite" type="button" data-action="densite-table">Densité : confortable</button>
     </p>
   </aside>
 
@@ -360,7 +364,7 @@ const DEMANDES = [
 
 const VOLUME = [18, 24, 21, 33, 29, 41, 37];
 
-const ETAT = { tri: "ref", sens: 1, filtre: "", densite: "confortable", feuilleOuverte: false };
+const ETAT = { tri: "ref", sens: 1, filtre: "", urgentes: false, densite: "confortable", feuilleOuverte: false };
 
 /* ------------------------------ utilitaires ------------------------------ */
 const echapper = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -370,7 +374,8 @@ function lignesFiltrees() {
   const base = q
     ? DEMANDES.filter((d) => (d.ref + d.logement + d.objet + d.statut).toLowerCase().includes(q))
     : DEMANDES.slice();
-  return base.sort((a, b) => String(a[ETAT.tri]).localeCompare(String(b[ETAT.tri])) * ETAT.sens);
+  const vues = ETAT.urgentes ? base.filter((d) => d.urgence === "Urgente") : base;
+  return vues.sort((a, b) => String(a[ETAT.tri]).localeCompare(String(b[ETAT.tri])) * ETAT.sens);
 }
 
 function etiquetteStatut(d) {
@@ -444,10 +449,10 @@ const ROUTES = {
           <caption>Demandes d'intervention — tri sur « ${echapper(ETAT.tri)} », sens ${ETAT.sens > 0 ? "croissant" : "décroissant"}.</caption>
           <thead>
             <tr>
-              <th scope="col"><button class="tri" type="button" data-tri="ref">Référence <span class="rang-tri">${ETAT.tri === "ref" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
-              <th scope="col"><button class="tri" type="button" data-tri="logement">Logement <span class="rang-tri">${ETAT.tri === "logement" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
-              <th scope="col"><button class="tri" type="button" data-tri="objet">Objet <span class="rang-tri">${ETAT.tri === "objet" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
-              <th scope="col"><button class="tri" type="button" data-tri="statut">Statut <span class="rang-tri">${ETAT.tri === "statut" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="ref" data-action="trier-colonne">Référence <span class="rang-tri">${ETAT.tri === "ref" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="logement" data-action="trier-colonne">Logement <span class="rang-tri">${ETAT.tri === "logement" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="objet" data-action="trier-colonne">Objet <span class="rang-tri">${ETAT.tri === "objet" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
+              <th scope="col"><button class="tri" type="button" data-tri="statut" data-action="trier-colonne">Statut <span class="rang-tri">${ETAT.tri === "statut" ? (ETAT.sens > 0 ? "▲" : "▼") : ""}</span></button></th>
               <th scope="col">Échéance</th>
             </tr>
           </thead>
@@ -481,8 +486,8 @@ const ROUTES = {
         <li>28/07 — passage du gardien, coupure partielle.</li>
         <li>29/07 — devis plombier demandé. <em>En attente.</em></li>
       </ol>
-      <p><button class="btn" type="button">Assigner un intervenant</button>
-         <button class="btn btn-fantome" type="button">Ajouter au suivi</button></p>
+      <p><button class="btn" type="button" data-action="assigner-intervenant">Assigner un intervenant</button>
+         <button class="btn btn-fantome" type="button" data-action="ajouter-suivi">Ajouter au suivi</button></p>
     </section>
     <section class="panneau">
       <h2>Pièces jointes</h2>
@@ -502,9 +507,9 @@ const ROUTES = {
     <div class="grille-composants">
       <section class="panneau">
         <h2>Actions</h2>
-        <p><button class="btn" type="button">Principal</button></p>
-        <p><button class="btn btn-fantome" type="button">Secondaire</button></p>
-        <p><button class="btn btn-discret" type="button">Discret</button></p>
+        <p><button class="btn" type="button" data-action="essayer-composant">Principal</button></p>
+        <p><button class="btn btn-fantome" type="button" data-action="essayer-composant">Secondaire</button></p>
+        <p><button class="btn btn-discret" type="button" data-action="essayer-composant">Discret</button></p>
         <p><button class="btn" type="button" disabled>Désactivé</button></p>
       </section>
       <section class="panneau">
@@ -535,7 +540,7 @@ const ROUTES = {
       <div class="etat-vide">
         <h3>Aucune demande sur ce logement</h3>
         <p>C'est plutôt bon signe. Tu peux quand même en créer une.</p>
-        <button class="btn" type="button">Créer une demande</button>
+        <button class="btn" type="button" data-action="creer-demande">Créer une demande</button>
       </div>
     </section>
     <section class="panneau">
@@ -544,7 +549,7 @@ const ROUTES = {
         <div>
           <strong>La liste n'a pas pu être chargée.</strong>
           <p>Le service de gestion locative n'a pas répondu. Réessaie, ou consulte le dernier export.</p>
-          <p><button class="btn btn-fantome" type="button">Réessayer</button></p>
+          <p><button class="btn btn-fantome" type="button" data-action="recharger-liste">Réessayer</button></p>
         </div>
       </div>
     </section>
@@ -564,7 +569,7 @@ const ROUTES = {
       <div class="chassis-vue">
         <h2>Mes demandes</h2>
         <p>3 en cours, 1 planifiée.</p>
-        ${DEMANDES.slice(0, 4).map((d) => `
+        ${lignesFiltrees().slice(0, 4).map((d) => `
           <div class="panneau">
             <strong>${echapper(d.ref)}</strong> ${etiquetteStatut(d)}
             <p>${echapper(d.objet)}</p>
@@ -577,8 +582,8 @@ const ROUTES = {
       <div class="feuille" role="dialog" aria-modal="true" aria-label="Filtrer les demandes">
         <div class="feuille-poignee" aria-hidden="true"></div>
         <h3>Filtrer</h3>
-        <p><button class="btn btn-fantome" type="button">Urgentes seulement</button></p>
-        <p><button class="btn btn-fantome" type="button">Non assignées</button></p>
+        <p><button class="btn btn-fantome" type="button" data-action="filtrer-urgentes">Urgentes seulement</button></p>
+        <p><button class="btn btn-fantome" type="button" data-action="filtrer-non-assignees">Non assignées</button></p>
         <p><button class="btn" type="button" data-action="feuille-fermer">Fermer</button></p>
       </div>` : ""}
       <nav class="chassis-onglets" aria-label="Navigation mobile">
@@ -661,6 +666,16 @@ function appliquerTheme(theme, bouton) {
   }
 })();
 
+const SIMULES = {
+  "assigner-intervenant": "Intervenant assigné (simulé : la démo n’écrit rien).",
+  "ajouter-suivi": "Entrée ajoutée au suivi (simulé).",
+  "essayer-composant": "Bouton actionné : le composant répond au clic.",
+  "creer-demande": "Formulaire de création ouvert (simulé).",
+  "recharger-liste": "Nouvel essai de chargement (simulé : le service reste indisponible dans la démo).",
+  "filtrer-non-assignees": "Filtre « non assignées » : aucune donnée d’assignation dans la démo, liste inchangée."
+};
+function annoncer(texte) { const z = document.getElementById("annonce-demo"); if (z) z.textContent = texte; }
+
 document.addEventListener("click", (e) => {
   const tri = e.target.closest("[data-tri]");
   if (tri) {
@@ -674,15 +689,17 @@ document.addEventListener("click", (e) => {
   if (action) {
     const a = action.getAttribute("data-action");
     if (a === "vider-filtre") { ETAT.filtre = ""; rendre(); }
-    if (a === "densite-table") { ETAT.densite = ETAT.densite === "compact" ? "confortable" : "compact"; rendre(); }
+    if (a === "densite-table") {
+      ETAT.densite = ETAT.densite === "compact" ? "confortable" : "compact";
+      const chrome = document.getElementById("bascule-densite");
+      if (chrome) chrome.textContent = "Densité : " + ETAT.densite;
+      rendre();
+    }
     if (a === "feuille-ouvrir") { ETAT.feuilleOuverte = true; rendre(); }
     if (a === "feuille-fermer") { ETAT.feuilleOuverte = false; rendre(); }
+    if (a === "filtrer-urgentes") { ETAT.urgentes = !ETAT.urgentes; ETAT.feuilleOuverte = false; rendre(); annoncer(ETAT.urgentes ? "Filtre « urgentes » appliqué." : "Filtre « urgentes » retiré."); }
+    if (SIMULES[a]) annoncer(SIMULES[a]);
     return;
-  }
-  if (e.target.id === "bascule-densite") {
-    ETAT.densite = ETAT.densite === "compact" ? "confortable" : "compact";
-    e.target.textContent = "Densité : " + ETAT.densite;
-    rendre();
   }
 });
 

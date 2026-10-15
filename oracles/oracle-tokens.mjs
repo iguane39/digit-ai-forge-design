@@ -71,9 +71,11 @@ if (tokensArg && fs.existsSync(tokensArg)) cssText = fs.readFileSync(tokensArg, 
 const regles = cssRulesDeep(cssText);
 const estBlocToken = r =>
   /:root|\[data-theme|^html(\.|:)|\.theme-/i.test(r.selector) || /--[\w-]+\s*:/.test(r.body) && /:root/i.test(r.selector);
-const estSombre = r =>
-  r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) ||
-  /dark/i.test(r.selector);
+// R-30 du pilot (clair par defaut strict, TF-0158) : un bloc @media (prefers-color-scheme: dark)
+// n'est PAS le theme sombre — check_html G1 le refuse. Ses jetons ne sont lus ni en clair ni en
+// sombre, et la forme auto-sombre se signale en avertissement (troisieme vague du 15/10, suite TF-1771).
+const estAutoSombre = r => r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a));
+const estSombre = r => !estAutoSombre(r) && /dark/i.test(r.selector);
 // TF-1057 (mesuré le 11/09 sur Produit-62, RD-16) — un bloc `@media print` peut
 // redéclarer `:root, :root[data-theme="dark"] { --bg:#FFFFFF; … }` pour l'impression :
 // le SÉLECTEUR porte « dark », mais la VALEUR n'appartient à aucun des deux thèmes
@@ -88,13 +90,18 @@ const estImpression = r => r.atRules.some(a => /^@media\b[^{]*\bprint\b/i.test(a
 // ── Collecte des tokens déclarés ───────────────────────────────────────────
 const tokens = { clair: new Map(), sombre: new Map() };
 let ecartesImpression = 0;
+let autoSombre = 0;
 for (const r of regles) {
   if (!estBlocToken(r)) continue;
   if (estImpression(r)) { ecartesImpression++; continue; }
+  if (estAutoSombre(r)) { autoSombre++; continue; }
   const cible = estSombre(r) ? tokens.sombre : tokens.clair;
   const re = /(--[\w-]+)\s*:\s*([^;]+)/g;
   let m;
   while ((m = re.exec(r.body))) cible.set(m[1], m[2].trim());
+}
+if (autoSombre > 0) {
+  add('avertissement', 'T4', `${autoSombre} bloc(s) de tokens sous @media (prefers-color-scheme: dark) : auto-sombre hérité de l'OS, retiré par R-30 (clair par défaut strict) et refusé par check_html G1 — ces jetons ne comptent pas comme thème sombre ; les déclarer sous :root[data-theme="dark"]`, 'bloc @media prefers-color-scheme');
 }
 if (ecartesImpression > 0) {
   NJ.push(`${ecartesImpression} bloc(s) de tokens sous @media print écarté(s) de la lecture clair/sombre (TF-1057) — ils décrivent la mise en page imprimée, pas un thème d'écran ; contraste d'impression non jugé ici`);

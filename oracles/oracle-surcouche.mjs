@@ -232,7 +232,12 @@ for (const c of composants) {
 // (scripts/generer-tokens-css.mjs, vérifié par oracle-dtcg D3) ; ici on vérifie qu'elle
 // est bien ARRIVÉE jusqu'à la page — par son CSS ou par le fichier --tokens.
 {
-  const estSombre = r => r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) || /dark/i.test(r.selector);
+  // R-30 : un bloc @media (prefers-color-scheme: dark) n'est pas le thème sombre (check_html G1).
+  const estAutoSombre = r => r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a));
+  const estSombre = r => !estAutoSombre(r) && /dark/i.test(r.selector);
+  if (regles.some(estAutoSombre)) {
+    add('avertissement', 'SC4', 'bloc @media (prefers-color-scheme: dark) : auto-sombre hérité de l’OS, retiré par R-30 et refusé par check_html G1 — il ne compte pas comme thème sombre ; déclarer le sombre (et son color-scheme: dark) sous :root[data-theme="dark"]', 'bloc @media prefers-color-scheme');
+  }
   const schemas = [];
   for (const r of regles) {
     for (const m of r.body.matchAll(/(^|[;{\s])color-scheme\s*:\s*([^;]+)/gi)) {
@@ -255,7 +260,7 @@ for (const c of composants) {
   }
   if (aThemeSombre && !sombreDeclare) {
     add('bloquant', 'SC4',
-      'un thème sombre est déclaré (bloc [data-theme="dark"] ou @media prefers-color-scheme: dark) ' +
+      'un thème sombre est déclaré (bloc [data-theme="dark"]) ' +
       'mais aucun « color-scheme: dark » ne l\'accompagne : la page bascule, les composants natifs ' +
       'restent clairs — le rendu bâtard du 01/09, dans l\'autre sens',
       'bloc de thème sombre');

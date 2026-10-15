@@ -20,8 +20,8 @@
 //   B-T3  persistance localStorage déclarée (lecture ET écriture d'une clé de thème :
 //         littéral contenant « theme », ou constante du même script dont la valeur ou
 //         le nom le contient)
-//   B-T4  palette sombre présente sous [data-theme="dark"] (ou @media prefers-color-scheme:
-//         dark), dérivée des tokens clairs (parité) — aucune couleur en dur nouvelle dans
+//   B-T4  palette sombre présente sous [data-theme="dark"] (un @media prefers-color-scheme:
+//         dark n’en tient plus lieu, R-30 : avertissement auto-sombre), dérivée des tokens clairs (parité) — aucune couleur en dur nouvelle dans
 //         une règle scopée au thème sombre hors du bloc de définition des tokens
 //
 // TF-0800 (lot pilot du 05/09/2026) — POURQUOI B-T2 ET B-T3 ONT ÉTÉ ÉLARGIES. Un produit
@@ -118,7 +118,7 @@ const sombreDeclare = (() => {
   const texteCss = css(html, root).replace(/\/\*[\s\S]*?\*\//g, ' ');
   return cssRulesDeep(texteCss).some(r =>
     /:root|\[data-theme|^html(\.|:)|\.theme-/i.test(r.selector)
-    && (r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) || /dark/i.test(r.selector))
+    && !r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) && /dark/i.test(r.selector)
     && /--[\w-]+\s*:/.test(r.body));
 })();
 const scriptDeTheme = elements(root, 'script')
@@ -300,19 +300,26 @@ if (!A_ECRITURE && !A_LECTURE && (ecriture.opaque || lecture.opaque)) {
 const cssText = css(html, root).replace(/\/\*[\s\S]*?\*\//g, ' ');
 const regles = cssRulesDeep(cssText);
 const estBlocToken = r => /:root|\[data-theme|^html(\.|:)|\.theme-/i.test(r.selector);
-const estSombre = r =>
-  r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a)) || /dark/i.test(r.selector);
+// R-30 du pilot (clair par défaut strict, TF-0158) : la palette sombre se déclare sous
+// [data-theme="dark"] ; un bloc @media (prefers-color-scheme: dark) n'en est pas une (check_html G1
+// le refuse) — ses jetons sont écartés et la forme se signale (troisième vague du 15/10).
+const estAutoSombre = r => r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a));
+const estSombre = r => !estAutoSombre(r) && /dark/i.test(r.selector);
 
 const tokensClairs = new Map();
 const tokensSombres = new Map();
 for (const r of regles) {
   if (!estBlocToken(r)) continue;
+  if (estAutoSombre(r)) continue;
   const dest = estSombre(r) ? tokensSombres : tokensClairs;
   for (const m of r.body.matchAll(/(--[\w-]+)\s*:\s*([^;]+)/g)) dest.set(m[1], m[2].trim());
 }
 
+if (regles.some(estAutoSombre) || /matchMedia\s*\(\s*['"][^'"]*prefers-color-scheme/.test(texteScripts)) {
+  add('avertissement', 'B-T4', 'auto-sombre hérité de l’OS (@media ou matchMedia prefers-color-scheme) : R-30 le retire (clair par défaut strict, le sombre est un choix du lecteur) et check_html G1 le refuse — palette sous :root[data-theme="dark"], initialisation « choix stocké, sinon light »', 'CSS / JS inline');
+}
 if (tokensSombres.size === 0) {
-  add('bloquant', 'B-T4', 'aucun bloc de thème sombre détecté ([data-theme="dark"] ou @media (prefers-color-scheme: dark)) : palette sombre absente', file);
+  add('bloquant', 'B-T4', 'aucun bloc de thème sombre détecté sous [data-theme="dark"] (un @media (prefers-color-scheme: dark) n’en tient pas lieu, R-30) : palette sombre absente', file);
 } else {
   for (const [k, v] of tokensClairs) {
     if (/#|rgb|hsl|oklch/i.test(v) && !tokensSombres.has(k)) {

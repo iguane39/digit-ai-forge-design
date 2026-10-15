@@ -14,15 +14,13 @@
     --police-corps: Georgia, serif;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
+  :root[data-theme="dark"] {
       --fond-page: #14171c;
       --texte-principal: #eceff4;
       --texte-faible: #6b7280;
       --halo: oklch(0.90 0.05 250);
       --surbrillance: #fde68a;     /* T4 · défini en sombre seulement */
     }
-  }
 
   body { background: var(--fond-page); color: var(--texte-principal); }
 

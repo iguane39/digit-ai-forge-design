@@ -22,8 +22,7 @@
     --police-corps: "Source Serif 4", Georgia, serif;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
+  :root[data-theme="dark"] {
       --fond-page: #14171c;
       --fond-surface: #1e222a;
       --texte-principal: #eceff4;
@@ -34,7 +33,6 @@
       --halo: oklch(0.90 0.05 62);
       --puits: oklch(0.14 0.03 62);
     }
-  }
 
   body {
     background: var(--fond-page);
