@@ -1123,6 +1123,68 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1860 (retour Produit-79 RD-2, décidé le 18/10/2026) — LE REFUS NOMME LA VOIE. L'exemption de
+// TF-1629 existait ; le FAIL ne la nommait pas, et le produit a conclu qu'il n'y en avait aucune. Trois
+// preuves : le message dit l'attribut, où le poser et un exemple ; la sortie de run-oracles-design le
+// transmet (JSON et lecture humaine) ; le remède COPIÉ du message, joué sur la page, la fait passer
+// (TF-1013). Deux sens rouges : une police non déclarée reste majeure, et un tokens.css qui porte la
+// famille n'exempte rien (seconde voie du produit refusée, motif au non_juge).
+{
+  console.log(String.fromCharCode(10) + 'oracle-slop S3 (TF-1860) — le refus nomme la déclaration, le remède joué passe, la police non déclarée reste rouge');
+  const racineEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'voie-s3-'));
+  try {
+    const env = { ...process.env, FORGE_SKILLS_INSTALLES: path.join(racineEssai, 'vide') };
+    const page = (attr, extra = '') => `<!DOCTYPE html><html lang="fr"${attr}><head><meta charset="UTF-8"><title>t</title><style>`
+      + 'h1{font-family:"Cormorant Garamond", Georgia, serif}body{font-family:Georgia, serif}' + extra
+      + '</style></head><body><main><h1>Titre</h1><p class="a">corps</p></main></body></html>';
+    const ecrire = (nom, contenu) => { const f = path.join(racineEssai, nom); fs.writeFileSync(f, contenu, 'utf8'); return f; };
+    const slop = (f) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-slop.mjs'), f, '--json-only'], { encoding: 'utf8', env });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible */ }
+      return { findings: (j?.findings || []).filter((x) => x.regle === 'S3'), non_juge: j?.non_juge || [] };
+    };
+    const muette = slop(ecrire('muette.html', page('')));
+    const refus = muette.findings.find((x) => x.sev === 'majeur' && /cormorant/i.test(x.msg));
+    ligne(Boolean(refus) && /data-police-de-marque="Cormorant Garamond"/.test(refus.msg) && /<html[^>]*data-police-de-marque/.test(refus.msg) && /sur <html>/.test(refus.msg),
+      'sens vert · le refus de S3 nomme l\'attribut data-police-de-marque, où le poser (<html>) et un exemple à la famille refusée');
+    ligne(Boolean(refus?.voie) && refus.msg.includes(refus.voie),
+      'sens vert · le constat porte la voie en champ structuré (`voie`), identique à celle du message');
+    // Le remède se joue : l'exemple lu DANS le message est posé sur la page, et S3 passe en info.
+    const exemple = refus ? /data-police-de-marque="[^"]+"/.exec(refus.voie)?.[0] : null;
+    const appliquee = exemple ? slop(ecrire('remede.html', page(' ' + exemple))) : { findings: [] };
+    ligne(Boolean(exemple) && appliquee.findings.length > 0 && appliquee.findings.every((x) => x.sev === 'info'),
+      `sens vert · le remède copié du message, posé sur la page : S3 en info seulement (${appliquee.findings.map((x) => x.sev).join(', ') || 'aucun constat'})`);
+    ligne(muette.findings.some((x) => x.sev === 'majeur'),
+      'sens rouge · la même police SANS déclaration reste majeure (le message qui nomme la voie ne l\'exempte pas)');
+    const autre = slop(ecrire('autre.html', page(' data-police-de-marque="Fraunces"')));
+    ligne(autre.findings.some((x) => x.sev === 'majeur' && /cormorant/i.test(x.msg)),
+      'sens rouge · déclarer une AUTRE famille (Fraunces) n\'exempte pas Cormorant Garamond');
+    // Seconde voie du produit (tokens.css / dossier de marque) : refusée, et la limite est dite.
+    const tokens = ecrire('tokens.css', ':root{--font-titre: "Cormorant Garamond", Georgia, serif;}');
+    const cible = ecrire('avec-tokens.html', page(''));
+    const run = (args) => spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, '--tokens', tokens, ...args], { encoding: 'utf8', env });
+    const j = (() => { try { return JSON.parse(run(['--json-only']).stdout.trim()); } catch { return null; } })();
+    const sl = (j?.oracles || []).find((o) => o.oracle === 'oracle-slop');
+    const s3 = (sl?.findings || []).filter((x) => x.regle === 'S3');
+    ligne(s3.some((x) => x.sev === 'majeur' && /cormorant/i.test(x.msg)),
+      'sens rouge · la famille portée par le tokens.css du produit n\'exempte rien : S3 reste majeur (seconde voie refusée)');
+    ligne((j?.non_juge || []).some((n) => /ni le tokens\.css du produit ni son dossier de marque/.test(n)),
+      'limite déclarée · le non_juge dit que ni tokens.css ni MARQUE.md ne sont lus, et pourquoi');
+    // La sortie de run-oracles-design TRANSMET la voie : champ JSON conservé, et lecture humaine (stderr).
+    ligne(s3.some((x) => x.voie && /data-police-de-marque="Cormorant Garamond"/.test(x.voie) && x.msg.includes(x.voie)),
+      'sens vert · run-oracles-design transmet le constat avec sa voie (JSON : message et champ `voie`)');
+    const humaine = run([]).stderr;
+    ligne(/↳ S3 : si « Cormorant Garamond » est la police de MARQUE[^\n]*data-police-de-marque="Cormorant Garamond"/.test(humaine),
+      'sens vert · la lecture humaine de run-oracles-design affiche la voie sous l\'oracle en échec');
+    const ok = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), ecrire('declaree-run.html', page(' data-police-de-marque="Cormorant Garamond"'))],
+      { encoding: 'utf8', env });
+    ligne(!/↳ S3/.test(ok.stderr),
+      'sens vert · page déclarée : aucune voie affichée (le remède n\'est rappelé qu\'au refus)');
+  } finally {
+    fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-1661 (retour du 13/10/2026) — LE VERT DU RENDU FIGÉ N'EST PAS UN SILENCE. Le cas du harnais
 // prouve PASS sur la verte ; ce bloc prouve qu'elle passe POUR LA BONNE RAISON : l'absence de
 // bascule y est dite en avertissement, et les trois règles non jugées le sont au non_juge.

@@ -49,7 +49,7 @@ const root = parse(html);
 const cssText = css(html, root).replace(/\/\*[\s\S]*?\*\//g, ' ');
 const regles = cssRules(cssText);
 const F = [];
-const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
+const add = (sev, regle, msg, where, voie) => F.push(voie ? { sev, regle, msg, where, voie } : { sev, regle, msg, where });
 const L = i => 'ligne ' + lineOf(html, i);
 
 // Le contrat de la forge impose un rendu dynamique : sans les fragments portés
@@ -175,6 +175,23 @@ for (const m of html.matchAll(/\bdata-police-de-marque\s*=\s*(?:"([^"]*)"|'([^']
 if (POLICES_DE_MARQUE.size) {
   NON_JUGE.push(`S3 : page déclarant sa/ses police(s) de marque par data-police-de-marque (${[...POLICES_DE_MARQUE].join(', ')}) — exemptée(s) et rendue(s) en \`info\` ; la présence de ces familles dans le dossier de marque du produit n'est pas vérifiée (TF-1629). Toute autre famille réflexe reste jugée`);
 }
+// TF-1860 (retour Produit-79 RD-2, décidé le 18/10/2026) — LE REFUS NOMME LA VOIE. L'exemption de TF-1629
+// existait depuis cinq jours quand le produit a écrit n'avoir trouvé « aucune voie de déclaration » : le
+// FAIL disait la règle, pas son remède. Le message et le champ `voie` disent donc où la poser et en
+// donnent l'exemple, avec la famille même qui vient d'être refusée (le remède se copie). Seconde voie
+// proposée par le produit — lire la police dans le `tokens.css` ou le dossier de marque du produit —
+// REFUSÉE : tout `tokens.css` porte des familles, posées par réflexe comme par charte, et l'oracle ne
+// distingue pas les deux sans deviner ; MARQUE.md est de la prose. Lire l'un ou l'autre ferait exempter
+// la monoculture que S3 existe pour refuser. Seul un acte explicite, nommé, sur la page, se juge.
+const refusee = (libelle, msg, ou) => {
+  const famille = String(libelle).trim().replace(/^["']|["']$/g, '');
+  const voie = `si « ${famille} » est la police de MARQUE du client, la déclarer sur la page : attribut data-police-de-marque="${famille}" `
+    + `(plusieurs familles séparées par des virgules) posé sur <html>, par exemple <html lang="fr" data-police-de-marque="${famille}"> ; `
+    + 'elle sort alors du constat, rendue en info, et seule la famille listée est exemptée (TF-1629). Sinon, changer de famille';
+  add('majeur', 'S3', `${msg} — ${voie}`, ou, voie);
+  const limite = 'S3 : la police de marque ne se lit que sur la page (data-police-de-marque) ; ni le tokens.css du produit ni son dossier de marque (MARQUE.md) ne sont lus — une famille posée par réflexe dans un tokens.css serait exemptée au même titre qu\'une famille de charte (TF-1860)';
+  if (!NON_JUGE.includes(limite)) NON_JUGE.push(limite);
+};
 {
   const vus = new Set();
   const constater = (n, libelle, ou) => {
@@ -186,7 +203,7 @@ if (POLICES_DE_MARQUE.size) {
       add('info', 'S3', `police « ${libelle} » : famille réflexe, mais déclarée police de marque par la page (data-police-de-marque) — exemptée, TF-1629`, ou);
       return;
     }
-    add('majeur', 'S3', `police réflexe « ${libelle} » — famille bannie par impeccable, monoculture inter-projets`, ou);
+    refusee(libelle, `police réflexe « ${libelle} » — famille bannie par impeccable, monoculture inter-projets`, ou);
   };
   const scan = (texte, ou) => {
     const re = /font-family\s*:\s*([^;{}]+)/gi;
@@ -213,7 +230,7 @@ if (POLICES_DE_MARQUE.size) {
           add('info', 'S3', `police « ${n} » importée depuis Google Fonts : famille réflexe, mais PRESCRITE par la charte du socle digit-ai que cette page déclare — exemptée, TF-0857`, L(l.start));
         else if (POLICES_DE_MARQUE.has(n))
           add('info', 'S3', `police « ${n} » importée depuis Google Fonts : famille réflexe, mais déclarée police de marque par la page (data-police-de-marque) — exemptée, TF-1629`, L(l.start));
-        else add('majeur', 'S3', `police réflexe « ${n} » importée depuis Google Fonts`, L(l.start));
+        else refusee(n, `police réflexe « ${n} » importée depuis Google Fonts`, L(l.start));
       }
     }
   }

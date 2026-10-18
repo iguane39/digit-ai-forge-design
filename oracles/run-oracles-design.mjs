@@ -521,6 +521,14 @@ if (!jsonOnly) {
     process.stderr.write(`  ${r.verdict.padEnd(4)} ${r.oracle}` +
       (r.verdict === 'SKIP' ? ` — ${r.raison}` : ` — ${r.ecarts_durs} dur(s), ${r.avertissements} avert.`
         + (r.exemptes_socle ? `, ${r.exemptes_socle} au compte du socle` : '')) + '\n');
+    // TF-1860 : un refus qui porte son remède (`voie`) le dit ici, une fois par remède — le produit
+    // ne lit pas toujours le JSON, et n'a pas à deviner qu'une exemption existe.
+    const voies = new Set();
+    for (const f of (r.findings || [])) {
+      if (!f.voie || !(f.sev === 'bloquant' || f.sev === 'majeur') || voies.has(f.voie)) continue;
+      voies.add(f.voie);
+      process.stderr.write(`         ↳ ${f.regle} : ${f.voie}\n`);
+    }
   }
   for (const s of sansObjet) process.stderr.write(`  —    ${s}\n`);
   if (socleExempte && socleExempte.verifies.length) {
