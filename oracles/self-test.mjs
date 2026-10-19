@@ -1485,10 +1485,29 @@ for (const cas of CAS) {
         const r = spawnSync(OUTILLAGE_RENDU.python, [OUTILLAGE_RENDU.renderPage, f, '--widths', '600', '--output', 'json', '--theme', 'sombre', '--out', dossier],
           { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
         let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
-        return (j?.non_juge || []).some(l => /THEME DEMANDE NON RENDU/.test(l));
+        return (j?.non_juge || []).some(l => /THEME TENU CONTRE LA PAGE/.test(l));
       };
-      ligne(jouer('brute', page), 'sens rouge · page brute : son script réécrit le thème, render_page le signale (témoin de la mesure)');
-      ligne(!jouer('copie', injecterThemeSombre(page)), 'sens vert · copie sombre de la forge : le thème sombre tient après le script de la page');
+      // TF-1862 (rouge depuis le 18/10/2026). Depuis le socle 1.31.0 (forge-agents 4e77ee8, TF-1775),
+      // render_page contre lui-même la réécriture : sous --theme sombre il remet data-theme à chaque fois et publie
+      // « THEME TENU CONTRE LA PAGE » au lieu de « THEME DEMANDE NON RENDU » (réservé au thème qu'il n'a pas pu tenir).
+      // Le message ne distingue plus la copie de la forge de la page brute (les deux le portent, mesuré le 19/10) :
+      // la garde de injecterThemeSombre se prouve donc sur le fait, le data-theme que la page porte une fois ses
+      // scripts joués, sans --theme (qui tiendrait le thème à sa place).
+      const themeFinal = (nom, html) => {
+        const f = path.join(dossier, nom + '.html');
+        fs.writeFileSync(f, html, 'utf8');
+        const code = 'import sys,pathlib\nfrom playwright.sync_api import sync_playwright\n'
+          + 'with sync_playwright() as p:\n b=p.chromium.launch()\n pg=b.new_context(color_scheme="dark").new_page()\n'
+          + ' pg.goto(pathlib.Path(sys.argv[1]).resolve().as_uri())\n pg.wait_for_timeout(300)\n'
+          + ' print(pg.evaluate("() => document.documentElement.getAttribute(\'data-theme\')"))\n b.close()\n';
+        const r = spawnSync(OUTILLAGE_RENDU.python, ['-c', code, f], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        return (r.stdout || '').trim();
+      };
+      ligne(jouer('brute', page), 'sens rouge · page brute : son script réécrit le thème, render_page le signale et le tient (témoin de la mesure)');
+      const brut = themeFinal('brut-final', page);
+      ligne(brut === 'light', `sens rouge · page brute : sans garde, le thème final est le clair que son script pose (obtenu « ${brut} »)`);
+      const garde = themeFinal('copie-finale', injecterThemeSombre(page));
+      ligne(garde === 'dark', `sens vert · copie sombre de la forge : le thème sombre tient après le script de la page (obtenu « ${garde} »)`);
     } finally {
       fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
     }
