@@ -276,8 +276,9 @@ déclenchés par contenu et non par extension — détail et sauvegardes :
 144 entrées, toutes sourcées : 24 styles, 9 palettes OKLCH déclinées en deux thèmes
 (18 lignes), 20 appariements typographiques hors liste réflexe, 31 patterns,
 51 guidelines. Sources : WCAG 2.2, ARIA APG, Material 3, Apple HIG, NN/g,
-Google Fonts, Fontshare, `impeccable`, et **apple-design** d'Emil Kowalski (MIT) —
-valeurs de ressorts, projection d'inertie, rubber-banding, tracking optique.
+Google Fonts, Fontshare et `impeccable`. Les valeurs de `apple-design` d'Emil Kowalski
+(ressorts, inertie, rubber-banding, tracking optique) n'y figurent pas : ce skill n'est
+ni installé ni versé au corpus, qui s'arrête à GL45 (relevé du 19/10/2026).
 
 C'est un corpus d'amorçage, pas un catalogue exhaustif : il grandit par ajout sourcé,
 et `oracle-corpus` refuse toute entrée sans source résolue.
@@ -293,16 +294,21 @@ au lieu de produire une entrée inventée.
 
 ## Skills tiers installés pour la forge
 
-Trois skills extérieurs sont installés à côté de la forge, et le tableau ci-dessous dit
-lequel sert à quoi et sous quelle licence il est repris. Sont exclus de cette liste les
-outils simplement consultés : n'y figure que ce qui est effectivement installé et
-exécuté ou cité par un oracle.
+Un skill est installé à côté de la forge, et le tableau ci-dessous dit à quoi il sert et
+sous quelle licence il est repris. Sont exclus de cette liste les outils simplement
+consultés : n'y figure que ce qui est effectivement installé et exécuté ou cité par un
+oracle.
 
 | Skill | Rôle | Licence |
 |---|---|---|
-| `apple-design` | mouvement, gestes, matières — ses seuils sont dans le corpus (GL36–GL51, PT27–PT31) | MIT, Emil Kowalski |
-| `review-animations` | revue de code d'animation, adossée à `critique-le-design` D6. `disable-model-invocation` : invocation explicite | MIT, Emil Kowalski |
 | `digit-ai-page-html` + `render_page.py` | juge de rendu réel V1–V7. **Le script a été installé le 04/08/2026** : le registre le déclarait sans qu'il existe | maison |
+
+`apple-design` et `review-animations` d'Emil Kowalski (MIT) ne sont **pas** installés :
+absents de `~\.claude\skills\` (`~\.claude-b\skills\` en est un lien), et aucun de leurs
+fichiers n'est dans l'arbre ni dans l'historique git de la forge (relevé du
+19/10/2026). Seule trace de `review-animations` : les règles R1 à R7 de
+`oracles/oracle-motion.mjs` (ligne 3) en sont dérivées, et le skill lui-même n'est pas
+joué.
 
 ## Règle qui traverse tout
 

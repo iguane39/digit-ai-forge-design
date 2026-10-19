@@ -78,7 +78,7 @@ jugements humains (adéquation à la marque, goût), déclarés plus bas.
 | Chroma aux extrêmes de luminosité | ≤ 0.10 si L ≥ 0.85 ou L ≤ 0.15 | T6 |
 | Parité des thèmes | tout token de couleur existe des deux côtés | T4 |
 | Échelle d'espacement | multiples de 4 | T3 |
-| Tracking optique | ~-0.02em sur le display, ~0 sur le corps | corpus GL49 (apple-design) |
+| Tracking optique | ~-0.02em sur le display, ~0 sur le corps | intention, aucun oracle : valeur d'`apple-design` (Emil Kowalski), non versée au corpus (qui s'arrête à GL45) |
 | Aucune valeur en dur hors `:root` | 0 couleur, 0 police littérale | T1, T2 |
 | `color-scheme` déclaré par thème | `light` au bloc clair · `dark` au bloc sombre | `oracle-dtcg` D3 (dérivé) · `oracle-surcouche` SC4 (page) |
 | Durée de transition | ≤ `--dur-plafond` (300 ms) — pour le token **et** pour la feuille | `oracle-motion` R9, R4 |
