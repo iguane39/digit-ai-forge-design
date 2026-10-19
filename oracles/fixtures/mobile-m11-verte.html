@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#fbf9f5">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14171c">
+<title>Fixture verte — oracle-mobile M11 (theme-color présent)</title>
+<!--
+  TF-1911, règle M11 (avertissement), sens vert. Règle tirée des Web Interface Guidelines de
+  Vercel (l.121) et de mobile-native d'Emil Kowalski (§10), MIT, figées au 19/10/2026 ;
+  attribution : regles-importees-vercel-emil.md. Une valeur par schéma de couleur : M11 muette.
+  touch-action posé : M10 muette aussi.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  button { touch-action: manipulation; min-height: 44px; min-width: 44px; background: var(--fond); color: var(--texte); border: 1px solid var(--trait); }
+  @media (orientation: landscape) { body { padding: 16px; } }
+</style>
+</head>
+<body>
+  <h1>Barre d'état accordée</h1>
+  <button type="button">Valider</button>
+</body>
+</html>

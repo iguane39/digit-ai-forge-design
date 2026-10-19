@@ -615,3 +615,124 @@ variable, une boucle JavaScript (`repeat: Infinity`), les transitions pour R13, 
   }
 ]
 ```
+
+## Entrée du 19/10/2026 — sept règles extraites de skills tiers (TF-1911)
+
+Voie taste-skill (TF-0199), appliquée aux Web Interface Guidelines de Vercel et aux skills
+d'Emil Kowalski, **sans rien installer**. Le trou, mesuré par l'étude d'opportunité 20261019e :
+sur une page témoin à 14 défauts tirés de cinq skills de design tiers, 12 passaient tous les
+oracles du lanceur sans alerte. Sept règles statiques, vérifiables sur le fichier seul et citées
+par deux sources au moins (ou un texte normatif), entrent en **avertissement** dans l'oracle qui
+juge déjà leur domaine. Attribution, citations, écarts à la lettre et règles écartées :
+[regles-importees-vercel-emil.md](regles-importees-vercel-emil.md).
+
+| Règle | Oracle | Défaut visé |
+|---|---|---|
+| DE4 | `oracle-declencheurs` | `div` ou `span` avec `onclick`, sans `role` ni `tabindex` |
+| SA8 | `oracle-saisie` | champ textuel sans `autocomplete` ni `inputmode` |
+| M10 | `oracle-mobile` | contrôles sans `touch-action: manipulation` ni `-webkit-tap-highlight-color` |
+| M11 | `oracle-mobile` | `<meta name="theme-color">` absent |
+| SC5 | `oracle-surcouche` | modale ou tiroir sans `overscroll-behavior: contain` |
+| I8 | `oracle-images` | `<img>` sans `width` ni `height` |
+| R14 | `oracle-motion` | contrôle pressable qu'aucune règle `:active` n'atteint |
+
+Preuves : sept paires de fixtures, verrouillées par le bloc « sept règles extraites de skills
+tiers (TF-1911) » de `self-test.mjs` (rouge PASS exit 0 avec sa règle seule, verte sans la règle).
+`oracle-motion` reste le seul lieu du mouvement : R14 s'ajoute à R11 à R13, sans doublon (aucune
+de ces trois règles ne porte un retour d'appui).
+
+Bruit mesuré le 19/10/2026 avant l'inscription. Aucun verdict ne change nulle part. Sur les 108
+HTML et CSS suivis de la forge (dont 92 fixtures minimales) : DE4 0 constat, SA8 44 constats sur
+26 fichiers, M10 70 fichiers, M11 99 fichiers, SC5 6 fichiers, I8 7 fichiers, R14 63 fichiers.
+Sur 1 405 HTML suivis des autres dépôts de `C:\dev` : DE4 2 constats sur 1 fichier, SA8 183
+constats sur 49 fichiers, M10 1 010 fichiers, M11 609 fichiers, SC5 519 fichiers (sur 523 constats),
+I8 530 fichiers, R14 894 fichiers. M10, M11 et R14 sont donc bavardes : l'avertissement le dit, et
+la revue du 2026-11-16 retire toute règle dont la moitié des avertissements n'est pas confirmée
+à la lecture.
+
+```json
+[
+  {
+    "domaine": "Déclencheurs : nature du point d'entrée d'une fonctionnalité",
+    "oracle": "oracles/oracle-declencheurs.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/declencheurs-verte.html",
+      "rouge": "oracles/fixtures/declencheurs-rouge.html",
+      "verte_de4": "oracles/fixtures/declencheurs-de4-verte.html",
+      "rouge_de4": "oracles/fixtures/declencheurs-de4-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-10-19", "mandat": "TF-1911", "amont": "Vercel Web Interface Guidelines (MIT) ; WCAG 2.1.1" },
+    "regles": 4
+  },
+  {
+    "domaine": "Champs de saisie : typé, proposé, borné, atteignable",
+    "oracle": "oracles/oracle-saisie.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte_sa8": "oracles/fixtures/saisie-sa8-verte.html",
+      "rouge_sa8": "oracles/fixtures/saisie-sa8-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-10-19", "mandat": "TF-1911", "amont": "Vercel Web Interface Guidelines (MIT) ; mobile-native d'Emil Kowalski (MIT)" },
+    "regles": 8
+  },
+  {
+    "domaine": "Cible mobile : contrat d'usage tactile",
+    "oracle": "oracles/oracle-mobile.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte_m10": "oracles/fixtures/mobile-m10-verte.html",
+      "rouge_m10": "oracles/fixtures/mobile-m10-rouge.html",
+      "verte_m11": "oracles/fixtures/mobile-m11-verte.html",
+      "rouge_m11": "oracles/fixtures/mobile-m11-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-10-19", "mandat": "TF-1911", "amont": "Vercel Web Interface Guidelines (MIT) ; mobile-native d'Emil Kowalski (MIT)" },
+    "regles": 11
+  },
+  {
+    "domaine": "Composant dynamique et sur-couche : habillage explicite depuis les jetons",
+    "oracle": "oracles/oracle-surcouche.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte_sc5": "oracles/fixtures/surcouche-sc5-verte.html",
+      "rouge_sc5": "oracles/fixtures/surcouche-sc5-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-10-19", "mandat": "TF-1911", "amont": "Vercel Web Interface Guidelines (MIT) ; mobile-native d'Emil Kowalski (MIT)" },
+    "regles": 5
+  },
+  {
+    "domaine": "Visuels générés : traçabilité et budget",
+    "oracle": "oracles/oracle-images.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte_i8": "oracles/fixtures/images-i8-verte.html",
+      "rouge_i8": "oracles/fixtures/images-i8-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-10-19", "mandat": "TF-1911", "amont": "Vercel Web Interface Guidelines (MIT)" },
+    "regles": 8
+  },
+  {
+    "domaine": "Mouvement : craft de l'animation, PRESCRIT et jugé",
+    "oracle": "oracles/oracle-motion.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html", ".css"],
+    "fixtures": {
+      "verte_appui": "oracles/fixtures/motion-appui-verte.html",
+      "rouge_appui": "oracles/fixtures/motion-appui-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-10-19", "mandat": "TF-1911", "amont": "review-animations d'Emil Kowalski (MIT), STANDARDS l.59" },
+    "regles": 14
+  }
+]
+```

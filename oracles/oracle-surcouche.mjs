@@ -22,6 +22,13 @@
 //        sombre dès qu'un thème sombre existe. Sans lui, la page obéit à data-theme et le
 //        navigateur au réglage du système : deux autorités sur un même écran.
 //
+// Une règle d'AVERTISSEMENT, extraite de textes tiers (TF-1911, voie taste-skill ;
+// attribution : `regles-importees-vercel-emil.md`) :
+//   SC5  une modale ou un tiroir (<dialog>, role="dialog"/"alertdialog", classe drawer, sheet
+//        ou tiroir) contient son défilement : `overscroll-behavior: contain` (ou `none`)
+//        sur lui ou sur un descendant (Vercel Web Interface Guidelines l.106 ; Emil Kowalski,
+//        mobile-native §6)
+//
 // Ce que cet oracle NE juge PAS (déclaré en non_juge, jamais dupliqué) :
 //   - la prescription et le contraste de l'anneau de focus → oracle-tokens T8 ;
 //   - la traçabilité des couleurs employées (couleur en dur hors bloc de tokens) → T1 ;
@@ -51,6 +58,7 @@ const NJ = [
   'traçabilité des couleurs employées (couleur en dur hors bloc de tokens) — oracle-tokens T1',
   'rendu réel du composant OUVERT (top-layer, ::backdrop composé, ordre d\'empilement) — render_page.py, matrice d\'états de la critique d\'implémentation',
   'ouverture effective du composant (showModal(), popovertarget, piège de focus) — pan « interface » de forge-tests',
+  'SC5 : présence de overscroll-behavior sur le composant ou un descendant, sans vérifier que cet élément est bien celui qui défile ; le comportement du défilement sur la racine de la page (html, body) n\'est pas jugé, les sources tierces divergeant',
   'habillage porté par une feuille externe (<link rel="stylesheet">) ou un framework — lecture limitée au CSS du document et au fichier --tokens',
   'composant construit sans littéral de gabarit (document.createElement en série) — non lu par l\'analyse statique',
   'partie ANCÊTRE d\'un sélecteur descendant (« .modale .bouton ») — seul le dernier compound est confronté à l\'élément, l\'arbre n\'est pas remonté : une règle qui ne s\'applique qu\'en contexte est comptée comme si elle s\'appliquait (lib/selecteurs.mjs, TF-0921)',
@@ -223,6 +231,30 @@ for (const c of composants) {
   add('majeur', 'SC3',
     `composant modal « ${c.nom} » sans voile habillé : aucune règle ::backdrop ne pose de fond — ` +
     'le voile par défaut du navigateur ignore le thème de la page et ne suit aucun jeton',
+    `${c.provenance} · ${c.nom}`);
+}
+
+// ── SC5 · une modale ou un tiroir contient le défilement (avertissement, TF-1911) ──
+// Sans `overscroll-behavior: contain`, le défilement de la fenêtre se prolonge dans la page
+// derrière elle (Vercel Web Interface Guidelines l.106 ; Emil Kowalski, mobile-native §6).
+// `none` est accepté : il contient aussi, et supprime en plus le rebond. Visés : <dialog>,
+// role="dialog"/"alertdialog", et les conteneurs dont la classe nomme un tiroir (drawer,
+// sheet, tiroir) ; un [popover] seul, qui ne défile pas, n'est pas visé. La propriété est
+// cherchée sur le composant et sur ses descendants (le conteneur qui défile est souvent un
+// enfant). Sur la racine de la page les sources divergent : non jugée.
+for (const c of composants) {
+  const el = c.el;
+  const visee = el.tag === 'dialog' || ['dialog', 'alertdialog'].includes(roleDe(el))
+    || classesDe(el).some(k => /drawer|sheet|tiroir/i.test(k));
+  if (!visee) continue;
+  const contient = [el, ...elements(el)].some(x => {
+    const d = declarationsPour(x);
+    return /^(contain|none)\b/i.test(String(d.get('overscroll-behavior') ?? d.get('overscroll-behavior-y') ?? ''));
+  });
+  if (contient) continue;
+  add('avertissement', 'SC5',
+    `composant en sur-couche « ${c.nom} » (${c.provenance}) sans overscroll-behavior: contain : ` +
+    'le défilement de la fenêtre se prolonge dans la page derrière elle — le poser sur le composant ou sur son conteneur défilant',
     `${c.provenance} · ${c.nom}`);
 }
 

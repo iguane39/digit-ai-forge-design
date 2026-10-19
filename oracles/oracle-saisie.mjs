@@ -44,6 +44,13 @@
 //                     contrainte déclarée n'existe pas (TF-1343). Aucune échappatoire : un motif
 //                     qui ne compile pas n'est jamais un choix délibéré.
 //
+// Une règle d'AVERTISSEMENT, extraite de textes tiers (TF-1911, voie taste-skill ; attribution :
+// `regles-importees-vercel-emil.md`) :
+//   SA8  CLAVIER ET REMPLISSAGE — un champ textuel (text, email, tel, url, number, password)
+//                     sans autocomplete NI inputmode : ni remplissage automatique, ni clavier
+//                     adapté (Vercel Web Interface Guidelines l.39-40 ; Emil Kowalski,
+//                     mobile-native §4 ; UI/UX Pro Max n° 58 et n° 63).
+//
 // Ce que cet oracle NE juge PAS (déclaré en non_juge, jamais supposé) :
 //   - la JUSTESSE de la valeur proposée (fin de période = aujourd'hui, début = dernière position
 //     connue sinon profondeur métier 1/3/6 mois) : la présence est décidable, la pertinence non ;
@@ -76,6 +83,7 @@ const NON_JUGE = [
   'garde serveur symétrique des bornes min/max — hors périmètre d\'un fichier HTML autonome, à exiger au contrat du produit',
   'champs rendus par un <script src="…"> externe ou un framework (React/Vue/Web Components) — analyse statique limitée au DOM et au JS inline',
   'support navigateur effectif de showPicker() et son refus hors geste utilisateur — comportement runtime, non observable sur le fichier',
+  'SA8 : présence de autocomplete ou d\'inputmode seulement — ni la justesse du jeton (email, tel, one-time-code…) ni celle du mode (numeric, decimal…) ; les champs date, couleur, curseur, liste et zone de texte sont hors règle',
   'pertinence métier du motif pattern une fois compilé sous v (est-ce la bonne contrainte, ex. un IBAN vs un simple alphanumérique) — la compilation est décidable sur le fichier, la justesse métier non, même logique que la valeur proposée (SA2)',
   'pattern posé par le JS inline sur la propriété .pattern plutôt que par l\'attribut HTML statique — non tracé, comme le reste de l\'oracle ne trace que value/valueAsDate/valueAsNumber/defaultValue posés par le JS',
 ];
@@ -324,6 +332,23 @@ for (const tree of TOUS_ARBRES) {
           ou(el));
       }
     }
+  }
+}
+
+// ── SA8 · CLAVIER ET REMPLISSAGE (avertissement, TF-1911) ───────────────────
+// Un champ textuel sans autocomplete ni inputmode n'aide ni le navigateur ni le clavier
+// mobile. `autocomplete="off"` COMPTE comme posé : l'auteur a tranché. Les champs dont le
+// sélecteur est natif (date, couleur, curseur), les listes et les zones de texte sont hors règle.
+// SA1 juge le TYPE, SA8 l'attribut qui le complète : deux règles, deux défauts.
+const TEXTUELS = new Set(['text', 'email', 'tel', 'url', 'number', 'password']);
+for (const tree of TOUS_ARBRES) {
+  const dans = tree === root ? 'DOM statique' : 'gabarit JS';
+  for (const el of elements(tree)) {
+    if (el.tag !== 'input' || !TEXTUELS.has(typeDe(el))) continue;
+    if (aAttr(el, 'autocomplete') || aAttr(el, 'inputmode')) continue;
+    add('avertissement', 'SA8',
+      `champ « ${nomDe(el)} » (type="${typeDe(el)}") sans autocomplete ni inputmode : poser autocomplete (jeton adapté, ou "off" si voulu) et inputmode si le clavier mobile peut être précisé`,
+      `${dans} · input[name=${nomDe(el)}]`);
   }
 }
 

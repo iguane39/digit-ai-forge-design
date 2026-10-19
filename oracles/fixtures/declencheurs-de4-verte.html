@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — oracle-declencheurs DE4 (éléments cliquables tenus)</title>
+<!--
+  TF-1911, règle DE4 (avertissement), sens vert. Règle tirée des Web Interface Guidelines de
+  Vercel (MIT, figées au 19/10/2026, attribution : regles-importees-vercel-emil.md). Trois
+  façons de ne PAS lever DE4 : le bouton natif, un <div> qui porte son rôle ET son tabindex,
+  et un <div> sans onclick (aucun gestionnaire écrit sur l'élément).
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --fond-eleve: #f2eee6; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  .btn { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .puce { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; display: inline-block; }
+</style>
+</head>
+<body>
+  <h1>Déclencheurs tenus</h1>
+  <button class="btn" type="button" onclick="ouvrir()">Ouvrir</button>
+  <div class="puce" role="button" tabindex="0" onclick="filtrer()">Filtrer</div>
+  <div class="puce">Étiquette sans gestionnaire</div>
+  <script>function ouvrir() {} function filtrer() {}</script>
+</body>
+</html>

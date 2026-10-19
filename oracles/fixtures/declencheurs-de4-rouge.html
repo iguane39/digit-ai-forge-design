@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — oracle-declencheurs DE4 (éléments non interactifs cliquables)</title>
+<!--
+  TF-1911, règle DE4 (avertissement), sens rouge : un <div> et un <span> rendus cliquables par
+  onclick, sans role ni tabindex — ni focus clavier ni rôle annoncé (WCAG 2.1.1). Le bouton natif
+  qui les accompagne est correct : DE4 ne porte que sur les deux autres. DE4 est un avertissement :
+  la page reste PASS, exit 0.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --fond-eleve: #f2eee6; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  .btn { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .puce { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; display: inline-block; }
+</style>
+</head>
+<body>
+  <h1>Déclencheurs non interactifs</h1>
+  <button class="btn" type="button" onclick="ouvrir()">Ouvrir</button>
+  <div class="puce" onclick="filtrer()">Filtrer</div>
+  <span class="puce" onclick="trier()">Trier</span>
+  <script>function ouvrir() {} function filtrer() {} function trier() {}</script>
+</body>
+</html>

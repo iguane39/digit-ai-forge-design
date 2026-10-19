@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — oracle-surcouche SC5 (défilement contenu)</title>
+<!--
+  TF-1911, règle SC5 (avertissement), sens vert. Règle tirée des Web Interface Guidelines de
+  Vercel (l.106) et de mobile-native d'Emil Kowalski (§6), MIT, figées au 19/10/2026 ;
+  attribution : regles-importees-vercel-emil.md. Le tiroir contient son défilement sur son
+  conteneur défilant (un descendant) ; le popover d'aide, qui ne défile pas, n'est pas visé.
+  Habillage complet (SC1 à SC4 muettes) : SC5 est seule en jeu.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --fond-eleve: #f2eee6; --texte: #1d2126; --trait: #d8d2c6; --voile: rgba(29, 33, 38, 0.55); --ombre: rgba(29, 33, 38, 0.18); }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  .tiroir { background: var(--fond-eleve); color: var(--texte); box-shadow: 0 -8px 24px var(--ombre); padding: 24px; }
+  .tiroir::backdrop { background: var(--voile); }
+  .tiroir-corps { max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+  .tiroir-btn { background: var(--fond); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  .aide { background: var(--fond-eleve); color: var(--texte); box-shadow: 0 4px 12px var(--ombre); padding: 12px; }
+  .aide::backdrop { background: var(--voile); }
+</style>
+</head>
+<body>
+  <h1>Tiroir qui contient son défilement</h1>
+  <dialog class="tiroir" aria-labelledby="t-titre">
+    <h2 id="t-titre">Historique</h2>
+    <div class="tiroir-corps"><p>Ligne 1</p><p>Ligne 2</p><p>Ligne 3</p></div>
+    <button class="tiroir-btn" type="button">Fermer</button>
+  </dialog>
+  <div class="aide" popover id="aide-1"><p>Aide courte</p></div>
+</body>
+</html>

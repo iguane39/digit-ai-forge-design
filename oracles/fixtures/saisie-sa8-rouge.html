@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — oracle-saisie SA8 (champs sans autocomplete ni inputmode)</title>
+<!--
+  TF-1911, règle SA8 (avertissement), sens rouge : trois champs textuels typés correctement
+  (SA1 muette) mais sans autocomplete ni inputmode — ni remplissage automatique, ni clavier
+  adapté. SA8 est un avertissement : la page reste PASS, exit 0.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+</style>
+</head>
+<body>
+  <h1>Saisie sans aide au clavier</h1>
+  <form>
+    <label for="courriel">Courriel</label>
+    <input id="courriel" name="courriel" type="email">
+    <label for="ville">Ville</label>
+    <input id="ville" name="ville" type="text">
+    <label for="poste">Poste fixe</label>
+    <input id="poste" name="poste" type="tel">
+  </form>
+</body>
+</html>

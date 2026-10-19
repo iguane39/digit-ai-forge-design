@@ -1735,6 +1735,46 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1911 (étude 20261019e, mesuré le 19/10/2026) — sur une page témoin à 14 défauts tirés de cinq
+// skills de design tiers, 12 passaient tous les oracles de la forge sans alerte. Sept règles
+// statiques en sont extraites (voie taste-skill : attribution `regles-importees-vercel-emil.md`),
+// en AVERTISSEMENT, chacune dans l'oracle qui juge déjà son domaine. Comme R11–R13, elles ne
+// passent pas par CAS (la rouge y doit FAIL) : la verte doit rester sans la règle, la rouge doit
+// rester PASS, exit 0, avec un avertissement de SA règle et aucune des autres règles neuves du
+// même oracle (la bonne raison).
+{
+  console.log(String.fromCharCode(10) + 'sept règles extraites de skills tiers (TF-1911) — avertissements, deux sens, aucun livrable rougi');
+  const NEUVES_PAR_ORACLE = {
+    'oracle-declencheurs.mjs': ['DE4'], 'oracle-saisie.mjs': ['SA8'], 'oracle-mobile.mjs': ['M10', 'M11'],
+    'oracle-surcouche.mjs': ['SC5'], 'oracle-images.mjs': ['I8'], 'oracle-motion.mjs': ['R11', 'R12', 'R13', 'R14'],
+  };
+  const jouer = (oracle, f) => {
+    const r = spawnSync(process.execPath, [path.join(ici, oracle), f, '--json-only'], { encoding: 'utf8' });
+    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, verdict: j?.verdict, f: j?.findings || [] };
+  };
+  const regles = [
+    ['DE4', 'oracle-declencheurs.mjs', 'declencheurs-de4'],
+    ['SA8', 'oracle-saisie.mjs', 'saisie-sa8'],
+    ['M10', 'oracle-mobile.mjs', 'mobile-m10'],
+    ['M11', 'oracle-mobile.mjs', 'mobile-m11'],
+    ['SC5', 'oracle-surcouche.mjs', 'surcouche-sc5'],
+    ['I8', 'oracle-images.mjs', 'images-i8'],
+    ['R14', 'oracle-motion.mjs', 'motion-appui'],
+  ];
+  for (const [regle, oracle, base] of regles) {
+    const neuves = NEUVES_PAR_ORACLE[oracle];
+    const v = jouer(oracle, fx(`${base}-verte.html`)), r = jouer(oracle, fx(`${base}-rouge.html`));
+    ligne(v.code === 0 && v.verdict === 'PASS' && !v.f.some(x => neuves.includes(x.regle)),
+      `${regle} · sens vert : ${base}-verte.html sans aucun avertissement de ${neuves.join('/')} (exit ${v.code}, ${v.verdict})`);
+    const siennes = r.f.filter(x => x.regle === regle);
+    ligne(r.code === 0 && r.verdict === 'PASS' && siennes.length > 0 && siennes.every(x => x.sev === 'avertissement'),
+      `${regle} · sens rouge : ${base}-rouge.html lève ${regle} en avertissement SANS rougir la page (exit ${r.code}, ${r.verdict}, ×${siennes.length})`);
+    const autres = r.f.filter(x => neuves.includes(x.regle) && x.regle !== regle);
+    ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune autre règle neuve de ${oracle} (obtenu ×${autres.length})`);
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

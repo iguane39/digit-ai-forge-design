@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-motion R14 (retour d'appui présent)</title>
+<style>
+  /* TF-1911, règle R14 (avertissement), sens vert. Règle tirée de review-animations d'Emil
+     Kowalski (STANDARDS l.59, MIT, figée au 19/10/2026) ; attribution :
+     regles-importees-vercel-emil.md. Trois pressables, trois façons d'être atteint par un
+     :active — classe, rôle, attribut de type. Le mouvement est prescrit (jetons) et la
+     révocation est universelle : R1 à R13 muettes. */
+  :root {
+    --dur-etat: 120ms;
+    --ease-deplacement: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn { transition: transform var(--dur-etat) var(--ease-deplacement); }
+  .btn:active { transform: scale(0.97); }
+  .chip { transition: transform var(--dur-etat) var(--ease-deplacement); }
+  .chip:active { transform: scale(0.97); }
+  input[type="submit"] { transition: transform var(--dur-etat) var(--ease-deplacement); }
+  input[type="submit"]:active { transform: scale(0.97); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Retour d'appui présent</h1>
+  <button class="btn" type="button">Valider</button>
+  <div class="chip" role="button" tabindex="0">Filtrer</div>
+  <input type="submit" value="Envoyer">
+</body>
+</html>

@@ -13,6 +13,15 @@
 //   M9  un bandeau collé en haut d'écran ne retire pas plus d'un quart de l'écran
 //       une fois le défilement passé (TF-1355)
 //
+// Deux règles d'AVERTISSEMENT, extraites de textes tiers (TF-1911, voie taste-skill ;
+// attribution : `regles-importees-vercel-emil.md`) :
+//   M10 la page porte des contrôles (button, lien, role=button) mais ne pose ni
+//       `touch-action: manipulation` ni `-webkit-tap-highlight-color` : délai de tap et
+//       éclair gris/bleu du navigateur (Vercel Web Interface Guidelines l.104-105 ;
+//       Emil Kowalski, mobile-native §2 et §5 ; UI/UX Pro Max n° 25)
+//   M11 document sans `<meta name="theme-color">` : la barre d'état ne suit pas la page
+//       (Vercel l.121 ; mobile-native §10)
+//
 // Ce qui exige un rendu réel (taille effective après cascade, gestes, débordements
 // au breakpoint) est déclaré non jugé et délégué à render_page.py.
 //
@@ -38,6 +47,7 @@ const jsonOnly = args.includes('--json-only');
 const NJ = [
   'taille tactile effective après cascade et héritage — déléguer à render_page.py au breakpoint 390 px',
   'gestes réels (swipe, pull-to-refresh, retour geste) — parcours à exécuter',
+  'M10 : cherche la déclaration dans toute la feuille, sans vérifier qu\'elle atteint chaque contrôle (cascade, héritage) ; M11 : présence de la balise seulement, pas l\'accord de sa couleur avec le fond de la page',
   'débordements et chevauchements aux breakpoints — render_page.py V1/V4',
   'pertinence des patterns natifs choisis (bottom sheet vs modale) — jugement produit',
   // TF-0875 : la SURVIE effective de l'état ne se lit pas sur le fichier — elle se mesure au
@@ -370,6 +380,37 @@ const regles = cssRulesDeep(cssText);
         + 'Un élément qui reçoit le focus sous ce bandeau risque d\'être recouvert (WCAG 2.2 2.4.11 AA)',
         'feuille de style');
     }
+  }
+}
+
+// ── M10 · délai de tap et éclair du navigateur (avertissement, TF-1911) ─────
+// Page-level : la déclaration est cherchée dans toute la feuille, sans résoudre la cascade
+// jusqu'au contrôle (non_juge). `touch-action: manipulation` est cherché avec sa valeur :
+// un `touch-action: pan-y` de carrousel ne supprime pas le délai de tap des boutons.
+{
+  const controles = arbres(html, root).flatMap(r => elements(r)).filter(e =>
+    e.tag === 'button' || (e.tag === 'a' && e.attrs.href !== undefined)
+    || String(e.attrs.role || '').toLowerCase() === 'button'
+    || (e.tag === 'input' && ['button', 'submit', 'reset'].includes(String(e.attrs.type || '').toLowerCase())));
+  const poseTouch = /touch-action\s*:\s*manipulation/i.test(cssText);
+  const poseSurbrillance = /-webkit-tap-highlight-color\s*:/i.test(cssText);
+  if (controles.length && !poseTouch && !poseSurbrillance) {
+    add('avertissement', 'M10',
+      `${controles.length} contrôle(s) tactile(s) sans touch-action: manipulation ni -webkit-tap-highlight-color posé : ` +
+      'délai de tap sur certains navigateurs mobiles et éclair gris/bleu non voulu — poser l\'un des deux, globalement ou sur les contrôles',
+      'feuille de style');
+  }
+}
+
+// ── M11 · theme-color absent (avertissement, TF-1911) ───────────────────────
+{
+  const estDocument = elements(root, 'head').length > 0 || elements(root, 'html').length > 0;
+  const themeColor = elements(root, 'meta').some(m => (m.attrs.name || '').toLowerCase() === 'theme-color');
+  if (estDocument && !themeColor) {
+    add('avertissement', 'M11',
+      'aucune balise <meta name="theme-color"> : la barre d\'état et le cadre du navigateur mobile ne suivent pas la couleur de la page ' +
+      '(une valeur par schéma de couleur si la page en porte deux)',
+      'head');
   }
 }
 

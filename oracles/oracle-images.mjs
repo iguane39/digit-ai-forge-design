@@ -11,6 +11,11 @@
 //       générée (défaut) → prompt, modèle et date ; relevée → source et date de relevé
 //   I7  deux actifs déclarés VARIANTES l'un de l'autre rendent réellement différemment
 //
+// Une règle d'AVERTISSEMENT, extraite de textes tiers (TF-1911, voie taste-skill ;
+// attribution : `regles-importees-vercel-emil.md`) :
+//   I8  toute <img> porte width ET height : sans eux, la page se décale quand l'image arrive
+//       (Vercel Web Interface Guidelines l.80 ; UI/UX Pro Max n° 19)
+//
 // Variantes : deux actifs sont déclarés variantes soit par la convention de nommage
 // (suffixe -white / -blanc / -dark / -sombre / -light / -clair / -inverse / -negatif
 // / -mono sur un même radical), soit explicitement par « variante_de » au manifeste :
@@ -48,6 +53,7 @@ const NJ = [
   'ce que l\'image montre réellement (ressemblance à une personne, un lieu ou une marque existante) — revue humaine obligatoire',
   'qualité esthétique et adéquation de l\'image à la direction retenue',
   'poids perçu après compression du transport (gzip/brotli) — hors périmètre d\'un fichier ouvert en local',
+  'I8 : présence des attributs width et height seulement — ni leur exactitude par rapport à l\'image, ni un aspect-ratio posé en CSS (qui ne lève pas l\'avertissement)',
 ];
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
@@ -128,6 +134,7 @@ const sources = ARBRES.flatMap(a => [
   ...elements(a.r, 'source').map(el => ({ a, el, src: el.attrs.srcset || el.attrs.src || '', tag: 'source' })),
 ]);
 let embarquees = 0;
+const sansDimensions = []; // I8 · <img> sans width ET height, avec leur lieu
 const actifs = []; // I7 · nom, charge utile réelle et forme de chaque actif servi par la page
 
 for (const { a, el, src, tag } of sources) {
@@ -145,6 +152,7 @@ for (const { a, el, src, tag } of sources) {
     else if (alt.trim() && /^(image|photo|illustration|visuel|logo)$/i.test(alt.trim())) {
       add('majeur', 'I1', `alt non informatif « ${alt.trim()} »`, ou);
     }
+    if (el.attrs.width === undefined || el.attrs.height === undefined) sansDimensions.push(ou);
   }
 
   if (src.startsWith('data:')) {
@@ -182,6 +190,16 @@ for (const { a, el, src, tag } of sources) {
     }
   }
   if (nom && charge && charge.length) actifs.push({ nom, charge, forme, ou });
+}
+
+// ── I8 · dimensions explicites (avertissement, TF-1911) ─────────────────────
+// Un seul constat par page : le nombre et les premiers lieux, pas une ligne par image.
+if (sansDimensions.length) {
+  add('avertissement', 'I8',
+    `${sansDimensions.length} <img> sans width ET height explicites (${sansDimensions.slice(0, 3).join(' ; ')}`
+    + `${sansDimensions.length > 3 ? ' ; …' : ''}) : la page se décale quand l'image arrive (décalage cumulé de mise en page) — `
+    + 'poser les attributs width et height, le CSS les redimensionne ensuite',
+    'document');
 }
 
 if (embarquees > 0 && manifeste === null) {

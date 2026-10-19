@@ -175,15 +175,15 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 |---|---|---|
 | `oracle-slop` | S1–S10 | marqueurs de design généré |
 | `oracle-tokens` | T1–T6 | traçabilité des tokens, parité des thèmes, contraste |
-| `oracle-mobile` | M1–M8 | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante |
-| `oracle-images` | I1–I7 | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment |
+| `oracle-mobile` | M1–M8, M10–M11 (avertissements) | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante ; délai de tap et `theme-color` en avertissement (TF-1911) |
+| `oracle-images` | I1–I7, I8 (avertissement) | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment ; `width` et `height` posés en avertissement (TF-1911) |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
 | `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
 | `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée ; un rendu figé (ni bouton, ni palette sombre, ni script de thème) n'est qu'un avertissement, comme G1 du socle (TF-1661) |
-| `oracle-saisie` | SA1–SA7 | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v |
+| `oracle-saisie` | SA1–SA7, SA8 (avertissement) | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v ; `autocomplete` ou `inputmode` posé en avertissement (TF-1911) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
-| `oracle-surcouche` | SC1–SC4 | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème |
-| `oracle-declencheurs` | DE1–DE3 | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès |
+| `oracle-surcouche` | SC1–SC4, SC5 (avertissement) | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème ; défilement contenu (`overscroll-behavior`) en avertissement (TF-1911) |
+| `oracle-declencheurs` | DE1–DE3, DE4 (avertissement) | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès ; un `div` ou `span` cliquable sans rôle ni `tabindex` en avertissement (TF-1911) |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et

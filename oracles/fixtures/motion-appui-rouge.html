@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion R14 (pressables sans retour d'appui)</title>
+<style>
+  /* TF-1911, règle R14 (avertissement), sens rouge : un bouton, un rôle bouton et un
+     input submit, dont aucun n'est atteint par une règle :active. Le survol est protégé,
+     les durées viennent des jetons, la révocation est universelle : R1 à R13 muettes, R14
+     seule en cause. R14 est un avertissement : la page reste PASS, exit 0. */
+  :root {
+    --dur-etat: 120ms;
+    --ease-deplacement: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  @media (hover: hover) {
+    .btn:hover { transform: translateY(-1px); transition: transform var(--dur-etat) var(--ease-deplacement); }
+  }
+  .chip { transition: opacity var(--dur-etat) var(--ease-deplacement); }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Retour d'appui absent</h1>
+  <button class="btn" type="button">Valider</button>
+  <div class="chip" role="button" tabindex="0">Filtrer</div>
+  <input type="submit" value="Envoyer">
+</body>
+</html>

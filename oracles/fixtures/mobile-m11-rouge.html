@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — oracle-mobile M11 (theme-color absent)</title>
+<!--
+  TF-1911, règle M11 (avertissement), sens rouge : le document ne porte aucune balise
+  <meta name="theme-color"> — la barre d'état du navigateur mobile ne suit pas la page.
+  touch-action est posé : M10 reste muette, M11 est seule en cause. M11 est un avertissement :
+  la page reste PASS, exit 0.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  button { touch-action: manipulation; min-height: 44px; min-width: 44px; background: var(--fond); color: var(--texte); border: 1px solid var(--trait); }
+  @media (orientation: landscape) { body { padding: 16px; } }
+</style>
+</head>
+<body>
+  <h1>Barre d'état non accordée</h1>
+  <button type="button">Valider</button>
+</body>
+</html>

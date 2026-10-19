@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — oracle-images I8 (dimensions absentes)</title>
+<!--
+  TF-1911, règle I8 (avertissement), sens rouge : une image sans aucune dimension, une autre
+  avec width seul — la page se décale quand elles arrivent. Alt informatifs (I1 muette),
+  images relatives non embarquées. I8 est un avertissement : la page reste PASS, exit 0.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+  <h1>Images sans dimensions</h1>
+  <img src="chantier.jpg" alt="Façade du chantier de la rue Haute">
+  <img src="plan.jpg" alt="Plan du rez-de-chaussée" width="320">
+</body>
+</html>

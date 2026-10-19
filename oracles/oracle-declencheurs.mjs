@@ -22,6 +22,11 @@
 //   DE3  une fonctionnalité (data-fonctionnalite="<nom>") dont TOUS les points d'entrée
 //        sont fantômes ou du texte nu : unique accès fantôme
 //
+// Une règle d'AVERTISSEMENT, extraite d'un texte tiers (TF-1911, voie taste-skill ; attribution :
+// `regles-importees-vercel-emil.md`) :
+//   DE4  un <div> ou un <span> rendu cliquable par onclick, sans role ni tabindex — ni focus
+//        clavier ni rôle annoncé (Vercel Web Interface Guidelines l.19 et l.159 ; WCAG 2.1.1)
+//
 // Le contrôle produit AUSSI le registre lui-même — la liste des points d'entrée de la
 // page avec la nature de chacun, dans le champ `registre` du JSON. C'est le critère
 // mesurable que la grille cite en maquette (ameliore-le-design) comme à l'implémentation
@@ -56,6 +61,7 @@ const NJ = [
   'taille rendue de la cible de geste — oracle-saisie SA5 pour le câblage, render_page.py pour la géométrie',
   'navigation portée par un routeur applicatif (data-action interprété par un aiguillage JS) — indécidable statiquement : DE2 ne juge que la navigation ÉCRITE sur le bouton',
   'justesse du découpage en fonctionnalités et pertinence des libellés — jugement de conception',
+  'DE4 : ne lit que les <div> et <span> porteurs d\'un onclick écrit sur l\'élément — un écouteur posé par addEventListener ou délégué (data-action interprété par un aiguillage JS) n\'est pas tracé ; un role SEUL ou un tabindex SEUL lève l\'avertissement sans prouver que l\'élément est complet (clavier ET rôle)',
   'partie ANCÊTRE d\'un sélecteur descendant (« .carte .bouton ») — seul le dernier compound est confronté à l\'élément, l\'arbre n\'est pas remonté : une règle qui ne s\'applique qu\'en contexte est comptée comme si elle s\'appliquait (TF-0833)',
 ];
 const F = [];
@@ -238,6 +244,22 @@ for (const [nom, liste] of parFonctionnalite) {
 }
 if (parFonctionnalite.size === 0) {
   NJ.push('DE3 : aucun point d\'entrée déclaré par data-fonctionnalite="<nom>" — la couverture des fonctionnalités n\'a PAS été jugée ; le registre ci-dessus liste les déclencheurs trouvés et leur nature, à confronter à la main');
+}
+
+// ── DE4 · un élément non interactif rendu cliquable (avertissement, TF-1911) ──
+// Un <div onclick> n'est ni atteignable au clavier (WCAG 2.1.1) ni annoncé comme une action :
+// le registre ci-dessus le range en « texte ». Règle tirée des Web Interface Guidelines de
+// Vercel (MIT, figées au 19/10/2026), croisée avec WCAG. Un role OU un tabindex posé lève
+// l'avertissement ; le bouton natif reste la forme attendue (DE1 et DE2 le disent déjà).
+for (const d of declencheurs) {
+  const el = d.el;
+  if (el.tag !== 'div' && el.tag !== 'span') continue;
+  if (!Object.prototype.hasOwnProperty.call(el.attrs || {}, 'onclick')) continue;
+  if (String(el.attrs.role || '').trim() !== '' || el.attrs.tabindex !== undefined) continue;
+  add('avertissement', 'DE4',
+    `« ${d.libelle || '(sans libellé)'} » est un <${el.tag}> rendu cliquable par onclick, sans role ni tabindex : ` +
+    'ni focus clavier ni rôle annoncé — utiliser un <button> (Vercel Web Interface Guidelines ; WCAG 2.1.1)',
+    d.provenance);
 }
 
 // ── Le registre, toujours rendu ────────────────────────────────────────────

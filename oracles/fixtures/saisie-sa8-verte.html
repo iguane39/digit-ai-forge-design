@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — oracle-saisie SA8 (clavier et remplissage tenus)</title>
+<!--
+  TF-1911, règle SA8 (avertissement), sens vert. Règle tirée des Web Interface Guidelines de
+  Vercel (l.39-40) et de mobile-native d'Emil Kowalski (§4), MIT, figées au 19/10/2026 ;
+  attribution : regles-importees-vercel-emil.md. Trois champs textuels qui portent autocomplete
+  ou inputmode : un jeton de remplissage, un autocomplete="off" (l'auteur a tranché, cela
+  compte) et un inputmode seul. Un champ couleur et une zone de texte,
+  hors règle.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+</style>
+</head>
+<body>
+  <h1>Saisie tenue</h1>
+  <form>
+    <label for="courriel">Courriel</label>
+    <input id="courriel" name="courriel" type="email" autocomplete="email">
+    <label for="ville">Ville</label>
+    <input id="ville" name="ville" type="text" autocomplete="off">
+    <label for="reference">Référence</label>
+    <input id="reference" name="reference" type="text" inputmode="numeric">
+    <label for="teinte">Teinte</label>
+    <input id="teinte" name="teinte" type="color" value="#2255aa">
+    <label for="message">Message</label>
+    <textarea id="message" name="message"></textarea>
+  </form>
+</body>
+</html>

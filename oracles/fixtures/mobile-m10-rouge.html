@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fbf9f5">
+<title>Fixture rouge — oracle-mobile M10 (contrôles sans touch-action ni tap-highlight)</title>
+<!--
+  TF-1911, règle M10 (avertissement), sens rouge : la page porte un bouton et un lien, et ne
+  pose ni touch-action: manipulation ni -webkit-tap-highlight-color. theme-color est présent :
+  M11 reste muette, M10 est seule en cause. M10 est un avertissement : la page reste PASS, exit 0.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 32px; }
+  button { min-height: 44px; min-width: 44px; background: var(--fond); color: var(--texte); border: 1px solid var(--trait); }
+  @media (orientation: landscape) { body { padding: 16px; } }
+</style>
+</head>
+<body>
+  <h1>Tap non maîtrisé</h1>
+  <button type="button">Valider</button>
+  <a href="#suite">Suite</a>
+</body>
+</html>

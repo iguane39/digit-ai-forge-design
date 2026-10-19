@@ -44,11 +44,20 @@
 //   R13 révocation `prefers-reduced-motion: reduce` qui neutralise quelque chose mais ne couvre
 //       pas CHAQUE sélecteur portant une `animation` — sauf règle universelle `*`.
 //
+// Une règle d'AVERTISSEMENT, extraite de textes tiers (TF-1911, voie taste-skill ; attribution :
+// `regles-importees-vercel-emil.md`). Elle entre ICI et non dans un oracle neuf : le mouvement se
+// juge en un seul lieu (`registre-entrees.md`, arbitrage d'autorité). Elle n'est pas la règle
+// d'appui de R11–R13, qui ne portent aucun retour d'appui : pas de doublon.
+//   R14 un contrôle pressable (button, role="button", input button/submit/reset) qu'aucune règle
+//       `:active` n'atteint : l'interface ne répond pas à l'appui, seulement au relâchement
+//       (Emil Kowalski, review-animations STANDARDS l.59 ; mobile-native §5 ; UI/UX Pro Max n° 30)
+//
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-motion.mjs <fichier.html> [--json-only]
 
 import fs from 'node:fs';
-import { parse, css } from './lib/html.mjs';
+import { parse, css, arbres, elements } from './lib/html.mjs';
+import { correspond } from './lib/selecteurs.mjs';
 
 const DOM = 'Mouvement : craft de l\'animation';
 
@@ -66,6 +75,7 @@ const NON_JUGE = [
   'finalité de chaque geste (« ce mouvement sert à quoi ») — un token prescrit une durée, pas une intention',
   'durées passées à `animate()` : R12 ne lit que les durées numériques LITTÉRALES — une durée portée par une variable, un jeton ou une expression n\'est pas résolue ; R8 ne juge que le CSS',
   'R11 : un cycle `infinite` de 5 s ou moins (loader, spinner) n\'est pas jugé ; la durée doit être dans le même bloc que `infinite` ; une boucle JavaScript (`repeat: Infinity`) n\'est pas lue ; la pause est reconnue par sa seule présence dans la page, pas par son câblage à un contrôle',
+  'R14 : une règle :active qui atteint le contrôle suffit, sans juger ce qu\'elle fait (échelle, ombre, couleur) ; un retour d\'appui posé par JavaScript (pointerdown) n\'est pas lu ; les liens stylés en boutons ne sont pas visés',
   'R13 : ne juge que les sélecteurs portant une `animation` CSS (pas les transitions, couvertes seulement dans leur existence par R10) ; compare les sélecteurs par égalité de texte, sans résoudre la cascade — le rendu réel relève de render_page.py',
 ];
 
@@ -441,6 +451,29 @@ const dureesIsolees = (valeur) => [...valeur.matchAll(/(?<![\w.-])(\d*\.?\d+)\s*
         + `(${[...animes.keys()].slice(0, 4).join(' ; ')}) — neutraliser chacun, ou une règle universelle « * » (WCAG 2.2 SC 2.3.3)`,
         '@media prefers-reduced-motion');
     }
+  }
+}
+
+// ── R14 · contrôle pressable sans retour d'appui :active (avertissement, TF-1911) ──
+// Un seul constat par page : le nombre de contrôles atteints par aucune règle `:active`.
+// L'appariement est celui de la bibliothèque partagée (dernier compound, ancêtres non remontés).
+if (html) {
+  const parties = [];
+  for (const b of blocs) {
+    if (b.sel.startsWith('@')) continue;
+    for (const p of b.sel.split(',').map(x => x.trim()).filter(Boolean)) {
+      if (/:active\b/i.test(p)) parties.push(p);
+    }
+  }
+  const pressables = arbres(brut, html).flatMap(r => elements(r)).filter(e =>
+    e.tag === 'button' || String(e.attrs.role || '').toLowerCase() === 'button'
+    || (e.tag === 'input' && ['button', 'submit', 'reset'].includes(String(e.attrs.type || '').toLowerCase())));
+  const sansAppui = pressables.filter(e => !parties.some(p => correspond(e, p)));
+  if (sansAppui.length) {
+    add('avertissement', 'R14',
+      `${sansAppui.length} contrôle(s) pressable(s) sur ${pressables.length} qu'aucune règle :active n'atteint : l'interface répond au relâchement, `
+      + 'pas à l\'appui — ex. « .btn:active { transform: scale(0.97); } » avec une transition courte (STANDARDS, Emil Kowalski)',
+      'feuille de style');
   }
 }
 
