@@ -52,6 +52,27 @@ const echapper = txt => txt.replace(/<\/script/gi, '<\\/script');
 // telle qu'elle est sur le disque — c'est elle qui scelle, pas la comparaison de texte.
 const lignesLf = txt => txt.replace(/\r\n/g, '\n');
 
+// TF-1876 (lot Produit-84 du 16/10/2026) — LA FEUILLE DU GABARIT EST UNE SOURCE SYNTHÉTIQUE.
+// `embarquer-composants.mjs --poser … --composants boilerplate.css` pose la feuille du gabarit du
+// socle sous un bloc scellé comme les autres, mais `boilerplate.css` n'existe pas sur le disque : le
+// poseur l'extrait du premier `<style>` de `boilerplate.html` (TF-0926). Ce module cherchait un
+// fichier, ne le trouvait pas et rangeait le bloc « déclaré non vérifiable » : la critique imputait
+// à l'auteur la feuille du socle et gonflait les avertissements tokens et taste d'une page bâtie
+// au socle. La règle d'extraction est celle du poseur, au caractère près ; elle ne vaut, comme chez
+// lui, que pour le socle par défaut. Le sceau, lui, se confronte comme pour tout composant.
+const SOURCE_SYNTHETIQUE = 'boilerplate.css';
+function sourceDuSocle(socle, nom) {
+  if (nom === SOURCE_SYNTHETIQUE && socle === SOCLE_DEFAUT) {
+    const gabarit = path.join(RACINE_SKILLS, socle, 'boilerplate.html');
+    let html = null;
+    try { html = fs.readFileSync(gabarit, 'utf8'); } catch { /* gabarit absent : retombe sur la source introuvable */ }
+    const feuille = html === null ? null : html.match(/<style>([\s\S]*?)<\/style>/);
+    if (feuille) return { source: `${gabarit} (premier <style>)`, texte: feuille[1].replace(/^\n+/, '').replace(/\n+$/, '') };
+  }
+  const source = path.join(RACINE_SKILLS, socle, nom);
+  return { source, texte: fs.existsSync(source) ? fs.readFileSync(source, 'utf8') : null };
+}
+
 /** Bornes des blocs marqués d'un HTML : { nom, socle, debut, fin } (offsets d'octets). */
 export function blocsMarques(html) {
   const trouves = [];
@@ -92,12 +113,11 @@ export function blocsDuSocle(html) {
       declares.push({ ...bloc, raison: 'bloc sans data-empreinte sha256 exploitable, ou data-composant qui ne nomme pas le bloc' });
       continue;
     }
-    const source = path.join(RACINE_SKILLS, bloc.socle, bloc.nom);
-    if (!fs.existsSync(source)) {
+    const { source, texte } = sourceDuSocle(bloc.socle, bloc.nom);
+    if (texte === null) {
       declares.push({ ...bloc, empreinte, raison: `source du socle introuvable (${source}) : le sceau n'a pas pu être confronté` });
       continue;
     }
-    const texte = fs.readFileSync(source, 'utf8');
     if (sha(texte) !== empreinte) {
       declares.push({ ...bloc, empreinte, raison: `empreinte déclarée ≠ empreinte de la source du socle (${sha(texte).slice(0, 12)}…)` });
       continue;

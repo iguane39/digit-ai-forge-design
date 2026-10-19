@@ -1002,6 +1002,67 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1876 (lot Produit-84 du 16/10/2026, option (a) par R-58 le 19/10) — LA FEUILLE DU GABARIT POSÉE PAR
+// LE POSEUR EST UNE FEUILLE DU SOCLE. `embarquer-composants.mjs --poser … --composants boilerplate.css`
+// scelle la feuille du gabarit, source SYNTHÉTIQUE extraite du premier <style> de boilerplate.html ;
+// lib/socle.mjs cherchait un fichier boilerplate.css, ne le trouvait pas et jugeait la feuille comme
+// celle de l'auteur (mesuré sur une page minimale : FAIL, 2 écarts durs bascule, 13 avertissements). Même
+// socle d'essai que TF-1241, dont le gabarit porte une feuille volontairement SALE, scellée JUSTE. Les sens
+// rouges bornent l'exemption : sceau altéré, copie éditée sur place, gabarit absent, et la même feuille
+// écrite par l'auteur hors du bloc restent jugés.
+{
+  console.log(String.fromCharCode(10) + 'lib/socle.mjs (TF-1876) — la feuille boilerplate.css posée par le poseur est reconnue comme feuille du socle');
+  const { createHash } = await import('node:crypto');
+  const racineEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'socle-feuille-'));
+  try {
+    const dossierSocle = path.join(racineEssai, 'digit-ai-page-html', 'assets');
+    fs.mkdirSync(dossierSocle, { recursive: true });
+    const sale = '.tf-btn.tf-on { background: #2563EB; color: #fff; padding: 7px 13px; }\n'
+      + '.tf-opts label:hover { background: #f6f8fc; }';
+    // Un second <style> au gabarit : seul le PREMIER est la feuille, comme chez le poseur.
+    fs.writeFileSync(path.join(dossierSocle, 'boilerplate.html'),
+      `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>g</title><style>\n${sale}\n</style><style>.autre{color:#654321}</style></head><body></body></html>`, 'utf8');
+    const sceau = createHash('sha256').update(sale, 'utf8').digest('hex');
+    const bloc = (empreinte, corps = sale) => '<!-- COMPOSANT-EMBARQUE:DEBUT boilerplate.css — copie du socle digit-ai-page-html/assets/boilerplate.css -->\n'
+      + `<style data-composant="boilerplate.css" data-empreinte="sha256:${empreinte}">\n${corps}\n</style>\n`
+      + '<!-- COMPOSANT-EMBARQUE:FIN boilerplate.css -->';
+    const hote = fs.readFileSync(fx('socle-embarque-verte.html'), 'utf8');
+    const motif = /<!--\s*COMPOSANT-EMBARQUE:DEBUT table-filters\.css[\s\S]*?<!--\s*COMPOSANT-EMBARQUE:FIN table-filters\.css\s*-->/;
+    const ecrire = (nom, contenu) => { const f = path.join(racineEssai, nom); fs.writeFileSync(f, contenu, 'utf8'); return f; };
+    const juste = ecrire('feuille-juste.html', hote.replace(motif, bloc(sceau)));
+    const altere = ecrire('feuille-sceau-altere.html', hote.replace(motif, bloc((sceau[0] === 'a' ? 'b' : 'a') + sceau.slice(1))));
+    const editee = ecrire('feuille-editee.html', hote.replace(motif, bloc(sceau, sale + '\n.ajout-auteur { color: #123456; }')));
+    const auteur = ecrire('feuille-auteur.html', hote.replace(motif, `<style>\n${sale}\n</style>`));
+    const jouer = (args, racine = racineEssai) => {
+      const r = spawnSync(process.execPath, args, { encoding: 'utf8', env: { ...process.env, FORGE_SKILLS_INSTALLES: racine } });
+      let json = null; try { json = JSON.parse((r.stdout || '').trim()); } catch { /* sortie illisible, jugée ci-dessous */ }
+      return { code: r.status, json };
+    };
+    const runner = (f, racine) => jouer([path.join(ici, 'run-oracles-design.mjs'), f, '--oracle', 'tokens', '--contrat-runner', '--json-only'], racine);
+    const direct = jouer([path.join(ici, 'oracle-tokens.mjs'), juste, '--json-only']);
+    ligne(direct.json?.verdict === 'FAIL', `sens témoin · direct sur la feuille sale : FAIL (obtenu ${direct.json?.verdict}) — ce que la critique imputait à l'auteur`);
+    const v = runner(juste);
+    const exemptee = v.json?.socle_exempte;
+    ligne(v.code === 0 && v.json?.verdict === 'PASS' && (exemptee?.verifies || []).some(b => b.nom === 'boilerplate.css') && (exemptee?.declares || []).length === 0,
+      `sens vert · feuille boilerplate.css scellée juste : reconnue vérifiée, aucun bloc déclaré non vérifiable, PASS exit 0 (obtenu ${v.json?.verdict}, exit ${v.code}, vérifiés ${(exemptee?.verifies || []).length}, déclarés ${(exemptee?.declares || []).length})`);
+    ligne((exemptee?.findings || []).length > 0, `sens vert · ses constats sont RENDUS dans socle_exempte, pas effacés (${(exemptee?.findings || []).length})`);
+    const a = runner(altere);
+    ligne(a.code === 1 && a.json?.verdict === 'FAIL' && (a.json?.socle_exempte?.declares || []).some(b => b.nom === 'boilerplate.css' && /empreinte déclarée ≠/.test(b.raison)),
+      `sens rouge · sceau altéré d'un caractère : FAIL exit 1, bloc déclaré non vérifiable pour « empreinte ≠ source » (obtenu ${a.json?.verdict}, exit ${a.code})`);
+    const e = runner(editee);
+    ligne(e.code === 1 && e.json?.verdict === 'FAIL' && (e.json?.socle_exempte?.declares || []).some(b => b.nom === 'boilerplate.css' && /copie éditée sur place/.test(b.raison)),
+      `sens rouge · feuille éditée sur place sous un sceau juste : FAIL exit 1, « copie éditée sur place » (obtenu ${e.json?.verdict}, exit ${e.code})`);
+    const au = runner(auteur);
+    ligne(au.code === 1 && au.json?.verdict === 'FAIL' && (au.json?.socle_exempte?.verifies || []).length === 0,
+      `sens rouge · la même feuille écrite par l'auteur, hors de tout bloc : FAIL exit 1, rien d'exempté (obtenu ${au.json?.verdict}, exit ${au.code})`);
+    const sg = runner(juste, path.join(racineEssai, 'vide'));
+    ligne(sg.code === 1 && sg.json?.verdict === 'FAIL' && (sg.json?.socle_exempte?.declares || []).some(b => b.nom === 'boilerplate.css' && /source du socle introuvable/.test(b.raison)),
+      `sens rouge · gabarit absent du socle installé : le sceau ne se confronte à rien, FAIL, « source du socle introuvable » (obtenu ${sg.json?.verdict}, exit ${sg.code})`);
+  } finally {
+    fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-1322 (D-13 (a) du 23/09/2026) — UNE PORTÉE, DEUX JUGES. Le lanceur général de quality-oracles
 // jouait oracle-mobile sur toute page HTML, là où ce point d'entrée le réserve aux cibles mobiles :
 // une page conforme du socle y échouait par les barres collées du gabarit lui-même. La règle vit
