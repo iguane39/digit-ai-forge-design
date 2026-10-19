@@ -282,7 +282,10 @@ try {
   // --- TF-1777 (lot Produit-83 du 15/10) : le GABARIT de MARQUE.md (references/voix.md) ne
   // prévoyait ni « Parti pris » ni « Voix », que ce générateur lit. Une marque écrite au gabarit
   // perdait la dérivation de sa DA : DESIGN.md recevait une phrase générique, en silence.
-  const gabaritVoix = readFileSync(join(ICI, "..", "references", "voix.md"), "utf8");
+  // TF-1861 : le gabarit se lit à fins de ligne normalisées. Un poste en core.autocrlf=true le
+  // livre en CRLF, et le motif ```markdown\n ne le trouvait plus (3 lignes rouges sur 55 le 19/10/2026).
+  // C'est la LECTURE qui se normalise ; aucune assertion n'est touchée.
+  const gabaritVoix = readFileSync(join(ICI, "..", "references", "voix.md"), "utf8").replace(/\r\n/g, "\n");
   const blocGabarit = (gabaritVoix.match(/```markdown\n([\s\S]*?)```/) || [, ""])[1];
   ok("TF-1777 · le gabarit voix.md prévoit « ## Parti pris »", /^## Parti pris/m.test(blocGabarit));
   ok("TF-1777 · le gabarit voix.md prévoit « ## Voix »", /^## Voix/m.test(blocGabarit));

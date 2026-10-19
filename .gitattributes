@@ -6,3 +6,9 @@
 # savait plus reconstruire sa propre démo. Un artefact jugé à l'octet près se
 # déclare binaire, sinon son empreinte ne veut rien dire.
 oracles/vendor/*.js -text
+
+# Le gabarit de MARQUE.md (voix.md) est lu par motif de fin de ligne (```markdown puis \n) par la
+# recette de systeme-de-marque (TF-1777) : sous core.autocrlf=true il sortait en CRLF et 3 cas de la
+# recette passaient au rouge sur 55 (TF-1861, constaté le 19/10/2026). Il se livre en LF partout ;
+# la recette normalise en plus sa lecture.
+skills/systeme-de-marque/references/voix.md text eol=lf
