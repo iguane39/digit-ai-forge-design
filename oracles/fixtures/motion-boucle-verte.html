@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-motion R11 (boucles infinies tenues)</title>
+<style>
+  /* Preuve dédiée de R11 (TF-1904), sens vert. Trois cas qui NE doivent PAS lever R11 :
+     un cycle court (loader, 2 s ≤ 5 s), une boucle de 40 s dont la page porte un moyen de
+     pause (animation-play-state) et une animation longue mais finie (pas de `infinite`). */
+  @keyframes tourne { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes derive { from { transform: translateX(0); } to { transform: translateX(-200px); } }
+  @keyframes entree { from { opacity: 0; } to { opacity: 1; } }
+
+  /* Loader : un cycle de 2 s n'atteint pas le seuil de 5 s */
+  .tourniquet { animation: tourne 2s linear infinite; }
+
+  /* Boucle de 40 s : la pause existe ci-dessous et le script la bascule */
+  .fond { animation: derive 40s linear infinite; }
+  .fond.en-pause { animation-play-state: paused; }
+
+  /* Longue mais finie : ne boucle pas */
+  .apparition { animation: entree 12s ease-out 1; }
+
+  /* Révocation universelle et effective : R10 et R13 restent muettes */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture verte — boucles infinies</h1>
+  <div class="tourniquet">chargement</div>
+  <div class="fond">fond animé</div>
+  <div class="apparition">texte</div>
+  <button type="button" id="pause-fond">Mettre le fond en pause</button>
+  <script>
+    document.getElementById('pause-fond').addEventListener('click', function () {
+      document.querySelector('.fond').classList.toggle('en-pause');
+    });
+  </script>
+</body>
+</html>

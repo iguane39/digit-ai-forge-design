@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion R12 (durées d'animate() au-delà du plafond)</title>
+<style>
+  /* Preuve dédiée de R12 (TF-1904), sens rouge : l'animation JavaScript de 1,2 s mesurée
+     dans l'étude 20261019i (PASS, exit 0 avant la règle), puis son pendant Web Animations
+     en millisecondes. Aucun mouvement CSS : seule la durée des appels est en cause.
+     R12 est un avertissement : la page reste PASS, exit 0. */
+  .carte { opacity: 0; }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge — durées d'animate()</h1>
+  <div class="carte">carte</div>
+  <div class="panneau">panneau</div>
+  <script>
+    const { animate } = Motion;
+    // R12 : 1.2 SECONDE = 1200 ms
+    animate('.carte', { opacity: [0, 1] }, { duration: 1.2 });
+    // R12 : 800 MILLISECONDES (Web Animations)
+    document.querySelector('.panneau').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 800, easing: 'ease-out' });
+  </script>
+</body>
+</html>

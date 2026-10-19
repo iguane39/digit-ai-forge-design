@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion R11 (boucles infinies sans pause)</title>
+<style>
+  /* Preuve dédiée de R11 (TF-1904), sens rouge : la dérive de fond de 40 s mesurée dans
+     l'étude 20261019i (PASS, exit 0 avant la règle). Deux écritures du même défaut :
+     le shorthand `animation` et le triplet de longhands. Aucune pause dans la page.
+     Le reste est irréprochable — révocation universelle effective — pour que R11 soit
+     seule en cause. R11 est un avertissement : la page reste PASS, exit 0. */
+  @keyframes derive { from { transform: translateX(0); } to { transform: translateX(-200px); } }
+  @keyframes pulse { from { opacity: .6; } to { opacity: 1; } }
+
+  /* R11 : shorthand, cycle de 40 s */
+  .fond { animation: derive 40s linear infinite; }
+
+  /* R11 : longhands, cycle de 12 s */
+  .halo { animation-name: pulse; animation-duration: 12s; animation-iteration-count: infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge — boucles infinies sans pause</h1>
+  <div class="fond">fond animé</div>
+  <div class="halo">halo</div>
+</body>
+</html>

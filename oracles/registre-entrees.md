@@ -551,3 +551,67 @@ connexion introuvable, redirection) rend le point d'entrée indéterminé, jamai
   « clé : valeur ; » (camelCase, identifiant opaque).
 - La **validité** d'un état de connexion au-delà du constat X0 : une session périmée qui
   redirige est dite, une session périmée qui sert une page vide ne l'est pas.
+
+## Entrée du 19/10/2026 — oracle-motion, règles R11 à R13 (TF-1904)
+
+L'entrée du 18/08/2026 (R1 à R10) reste vraie ; elle compte **treize** règles depuis ce jour.
+Le trou, mesuré par l'étude d'opportunité 20261019i sur une page jetable de 9 lignes : une
+animation CSS `infinite` de 40 s, un `animate(…, { duration: 1.2 })` et une révocation
+`prefers-reduced-motion` qui ne coupe que l'un des deux éléments animés rendaient **PASS,
+exit 0, sans une alerte**. Les trois règles sont des **avertissements** (comme la seconde
+branche de R8) : elles ne requalifient aucun livrable existant, et la page reste PASS.
+L'arbitrage d'autorité ci-dessus tient : elles entrent dans `oracle-motion`, aucun oracle neuf.
+
+- **R11** — animation `infinite` dont le cycle dépasse 5 s, sans mécanisme de pause
+  (WCAG 2.2 SC 2.2.2, niveau A). Pause reconnue : `animation-play-state` déclaré hors du bloc de
+  révocation, ou `.pause()` / `playState` dans un script de la page.
+- **R12** — durée **littérale** passée à `animate()` au-delà de 300 ms, le même plafond que R4
+  (`PLAFOND_MS`). L'unité se lit sur l'appelant : secondes pour Motion, millisecondes pour
+  `element.animate()` (Web Animations). Un script de plus de 20 000 caractères (bibliothèque
+  vendorée) n'est pas lu.
+- **R13** — révocation `prefers-reduced-motion: reduce` qui neutralise quelque chose (R10
+  passe) mais ne nomme pas chaque sélecteur portant une `animation`, sauf règle universelle `*`.
+
+Preuves : trois paires de fixtures (`motion-boucle-*`, `motion-js-*`, `motion-couverture-*`),
+verrouillées par le bloc « oracle-motion R11–R13 (TF-1904) » de `self-test.mjs`. La rouge doit
+rester PASS (exit 0) avec un avertissement de SA règle et aucune des deux autres : elle ne passe
+donc pas par la boucle `CAS`, où une rouge doit FAIL. Le bloc rejoue aussi la page de l'étude.
+
+Bruit mesuré le 19/10/2026 avant l'inscription : sur les 108 HTML et CSS suivis de la forge,
+aucun verdict ne change ; R11 et R13 ne lèvent rien ; R12 lève 4 avertissements, tous justes (les
+4 maquettes de `demo/` passent `duration: 0.32`, soit 320 ms). Sur 1 405 HTML suivis des autres
+dépôts de `C:\dev`, R11, R12 et R13 ne lèvent rien.
+
+Ce que R11 à R13 ne jugent pas : une boucle de 5 s ou moins (loader), une durée portée par une
+variable, une boucle JavaScript (`repeat: Infinity`), les transitions pour R13, la cascade réelle
+(rendu : `render_page.py`).
+
+```json
+[
+  {
+    "domaine": "Mouvement : craft de l'animation, PRESCRIT et jugé",
+    "oracle": "oracles/oracle-motion.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html", ".css"],
+    "fixtures": {
+      "verte": "oracles/fixtures/motion-verte.html",
+      "rouge": "oracles/fixtures/motion-rouge.html",
+      "rouge_revocation": "oracles/fixtures/motion-revocation-rouge.html",
+      "verte_boucle": "oracles/fixtures/motion-boucle-verte.html",
+      "rouge_boucle": "oracles/fixtures/motion-boucle-rouge.html",
+      "verte_js": "oracles/fixtures/motion-js-verte.html",
+      "rouge_js": "oracles/fixtures/motion-js-rouge.html",
+      "verte_couverture": "oracles/fixtures/motion-couverture-verte.html",
+      "rouge_couverture": "oracles/fixtures/motion-couverture-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-10-19",
+      "mandat": "TF-1904",
+      "amont": "WCAG 2.2 SC 2.2.2 et 2.3.3 ; étude 20261019i (animation et finition des interfaces)"
+    },
+    "regles": 13
+  }
+]
+```

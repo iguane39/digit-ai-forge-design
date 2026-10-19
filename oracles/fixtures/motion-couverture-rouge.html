@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge — oracle-motion R13 (révocation partielle)</title>
+<style>
+  /* Preuve dédiée de R13 (TF-1904), sens rouge : la révocation de l'étude 20261019i, qui
+     neutralise le tourniquet et laisse la dérive de fond. R10 la juge effective (elle coupe
+     bien quelque chose) : seul R13 voit l'élément oublié. R13 est un avertissement : la page
+     reste PASS, exit 0. Les cycles tiennent sous 5 s : R11 reste muette. */
+  @keyframes tourne { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes derive { from { transform: translateX(0); } to { transform: translateX(-40px); } }
+
+  .tourniquet { animation: tourne 2s linear infinite; }
+  .derive { animation: derive 4s linear infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tourniquet { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge — révocation partielle</h1>
+  <div class="tourniquet">chargement</div>
+  <div class="derive">fond animé</div>
+</body>
+</html>

@@ -1687,6 +1687,54 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1904 (étude 20261019i, mesuré le 19/10/2026) — une page jetable de 9 lignes portant une
+// boucle infinie de 40 s, une animation JavaScript de 1,2 s et une révocation reduced-motion qui
+// ne couvre qu'un des deux éléments animés rendait PASS, exit 0, sans une alerte. R11, R12 et
+// R13 sont des AVERTISSEMENTS : elles ne rougissent aucun livrable existant. Les trois paires de
+// fixtures ne passent donc pas par CAS (la rouge y doit FAIL, exit 1) : ici la rouge doit rester
+// PASS, exit 0, avec UN avertissement de SA règle et aucune des deux autres.
+{
+  console.log(String.fromCharCode(10) + 'oracle-motion R11–R13 (TF-1904) — avertissements, deux sens, aucun livrable rougi');
+  const NEUVES = ['R11', 'R12', 'R13'];
+  const jouer = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-motion.mjs'), f, '--json-only'], { encoding: 'utf8' });
+    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, verdict: j?.verdict, f: j?.findings || [] };
+  };
+  const paires = [
+    ['R11', 'motion-boucle-verte.html', 'motion-boucle-rouge.html'],
+    ['R12', 'motion-js-verte.html', 'motion-js-rouge.html'],
+    ['R13', 'motion-couverture-verte.html', 'motion-couverture-rouge.html'],
+  ];
+  for (const [regle, verte, rouge] of paires) {
+    const v = jouer(fx(verte)), r = jouer(fx(rouge));
+    ligne(v.code === 0 && v.verdict === 'PASS' && !v.f.some(x => NEUVES.includes(x.regle)),
+      `${regle} · sens vert : ${verte} sans aucun avertissement R11–R13 (exit ${v.code}, ${v.verdict})`);
+    const siennes = r.f.filter(x => x.regle === regle);
+    ligne(r.code === 0 && r.verdict === 'PASS' && siennes.length > 0 && siennes.every(x => x.sev === 'avertissement'),
+      `${regle} · sens rouge : ${rouge} lève ${regle} en avertissement SANS rougir la page (exit ${r.code}, ${r.verdict}, ×${siennes.length})`);
+    const autres = r.f.filter(x => NEUVES.includes(x.regle) && x.regle !== regle);
+    ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune des deux autres règles neuves (obtenu ×${autres.length})`);
+  }
+  // Le cas mesuré par l'étude, tel quel : les trois défauts sur UNE page, aucun refus, trois avertissements.
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-r11-r13-'));
+  try {
+    const page = path.join(dossier, 'mesure-etude.html');
+    fs.writeFileSync(page, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Mesure</title><style>'
+      + '@keyframes t { to { transform: rotate(360deg); } } @keyframes d { to { transform: translateX(-9px); } }'
+      + '.tourniquet { animation: t 2s linear infinite; } .derive { animation: d 40s linear infinite; }'
+      + '@media (prefers-reduced-motion: reduce) { .tourniquet { animation: none; } }'
+      + '</style></head><body><h1>Mesure</h1><div class="tourniquet">a</div><div class="derive">b</div>'
+      + '<script>Motion.animate(".derive", { opacity: [0, 1] }, { duration: 1.2 });</script></body></html>', 'utf8');
+    const m = jouer(page);
+    const vues = new Set(m.f.filter(x => x.sev === 'avertissement').map(x => x.regle));
+    ligne(m.code === 0 && m.verdict === 'PASS' && NEUVES.every(x => vues.has(x)),
+      `mesure de l'étude 20261019i · boucle de 40 s + animate(1,2 s) + révocation partielle : PASS exit 0, R11 R12 R13 signalées (exit ${m.code}, ${[...vues].filter(x => NEUVES.includes(x)).join(' ')})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

@@ -32,6 +32,18 @@
 //       Règle jouée, pas un avertissement : c'était le statut de C4 dans check_maquette,
 //       qui délègue maintenant ici plutôt que d'entretenir un contrôle divergent.
 //
+// Trois règles d'AVERTISSEMENT (TF-1904, étude 20261019i : une page jetable de 9 lignes portant
+// une boucle de 40 s, une animation de 1,2 s et une révocation partielle rendait PASS, exit 0).
+// Avertissement et non refus : elles ne requalifient aucun livrable existant (cf. R8).
+//   R11 animation CSS `infinite` dont le cycle dépasse 5 s, sans mécanisme de pause (WCAG 2.2
+//       SC 2.2.2, niveau A) — pause = `animation-play-state` déclaré hors révocation, ou
+//       `.pause()` / `playState` dans un script.
+//   R12 durée LITTÉRALE passée à `animate()` au-delà du plafond de 300 ms — secondes pour
+//       Motion (`animate(` nu ou `Motion.animate(`), millisecondes pour l'API Web Animations
+//       (`element.animate(`). Les bibliothèques vendorées (script > 20 000 car.) sont écartées.
+//   R13 révocation `prefers-reduced-motion: reduce` qui neutralise quelque chose mais ne couvre
+//       pas CHAQUE sélecteur portant une `animation` — sauf règle universelle `*`.
+//
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-motion.mjs <fichier.html> [--json-only]
 
@@ -52,7 +64,9 @@ const NON_JUGE = [
   'durées des `animation` (décoratives, loaders) — seules les transitions UI sont bornées (R4)',
   'CSS porté par des gabarits JS (runtime) — non parsé par cette v1',
   'finalité de chaque geste (« ce mouvement sert à quoi ») — un token prescrit une durée, pas une intention',
-  'durées passées à `animate()` en JavaScript (Motion vendoré) — R8 ne juge que le CSS',
+  'durées passées à `animate()` : R12 ne lit que les durées numériques LITTÉRALES — une durée portée par une variable, un jeton ou une expression n\'est pas résolue ; R8 ne juge que le CSS',
+  'R11 : un cycle `infinite` de 5 s ou moins (loader, spinner) n\'est pas jugé ; la durée doit être dans le même bloc que `infinite` ; une boucle JavaScript (`repeat: Infinity`) n\'est pas lue ; la pause est reconnue par sa seule présence dans la page, pas par son câblage à un contrôle',
+  'R13 : ne juge que les sélecteurs portant une `animation` CSS (pas les transitions, couvertes seulement dans leur existence par R10) ; compare les sélecteurs par égalité de texte, sans résoudre la cascade — le rendu réel relève de render_page.py',
 ];
 
 const args = process.argv.slice(2);
@@ -310,6 +324,121 @@ if (!prescrit) {
     if (!coupe && !quasiNul) {
       add('majeur', 'R10', 'bloc @media (prefers-reduced-motion: reduce) présent mais il ne neutralise rien : '
         + 'ni durée ramenée à ~0, ni transition/animation coupée — une révocation non câblée n\'existe pas (loi n° 1)',
+        '@media prefers-reduced-motion');
+    }
+  }
+}
+
+// ── Matière commune à R11, R12, R13 (TF-1904) ─────────────────────────────
+// Les scripts de la page, sans commentaires, bibliothèque vendorée écartée : un bundle
+// de plusieurs dizaines de ko (Motion, 79 ko) porte des centaines d'`animate(` et de
+// `duration:` qui ne sont pas ceux de l'auteur de la page.
+const TAILLE_MAX_SCRIPT = 20000;
+const scriptsJs = (html ? [...brut.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]) : [])
+  .filter(s => s.length <= TAILLE_MAX_SCRIPT)
+  .map(s => s.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:\\])\/\/.*$/gm, '$1'));
+/** Découpe une liste séparée par des virgules, hors parenthèses (cubic-bezier, var()). */
+function virgules(v) {
+  const parts = []; let prof = 0, debut = 0;
+  for (let i = 0; i < v.length; i++) {
+    if (v[i] === '(') prof++;
+    else if (v[i] === ')') prof--;
+    else if (v[i] === ',' && prof === 0) { parts.push(v.slice(debut, i)); debut = i + 1; }
+  }
+  parts.push(v.slice(debut));
+  return parts.map(p => p.trim()).filter(Boolean);
+}
+/** Durées CSS (ms) portées par une valeur, sans lire un « 5s » collé à un nom de keyframes. */
+const dureesIsolees = (valeur) => [...valeur.matchAll(/(?<![\w.-])(\d*\.?\d+)\s*(ms|s)\b/gi)]
+  .map(d => (d[2].toLowerCase() === 's' ? parseFloat(d[1]) * 1000 : parseFloat(d[1])));
+
+// ── R11 · boucle infinie de plus de 5 s sans pause (avertissement) ────────
+// WCAG 2.2 SC 2.2.2 : un contenu qui bouge seul plus de 5 s demande un moyen de pause.
+// Le cycle est lu dans le MÊME bloc que `infinite` (shorthand `animation`, ou
+// `animation-duration` à côté de `animation-iteration-count: infinite`).
+{
+  const SEUIL_BOUCLE_MS = 5000;
+  const pause = /animation-play-state\s*:/i.test(cssHorsRevocation)
+    || scriptsJs.some(s => /\.pause\s*\(|playState|animationPlayState|animation-play-state/.test(s));
+  for (const b of blocsHorsRevocation) {
+    const cycles = [];
+    for (const v of declsDe('animation', b.decl)) {
+      for (const part of virgules(v)) {
+        if (/(^|\s)infinite(\s|$)/i.test(part)) cycles.push(dureesIsolees(resoudre(part))[0] ?? 0);
+      }
+    }
+    if (declsDe('animation-iteration-count', b.decl).some(v => /(^|[\s,])infinite([\s,]|$)/i.test(v))) {
+      for (const v of declsDe('animation-duration', b.decl)) cycles.push(...dureesIsolees(resoudre(v)));
+    }
+    const max = cycles.length ? Math.max(...cycles) : 0;
+    if (max > SEUIL_BOUCLE_MS && !pause) {
+      add('avertissement', 'R11', `animation infinie de cycle ${Math.round(max / 100) / 10} s (> 5 s) sans mécanisme de pause : `
+        + 'poser un contrôle qui bascule animation-play-state, ou borner la boucle — WCAG 2.2 SC 2.2.2', b.sel.slice(0, 80));
+    }
+  }
+}
+
+// ── R12 · durée littérale d'animate() au-delà de 300 ms (avertissement) ───
+// Motion compte en SECONDES (`animate(el, kf, { duration: 0.24 })`), l'API Web Animations
+// en MILLISECONDES (`el.animate(kf, { duration: 240 })`) : l'unité se lit sur l'appelant.
+{
+  for (const s of scriptsJs) {
+    for (const m of s.matchAll(/(?<![\w$])animate\s*\(/g)) {
+      const avant = s.slice(Math.max(0, m.index - 40), m.index);
+      const motion = /(^|[^\w$.])$/.test(avant) || /(?<![\w$])[Mm]otion\s*\.\s*$/.test(avant);
+      const debut = m.index + m[0].length - 1;
+      let prof = 0, fin = Math.min(s.length - 1, debut + 4000);
+      for (let i = debut; i < Math.min(s.length, debut + 4000); i++) {
+        if (s[i] === '(') prof++;
+        else if (s[i] === ')' && --prof === 0) { fin = i; break; }
+      }
+      const appel = s.slice(debut, fin + 1);
+      for (const d of appel.matchAll(/(?<![\w$])duration\s*:\s*(\d*\.?\d+)\s*(?=[,}\s)])/g)) {
+        const ms = parseFloat(d[1]) * (motion ? 1000 : 1);
+        if (ms > PLAFOND_MS) {
+          add('avertissement', 'R12', `animate() avec duration: ${d[1]} (${motion ? 'secondes, Motion' : 'millisecondes, Web Animations'}) `
+            + `= ${Math.round(ms)} ms > ${PLAFOND_MS} ms : l'UI paraîtra lente — même plafond que R4`, 'script (appel animate)');
+        }
+      }
+    }
+  }
+}
+
+// ── R13 · révocation prefers-reduced-motion qui ne couvre pas chaque animation ──
+// R10 sait qu'un bloc de révocation existe et neutralise quelque chose ; il se satisfait
+// d'UN sélecteur neutralisé. R13 demande que chaque sélecteur portant une `animation`
+// le soit, sauf règle universelle `*` qui neutralise.
+{
+  const neutralise = (decl) => /(transition|animation)\s*:\s*none/i.test(decl)
+    || /(transition|animation)-duration\s*:\s*0m?s?\b/i.test(decl)
+    || /animation-play-state\s*:\s*paused/i.test(decl)
+    || [...decl.matchAll(/(?:transition|animation)(?:-duration)?\s*:\s*([^;}]+)/gi)].some(m => msDe(m[1]).some(v => v <= 1));
+  const couverts = new Set();
+  let universel = false, neutralisation = false;
+  for (const bloc of BLOCS_REVOCATION) {
+    const interieur = bloc.slice(1, -1);
+    for (const r of interieur.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+      if (!neutralise(r[2])) continue;
+      neutralisation = true;
+      for (const p of r[1].split(',').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean)) {
+        if (p === '*') universel = true;
+        couverts.add(p);
+      }
+    }
+  }
+  if (neutralisation && !universel) {
+    const animes = new Map();
+    for (const b of blocsHorsRevocation) {
+      const porte = [...declsDe('animation', b.decl), ...declsDe('animation-name', b.decl)]
+        .some(v => !/^\s*none\b/i.test(v));
+      if (!porte || b.sel.startsWith('@')) continue;
+      for (const p of b.sel.split(',').map(x => x.trim().replace(/\s+/g, ' ')).filter(Boolean)) {
+        if (!couverts.has(p)) animes.set(p, true);
+      }
+    }
+    if (animes.size) {
+      add('avertissement', 'R13', `révocation prefers-reduced-motion partielle : ${animes.size} sélecteur(s) animé(s) hors de la révocation `
+        + `(${[...animes.keys()].slice(0, 4).join(' ; ')}) — neutraliser chacun, ou une règle universelle « * » (WCAG 2.2 SC 2.3.3)`,
         '@media prefers-reduced-motion');
     }
   }

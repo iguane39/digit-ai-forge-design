@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-motion R12 (durées d'animate() sous le plafond)</title>
+<style>
+  /* Preuve dédiée de R12 (TF-1904), sens vert : aucun mouvement CSS, seulement des appels
+     JavaScript dont les durées tiennent sous 300 ms — ou ne sont pas des littéraux. */
+  .carte { opacity: 0; }
+</style>
+</head>
+<body>
+  <h1>Fixture verte — durées d'animate()</h1>
+  <div class="carte">carte</div>
+  <div class="panneau">panneau</div>
+  <script>
+    // Motion : 0.24 SECONDE = 240 ms, sous le plafond
+    const { animate } = Motion;
+    if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      animate('.carte', { opacity: [0, 1] }, { duration: 0.24, easing: [0.16, 1, 0.3, 1] });
+    }
+    // Web Animations : 240 MILLISECONDES, sous le plafond. Le « 1200 » de ce commentaire
+    // ne compte pas : { duration: 1200 }
+    document.querySelector('.panneau').animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, easing: 'ease-out' });
+    // Durée portée par une variable : non résolue, déclarée au non_juge, jamais devinée
+    const DUREE = 0.2;
+    animate('.panneau', { opacity: [0, 1] }, { duration: DUREE });
+  </script>
+</body>
+</html>

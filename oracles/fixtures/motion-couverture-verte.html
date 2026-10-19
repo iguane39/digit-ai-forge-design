@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-motion R13 (révocation qui couvre chaque animation)</title>
+<style>
+  /* Preuve dédiée de R13 (TF-1904), sens vert : deux éléments animés, et une révocation
+     SANS règle universelle qui nomme les deux. Les cycles tiennent sous 5 s : R11 reste muette. */
+  @keyframes tourne { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes derive { from { transform: translateX(0); } to { transform: translateX(-40px); } }
+
+  .tourniquet { animation: tourne 2s linear infinite; }
+  .derive { animation: derive 4s linear infinite; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tourniquet { animation: none; }
+    .derive { animation: none; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture verte — révocation complète</h1>
+  <div class="tourniquet">chargement</div>
+  <div class="derive">fond animé</div>
+</body>
+</html>
