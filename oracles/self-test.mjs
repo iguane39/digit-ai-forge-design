@@ -49,6 +49,21 @@ const CAS = [
     rouge: [fx('liste-demande-rouge.md')],
   },
   {
+    // TF-1940 (21/10/2026) — LA PROMESSE CITE LA DEMANDE, ET UN MODELE DESIGNE SE JOUE. Demande, mot
+    // pour mot : « Un selecteur de calendrier, comme pour la reservation, regle par defaut sur les 3
+    // prochaines semaines, qui peut etre modifie pour selectionner une semaine en particulier ». La
+    // reservation choisit une arrivee puis un depart ; la refonte a selectionne la semaine entiere du
+    // jour clique. La promesse resumait (« semaine au choix ») et l'a jugee tenue. La rouge est ce cas
+    // reel : une ligne resumee sans citation (D4) et une ligne citee dont le « comme pour la
+    // reservation » ne nomme aucun critere de comparaison (D5). La verte joue le remede que les
+    // messages prescrivent (citation + critere comparant le meme geste sur le modele et le livrable)
+    // et declare un AJOUT, que D4 n'exige pas de citer.
+    oracle: 'oracle-liste-demande.mjs',
+    regles: ['D4', 'D5'],
+    verte: [fx('liste-demande-modele-verte.md')],
+    rouge: [fx('liste-demande-modele-rouge.md')],
+  },
+  {
     // TF-0578 (25/08) — LA PAGE DIT-ELLE LA MEME CHOSE QUE L'OFFRE ? Une une promettait « votre
     // produit, LIVRE avec ses preuves » quand les six services du MEME RUN disaient « vos equipes
     // executent les oracles SANS NOUS ». Aucun oracle ne l'a vu : tous jugent la page ISOLEMENT.

@@ -79,6 +79,41 @@ déclare — jamais de conformité jugée sans référentiel.
    **NON JOUÉ** et se déclare au rapport, jamais vert ; il se rejoue après la première
    alimentation réelle.
 
+## La promesse cite la demande, et un modèle désigné se joue (TF-1940, 21/10/2026)
+
+Quand le run répond à une demande humaine, la promesse que la critique pose pour un point de
+cette demande n'est pas un résumé : c'est la demande elle-même. Trois règles, écrites dans la
+section « Liste de contrôle de la demande » de `revue-implementation.md`
+(`references/liste-de-controle-demande.md`) :
+
+1. **La promesse cite la demande entre guillemets, mot pour mot.** « Semaine au choix » n'est
+   pas la demande, c'est son interprétation ; c'est en la résumant qu'on perd ce qui la contraint.
+   Un résumé peut s'ajouter à la citation, jamais la remplacer.
+2. **« Comme pour X », « comme sur X », « pareil que X » devient un critère nommé** : le même
+   geste joué sur X et sur le livrable, puis comparé. La ligne écrit le geste (ce qu'on clique,
+   dans quel ordre, ce qui reste libre), les deux preuves côte à côte (capture ou parcours rejoué
+   des deux côtés) et le verdict de la comparaison. Un modèle qu'on ne rejoue pas est lu comme
+   une inspiration, et le livrable en prend à son aise.
+3. **Tout contrôle d'interface que le livrable ajoute et que la demande ne porte pas est déclaré
+   « ajout »** : une ligne `AJOUT — <contrôle>` dans la même liste, avec sa capture. Elle n'a rien
+   à citer ; elle est posée à l'humain, qui garde ou retire. Un ajout non déclaré est un point
+   que personne n'a demandé et que personne n'a vu passer.
+
+*Le fait* (18-19/10/2026, un produit). Demande, mot pour mot : « Un sélecteur de calendrier, comme
+pour la réservation, réglé par défaut sur les 3 prochaines semaines, qui peut être modifié pour
+sélectionner une semaine en particulier ». Le calendrier de réservation choisit une arrivée puis un
+départ ; la refonte de l'agenda a sélectionné la semaine entière du jour cliqué, sans début ni fin
+libres. La promesse résumait la demande (« semaine au choix »), sans la citer, et l'a jugée tenue ;
+un bouton « Voir les N évènements », non demandé, est passé de même. Retour humain : « ça n'a
+jamais été demandé ».
+
+Contrôle exécuté : `node oracles\oracle-liste-demande.mjs <revue-implementation.md>` — **D4**
+refuse une ligne dont le point demandé n'est pas cité entre guillemets (hors ligne `AJOUT`) ;
+**D5** refuse une demande citée qui désigne un modèle sans que la ligne nomme un critère de
+comparaison et ce modèle. Il ne lit ni la demande d'origine ni le livrable : il ne sait pas que la
+citation est exacte, ni qu'un ajout a été oublié (c'est la relecture, contre le fil de la demande),
+et sans section « Liste de contrôle de la demande » il rend SANS OBJET.
+
 ## Volet « livré à l'écran » — ce que la page ne dessine pas elle-même
 
 Les contrôles 1 à 6 et 8 jugent ce que le produit dessine. Il reste une part de l'écran
@@ -122,7 +157,9 @@ Trois conséquences pour la revue :
 
 Sortie : `revue-implementation.md` — même squelette que `restitution.md` (verdict
 Livrer / Renforcer / Refondre, relevé d'oracles, « ce qui n'a pas été jugé ») **plus** une
-section « Écarts à la promesse » où chaque écart est un retour prêt à consigner :
+section « Liste de contrôle de la demande » dès que le run répond à une demande humaine (règles
+ci-dessus : citée, modèle joué, ajouts déclarés) **plus** une section « Écarts à la promesse »
+où chaque écart est un retour prêt à consigner :
 
 ```
 - ecart: <tokens|ecran|cta|rendu|voix|exploitabilite>

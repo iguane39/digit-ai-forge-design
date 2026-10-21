@@ -60,7 +60,10 @@ le bloc « non traité » d'une restitution : *un reste sans motif est un silenc
 Gabarit et bornes : `references/liste-de-controle-demande.md`. **Contrôle exécuté** :
 `node oracles\oracle-liste-demande.mjs <REVUE.md>` — D1 une ligne sans preuve ni motif · D2 le
 compte annoncé ne colle pas au nombre de lignes (*le défaut du 22/08 en une soustraction*) ·
-D3 une preuve qui n'en est pas une (« vérifié », « fait », « ok » seuls). Sans section, l'oracle
+D3 une preuve qui n'en est pas une (« vérifié », « fait », « ok » seuls) · D4 un point non cité
+entre guillemets, mot pour mot (TF-1940) · D5 une demande qui désigne un modèle (« comme pour X »)
+sans critère nommé : le même geste joué sur X et sur le livrable, comparé ; un contrôle ajouté par le
+livrable et absent de la demande s'écrit `AJOUT — …`. Sans section, l'oracle
 rend **SANS OBJET** : tous les livrables ne répondent pas à une demande à points, et en inventer
 une serait pire.
 
@@ -115,4 +118,7 @@ produit), huit contrôles avec preuve — dont l'exploitabilité rejouée sur un
 au volume réel (`oracle-exploitabilite`, `--etat-connexion` derrière une connexion) —,
 restitution en écarts ancrés prêts pour le ledger — tout est dans `references/critique-implementation.md`. Frontière : le câblage fonctionnel des
 affordances reste à forge-tests (pan `interface`) ; ici on juge la forme contre la promesse.
-Sans artefacts de référence, le mode dégrade en critique classique et le déclare.
+Sans artefacts de référence, le mode dégrade en critique classique et le déclare. La promesse d'un
+point de la demande humaine **cite la demande mot pour mot**, un « comme pour X » devient un critère
+nommé (le même geste joué sur X et sur le livrable), un ajout non demandé se déclare (TF-1940) :
+`references/critique-implementation.md`.

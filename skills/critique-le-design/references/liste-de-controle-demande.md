@@ -47,6 +47,26 @@ point perdu, et c'est celui-là que le client redemande.
 C'est la même doctrine que le bloc « non traité » d'une restitution : *un reste sans motif est un
 silence*.
 
+## Citer, jouer le modèle, déclarer l'ajout (TF-1940, 21/10/2026)
+
+Le fait : demande « Un sélecteur de calendrier, **comme pour la réservation**, réglé par défaut sur
+les 3 prochaines semaines, qui peut être modifié pour sélectionner une semaine en particulier » ; la
+promesse de la critique d'implémentation écrivait « semaine au choix » et l'a jugée tenue, alors que
+la réservation choisit une arrivée puis un départ et que l'agenda sélectionnait la semaine entière du
+jour cliqué. Un bouton « Voir les N évènements » que personne n'avait demandé est passé aussi.
+
+- **La colonne « Point demandé » est la citation entre guillemets** (« … »), pas un résumé.
+- **Une demande qui désigne un modèle** (« comme pour X », « comme sur X », « pareil que X ») impose
+  un critère nommé dans « Correction » ou « Preuve » : le même geste joué sur X et sur le livrable,
+  comparé, avec le nom de X. Exemple : `critère comparé : le même geste (arrivée puis départ, libres)
+  joué sur la réservation et sur l'agenda`.
+- **Un contrôle d'interface ajouté par le livrable** s'écrit `AJOUT — <contrôle>` : il n'y a rien à
+  citer, il reste une ligne, avec sa preuve, que l'humain tranche.
+
+Les deux règles mécaniques : **D4** (point non cité entre guillemets, hors `AJOUT`) et **D5** (modèle
+désigné sans critère de comparaison). Fixtures : `oracles/fixtures/liste-demande-modele-rouge.md`
+(le cas réel) et `liste-demande-modele-verte.md`.
+
 ## Contrôle exécuté
 
 `node oracles\oracle-liste-demande.mjs <REVUE.md>` — il refuse :
@@ -55,7 +75,9 @@ silence*.
 - un **compte annoncé** en titre qui ne correspond pas au nombre de lignes (`D2`) — c'est le défaut
   du 22/08 en une règle : dix-sept annoncés, seize listés, et personne ne fait la soustraction ;
 - une preuve qui n'en est pas une (`D3`) : « vérifié », « fait », « ok », « corrigé » seuls, sans
-  fichier, sans mesure, sans verdict.
+  fichier, sans mesure, sans verdict ;
+- un point demandé non cité entre guillemets (`D4`) et un modèle désigné sans critère de
+  comparaison (`D5`) — voir la section suivante.
 
 **Ce qu'il ne juge pas** : la VÉRACITÉ d'une preuve — qu'une capture montre vraiment ce qu'elle
 prétend demande de regarder. Et il ne sait pas si un point a été **oublié à la saisie** : il compare
