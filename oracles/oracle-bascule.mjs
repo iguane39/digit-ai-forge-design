@@ -160,6 +160,44 @@ if (elements(root, 'script').some(s => s.attrs && Object.prototype.hasOwnPropert
   NON_JUGE.push('au moins un <script src="…"> détecté : son contenu n\'est pas analysé (câblage éventuellement porté par lui, hors périmètre)');
 }
 
+// TF-1906 (retour Produit-79 du 18/10/2026) — LIRE CHAQUE DÉCLARATEUR, PAS SEULEMENT LE PREMIER.
+// `var racine = document.documentElement, bouton = document.getElementById('theme')` puis
+// `bouton.addEventListener('click', …)` : la bascule marchait (Chromium 13/13) et B-T2 rendait un
+// bloquant, parce que les lectures d'alias (bouton, racine) et de constante (clé de thème)
+// s'ancraient sur le mot-clé var/let/const et ne voyaient que le déclarateur qui le suit.
+// Cette lecture découpe une déclaration multiple aux virgules de niveau 0 (hors parenthèses,
+// crochets, accolades, chaînes et commentaires) et rend chaque déclarateur `nom = initialisation`.
+function declarateurs(texte) {
+  const out = [];
+  for (const d of texte.matchAll(/(?<![\w$.])(?:var|let|const)\s+(?=[A-Za-z_$])/g)) {
+    const morceaux = [];
+    let i = d.index + d[0].length, debut = i, profondeur = 0, guillemet = null;
+    for (; i < texte.length; i++) {
+      const c = texte[i];
+      if (guillemet) { if (c === '\\') i++; else if (c === guillemet) guillemet = null; continue; }
+      if (c === '"' || c === "'" || c === '`') { guillemet = c; continue; }
+      if (c === '/' && texte[i + 1] === '/') { const fin = texte.indexOf('\n', i); i = fin < 0 ? texte.length : fin - 1; continue; }
+      if (c === '/' && texte[i + 1] === '*') { const fin = texte.indexOf('*/', i + 2); i = fin < 0 ? texte.length : fin + 1; continue; }
+      if ('([{'.includes(c)) profondeur++;
+      else if (')]}'.includes(c)) { if (profondeur === 0) break; profondeur--; }
+      else if (profondeur === 0 && c === ',') { morceaux.push(texte.slice(debut, i)); debut = i + 1; }
+      else if (profondeur === 0 && c === ';') break;
+      else if (profondeur === 0 && c === '\n') {
+        // fin d'instruction sans point-virgule, sauf si la ligne se poursuit (virgule ou opérateur avant/après)
+        const avant = texte.slice(debut, i).trimEnd();
+        const apres = /^\s*([^\s])/.exec(texte.slice(i + 1));
+        if (avant && !/[,=+\-*?:&|.]$/.test(avant) && !(apres && /[,.?:+\-*&|=]/.test(apres[1]))) break;
+      }
+    }
+    morceaux.push(texte.slice(debut, i));
+    for (const m of morceaux) {
+      const x = /^\s*([A-Za-z_$][\w$]*)\s*=\s*([\s\S]*)$/.exec(m);
+      if (x) out.push({ nom: x[1], init: x[2].trim() });
+    }
+  }
+  return out;
+}
+
 // ── B-T2 · câblage : écouteur sur CE bouton + mutation data-theme sur la racine ──
 function coincideBouton(fn, arg, bt) {
   if (!bt) return false;
@@ -211,17 +249,19 @@ if (bouton) {
       ecouteurTrouve = true;
     }
   }
-  const REF_ALIAS = /\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*document\.(getElementById|querySelector)\(\s*(['"])([^'"]+)\3\s*\)/g;
-  for (const m of texteScripts.matchAll(REF_ALIAS)) {
-    if (!coincideBouton(m[2], m[4], bouton)) continue;
-    const alias = m[1];
+  // TF-1906 : chaque déclarateur d'une déclaration multiple est lu (voir declarateurs()).
+  const REF_ALIAS = /^document\.(getElementById|querySelector)\(\s*(['"])([^'"]+)\2\s*\)/;
+  for (const { nom: alias, init } of declarateurs(texteScripts)) {
+    const m = REF_ALIAS.exec(init);
+    if (!m || !coincideBouton(m[1], m[3], bouton)) continue;
     const usage = new RegExp(`\\b${alias}\\b\\s*\\.\\s*(?:addEventListener\\(\\s*['"]click['"]|onclick\\s*=)`);
     if (usage.test(texteScripts)) ecouteurTrouve = true;
   }
 }
 
-const ROOT_ALIAS_RE = /\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*document\.(?:documentElement\b|querySelector\(\s*['"](?:html|:root)['"]\s*\)|getElementsByTagName\(\s*['"]html['"]\s*\)\s*\[0\])/g;
-const aliasRacine = [...texteAnalyse.matchAll(ROOT_ALIAS_RE)].map(m => m[1]);
+const ROOT_ALIAS_RE = /^document\.(?:documentElement\b|querySelector\(\s*['"](?:html|:root)['"]\s*\)|getElementsByTagName\(\s*['"]html['"]\s*\)\s*\[0\])/;
+const declarationsAnalysees = declarateurs(texteAnalyse);
+const aliasRacine = declarationsAnalysees.filter(d => ROOT_ALIAS_RE.test(d.init)).map(d => d.nom);
 const alternatives = ['document\\.documentElement', "document\\.querySelector\\(\\s*['\"](?:html|:root)['\"]\\s*\\)", ...aliasRacine.map(a => `\\b${a}\\b`)];
 const MUTATION_RE = new RegExp(`(?:${alternatives.join('|')})\\s*\\.\\s*(?:setAttribute\\(\\s*['"]data-theme['"]|dataset\\.theme\\s*=)`, 'i');
 const mutationTrouvee = MUTATION_RE.test(texteAnalyse);
@@ -231,7 +271,7 @@ if (bouton) {
     add('bloquant', 'B-T2',
       'bouton de bascule présent mais aucun écouteur de clic ne lui est attaché : bascule morte — loi n° 1. ' +
       'Motifs reconnus : (1) écouteur attaché au bouton — getElementById/querySelector, directement ou par ' +
-      'alias, suivi de addEventListener(\'click\') ou onclick= ; (2) attribut onclick inline ; ' +
+      'alias (y compris déclaré dans un var/let/const multiple), suivi de addEventListener(\'click\') ou onclick= ; (2) attribut onclick inline ; ' +
       '(3) délégation — addEventListener(\'click\') sur document/body/window, avec closest() ou matches() sur ' +
       'un sélecteur qui vise CE bouton, ou lecture de data-theme-toggle sur la cible du clic. ' +
       'Un câblage porté par un script externe ou un framework n\'est pas lisible ici : le déclarer.',
@@ -253,8 +293,9 @@ if (renduFige) conclure();
 // reconnue si la constante RÉSOUT vers une valeur contenant « theme », ou si son NOM
 // le contient (`CLE_THEME`, `themeKey`) : dans les deux cas, la trace existe.
 const litteraux = new Map();
-for (const m of texteAnalyse.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(['"])([^'"]*)\2/g)) {
-  if (!litteraux.has(m[1])) litteraux.set(m[1], m[3]);
+for (const { nom, init } of declarationsAnalysees) {
+  const m = /^(['"])([^'"]*)\1/.exec(init);
+  if (m && !litteraux.has(nom)) litteraux.set(nom, m[2]);
 }
 const EST_CLE_THEME = /theme/i;
 /** Un appel localStorage porte-t-il une clé de thème reconnaissable ? */

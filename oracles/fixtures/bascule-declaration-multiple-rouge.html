@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — var multiple dont l'alias vise un autre élément que le bouton de bascule</title>
+<!--
+  TF-1906, le sens rouge du même motif. La page ressemble trait pour trait à
+  bascule-declaration-multiple-verte.html : même var multiple, même clé en second
+  déclarateur, même palette sombre dérivée. Une seule chose change, et elle suffit :
+  l'alias câblé par addEventListener est celui d'un AUTRE élément
+  (getElementById('panneau')), pas celui du bouton de bascule (id « theme »). Aucun clic
+  sur le bouton n'atteindra jamais ce gestionnaire.
+
+  C'est le cas que la lecture de chaque déclarateur ne doit PAS laisser passer : lire tous
+  les déclarateurs ne veut pas dire faire confiance à tout alias. Seule B-T2 est cassée
+  ici ; B-T1, B-T3 et B-T4 restent verts.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" id="theme" type="button" aria-pressed="false">Thème sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour être mesurée par la règle de lisibilité, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">L'alias câblé dans le var multiple désigne le panneau latéral : le bouton de bascule, lui, n'a aucun écouteur.</p>
+  <p class="note">La clé de persistance est le second déclarateur d'une déclaration multiple : elle résout vers une valeur qui porte le mot theme.</p>
+  <aside id="panneau">Panneau</aside>
+
+  <script>
+    (function () {
+      var racine = document.documentElement, panneau = document.getElementById('panneau');
+      var vide = null, CLE_STOCKAGE = 'produit79.theme';
+
+      function appliquer(theme) {
+        racine.setAttribute('data-theme', theme);
+        localStorage.setItem(CLE_STOCKAGE, theme);
+      }
+
+      appliquer(localStorage.getItem(CLE_STOCKAGE) || 'light');
+
+      panneau.addEventListener('click', function () {
+        appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+    })();
+  </script>
+</body>
+</html>

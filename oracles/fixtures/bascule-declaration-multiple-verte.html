@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — bascule câblée par un alias déclaré dans un var multiple</title>
+<!--
+  TF-1906 (retour Produit-79 du 18/10/2026), le cas réel. Le script déclare plusieurs
+  variables d'un seul var :
+      var racine = document.documentElement, bouton = document.getElementById('theme');
+  puis câble `bouton.addEventListener('click', …)`. La bascule fonctionnait (Chromium 13/13)
+  et B-T2 rendait un bloquant : l'oracle ne lisait que le PREMIER déclarateur d'une
+  déclaration multiple, donc ne voyait jamais l'alias `bouton`.
+
+  La clé de persistance est rangée dans le second déclarateur d'une autre déclaration
+  multiple (`var vide = null, CLE_STOCKAGE = 'produit79.theme'`) : même lecture, côté B-T3.
+  Rien n'est relâché : l'écouteur existe, son alias vise CE bouton, la racine est mutée,
+  la clé résout vers une valeur qui porte « theme », la palette sombre est dérivée.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" id="theme" type="button" aria-pressed="false">Thème sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour être mesurée par la règle de lisibilité, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Le bouton de bascule est retrouvé par un alias déclaré en second dans un var multiple, puis câblé par addEventListener : un câblage direct, lisible statiquement.</p>
+  <p class="note">La clé de persistance est le second déclarateur d'une déclaration multiple : elle résout vers une valeur qui porte le mot theme.</p>
+
+  <script>
+    (function () {
+      var racine = document.documentElement, bouton = document.getElementById('theme');
+      var vide = null, CLE_STOCKAGE = 'produit79.theme';
+
+      function appliquer(theme) {
+        racine.setAttribute('data-theme', theme);
+        localStorage.setItem(CLE_STOCKAGE, theme);
+        bouton.setAttribute('aria-pressed', String(theme === 'dark'));
+      }
+
+      appliquer(localStorage.getItem(CLE_STOCKAGE) || 'light');
+
+      bouton.addEventListener('click', function () {
+        appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+    })();
+  </script>
+</body>
+</html>

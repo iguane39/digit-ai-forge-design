@@ -415,6 +415,18 @@ const CAS = [
     rouge: [fx('bascule-deleguee-morte-rouge.html')],
   },
   {
+    // TF-1906 (retour Produit-79 du 18/10/2026) : CHAQUE DÉCLARATEUR D'UN VAR MULTIPLE. Le cas
+    // réel — `var racine = document.documentElement, bouton = document.getElementById('theme')`
+    // puis `bouton.addEventListener('click', …)` — rendait B-T2 bloquant alors que la bascule
+    // marchait (Chromium 13/13) : seul le premier déclarateur d'une déclaration était lu. La verte
+    // est ce cas (alias du bouton en 2e position, clé de thème en 2e position d'une autre
+    // déclaration) ; la rouge ne diffère que par l'alias câblé, qui vise un autre élément.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T2'],
+    verte: [fx('bascule-declaration-multiple-verte.html')],
+    rouge: [fx('bascule-declaration-multiple-rouge.html')],
+  },
+  {
     // TF-1661 (retour du 13/10/2026) : LE RENDU FIGÉ. Une page claire seule, sans bouton ni
     // palette sombre ni script de thème, sortait B-T1, B-T3 et B-T4 en bloquant alors que
     // oracle-tokens T4 la déclare conforme et que check_html.py G1 n'en fait qu'un avertissement.
@@ -1682,6 +1694,40 @@ for (const cas of CAS) {
     const sr = jouer('oracle-surcouche.mjs', 'surcouche-rouge', page(AUTO, { dialogue: true }));
     ligne(sv.auto.length === 0 && !sv.durs.some(x => x.regle === 'SC4') && sr.auto.some(x => x.regle === 'SC4'),
       `oracle-surcouche · SC4 : data-theme muet, auto-sombre signalé (vert ×${sv.auto.length}, rouge ×${sr.auto.length})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// TF-1906 — variantes d'écriture d'une déclaration multiple (en plus de la paire de fixtures) : racine
+// et bouton déclarés en 2e et 3e position sur plusieurs lignes, virgules et apostrophes dans une chaîne
+// et un commentaire, instructions sans point-virgule. Pages écrites ici ; un alias vers un autre
+// élément reste refusé en B-T2.
+{
+  console.log(String.fromCharCode(10) + 'oracle-bascule (TF-1906) — déclarations multiples, variantes d\'écriture');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'bascule-multiple-'));
+  try {
+    const page = js => '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Thème</title><style>'
+      + ':root { color-scheme: light; --bg: #ffffff; --ink: #111111; }\n:root[data-theme="dark"] { color-scheme: dark; --bg: #0b1220; --ink: #eef2f8; }\n'
+      + 'body { background: var(--bg); color: var(--ink); }</style></head><body><header><button class="theme-toggle" id="theme" type="button">Thème</button></header>'
+      + '<aside id="autre">Autre</aside><main><h1>Thème</h1></main><script>' + js + '</script></body></html>';
+    const jouer = (nom, js) => {
+      const f = path.join(dossier, nom + '.html');
+      fs.writeFileSync(f, page(js), 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-bascule.mjs'), f, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, durs: (j?.findings || []).filter(x => x.sev === 'bloquant' || x.sev === 'majeur') };
+    };
+    const ECOUTE = "bouton.addEventListener('click', function () { racine.setAttribute('data-theme', 'dark'); localStorage.setItem(CLE, 'dark'); }); localStorage.getItem(CLE);";
+    const multiLignes = jouer('multi-lignes',
+      "var n = f(1, 2),\n  racine = document.documentElement,\n  bouton = document.getElementById('theme'),\n  CLE = 'produit.theme';\n" + ECOUTE);
+    const sansPointVirgule = jouer('sans-point-virgule',
+      "// l'écouteur, ici\nlet etat = { a: 1, b: [1, 2] }, texte = \"x,y\", bouton = document.querySelector('#theme')\nconst racine = document.documentElement\nconst CLE = 'theme'\n" + ECOUTE);
+    const autreElement = jouer('autre-element',
+      "var racine = document.documentElement, bouton = document.getElementById('autre'), CLE = 'produit.theme';\n" + ECOUTE);
+    ligne(multiLignes.code === 0 && multiLignes.durs.length === 0, `var multiple sur plusieurs lignes, racine et bouton en 2e/3e position : PASS (exit ${multiLignes.code}, ${multiLignes.durs.length} écart dur)`);
+    ligne(sansPointVirgule.code === 0 && sansPointVirgule.durs.length === 0, `déclarations sans point-virgule, virgules et apostrophes en chaîne et commentaire : PASS (exit ${sansPointVirgule.code}, ${sansPointVirgule.durs.length} écart dur)`);
+    ligne(autreElement.code === 1 && autreElement.durs.some(x => x.regle === 'B-T2'), `alias d'un var multiple vers un autre élément : B-T2 dur (exit ${autreElement.code})`);
   } finally {
     fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
   }
