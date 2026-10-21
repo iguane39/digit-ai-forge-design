@@ -29,7 +29,7 @@
 // ⇒ SKIP motivé dans les résultats, jamais une erreur.
 //
 // --instance <url|page.html> [--instance …] [--etat-connexion etat.json] (TF-1687) : enrôle
-// oracle-exploitabilite (X0–X5) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
+// oracle-exploitabilite (X0–X6) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
 // rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
 // est déclaré SANS OBJET à voix haute et ne pèse pas sur le verdict d'un projet sans instance.
 // --etat-connexion passe l'état Playwright (storageState) d'une application derrière une connexion.

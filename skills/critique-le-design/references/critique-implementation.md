@@ -69,8 +69,8 @@ déclare — jamais de conformité jugée sans référentiel.
 8. **Exploitabilité au volume réel** (TF-1654, TF-1687) : chaque écran clé se rejoue sur une
    instance **alimentée au volume réel**, jamais sur le seul jeu de démonstration —
    `run-oracles-design.mjs <page> --instance <url|page rendue> [--etat-connexion etat.json]`,
-   ou `oracle-exploitabilite.mjs <url>…` en direct. Oracle : `oracle-exploitabilite` (X0–X5 :
-   hauteur, densité des lignes, valeurs machine, colonnes déséquilibrées, libellés). Une
+   ou `oracle-exploitabilite.mjs <url>…` en direct. Oracle : `oracle-exploitabilite` (X0–X6 :
+   hauteur, densité des lignes, valeurs machine, colonnes déséquilibrées, libellés, et X6 : clic d'un onglet sous le premier écran sans perte de position, `patterns-interaction.md`). Une
    application derrière une connexion se juge avec l'état Playwright (storageState) produit
    par son script de connexion (`--etat-connexion`) : sans lui, l'oracle mesure la page de
    connexion, le dit (X0) et ne juge pas l'écran. *Mesure qui l'impose* : des écrans passés

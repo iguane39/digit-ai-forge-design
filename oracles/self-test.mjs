@@ -745,6 +745,20 @@ const CAS = [
     verte: [fx('exploitabilite-verte.html')],
     rouge: [fx('exploitabilite-rouge.html')],
   },
+  {
+    // TF-1916 (retour Produit-02 du 18/10/2026) — cinq onglets de gîte sous le bandeau, au-dessus d'un
+    // calendrier, étaient de simples liens vers cinq pages : chaque clic rechargeait et ramenait en haut.
+    // Les 13 oracles de la forge et render_page avaient passé, aucun ne cliquait un onglet après avoir
+    // défilé. Les deux fixtures sont la MÊME page (bandeau de plus d'un écran, onglets sous lui, calendrier
+    // en dessous) : la verte intercepte les liens, échange le contenu sur place et met l'adresse à jour par
+    // history.pushState ; la rouge garde de simples liens vers une page sœur. Mesure : défilement avant /
+    // après le clic, tolérance 2 px. Dépend de l'outillage de rendu — saut motivé s'il manque.
+    rendu: true,
+    oracle: 'oracle-exploitabilite.mjs',
+    regles: ['X6'],
+    verte: [fx('onglets-milieu-verte.html')],
+    rouge: [fx('onglets-milieu-rouge.html')],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
@@ -1743,6 +1757,50 @@ for (const cas of CAS) {
     ligne(autreElement.code === 1 && autreElement.durs.some(x => x.regle === 'B-T2'), `alias d'un var multiple vers un autre élément : B-T2 dur (exit ${autreElement.code})`);
   } finally {
     fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// TF-1916 — X6 hors des deux fixtures : le vert doit avoir été JOUÉ (un vert sans clic n'est pas un vert),
+// le repli par ancre (rechargement qui retombe sur le groupe d'onglets) est un avertissement qui ne rougit
+// pas, et un écran sans groupe d'onglets sous le premier écran dit que X6 n'a pas été joué.
+{
+  console.log(String.fromCharCode(10) + 'oracle-exploitabilite X6 (TF-1916) — onglets sous le premier écran, repli par ancre et contrôle joué');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'onglets-x6-'));
+    try {
+      const jouer = f => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'oracle-exploitabilite.mjs'), f, '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        return { code: r.status, json: j, x6: (j?.findings || []).filter(x => x.regle === 'X6') };
+      };
+      const verte = jouer(fx('onglets-milieu-verte.html'));
+      ligne(verte.code === 0 && verte.json?.onglets_joues === 1 && verte.x6.length === 0,
+        `sens vert · échange sur place : le clic a été joué (onglets_joues ${verte.json?.onglets_joues}) et X6 se tait, PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code})`);
+      const rouge = jouer(fx('onglets-milieu-rouge.html'));
+      ligne(rouge.code === 1 && rouge.x6.length === 1 && rouge.x6[0].sev === 'majeur' && /page rechargée/.test(rouge.x6[0].msg),
+        `sens rouge · simples liens vers une page sœur : X6 majeur, page rechargée, FAIL exit 1 (obtenu ${rouge.json?.verdict}, exit ${rouge.code}, ×${rouge.x6.length})`);
+      // Repli par ancre : la page sœur recharge, mais retombe sur le groupe (id="onglets") : position conservée.
+      const page = (courant, autre) => '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Gîte ' + courant + '</title>'
+        + '<style>body { margin: 0; } .bandeau { height: 1400px; } .onglets { display: flex; gap: 8px; padding: 12px 32px; } .calendrier { min-height: 1600px; }</style></head><body>'
+        + '<header class="bandeau"><h1>Réservation</h1></header>'
+        + '<nav class="onglets" id="onglets" role="tablist"><a role="tab" href="gite-' + courant + '.html#onglets" aria-selected="true">Gîte ' + courant + '</a>'
+        + '<a role="tab" href="gite-' + autre + '.html#onglets" aria-selected="false">Gîte ' + autre + '</a></nav>'
+        + '<main class="calendrier"><h2>Calendrier du gîte ' + courant + '</h2></main></body></html>';
+      fs.writeFileSync(path.join(dossier, 'gite-a.html'), page('a', 'b'), 'utf8');
+      fs.writeFileSync(path.join(dossier, 'gite-b.html'), page('b', 'a'), 'utf8');
+      const ancre = jouer(path.join(dossier, 'gite-a.html'));
+      ligne(ancre.code === 0 && ancre.x6.length === 1 && ancre.x6[0].sev === 'avertissement' && /position conservée par ancre/.test(ancre.x6[0].msg),
+        `repli par ancre · rechargement qui retombe sur le groupe : X6 en avertissement, PASS exit 0 (obtenu ${ancre.json?.verdict}, exit ${ancre.code}, ${ancre.x6.map(x => x.sev).join(',')})`);
+      // Sans groupe d'onglets sous le premier écran : dit au non_juge, jamais un silence.
+      const sans = jouer(fx('exploitabilite-verte.html'));
+      ligne(sans.json?.onglets_joues === 0 && (sans.json?.non_juge || []).some(n => /^X6 non joué : aucun groupe/.test(n)),
+        `écran sans onglets sous le premier écran · X6 dit non joué au non_juge (onglets_joues ${sans.json?.onglets_joues})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
   }
 }
 

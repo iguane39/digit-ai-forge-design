@@ -95,6 +95,47 @@ Sans `data-fonctionnalite`, l'oracle rend le **registre** de la page — chaque 
 avec sa nature mesurée — et déclare que la couverture des fonctionnalités n'a pas été
 jugée. Il ne devine pas un regroupement à partir des libellés : un contrôle qui devine ment.
 
+## Onglets sous le premier écran — le lecteur garde sa place (TF-1916)
+
+Le 18/10/2026, sur les pages de réservation d'un produit : cinq onglets de gîte, placés sous le
+bandeau et au-dessus d'un calendrier, étaient de simples liens vers cinq pages. Chaque clic
+rechargeait la page et la ramenait en haut. Le retour de l'exploitant, mot pour mot : « Lorsqu'on
+clique sur un autre gite dans la réservation, ne reviens pas en haut de la page, reste au même
+endroit sur la page. Fais en une règle générale des onglets en milieu de page pour la Factory. »
+Les treize oracles de la forge et `render_page.py` avaient passé : aucun ne cliquait un onglet
+après avoir défilé.
+
+**Règle.** Un groupe d'onglets situé sous le premier écran ne provoque ni rechargement ni
+remontée : cliquer un autre onglet laisse le lecteur exactement où il était, le contenu du
+nouvel onglet sous les yeux. Deux voies, par ordre de préférence :
+
+1. **Échange du contenu sur place (voie préférée).** Les onglets restent de **vrais liens**
+   (`<a role="tab" href="…">` vers la page de l'onglet : clic droit, nouvel onglet, copie de
+   l'adresse, lien profond et repli sans script restent entiers). Le script **intercepte** le clic
+   simple (ni modificateur, ni bouton secondaire), charge ou affiche le contenu **sur place**,
+   met l'adresse à jour par `history.pushState`, gère le retour arrière (`popstate`) et tient
+   `aria-selected` à jour. Le défilement n'est pas touché.
+2. **Ancre de retour à la position (repli).** À défaut, chaque lien pointe la page sœur **avec
+   le fragment du groupe d'onglets** (`href="gite-b.html#onglets"`, `id="onglets"` sur le groupe,
+   `scroll-margin-top` s'il y a un bandeau collant) : la page se recharge mais retombe sur le
+   groupe, pas en haut. Voie admise, dégradée : rechargement visible, état de la page perdu.
+
+Ce qui est refusé : des onglets qui sont de simples liens vers des pages sœurs, sans l'une des
+deux voies. La barre d'onglets de **navigation entre écrans en tête de page** (voir
+`contrat-technique.md`) n'est pas concernée : elle est dans le premier écran, il n'y a pas de
+place à perdre.
+
+**Critère mesurable** (clic réel dans un navigateur) : défiler jusqu'au groupe d'onglets, cliquer
+un autre onglet, mesurer. `scrollY` après le clic égale `scrollY` avant, à 2 px près ; pour la
+voie préférée, aucun rechargement complet (un marqueur posé sur `window` avant le clic est encore
+là après). Contrôle exécutable : `oracle-exploitabilite` **X6** — écart de défilement supérieur à
+2 px : majeur ; rechargement qui conserve la position (repli par ancre) : avertissement. Il se joue
+sur la page rendue ou, de préférence, sur l'instance servie (`run-oracles-design.mjs <page>
+--instance <url>`), et dit **non joué** quand la page n'a pas de groupe d'au moins deux onglets
+sous le premier écran. Le joué n'est pas le jugé : X6 ne clique qu'un onglet du premier groupe,
+et ne mesure ni l'adresse mise à jour ni le retour arrière — à vérifier à la critique
+d'implémentation.
+
 ## Champs de saisie — TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE, COMPILABLE
 
 Cinq volets, pour **tout** champ, quel que soit son format et son contexte

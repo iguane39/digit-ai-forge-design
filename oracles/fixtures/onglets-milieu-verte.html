@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — onglets sous le premier écran, contenu échangé sur place</title>
+<!--
+  TF-1916 (retour Produit-02 du 18/10/2026), le sens vert. Cinq gîtes, cinq onglets placés sous
+  le bandeau, au-dessus du calendrier : ce sont de VRAIS liens (href vers la page du gîte), que le
+  script intercepte. Le contenu du gîte est échangé sur place, l'adresse est mise à jour par
+  history.pushState, le retour arrière est géré (popstate). Le lecteur qui a défilé jusqu'aux
+  onglets reste où il est : même position de défilement, aucun rechargement.
+
+  Le bandeau fait plus d'un écran de haut, pour que le groupe d'onglets soit SOUS le premier écran.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; --accent: #27496d; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; }
+  .bandeau { height: 1400px; padding: 32px; border-bottom: 1px solid var(--trait); }
+  .onglets { display: flex; gap: 8px; padding: 12px 32px; border-bottom: 1px solid var(--trait); }
+  .onglets a { padding: 8px 16px; border: 1px solid var(--trait); color: var(--texte); text-decoration: none; }
+  .onglets a[aria-selected="true"] { background: var(--accent); color: #ffffff; }
+  .calendrier { min-height: 1600px; padding: 32px; }
+</style>
+</head>
+<body>
+  <header class="bandeau"><h1>Réservation</h1><p>Choisissez un gîte puis une période.</p></header>
+  <nav class="onglets" role="tablist" aria-label="Gîtes">
+    <a role="tab" href="?gite=a" aria-selected="true" data-gite="a">Gîte A</a>
+    <a role="tab" href="?gite=b" aria-selected="false" data-gite="b">Gîte B</a>
+    <a role="tab" href="?gite=c" aria-selected="false" data-gite="c">Gîte C</a>
+  </nav>
+  <main class="calendrier" id="calendrier" role="tabpanel"><h2 id="titre-gite">Calendrier du gîte A</h2><p>Disponibilités du gîte A.</p></main>
+
+  <script>
+    (function () {
+      var onglets = document.querySelectorAll('.onglets a');
+      var titre = document.getElementById('titre-gite');
+      var texte = document.querySelector('#calendrier p');
+
+      function afficher(gite) {
+        onglets.forEach(function (a) { a.setAttribute('aria-selected', String(a.dataset.gite === gite)); });
+        titre.textContent = 'Calendrier du gîte ' + gite.toUpperCase();
+        texte.textContent = 'Disponibilités du gîte ' + gite.toUpperCase() + '.';
+      }
+
+      // Les liens restent de vrais liens (clic droit, nouvel onglet, copie de l'adresse) ; seul le
+      // clic simple est pris en charge, sans rechargement et sans toucher à la position.
+      onglets.forEach(function (a) {
+        a.addEventListener('click', function (e) {
+          if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+          e.preventDefault();
+          afficher(a.dataset.gite);
+          history.pushState({ gite: a.dataset.gite }, '', a.getAttribute('href'));
+        });
+      });
+
+      window.addEventListener('popstate', function (e) {
+        afficher((e.state && e.state.gite) || 'a');
+      });
+    })();
+  </script>
+</body>
+</html>

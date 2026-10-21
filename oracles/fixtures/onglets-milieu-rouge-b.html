@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page sœur de onglets-milieu-rouge.html — gîte B</title>
+<!--
+  TF-1916 : destination des onglets de onglets-milieu-rouge.html. Page sœur complète, chargée
+  depuis le haut. Elle n'est pas une fixture à juger : elle existe pour que le lien ne soit pas
+  mort et que le rechargement soit réel.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; --accent: #27496d; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; }
+  .bandeau { height: 1400px; padding: 32px; border-bottom: 1px solid var(--trait); }
+  .onglets { display: flex; gap: 8px; padding: 12px 32px; border-bottom: 1px solid var(--trait); }
+  .onglets a { padding: 8px 16px; border: 1px solid var(--trait); color: var(--texte); text-decoration: none; }
+  .onglets a[aria-selected="true"] { background: var(--accent); color: #ffffff; }
+  .calendrier { min-height: 1600px; padding: 32px; }
+</style>
+</head>
+<body>
+  <header class="bandeau"><h1>Réservation</h1><p>Choisissez un gîte puis une période.</p></header>
+  <nav class="onglets" role="tablist" aria-label="Gîtes">
+    <a role="tab" href="onglets-milieu-rouge.html" aria-selected="false">Gîte A</a>
+    <a role="tab" href="onglets-milieu-rouge-b.html" aria-selected="true">Gîte B</a>
+    <a role="tab" href="onglets-milieu-rouge-b.html" aria-selected="false">Gîte C</a>
+  </nav>
+  <main class="calendrier" id="calendrier" role="tabpanel"><h2>Calendrier du gîte B</h2><p>Disponibilités du gîte B.</p></main>
+</body>
+</html>

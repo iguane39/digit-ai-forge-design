@@ -76,7 +76,7 @@ node oracles/self-test.mjs                                   # non-régression, 
 node oracles/run-oracles-design.mjs <page.html> \
   [--mobile] [--tokens tokens.css] [--json-only] [--racine <chemin>] \
   [--instance <url|page alimentée>… [--etat-connexion etat.json]]      # point d'entrée unique ;
-# --instance : exploitabilité X0–X5 en opt-in (TF-1687), SANS OBJET dit sans instance
+# --instance : exploitabilité X0–X6 en opt-in (TF-1687, onglets TF-1916), SANS OBJET dit sans instance
 
 node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode corpus (oracle-corpus seul)
 
@@ -87,7 +87,7 @@ node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choi
 node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
 node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
 node oracles/oracle-exploitabilite.mjs <page.html|url>… \
-  [--etat-connexion etat.json] [--theme dark] [--largeur N]   # X0–X5 : écran rendu au volume réel (TF-1654) ;
+  [--etat-connexion etat.json] [--theme dark] [--largeur N]   # X0–X6 : écran rendu au volume réel (TF-1654), onglets sous le premier écran (TF-1916) ;
 # URL servie derrière une connexion : état Playwright (storageState) du produit (TF-1674)
 
 node oracles/oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit> [--approuver [--motif "<écart voulu>"]]  # régression visuelle
