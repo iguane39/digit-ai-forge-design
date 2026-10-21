@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — le mot « refus » en infobulle d'un élément qui n'est pas une définition</title>
+<!--
+  TF-1910, le sens rouge du même motif. La page reprend les infobulles de
+  textes-application-definition-verte.html, mais portées par des éléments qui ne sont NI un
+  en-tête <th> NI un élément à data-definition : une cellule de donnée, un bouton, un message
+  affiché. Là, « refus » annonce bien un incident, sans cause ni réparation : T4-1 reste
+  bloquant. Exempter les définitions d'en-tête ne rend pas aveugle à un vrai message d'erreur.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; padding: 32px; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid var(--trait); padding: 8px 16px; text-align: left; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Décisions d'instruction</h1>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" data-definition="Code du motif de la décision, y compris le motif de refus. Source : référentiel des décisions.">Code</th>
+          <th scope="col">Résultat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td title="Date de la décision, refus compris. Source : registre des décisions.">Instruit le 03/10</td><td><button type="button" title="Échec de l'envoi">Transmettre la décision</button></td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

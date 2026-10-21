@@ -713,6 +713,19 @@ const CAS = [
     rouge: [fx('textes-application-rouge.json')],
   },
   {
+    // TF-1910 (retour Produit-79 du 18/10/2026, récidive de TF-1773) : L'INFOBULLE DE DÉFINITION D'UN
+    // EN-TÊTE. Les <th> « Code » et « Résultat » d'un tableau portaient leur définition en `title`
+    // (convention du socle : dictionnaire de colonnes, G9) ; elle disait « refus » parce que les
+    // décisions peuvent en être, et T4-1 la prenait pour un message d'erreur — 11 constats durs sur
+    // une page sans une erreur. La verte est ce tableau (th à data-definition + title, th à title
+    // seul, span à data-definition) ; la rouge garde le même texte en title d'une cellule de donnée
+    // et d'un bouton : là, le mot d'erreur annonce bien un incident, T4-1 reste bloquant.
+    oracle: 'oracle-textes-application.mjs',
+    regles: ['T4-1'],
+    verte: [fx('textes-application-definition-verte.html')],
+    rouge: [fx('textes-application-definition-rouge.html')],
+  },
+  {
     rendu: true,
     oracle: 'rendu-comparatif.mjs',
     regles: ['RC-1'],

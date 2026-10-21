@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — infobulle de définition d'un en-tête de tableau</title>
+<!--
+  TF-1910 (retour Produit-79 du 18/10/2026), le cas réel : les en-têtes « Code » et « Résultat »
+  d'un tableau de décisions portent leur définition, comme le prévoit le socle (dictionnaire de
+  colonnes, G9 : `data-definition`, ou `title`, sur chaque <th>). Cette définition dit ce que la
+  colonne contient — elle emploie le mot « refus » parce que les décisions peuvent être des refus.
+  Ce n'est pas un message d'erreur : T4-1 en rendait 11 constats durs sur la même page.
+
+  Trois formes, toutes des définitions : <th> à data-definition ET title (le socle reprend la
+  définition en infobulle), <th> à title seul (G9 l'accepte), élément non-<th> à data-definition.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; padding: 32px; }
+  table { border-collapse: collapse; }
+  th, td { border: 1px solid var(--trait); padding: 8px 16px; text-align: left; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Décisions d'instruction</h1>
+    <table>
+      <thead>
+        <tr>
+          <th scope="col" data-definition="Code du motif de la décision, y compris le motif de refus. Source : référentiel des décisions." title="Code du motif de la décision, y compris le motif de refus. Source : référentiel des décisions.">Code</th>
+          <th scope="col" data-definition="Résultat de l'instruction : accepté, ou refusé avec son motif. Unité : décision." title="Résultat de l'instruction : accepté, ou refusé avec son motif. Unité : décision.">Résultat</th>
+          <th scope="col" title="Date de la décision, refus compris. Source : registre des décisions.">Date</th>
+          <th scope="col"><span data-definition="Nombre de dossiers refusés dans le mois. Source : registre." title="Nombre de dossiers refusés dans le mois. Source : registre.">Refus</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>D-014</td><td>Accepté</td><td>03/10/2026</td><td>0</td></tr>
+        <tr><td>D-015</td><td>Accepté</td><td>04/10/2026</td><td>2</td></tr>
+      </tbody>
+    </table>
+  </main>
+</body>
+</html>

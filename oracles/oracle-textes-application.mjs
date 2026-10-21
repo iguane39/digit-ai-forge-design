@@ -32,6 +32,8 @@
 // dont le texte est un identifiant « C2 », « E-020 »), une valeur de statut seule (« Échec »,
 // « Refusé »), une pastille de statut (classe badge, pastille, statut…) et un libellé de donnée
 // où le mot d'erreur est complément de nom (« Date du refus »). Un `role="alert"` reste jugé.
+// TF-1910 (18/10/2026) : le `title` d'un <th> (ou d'un [role=columnheader|rowheader]) et celui de
+// tout élément à `data-definition` sont des DÉFINITIONS (convention du socle, dictionnaire de colonnes).
 //
 // POURQUOI T4-1…T4-4 ET NON TA1…TA4. Le lot du pilot nomme ces règles TA1 à TA4 ; ces
 // quatre identifiants sont DÉJÀ pris dans cette forge par `oracle-taste` (TA1 familles
@@ -370,10 +372,17 @@ export function extraireHtml(brut) {
     // identifiant comme « C2 », « E-020 ») est sa définition : elle décrit le code, elle
     // n'est ni une erreur ni un état vide de l'écran.
     const estCode = BALISES_CODE.includes(el.tag) || RX_IDENTIFIANT_CODE.test(texteDe(el));
+    // TF-1910 — l'infobulle de DÉFINITION d'un en-tête de colonne est une définition aussi. Le socle
+    // (digit-ai-page-html, dictionnaire de colonnes, G9) la porte par `data-definition` ou par
+    // `title` sur chaque <th> ; un élément à `data-definition` déclare lui-même que son infobulle
+    // définit. « Code » et « Résultat » y disaient « refus » (le motif des décisions) : 11 constats
+    // durs sur une page sans une erreur. Un `role="alert"` reste jugé (voir juger).
+    const definitionEntete = el.tag === 'th' || /^(columnheader|rowheader)$/.test(at(el, 'role'))
+      || Object.prototype.hasOwnProperty.call(el.attrs || {}, 'data-definition');
     for (const a of ATTRS_TEXTE) {
       const v = at(el, a);
       if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el),
-        ...(a === 'title' && estCode ? { definition: true } : {}) });
+        ...(a === 'title' && (estCode || definitionEntete) ? { definition: true } : {}) });
     }
     const classe = normaliser(at(el, 'class'));
     const estEtat = at(el, 'role') === 'alert'
@@ -528,6 +537,29 @@ if (args.includes('--self-test')) {
   });
   check('ROUGE TF-1773 — « Échec de l\'envoi » (le mot d\'erreur en tête) reste un message jugé', () => {
     const r = un('envoi.resultat', "Échec de l'envoi");
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+
+  // ── TF-1910 (lot Produit-79 du 18/10) : l'infobulle de définition d'un en-tête n'est pas une erreur ─
+  check('VERTE TF-1910 — <th data-definition title> « Code » dont la définition dit « refus » : aucun constat', () => {
+    const r = juger(extraireHtml('<table><thead><tr><th data-definition="Code du motif de la décision, y compris le motif de refus."'
+      + ' title="Code du motif de la décision, y compris le motif de refus.">Code</th></tr></thead></table>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-1910 — <th title> seul (G9 du socle) : une définition, aucun constat', () => {
+    const r = juger(extraireHtml('<table><thead><tr><th title="Résultat de l\'instruction : accepté, ou refusé avec son motif de refus.">Résultat</th></tr></thead></table>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-1910 — <span data-definition title> hors <th> : l\'élément déclare sa définition, aucun constat', () => {
+    const r = juger(extraireHtml('<span data-definition="Nombre de dossiers en refus." title="Nombre de dossiers en refus.">Refus</span>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-1910 — même texte en title d\'une cellule <td> sans data-definition : reste jugé (T4-1 bloquant)', () => {
+    const r = juger(extraireHtml('<table><tbody><tr><td title="Date de la décision, refus compris.">Instruit le 03/10</td></tr></tbody></table>'));
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-1910 — <th role="alert" title="Échec de l\'envoi"> : l\'alerte reste jugée', () => {
+    const r = juger(extraireHtml('<table><thead><tr><th role="alert" title="Échec de l\'envoi">Envoi</th></tr></thead></table>'));
     if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
   });
 
