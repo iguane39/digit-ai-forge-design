@@ -458,10 +458,12 @@ const CAS = [
     // en octal par un script Python), et les contrôles de livraison rendaient PASS. La rouge porte ces
     // deux octets dans la feuille de style locale liée ; la verte, la même feuille avec l'échappement
     // CSS intact.
+    // Œil critique du pilot, 29/10/2026 : la même feuille liée par un href racine (« /…css ») doit être
+    // jugée ; un href au « % » mal formé ne doit pas faire planter l'oracle.
     oracle: 'oracle-caracteres-controle.mjs',
     regles: ['CC-P1'],
-    verte: [fx('caracteres-controle-verte.html')],
-    rouge: [fx('caracteres-controle-rouge.html')],
+    verte: [fx('caracteres-controle-verte.html'), fx('caracteres-controle-href-malforme-verte.html')],
+    rouge: [fx('caracteres-controle-rouge.html'), fx('caracteres-controle-racine-rouge.html')],
   },
   {
     // TF-0235 (campagne pilot du 15/08) : restitution lisible — une page déclarée

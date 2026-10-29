@@ -70,7 +70,19 @@ for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
   if (!/\brel\s*=\s*["']?[^"'>]*stylesheet/i.test(balise)) continue;
   const href = (balise.match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1];
   if (!href || /^(?:[a-z]+:)?\/\//i.test(href) || /^data:/i.test(href)) continue;
-  const cible = path.resolve(dossier, decodeURIComponent(href.split(/[?#]/)[0]));
+  // Œil critique du pilot, 29/10/2026 : un href « /s.css » (racine du site) se résolvait contre la racine
+  // du disque, la feuille était sautée sans bruit et la page rendait PASS ; un « % » mal formé faisait
+  // planter l'oracle sans verdict. La racine du site est cherchée en remontant depuis le dossier de la page.
+  let chemin = href.split(/[?#]/)[0];
+  try { chemin = decodeURIComponent(chemin); } catch { /* « % » mal formé : le chemin brut est cherché tel quel */ }
+  let cible = path.resolve(dossier, chemin);
+  if (chemin.startsWith('/')) {
+    for (let d = dossier; ; d = path.dirname(d)) {
+      const c = path.join(d, chemin);
+      if (fs.existsSync(c)) { cible = c; break; }
+      if (path.dirname(d) === d) break;
+    }
+  }
   if (!fs.existsSync(cible)) continue;
   feuilles++;
   juger(path.relative(process.cwd(), cible) || cible, fs.readFileSync(cible, 'utf8'));
