@@ -385,6 +385,8 @@ function passeFichier(fichier, { muet = false } = {}) {
   out.push(lancer('oracle-tokens.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
   out.push(lancer('oracle-motion.mjs', [fichier]));
   out.push(lancer('oracle-bascule.mjs', [fichier]));
+  // TF-1980 : un octet de contrôle dans la page ou une feuille de style locale (« \25F7 » lu en octal par un script).
+  out.push(lancer('oracle-caracteres-controle.mjs', [fichier]));
   out.push(lancer('oracle-taste.mjs', [fichier]));
 
   if (estMobile) out.push(lancer('oracle-mobile.mjs', [fichier]));

@@ -454,6 +454,16 @@ const CAS = [
     rouge: [fx('bascule-figee-rouge.html')],
   },
   {
+    // TF-1980 (29/10/2026) — deux `content` CSS d'une page livrée portaient 0x15 et 0x00 (« \25F7 » lu
+    // en octal par un script Python), et les contrôles de livraison rendaient PASS. La rouge porte ces
+    // deux octets dans la feuille de style locale liée ; la verte, la même feuille avec l'échappement
+    // CSS intact.
+    oracle: 'oracle-caracteres-controle.mjs',
+    regles: ['CC-P1'],
+    verte: [fx('caracteres-controle-verte.html')],
+    rouge: [fx('caracteres-controle-rouge.html')],
+  },
+  {
     // TF-0235 (campagne pilot du 15/08) : restitution lisible — une page déclarée
     // data-restitution porte verdict, KPIs complets, questions de graphiques,
     // chemins de lecteurs et manifeste d'écarts. RL-2/5/6/7/8 déclarées non jugées
