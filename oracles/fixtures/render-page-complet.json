@@ -1,0 +1,11 @@
+{
+  "verdict": "PASS",
+  "breakpoints": {
+    "3840": { "png": "rendu-w3840.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 },
+    "1920": { "png": "rendu-w1920.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 },
+    "768": { "png": "rendu-w768.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 },
+    "390": { "png": "rendu-w390.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 }
+  },
+  "captures_manquees": [],
+  "non_juge": []
+}

@@ -4348,6 +4348,243 @@ if (!OUTILLAGE_DOCUMENT.ok) {
   }
 }
 
+// D-108 (b) (29/10/2026), volet 2 — UNE CAPTURE MANQUANTE À UNE LARGEUR EXIGÉE EST UN ÉCHEC, JAMAIS UN
+// SILENCE. Le fait : une capture à 390 px exigée n'a pas pu être faite, et le rendu a quand même été jugé
+// PASS. render_page.py déclare la capture manquée (`captures_manquees`, `capture.faite: false`, `png: null`)
+// et rend son verdict sur le DOM ; run-oracles-design.mjs et rendu-comparatif.mjs ne lisaient pas ce champ.
+// Mesuré avant correctif, sur le faux rendu de ce bloc (390 px sans capture) : run-oracles-design PASS,
+// rendu-comparatif PASS dans les trois cas (manque des deux côtés, après seul, avant seul), zéro mot sur 390.
+// Ce bloc joue la bibliothèque à l'unité, puis les deux consommateurs de bout en bout avec un faux
+// render_page.py (fixtures/faux-render-page.py) installé dans un faux dossier personnel — sans navigateur.
+{
+  console.log('\nlib/captures.mjs (D-108 (b)) — une capture manquante à une largeur exigée est nommée, jamais tue');
+  const { capturesManquantes } = await import('./lib/captures.mjs');
+  const lire = f => JSON.parse(fs.readFileSync(fx(f), 'utf8'));
+  const toutExiste = { fichierExiste: () => true };
+  const GRILLE_TEST = [3840, 1920, 768, 390];
+
+  ligne(capturesManquantes(lire('render-page-complet.json'), GRILLE_TEST, toutExiste).length === 0,
+    'sens vert · quatre largeurs capturées, PNG présents : aucune capture manquante');
+
+  const rouge = capturesManquantes(lire('render-page-390-manquant.json'), GRILLE_TEST, toutExiste);
+  ligne(rouge.length === 1 && rouge[0].largeur === 390 && /capture impossible a 390 px/.test(rouge[0].motif),
+    `sens rouge · render_page déclare la capture de 390 px non faite : 390 nommée, motif de render_page repris (obtenu ${JSON.stringify(rouge.map(m => m.largeur))})`);
+
+  const absente = lire('render-page-complet.json'); delete absente.breakpoints['390'];
+  const a = capturesManquantes(absente, GRILLE_TEST, toutExiste);
+  ligne(a.length === 1 && a[0].largeur === 390 && /aucun rendu de cette largeur/.test(a[0].motif),
+    'sens rouge · largeur exigée absente de la sortie de render_page : nommée — l\'ancien code ne parcourait que les largeurs présentes');
+
+  const sansPng = lire('render-page-complet.json'); sansPng.breakpoints['768'].png = null; delete sansPng.breakpoints['768'].capture;
+  const b = capturesManquantes(sansPng, GRILLE_TEST, toutExiste);
+  ligne(b.length === 1 && b[0].largeur === 768 && /aucun PNG/.test(b[0].motif),
+    'sens rouge · png null sans déclaration de capture : 768 nommée');
+
+  const c = capturesManquantes(lire('render-page-complet.json'), GRILLE_TEST, { fichierExiste: p => !/w1920/.test(p) });
+  ligne(c.length === 1 && c[0].largeur === 1920 && /absent du disque/.test(c[0].motif),
+    'sens rouge · PNG annoncé mais disparu du disque : 1920 nommée');
+
+  const deux = lire('render-page-390-manquant.json'); deux.breakpoints['768'].png = null; deux.breakpoints['768'].capture = { faite: false, motif: 'page trop haute' };
+  const d = capturesManquantes(deux, GRILLE_TEST, toutExiste);
+  ligne(d.map(m => m.largeur).join(',') === '768,390' && d[0].motif === 'page trop haute',
+    `sens rouge · deux largeurs manquantes : les deux sont nommées, dans l'ordre de la grille (obtenu ${d.map(m => m.largeur).join(',')})`);
+
+  // ── Les deux consommateurs, de bout en bout, avec un faux render_page.py ──
+  console.log('\nCapture manquante, de bout en bout (D-108 (b)) — run-oracles-design --rendu et rendu-comparatif, faux render_page.py');
+  const maison = fs.mkdtempSync(path.join(os.tmpdir(), 'cap-manquante-'));
+  try {
+    for (const [source, cible] of [
+      ['faux-render-page.py', ['.claude', 'skills', 'digit-ai-page-html', 'scripts', 'render_page.py']],
+      ['faux-oracle-a11y.py', ['.claude', 'skills', 'quality-oracles', 'scripts', 'oracle-a11y.py']],
+    ]) {
+      const dest = path.join(maison, ...cible);
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      fs.copyFileSync(fx(source), dest);
+    }
+    const jouer = (script, argv, env = {}) => {
+      const r = spawnSync(process.execPath, [path.join(ici, script), ...argv, '--json-only'], {
+        encoding: 'utf8', maxBuffer: 64 * 1024 * 1024,
+        env: { ...process.env, USERPROFILE: maison, HOME: maison, PYTHONUTF8: '1', FAUX_RENDU_MANQUE: '', FAUX_RENDU_MANQUE_AVANT: '', FAUX_RENDU_MANQUE_APRES: '', ...env },
+      });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json };
+    };
+    // Le faux dossier personnel n'a de sens que si un Python avec playwright existe (détection de l'outillage).
+    const sonde = jouer('run-oracles-design.mjs', [fx('rendu-l2-verte.html'), '--rendu']);
+    const rendus = j => (j?.oracles || []).filter(o => /^render_page/.test(o.oracle));
+    if (rendus(sonde.json).some(o => o.verdict === 'SKIP')) {
+      console.log(`  SKIP  outillage de rendu (Python avec playwright) indisponible : ${rendus(sonde.json)[0]?.raison || ''}`);
+      sautes.push('capture manquante de bout en bout');
+    } else {
+      // run-oracles-design --rendu
+      ligne(sonde.code === 0 && sonde.json?.verdict === 'PASS' && rendus(sonde.json).length === 2,
+        `run-oracles-design · sens vert : sept largeurs capturées, rendu clair et sombre PASS, exit 0 (obtenu ${sonde.json?.verdict}, exit ${sonde.code})`);
+      const m = jouer('run-oracles-design.mjs', [fx('rendu-l2-verte.html'), '--rendu'], { FAUX_RENDU_MANQUE: '390' });
+      const cap = (m.json?.oracles || []).flatMap(o => (o.findings || []).filter(f => f.regle === 'CAP-1').map(f => ({ oracle: o.oracle, ...f })));
+      ligne(m.code === 1 && m.json?.verdict === 'FAIL' && rendus(m.json).every(o => o.verdict === 'FAIL' && o.exit === 1),
+        `run-oracles-design · sens rouge : capture de 390 px manquante ⇒ rendu clair ET sombre FAIL, exit 1 — l'ancien code rendait PASS (obtenu ${m.json?.verdict}, exit ${m.code})`);
+      ligne(cap.length === 2 && cap.every(f => f.sev === 'bloquant' && /^390px — capture MANQUANTE/.test(f.msg) && /capture impossible a 390 px/.test(f.msg)),
+        `run-oracles-design · sens rouge : un constat bloquant CAP-1 par thème qui nomme 390 px et reprend le motif de render_page (obtenu ×${cap.length})`);
+      const autres = (m.json?.oracles || []).filter(o => o.verdict === 'FAIL' && !/^render_page/.test(o.oracle));
+      const bloquantsAutres = rendus(m.json).flatMap(o => o.findings.filter(f => f.sev === 'bloquant' && f.regle !== 'CAP-1'));
+      ligne(autres.length === 0 && bloquantsAutres.length === 0,
+        'run-oracles-design · sens rouge : pour la bonne raison, aucun autre oracle ni aucun autre constat bloquant ne rougit');
+      const deux = jouer('run-oracles-design.mjs', [fx('rendu-l2-verte.html'), '--rendu'], { FAUX_RENDU_MANQUE: '768,390' });
+      const nommees = new Set((deux.json?.oracles || []).flatMap(o => (o.findings || []).filter(f => f.regle === 'CAP-1').map(f => f.msg.split('px')[0])));
+      ligne(deux.code === 1 && nommees.has('390') && nommees.has('768') && nommees.size === 2,
+        `run-oracles-design · sens rouge : deux largeurs manquantes (768 et 390) sont nommées l'une et l'autre (obtenu ${[...nommees].join(',')})`);
+
+      // rendu-comparatif
+      const cmp = ['--avant', fx('comparatif-avant.html'), '--apres', fx('comparatif-avant.html')];
+      const v = jouer('rendu-comparatif.mjs', cmp);
+      ligne(v.code === 0 && v.json?.verdict === 'PASS' && !(v.json?.findings || []).some(f => f.regle === 'RC-3'),
+        `rendu-comparatif · sens vert : toutes les largeurs capturées des deux côtés, PASS, exit 0 (obtenu ${v.json?.verdict}, exit ${v.code})`);
+      for (const [env, cotes] of [
+        [{ FAUX_RENDU_MANQUE: '390' }, ['avant', 'après']],
+        [{ FAUX_RENDU_MANQUE_APRES: '390' }, ['après']],
+        [{ FAUX_RENDU_MANQUE_AVANT: '390' }, ['avant']],
+      ]) {
+        const r = jouer('rendu-comparatif.mjs', cmp, env);
+        const rc3 = (r.json?.findings || []).filter(f => f.regle === 'RC-3');
+        const vus = new Set(rc3.map(f => /côté « (avant|après) »/.exec(f.msg)?.[1]));
+        ligne(r.code === 1 && r.json?.verdict === 'FAIL' && rc3.length === 2 * cotes.length
+            && rc3.every(f => f.sev === 'bloquant' && /à 390px/.test(f.msg) && /^390px, thème (clair|sombre)$/.test(f.ou))
+            && cotes.every(c => vus.has(c)) && vus.size === cotes.length,
+          `rendu-comparatif · sens rouge · capture de 390 px manquante ${cotes.length === 2 ? 'des deux côtés' : `côté « ${cotes[0]} » seulement`} : RC-3 bloquant, 390 nommée, thèmes clair et sombre, FAIL exit 1 — l'ancien code rendait PASS (obtenu ${r.json?.verdict}, ×${rc3.length})`);
+      }
+    }
+  } finally {
+    fs.rmSync(maison, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// D-108 (b) (29/10/2026), volet 1 — LA FLUIDITÉ SE MESURE DE BOUT EN BOUT, OU ELLE N'EST PAS RENDUE.
+// Le fait : le 27/10, un oracle de fluidité a rendu PASS à « 60 images par seconde » ; la mesure réelle du
+// 28/10 donnait 3,3. Il comptait les rappels de requestAnimationFrame sans attendre le travail du
+// processeur graphique. Mesuré à l'écriture de cet oracle, sur la fixture rouge (moteur par défaut) : 241 rappels en 4 s
+// (60 i/s) pour 27 images réellement terminées (6,5 i/s) — le compte de rappels voit la boucle de la page,
+// jamais la carte. Ce bloc joue d'abord le JUGEMENT sur des mesures brutes écrites à la main (sans
+// navigateur : chaque branche, dont toutes celles qui rendent SKIP), puis l'oracle dans Chromium sur la
+// paire de fixtures, puis son enrôlement dans le point d'entrée.
+{
+  console.log('\nlib/fluidite.mjs (D-108 (b)) — le jugement de fluidité, branche par branche, sans navigateur');
+  const { jugerFluidite, SEUILS } = await import('./lib/fluidite.mjs');
+  // Une mesure brute de bout en bout : `periode` ms entre deux débuts d'image, n images, travail = periode.
+  const brute = (periode, n = 200, surcharge = {}) => ({
+    mode: 'bout_en_bout', contextes: 1, contexte_perdu: false, erreurs_sync: 0, rendu_gl: 'ANGLE (NVIDIA GeForce RTX 4070)',
+    images: Array.from({ length: n }, (_, k) => [k * periode, k * periode + periode * 0.9, 1]), ...surcharge,
+  });
+  const regles = j => j.findings.map(f => f.regle);
+
+  const v60 = jugerFluidite(brute(1000 / 60, 241));
+  ligne(v60.verdict === 'PASS' && Math.abs(v60.mesures.fps - 60) < 0.2 && v60.findings.every(f => f.sev === 'info'),
+    `sens vert · 241 images synchronisées à 16,7 ms : PASS, ${v60.mesures.fps} i/s, aucun avertissement`);
+
+  const v33 = jugerFluidite(brute(300, 14));
+  ligne(v33.verdict === 'FAIL' && regles(v33).includes('F1') && Math.abs(v33.mesures.fps - 3.3) < 0.1
+      && /3\.3 i\/s/.test(v33.findings.find(f => f.regle === 'F1').msg),
+    `sens rouge · le cas du 28/10 (une image terminée toutes les 300 ms) : FAIL F1, ${v33.mesures.fps} i/s cités au message — l'ancien oracle disait PASS à 60`);
+
+  // L'ancienne mesure, telle quelle : 240 rappels en 4 s, aucune attente de la carte. Elle ne fonde JAMAIS un PASS.
+  const naive = jugerFluidite(brute(1000 / 60, 240, { mode: 'naif', images: Array.from({ length: 240 }, (_, k) => [k * 16.67, k * 16.67 + 0.1, 0]) }));
+  ligne(naive.verdict === 'SKIP' && /ancienne mesure/.test(naive.motif),
+    `sens rouge · l'ancienne mesure (compte de rappels, 60 i/s) : SKIP motivé « ancienne mesure », JAMAIS PASS (obtenu ${naive.verdict})`);
+
+  const sansSync = jugerFluidite(brute(1000 / 60, 100, { images: Array.from({ length: 100 }, (_, k) => [k * 16.67, k * 16.67 + 1, k % 10 === 0 ? 0 : 1]) }));
+  ligne(sansSync.verdict === 'SKIP' && /10 image\(s\) sur 100 sans synchronisation/.test(sansSync.motif),
+    `sens rouge · dix images sur cent sans lecture synchronisante : SKIP, la durée ne serait pas de bout en bout (obtenu ${sansSync.verdict})`);
+
+  const cas = [
+    ['aucun contexte WebGL', brute(16.7, 100, { contextes: 0 }), /aucun contexte WebGL/],
+    ['contexte perdu pendant la mesure', brute(16.7, 100, { contexte_perdu: true }), /contexte WebGL perdu/],
+    ['aucune image animée', brute(16.7, 0), /aucune image animée/],
+    ['une seule image', brute(16.7, 1), /une seule image/],
+    ['fenêtre de mesure trop courte (500 ms)', brute(10, 51), /fenêtre de mesure de 500 ms/],
+    ['pilote en erreur', { erreur: 'navigateur indisponible : Executable doesn\'t exist' }, /mesure impossible : navigateur indisponible/],
+    ['aucune mesure reçue', null, /aucune mesure reçue/],
+  ];
+  for (const [nom, entree, motif] of cas) {
+    const j = jugerFluidite(entree);
+    ligne(j.verdict === 'SKIP' && motif.test(j.motif) && j.findings.length === 1 && j.findings[0].regle === 'F0',
+      `sens rouge · ${nom} : SKIP motivé, jamais PASS (obtenu ${j.verdict})`);
+  }
+
+  // Les bornes du plancher : le seuil est lu, pas deviné.
+  const limite = jugerFluidite(brute(1000 / (SEUILS.fpsMin - 0.5), 200));
+  const juste = jugerFluidite(brute(1000 / (SEUILS.fpsMin + 0.5), 200));
+  ligne(limite.verdict === 'FAIL' && juste.verdict === 'PASS' && regles(juste).includes('F3'),
+    `bornes · ${SEUILS.fpsMin - 0.5} i/s FAIL, ${SEUILS.fpsMin + 0.5} i/s PASS avec F3 (sous la cadence d'écran) en avertissement`);
+
+  const saccades = jugerFluidite({ ...brute(16.7, 0), images: Array.from({ length: 200 }, (_, k) => { const t = k * 16.7 + Math.floor(k / 10) * 90 + (k % 10 === 9 ? 0 : 0); return [t, t + 1, 1]; }) });
+  ligne(saccades.verdict === 'PASS' && regles(saccades).includes('F2') && saccades.findings.find(f => f.regle === 'F2').sev === 'avertissement',
+    `sens vert · saccades (un à-coup de 107 ms toutes les dix images, moyenne ${saccades.mesures.fps} i/s) : PASS avec F2 en avertissement`);
+
+  const logiciel = jugerFluidite(brute(300, 14, { rendu_gl: 'ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)), SwiftShader driver)' }));
+  ligne(logiciel.verdict === 'FAIL' && logiciel.mesures.rendu_logiciel === true
+      && /rendu LOGICIEL/.test(logiciel.findings.find(f => f.regle === 'F1').msg) && /SwiftShader/.test(logiciel.findings.find(f => f.regle === 'F1').msg),
+    'limite déclarée · rendu logiciel : FAIL gardé, mais le message nomme le moteur et dit que la durée majore celle d\'une vraie carte');
+
+  // ── L'oracle dans Chromium, sur la paire de fixtures ──
+  console.log('\noracle-fluidite (D-108 (b)) — la paire de fixtures dans Chromium : verte fluide, rouge à shader coûteux');
+  const jouerFluidite = (f, ...extra) => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-fluidite.mjs'), fx(f), ...extra, '--json-only'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+    let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, json };
+  };
+  const verte = jouerFluidite('fluidite-verte.html');
+  const POSTE_SANS_RENDU = /outillage de rendu indisponible|navigateur indisponible|aucun contexte WebGL/;
+  if (verte.json?.verdict === 'SKIP' && POSTE_SANS_RENDU.test(verte.json.non_juge?.[0] || '')) {
+    console.log(`  SKIP  ce poste ne peut pas mesurer (${verte.json.non_juge[0].slice(0, 110)}…) — le jugement est verrouillé ci-dessus sans navigateur`);
+    sautes.push('oracle-fluidite dans Chromium');
+  } else {
+    ligne(verte.code === 0 && verte.json?.verdict === 'PASS' && verte.json.mesures?.fps >= SEUILS.fpsMin,
+      `verte · exit 0, PASS, ${verte.json?.mesures?.fps} i/s de bout en bout sur ${verte.json?.mesures?.images} images (obtenu ${verte.json?.verdict}, exit ${verte.code})`);
+    const rouge = jouerFluidite('fluidite-rouge.html', '--temoin-naif');
+    const durs = (rouge.json?.findings || []).filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
+    ligne(rouge.code === 1 && rouge.json?.verdict === 'FAIL' && durs.length === 1 && durs[0].regle === 'F1' && rouge.json.mesures?.fps < SEUILS.fpsMin,
+      `rouge · exit 1, FAIL pour la bonne raison (F1 seul), ${rouge.json?.mesures?.fps} i/s de bout en bout pour ${SEUILS.fpsMin} au plancher (obtenu ${rouge.json?.verdict}, exit ${rouge.code})`);
+    // LA FIXTURE REPRODUIT LE CAS DU 27/10 : l'ancienne mesure, sur cette même page, aurait annoncé une page fluide.
+    // LE TÉMOIN DE L'ANCIENNE MESURE N'EST PAS DÉTERMINISTE, et la recette ne le prétend pas. Que le navigateur
+    // rappelle l'animation à 60 Hz pendant que la carte est en retard dépend du moteur de rendu ET de l'état du
+    // poste : mesuré le 29/10/2026, le compteur de rappels annonçait 60 i/s (241 rappels en 4 s) à cinq reprises
+    // en début de séance, puis 4,7 à 6,6 i/s à quatre reprises plus tard — avec le moteur logiciel forcé comme
+    // avec le moteur par défaut, le poste étant sous forte charge mémoire (cause non établie). Quand le témoin
+    // trompe, la ligne le prouve (« l'ancienne mesure aurait dit fluide ») ; quand il ne trompe pas, la recette
+    // le DIT en saut motivé. Ce qui est exigé partout, lui, est ci-dessus (FAIL de la rouge) et dans le bloc
+    // sans navigateur (l'ancienne mesure rend SKIP, jamais PASS, même à 60 i/s).
+    const naif = rouge.json?.mesures?.ancienne_mesure;
+    if (naif && naif.fps >= SEUILS.fpsCible) {
+      ligne(rouge.json.mesures.fps < SEUILS.fpsMin,
+        `rouge · la fixture reproduit le cas du 27/10 : l'ancienne mesure (compte de rappels) annonce ${naif.fps} i/s, donc « fluide » ; la mesure de bout en bout donne ${rouge.json.mesures.fps} i/s`);
+    } else {
+      console.log(`  SKIP  témoin de l'ancienne mesure : non reproduit sur ce passage (moteur « ${naif?.strategie} », le compteur de rappels annonce ${naif?.fps} i/s contre ${rouge.json?.mesures?.fps} i/s de bout en bout)`);
+      sautes.push('témoin de l\'ancienne mesure');
+    }
+    ligne(Boolean(rouge.json?.mesures?.rendu_gl) && (rouge.json?.non_juge || []).length > 0 && ['oracle', 'domaine', 'artefact', 'verdict', 'findings', 'non_juge'].every(k => k in rouge.json),
+      'contrat JSON complet · moteur de rendu rendu avec la mesure, non_juge déclaré et non vide');
+
+    // ── L'enrôlement dans le point d'entrée ──
+    console.log('\nrun-oracles-design (D-108 (b)) — la fluidité enrôlée : détectée par le contenu, sans objet sinon, forçable');
+    const entree = (f, ...extra) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx(f), ...extra, '--json-only'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json, flu: (json?.oracles || []).find(o => o.oracle === 'oracle-fluidite') };
+    };
+    const eRouge = entree('fluidite-rouge.html');
+    ligne(eRouge.flu?.verdict === 'FAIL' && eRouge.json?.verdict === 'FAIL' && eRouge.code === 1,
+      `point d'entrée · page WebGL animée lente : oracle-fluidite lancé tout seul, FAIL, verdict agrégé FAIL exit 1 (obtenu ${eRouge.flu?.verdict}, ${eRouge.json?.verdict}, exit ${eRouge.code})`);
+    const eVerte = entree('fluidite-verte.html');
+    ligne(eVerte.flu?.verdict === 'PASS',
+      `point d'entrée · page WebGL animée fluide : oracle-fluidite lancé tout seul et PASS (obtenu ${eVerte.flu?.verdict})`);
+    const eSans = entree('mobile-verte.html');
+    ligne(!eSans.flu && (eSans.json?.non_juge || []).some(n => /^oracle-fluidite : SANS OBJET — aucun canevas WebGL animé/.test(n)),
+      'point d\'entrée · page sans canevas WebGL : SANS OBJET dit au non_juge, non lancé — jamais un PASS ni un SKIP par défaut');
+    const eForce = entree('mobile-verte.html', '--fluidite');
+    ligne(eForce.flu?.verdict === 'SKIP' && /aucun contexte WebGL/.test(eForce.flu.non_juge?.[0] || '') && eForce.json?.verdict === 'SKIP',
+      `point d'entrée · --fluidite sur une page sans canevas WebGL : SKIP motivé, point d'entrée indéterminé, jamais PASS (obtenu ${eForce.flu?.verdict}, ${eForce.json?.verdict})`);
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok) && !(c.video && !OUTILLAGE_VIDEO.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

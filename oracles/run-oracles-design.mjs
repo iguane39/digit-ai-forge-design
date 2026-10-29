@@ -36,6 +36,10 @@
 // cible. Sans --rendu, comportement strictement inchangé. Outillage manquant
 // ⇒ SKIP motivé dans les résultats, jamais une erreur.
 //
+// --fluidite (D-108 (b)) : force oracle-fluidite (durée d'image de bout en bout d'une page animée) sur une
+// page dont le canevas WebGL n'est pas lisible dans le fichier (moteur 3D embarqué, bundle externe). Sans
+// l'option, il part tout seul quand le document porte un canevas WebGL ET une boucle d'animation.
+//
 // --instance <url|page.html> [--instance …] [--etat-connexion etat.json] (TF-1687) : enrôle
 // oracle-exploitabilite (règles au README de la forge) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
 // rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
@@ -96,6 +100,7 @@ import { typerPage } from './lib/type-page.mjs';
 import { rendreAutonome } from './lib/rendre-autonome.mjs';
 import { estHoteLocal } from './lib/lire-page-servie.mjs';
 import { lireStatutAttendu } from './lib/statut-attendu.mjs';
+import { capturesManquantes } from './lib/captures.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -313,6 +318,19 @@ function lancerRenderPage(tmpHtml, etiquette, outillage, extra = []) {
       for (const it of liste) findings.push({ sev, regle, msg: `${largeur}px — ${it.what} — ${it.detail}` });
     }
   }
+  // D-108 (b) (29/10/2026) — UNE CAPTURE MANQUANTE À UNE LARGEUR EXIGÉE EST UN ÉCHEC. Une capture à 390 px
+  // exigée n'avait pas pu être faite et le rendu avait été jugé PASS : render_page.py déclare la capture
+  // manquée et rend quand même son verdict sur le DOM, et cet agrégateur ne lisait que les constats par
+  // largeur — pas de constat à 390 px, donc rien à dire. Chaque largeur de la grille sans capture devient
+  // un constat bloquant qui la NOMME, avec le motif de render_page.py (lib/captures.mjs).
+  const manquantes = capturesManquantes(j, LARGEURS_RENDU.split(',').map(Number));
+  for (const m of manquantes) {
+    findings.push({ sev: 'bloquant', regle: 'CAP-1',
+      msg: `${m.largeur}px — capture MANQUANTE à une largeur exigée par la grille de rendu : ${m.motif}. `
+        + 'Sans capture, ni V5 ni V6 ni la lecture à l\'œil ne peuvent avoir lieu à cette largeur : '
+        + 'un rendu non vu n\'est pas un rendu conforme. Rejouer la capture (page trop haute : la découper ; '
+        + 'navigateur en échec : relancer) — jamais la requalifier en PASS' });
+  }
   // Filet de cohérence : un FAIL sans aucun constat dur propagé serait
   // exactement le défaut que ce correctif ferme. Le dire plutôt que le taire.
   if (j.verdict === 'FAIL' && !findings.some(f => f.sev === 'bloquant')) {
@@ -334,7 +352,7 @@ function lancerRenderPage(tmpHtml, etiquette, outillage, extra = []) {
       + `lui-même : ${[...inconnues].join(', ')} — incohérence à signaler côté digit-ai-page-html`);
   }
   return {
-    oracle: `render_page(${etiquette})`, verdict: j.verdict, exit: r.status,
+    oracle: `render_page(${etiquette})`, verdict: manquantes.length ? 'FAIL' : j.verdict, exit: manquantes.length ? 1 : r.status,
     ecarts_durs: findings.filter(f => f.sev === 'bloquant').length,
     avertissements: findings.filter(f => f.sev === 'avertissement').length,
     findings,
@@ -530,6 +548,14 @@ const aUnThemeSombre = pageAUnThemeSombre(html, jetonsCss);
 // TF-1219 : une action nommée par une exigence (data-exigence="<id>", convention posée au
 // 10e oracle) — une page sans aucune action nommée n'a rien à juger en perceptibilité.
 const aUneActionNommee = /data-exigence\s*=/i.test(html);
+// D-108 (b) : une page ANIMÉE EN WEBGL se juge sur la durée d'image de bout en bout, pas sur un compte de
+// rappels. Détection par contenu, comme les précédentes, sur le document sans ses commentaires : un canevas
+// WebGL (getContext webgl, WebGLRenderer) ET une boucle d'animation (requestAnimationFrame, setAnimationLoop).
+// Un moteur 3D que le fichier ne montre pas (bundle externe) se force par --fluidite.
+// Le document sans ses commentaires se calcule ici : la détection des sur-couches qui l'employait lit l'arbre depuis.
+const htmlSansCommentaires = html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
+const aUneAnimationWebgl = /getContext\s*\(\s*['"](?:experimental-)?webgl2?['"]|WebGL2?RenderingContext|WebGLRenderer/i.test(htmlSansCommentaires)
+  && /requestAnimationFrame|setAnimationLoop/.test(htmlSansCommentaires);
 // TF-1322 (23/09/2026) : la règle vit dans lib/cible-mobile.mjs, que le lanceur général de
 // quality-oracles consulte aussi (par oracle-mobile --si-cible-mobile) — une portée, deux juges.
 const estMobile = estCibleMobile(html, args);
@@ -750,6 +776,18 @@ if (!seul || seul === 'faits-commerciaux') {
     const r = lancer('oracle-faits-commerciaux.mjs', [i, ...(certificatLocal ? ['--accepter-certificat-local'] : []), ...optStatut]);
     if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'FC0') || {}).msg || 'non jugé';
     resultats.push(r);
+  }
+}
+
+// D-108 (b) — la fluidité se joue dans un navigateur, hors de la passe du socle (le socle ne l'anime pas) :
+// comme l'exploitabilité, elle n'entre qu'une fois. Mesure impossible ⇒ SKIP motivé, qui rend le point
+// d'entrée indéterminé : jamais un PASS sur une durée d'image que personne n'a mesurée.
+if (!seul) {
+  if (aUneAnimationWebgl || args.includes('--fluidite')) {
+    resultats.push(lancer('oracle-fluidite.mjs', [cible]));
+  } else {
+    sansObjet.push('oracle-fluidite : SANS OBJET — aucun canevas WebGL animé (getContext webgl + requestAnimationFrame) lisible dans le document ; '
+      + 'une page dont le moteur 3D est embarqué ailleurs se juge avec --fluidite');
   }
 }
 

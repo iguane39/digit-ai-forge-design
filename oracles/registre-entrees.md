@@ -762,6 +762,72 @@ la revue du 2026-11-16 retire toute règle dont la moitié des avertissements n'
 ]
 ```
 
+## Entrée du 29/10/2026 — oracle-fluidite, et la capture manquante qui échoue (D-108 (b))
+
+**Statut d'usage de la forge : `ok` depuis le 29/10/2026 (décision humaine D-108 (b)).** Écrit, exécuté et
+verrouillé au banc local (`self-test.mjs` : le jugement branche par branche sans navigateur, la paire de
+fixtures dans Chromium, l'enrôlement dans le point d'entrée). Son inscription au registre de
+`quality-oracles` relève du pilot : ce fichier ne dit pas qu'elle est faite.
+
+Le domaine que rien ne couvrait : **la fluidité d'une page animée, mesurée de bout en bout**. Le 27/10/2026,
+chez un produit (visite 3D animée), un oracle de fluidité a rendu PASS à « 60 images par seconde » ; la mesure
+réelle du 28/10 donnait 3,3. Il comptait les rappels de `requestAnimationFrame` sans attendre le travail du
+processeur graphique. `oracle-fluidite` ferme chaque image par la lecture d'un pixel du canevas WebGL
+(`readPixels`) : la durée d'image est celle de la page ET de la carte. `gl.finish()` seul ne suffit pas
+(mesuré sur Chromium 145 : retour en 0 ms avec 256 passes de dessin en file). Mesure impossible — pas de
+navigateur, pas de contexte WebGL, pas d'animation, synchronisation en échec, contexte perdu — ⇒ `SKIP`
+motivé, jamais PASS. Il est enrôlé dans `run-oracles-design.mjs` : lancé tout seul sur une page à canevas
+WebGL animé, `SANS OBJET` dit sinon, forçable par `--fluidite`.
+
+**Même décision, second volet : une capture manquante à une largeur de la grille est un échec.** Une capture à
+390 px exigée n'avait pas pu être faite, et le rendu a été jugé PASS : `render_page.py` déclare la capture
+manquée et rend son verdict sur le DOM, et les consommateurs de cette forge ne lisaient pas ce champ.
+`run-oracles-design.mjs --rendu` rend désormais `CAP-1` (bloquant, la largeur nommée, le motif de
+`render_page.py` repris) et `rendu-comparatif.mjs` rend `RC-3` (côté « avant » ou « après »). Mesuré avant
+correctif sur un faux `render_page.py` : PASS dans les quatre cas, zéro mot sur 390 px.
+`oracle-baseline.mjs` le faisait déjà (B0).
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Page animée en WebGL : durée d'image de bout en bout | `node c:/dev/digit-ai-forge-design/oracles/oracle-fluidite.mjs <page.html\|url> [--largeur N] [--hauteur N] [--echauffement ms] [--fenetre ms] [--temoin-naif]` — F1 cadence de bout en bout sous 30 i/s (bloquant), F2 95e centile de la durée d'image au-delà de 50 ms (avertissement), F3 entre 30 et 55 i/s (avertissement), F0 la mesure ou le motif du SKIP ; enrôlé par `run-oracles-design.mjs <page.html> [--fluidite]` | cli | ✅ |
+
+```json
+[
+  {
+    "domaine": "Page animée en WebGL : durée d'image de bout en bout",
+    "oracle": "oracles/oracle-fluidite.mjs",
+    "type": "cli",
+    "statut": "ok",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/fluidite-verte.html",
+      "rouge": "oracles/fixtures/fluidite-rouge.html"
+    },
+    "provenance": {
+      "chantier": "forge-design",
+      "date": "2026-10-29",
+      "mandat": "D-108 (b)",
+      "amont": "oracle de fluidité écrit par un produit (visite 3D animée), qui comptait les rappels d'animation sans attendre la carte ; mesure réelle 3,3 i/s pour 60 annoncées"
+    },
+    "regles": 3
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- La **présentation à l'écran** (compositeur, synchronisation verticale) : la durée d'image s'arrête quand le
+  travail graphique de la page est terminé, pas quand l'image est affichée.
+- Les canevas **hors de la page principale** (iframe, OffscreenCanvas piloté par un worker), les canevas 2D et
+  les animations CSS.
+- L'animation **sous geste** (rotation, défilement, changement de scène) : seule l'animation au repos est mesurée.
+- La **machine de l'utilisateur** : la durée est celle de ce poste et de ce moteur de rendu, nommé dans la
+  mesure. Sur un rendu LOGICIEL (SwiftShader, llvmpipe — poste sans processeur graphique), elle majore celle
+  d'une vraie carte : un FAIL y est gardé mais son message le dit, et il se confirme sur une machine à
+  processeur graphique avant de refondre le rendu.
+- Les **seuils** (30 i/s au plancher, 55 visés, 50 ms au 95e centile) : un choix de la forge, rendu dans
+  `mesures.seuils`, pas une norme.
+
 ## Entrée du 02/11/2026 — oracle-valeur-affichee (TF-2043)
 
 **Remontée §4 à forge-agents : FAITE le 02/11/2026** (registre de `quality-oracles` 2.50.0). Cette

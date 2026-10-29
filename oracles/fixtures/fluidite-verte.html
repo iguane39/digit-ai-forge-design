@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visite 3D légère — fixture verte d'oracle-fluidite (D-108 (b))</title>
+<!--
+  Fixture VERTE de oracle-fluidite : un canevas WebGL animé dont le travail graphique par image est
+  minuscule (une boucle de 16 tours dans le shader de fragment, une passe). Chaque image se termine bien
+  avant les 16,7 ms de la cadence d'écran, y compris sur un rendu logiciel : la mesure de bout en bout
+  doit donner ~60 i/s et le verdict PASS. Sa jumelle rouge est fluidite-rouge.html — même page, un seul
+  paramètre qui change : le coût du travail graphique.
+-->
+<style>
+  html, body { margin: 0; background: #11161c; color: #e8edf2; font: 16px/1.5 system-ui, sans-serif; }
+  main { padding: 16px; }
+  canvas { display: block; width: 100%; max-width: 960px; height: auto; background: #000; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Visite 3D</h1>
+  <canvas id="scene" width="480" height="270" aria-label="Scène animée"></canvas>
+</main>
+<script>
+(function () {
+  var canevas = document.getElementById('scene');
+  var gl = canevas.getContext('webgl');
+  if (!gl) { document.body.insertAdjacentHTML('beforeend', '<p>WebGL indisponible</p>'); return; }
+  var vs = 'attribute vec2 p; void main() { gl_Position = vec4(p, 0.0, 1.0); }';
+  var fs = 'precision mediump float; uniform float t; uniform vec2 res;'
+    + 'void main() { vec2 uv = gl_FragCoord.xy / res; float a = 0.0;'
+    + 'for (int i = 0; i < 16; i++) { a += sin(uv.x * float(i) + t) * cos(uv.y * float(i) - t) / float(i + 1); }'
+    + 'gl_FragColor = vec4(0.5 + 0.5 * sin(a), uv.y, 0.5 + 0.5 * cos(a), 1.0); }';
+  function shader(type, source) { var s = gl.createShader(type); gl.shaderSource(s, source); gl.compileShader(s); return s; }
+  var prog = gl.createProgram();
+  gl.attachShader(prog, shader(gl.VERTEX_SHADER, vs));
+  gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  var tampon = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, tampon);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+  var p = gl.getAttribLocation(prog, 'p'); gl.enableVertexAttribArray(p); gl.vertexAttribPointer(p, 2, gl.FLOAT, false, 0, 0);
+  var ut = gl.getUniformLocation(prog, 't'); gl.uniform2f(gl.getUniformLocation(prog, 'res'), canevas.width, canevas.height);
+  function image(ts) {
+    gl.uniform1f(ut, ts / 1000);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(image);
+  }
+  requestAnimationFrame(image);
+})();
+</script>
+</body>
+</html>

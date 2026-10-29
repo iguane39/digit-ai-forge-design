@@ -1,0 +1,16 @@
+{
+  "verdict": "PASS",
+  "breakpoints": {
+    "3840": { "png": "rendu-w3840.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 },
+    "1920": { "png": "rendu-w1920.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 },
+    "768": { "png": "rendu-w768.png", "capture": { "faite": true }, "issues": {}, "blocking": 0 },
+    "390": {
+      "png": null,
+      "capture": { "faite": false, "motif": "capture impossible a 390 px : TimeoutError — la page n'a pas rendu dans le delai" },
+      "issues": {},
+      "blocking": 0
+    }
+  },
+  "captures_manquees": [390],
+  "non_juge": []
+}

@@ -42,6 +42,7 @@ import { spawnSync } from 'node:child_process';
 import { detecterOutillageRendu, direInterpreteur, injecterThemeSombre } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { decoderPng, comparerPng } from './lib/png.mjs';
+import { capturesManquantes } from './lib/captures.mjs';
 
 const args = process.argv.slice(2);
 const opt = (n, d = null) => { const i = args.indexOf(n); return i === -1 ? d : args[i + 1]; };
@@ -205,6 +206,18 @@ for (const [theme, transformer] of THEMES) {
   const ra = lancerRenderPage(transformer(htmlAvant), `avant-${theme}`);
   const rb = lancerRenderPage(transformer(htmlApres), `apres-${theme}`);
   const bpsA = ra.breakpoints || {}, bpsB = rb.breakpoints || {};
+
+  // D-108 (b) (29/10/2026) — UNE CAPTURE MANQUANTE À UNE LARGEUR EXIGÉE EST UN ÉCHEC, des DEUX côtés. La
+  // boucle ci-dessous ne parcourait que les largeurs présentes dans le rendu « après » et ne disait d'une
+  // largeur absente « avant » qu'une ligne de non_juge : une capture à 390 px manquée passait en PASS, ou
+  // en silence. Chaque largeur de la grille sans capture, avant OU après, est un constat bloquant qui la
+  // nomme (lib/captures.mjs) ; la comparaison de cette largeur n'est alors pas jugée, et on le dit.
+  for (const [cote, rapportCote] of [['avant', ra], ['après', rb]]) {
+    for (const m of capturesManquantes(rapportCote, largeurs.split(',').map(Number))) {
+      add('bloquant', 'RC-3', `capture MANQUANTE à ${m.largeur}px côté « ${cote} » : ${m.motif} — la largeur n'est pas comparée, `
+        + 'un correctif jugé sans voir son rendu à une largeur exigée n\'est pas jugé',`${m.largeur}px, thème ${theme}`);
+    }
+  }
 
   for (const largeur of Object.keys(bpsB)) {
     const a = bpsA[largeur], b = bpsB[largeur];

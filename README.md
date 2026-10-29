@@ -113,6 +113,9 @@ node oracles/oracle-exploitabilite.mjs <page.html|url>… \
 # URL servie derrière une connexion : état Playwright (storageState) du produit (TF-1674) ;
 # instance locale en https à certificat auto-signé : --accepter-certificat-local, hôtes de boucle locale seulement (TF-2122)
 
+node oracles/oracle-fluidite.mjs <page.html|url> [--largeur N] [--hauteur N] [--temoin-naif]  # F1–F3 : durée d'image de bout en bout d'un canevas WebGL animé (D-108 (b)) ;
+# chaque image attend la fin du travail graphique (readPixels) ; mesure impossible ⇒ SKIP motivé, jamais PASS
+
 node oracles/oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit> [--approuver [--motif "<écart voulu>"]]  # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
@@ -155,6 +158,7 @@ avant. Ce que le correctif **répare** est compté et affiché, jamais porté au
 | `V1` `V4` `V2` `L2` | bloquant | débordement, chevauchement, contraste ou largeur de texte que la version « après » introduit |
 | `RC-1` | bloquant (avertissement si `--zone`) | le rendu s'allonge à largeur constante : trace mécanique d'un retour à la ligne nouveau |
 | `RC-2` | info | part de pixels qui bougent à hauteur identique — de combien le correctif a débordé de sa zone |
+| `RC-3` | bloquant | capture MANQUANTE à une largeur de la grille, côté « avant » ou « après » (D-108 (b)) : la largeur est nommée avec le motif de `render_page.py`, elle n'est pas comparée — jamais un PASS ni un silence |
 | `V3` `V7` | avertissement | alignement et espacement nouveaux |
 
 `--zone <sélecteur>` filtre sur l'étiquette produite par `render_page.py` (tag,
@@ -181,6 +185,7 @@ Options de `run-oracles-design.mjs` :
 | `--statut-attendu <code>` | l'instance est un **écran d'état voulu** (TF-2432) : « Page introuvable » servie en 404, par exemple. Servie avec CE code, elle est jugée comme un écran par les quatre juges qui lisent l'instance (exploitabilité, erreurs de formulaire, faits commerciaux, valeur affichée) ; servie avec un autre code, y compris 200, elle reste refusée (X0, EF0, SKIP exit 2). Sans l'option, toute réponse en 400 ou plus est refusée. Un code de trois chiffres (100 à 599), une seule valeur par appel ; sans `--instance`, l'option est dite sans effet au `non_juge`. Un écran 404 jugé répond aux mêmes règles qu'un écran d'application : X8 et X9 lui sont dues sauf s'il se déclare éditorial ou pose leur écart motivé |
 | `--type-page application\|editoriale` | nature de la page (TF-2121), prioritaire sur la déclaration de la page. Sans lui : `<meta name="forge-type-page" content="application">` ou `data-type-page="application"` sur un élément, puis un marqueur de structure (`data-panneau-tache`, `data-branche`, `data-exigence`). Un tableau filtrable ou une recherche ne classent **pas** (les pages d'étude du pilot en portent). Une page qui porte un champ de saisie et un tableau sans être classée est dite « application probable » au `non_juge`, jamais échouée. Valeur inconnue : SKIP. La classe décide aussi si `oracle-textes-application` (T4-1…T4-4, C14 de `ameliore-le-design`) entre dans la passe : joué sur une page d'application, dit SANS OBJET sur toute autre, et sur une page d'application dont aucune chaîne n'est extractible (TF-2466) |
 | `--maquette` | la page d'application est une maquette, sans instance par nature : l'absence d'instance est dite **SANS OBJET** au `non_juge` (« ce n'est pas un PASS de l'exploitabilité ») au lieu d'échouer en X7. À ne pas passer à une critique d'implémentation |
+| `--fluidite` | force `oracle-fluidite` (durée d'image de bout en bout) sur une page dont le canevas WebGL n'est pas lisible dans le fichier (moteur 3D embarqué ailleurs). Sans l'option, il part tout seul quand le document porte un canevas WebGL ET une boucle d'animation, et est dit `SANS OBJET` sinon ; mesure impossible ⇒ `SKIP` motivé (D-108 (b)) |
 | `--rendu` | si l'outillage est détecté (interpréteur désigné par `$FORGE_DESIGN_PYTHON`, sinon `python` ou `python3` du PATH avec `playwright`, sinon `.venv` sous la racine de la forge (TF-2461), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Le `non_juge` nomme l'interpréteur qui a joué et d'où il vient. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`
@@ -252,6 +257,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-saisie` | SA1–SA7, SA8 (avertissement) | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v ; `autocomplete` ou `inputmode` posé en avertissement (TF-1911) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4, SC5 (avertissement) | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème ; défilement contenu (`overscroll-behavior`) en avertissement (TF-1911) |
+| `oracle-fluidite` | F1 (bloquant), F2–F3 (avertissements) | page animée en WebGL : durée d'image mesurée de bout en bout — chaque image attend la fin du travail graphique (lecture d'un pixel du canevas), jamais un compte de rappels d'animation (D-108 (b)) ; pas de contexte WebGL, pas d'animation, synchronisation impossible ⇒ `SKIP` motivé, jamais `PASS` |
 | `oracle-declencheurs` | DE1–DE3, DE4 (avertissement) | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès ; un `div` ou `span` cliquable sans rôle ni `tabindex` en avertissement (TF-1911) |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
