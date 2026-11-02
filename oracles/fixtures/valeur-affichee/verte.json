@@ -1,0 +1,11 @@
+{
+  "schema": "digit-ai/valeurs-derivees@1",
+  "valeurs": [
+    { "nom": "version", "selecteur": ".version", "retirer_prefixe": "v", "dossier": ".",
+      "commande": "node -p \"require('./package.json').version\"" },
+    { "nom": "environnement", "motif": "Environnement\\s*:\\s*(\\S+)",
+      "commande": "node -p \"require('fs').readFileSync('environnement.txt','utf8')\"" },
+    { "nom": "date", "selecteur": ".maj", "comparaison": "contient",
+      "commande": ["node", "-p", "require('fs').readFileSync('date.txt','utf8')"] }
+  ]
+}

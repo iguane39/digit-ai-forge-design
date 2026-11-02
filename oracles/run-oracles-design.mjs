@@ -33,6 +33,13 @@
 // rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
 // est déclaré SANS OBJET à voix haute et ne pèse pas sur le verdict d'un projet sans instance.
 // --etat-connexion passe l'état Playwright (storageState) d'une application derrière une connexion.
+//
+// --valeurs-derivees <valeurs-derivees.json> (TF-2043) : enrôle oracle-valeur-affichee (VA1–VA4), qui compare
+// chaque valeur dérivée affichée (version, environnement, date) à la commande qui la donne. Opt-in par la
+// DÉCLARATION du produit : le fichier passé, sinon `valeurs-derivees.json` voisin de la page (dossier puis
+// parents). La page jugée est chaque --instance fournie, sinon la cible. Sans déclaration, l'oracle est dit
+// SANS OBJET à voix haute — il rendrait SKIP, et un SKIP sur tout projet qui n'a rien déclaré ferait tomber
+// l'agrégat en INDÉTERMINÉ ; c'est donc ce rapport, jamais un PASS, qui dit que rien n'a été comparé.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -43,6 +50,7 @@ import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
+import { trouverDeclaration, NOM_DECLARATION } from './lib/declaration-valeurs.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -57,7 +65,7 @@ const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus'
   && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
-  && args[args.indexOf(a) - 1] !== '--etat-connexion');
+  && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
@@ -376,6 +384,9 @@ function passeFichier(fichier, { muet = false } = {}) {
   // TF-1241 : avec `--oracle`, un seul juge est joué — et aucun « SANS OBJET » n'est écrit pour
   // les autres : ils ne sont pas sans objet, ils n'ont simplement pas été demandés.
   if (seul) {
+    // TF-2043 : l'oracle de valeur affichée se joue HORS de cette passe (voir plus bas) — sur la copie
+    // sans socle, dans le dossier temporaire, il ne retrouverait pas la déclaration voisine de la page.
+    if (seul === 'valeur-affichee') return [];
     const script = `oracle-${seul}.mjs`;
     const avecTokens = ['oracle-tokens.mjs', 'oracle-declencheurs.mjs', 'oracle-surcouche.mjs', 'oracle-perceptibilite.mjs'].includes(script);
     return [lancer(script, avecTokens && opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier])];
@@ -486,6 +497,24 @@ if (!seul) {
     sansObjet.push('oracle-exploitabilite : SANS OBJET — aucune instance alimentée fournie '
       + '(--instance <url|page rendue au volume réel> [--etat-connexion etat.json]) : l\'exploitabilité '
       + 'au volume réel ne se juge pas sur le fichier de conception, elle se rejoue après la première alimentation réelle');
+  }
+}
+
+// ── TF-2043 · la valeur affichée égale sa source, sur la DÉCLARATION du produit ──
+// Hors de la passe du socle, pour la même raison qu'oracle-exploitabilite : la déclaration vit chez le
+// produit, à côté de sa page, et un constat d'une copie temporaire ne s'impute pas à un composant du socle.
+if (!seul || seul === 'valeur-affichee') {
+  const declaration = opt('--valeurs-derivees') || trouverDeclaration(cible);
+  if (declaration || seul) {
+    const pages = instances.length ? instances : [cible];
+    for (const p of pages) {
+      const r = lancer('oracle-valeur-affichee.mjs', [p, ...(declaration ? ['--declaration', declaration] : [])]);
+      if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'VA0') || {}).msg || 'non jugé';
+      resultats.push(r);
+    }
+  } else {
+    sansObjet.push(`oracle-valeur-affichee : SANS OBJET — aucune déclaration de valeurs dérivées (${NOM_DECLARATION} voisin de la page, ou `
+      + '--valeurs-derivees <fichier>) : aucune version, environnement ou date affichés n\'a été comparé à sa source');
   }
 }
 

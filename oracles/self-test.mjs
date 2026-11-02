@@ -466,6 +466,20 @@ const CAS = [
     rouge: [fx('caracteres-controle-rouge.html'), fx('caracteres-controle-racine-rouge.html')],
   },
   {
+    // TF-2043 (02/11/2026) — un produit affichait « v1.06 » sous l'étiquette « v1.8.0 » : aucun oracle ne
+    // comparait une valeur affichée à sa source, tous jugent la page isolément. Le produit déclare ses
+    // valeurs dérivées (version, environnement, date) et la commande qui donne chacune ; l'oracle relit la
+    // page et rejoue la commande. La verte déclare 3 valeurs (sélecteur à 2 occurrences, motif sur le texte,
+    // comparaison « contient » avec une commande en tableau) qui égalent leur source. La rouge réunit les 4
+    // refus : une occurrence « v1.06 » face à 1.8.0 (VA1), un motif sans correspondance (VA2), une commande
+    // qui échoue (VA3), une entrée sans commande (VA4). Le SKIP sans déclaration est joué dans le bloc
+    // dédié en fin de recette.
+    oracle: 'oracle-valeur-affichee.mjs',
+    regles: ['VA1', 'VA2', 'VA3', 'VA4'],
+    verte: [fx('valeur-affichee/verte.html'), '--declaration', fx('valeur-affichee/verte.json')],
+    rouge: [fx('valeur-affichee/rouge.html'), '--declaration', fx('valeur-affichee/rouge.json')],
+  },
+  {
     // TF-0235 (campagne pilot du 15/08) : restitution lisible — une page déclarée
     // data-restitution porte verdict, KPIs complets, questions de graphiques,
     // chemins de lecteurs et manifeste d'écarts. RL-2/5/6/7/8 déclarées non jugées
@@ -1949,6 +1963,103 @@ for (const cas of CAS) {
       `${regle} · sens rouge : ${base}-rouge.html lève ${regle} en avertissement SANS rougir la page (exit ${r.code}, ${r.verdict}, ×${siennes.length})`);
     const autres = r.f.filter(x => neuves.includes(x.regle) && x.regle !== regle);
     ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune autre règle neuve de ${oracle} (obtenu ×${autres.length})`);
+  }
+}
+
+// TF-2043 (02/11/2026) — LA VALEUR AFFICHÉE ÉGALE SA SOURCE, ET SANS DÉCLARATION L'ORACLE SE TAIT EN LE DISANT.
+// Le cas de la table ci-dessus joue la verte et la rouge. Ce bloc joue ce que la table ne sait pas dire :
+// la déclaration absente ou vide rend SKIP exit 2 (jamais PASS), la déclaration voisine de la page est
+// trouvée sans option, la page SERVIE par http est relue (verte PASS, rouge FAIL), une page injoignable ou
+// en 404 est SKIP, la source qui change sans que la page suive est refusée (l'oracle rejoue la commande, il
+// ne lit pas le code de la page), et le point d'entrée enrôle l'oracle sur la déclaration seulement.
+{
+  console.log('\noracle-valeur-affichee (TF-2043) — déclaration absente, page servie, source qui change, point d\'entrée');
+  const http = await import('node:http');
+  const dossierFx = fx('valeur-affichee');
+  const jouer = argv => new Promise(resolve => {
+    const p = spawn(process.execPath, [...argv, '--json-only'], { env: process.env });
+    let sortie = '';
+    p.stdout.on('data', d => { sortie += d; });
+    p.on('close', code => { let json = null; try { json = JSON.parse(sortie.trim()); } catch { /* illisible : la ligne le dira */ } resolve({ code, json }); });
+  });
+  const oracle = path.join(ici, 'oracle-valeur-affichee.mjs');
+  const agregat = path.join(ici, 'run-oracles-design.mjs');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'va-'));
+  const prepare = (nom, page, declaration) => {
+    const d = path.join(dossier, nom);
+    fs.mkdirSync(d);
+    for (const f of ['package.json', 'environnement.txt', 'date.txt']) fs.copyFileSync(path.join(dossierFx, f), path.join(d, f));
+    fs.writeFileSync(path.join(d, 'page.html'), page, 'utf8');
+    if (declaration !== null) fs.writeFileSync(path.join(d, 'valeurs-derivees.json'), declaration, 'utf8');
+    return d;
+  };
+  const verteHtml = fs.readFileSync(path.join(dossierFx, 'verte.html'), 'utf8');
+  const verteJson = fs.readFileSync(path.join(dossierFx, 'verte.json'), 'utf8');
+  const rougeJson = fs.readFileSync(path.join(dossierFx, 'rouge.json'), 'utf8');
+  const serveur = http.createServer((req, res) => {
+    const fichier = { '/verte': 'verte.html', '/rouge': 'rouge.html' }[req.url];
+    if (!fichier) { res.writeHead(404); res.end('absent'); return; }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(fs.readFileSync(path.join(dossierFx, fichier)));
+  });
+  await new Promise(r => serveur.listen(0, '127.0.0.1', r));
+  const port = serveur.address().port;
+  try {
+    const sans = await jouer([oracle, path.join(prepare('sans', verteHtml, null), 'page.html')]);
+    ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && (sans.json?.findings || []).some(f => f.regle === 'VA0'),
+      `déclaration absente · SKIP exit 2, dit par VA0, jamais PASS (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+    const vide = await jouer([oracle, path.join(prepare('vide', verteHtml, '{"schema":"digit-ai/valeurs-derivees@1","valeurs":[]}'), 'page.html')]);
+    ligne(vide.code === 2 && vide.json?.verdict === 'SKIP',
+      `déclaration sans valeur · SKIP exit 2, rien à comparer n'est pas une page conforme (obtenu ${vide.json?.verdict}, exit ${vide.code})`);
+    const illisible = await jouer([oracle, path.join(prepare('illisible', verteHtml, '{ pas du json'), 'page.html')]);
+    ligne(illisible.code === 1 && (illisible.json?.findings || []).some(f => f.regle === 'VA4' && f.sev === 'bloquant'),
+      `déclaration illisible · FAIL VA4 : un fichier présent et cassé n'est pas une déclaration absente (obtenu ${illisible.json?.verdict}, exit ${illisible.code})`);
+
+    const voisine = prepare('voisine', verteHtml, verteJson);
+    const trouvee = await jouer([oracle, path.join(voisine, 'page.html')]);
+    ligne(trouvee.code === 0 && trouvee.json?.verdict === 'PASS' && trouvee.json?.valeurs_comparees === 3,
+      `déclaration voisine de la page · trouvée sans option, 3 valeurs comparées, PASS (obtenu ${trouvee.json?.verdict}, ×${trouvee.json?.valeurs_comparees})`);
+
+    // La source change, la page non : l'oracle rejoue la commande, il ne lit pas le code qui écrit la page.
+    fs.writeFileSync(path.join(voisine, 'package.json'), '{ "version": "1.8.1" }\n', 'utf8');
+    const derive = await jouer([oracle, path.join(voisine, 'page.html')]);
+    ligne(derive.code === 1 && (derive.json?.findings || []).some(f => f.regle === 'VA1' && f.sev === 'bloquant' && /1\.8\.1/.test(f.msg)),
+      `source qui change · la page garde v1.8.0, la commande rend 1.8.1 : FAIL VA1 (obtenu ${derive.json?.verdict}, exit ${derive.code})`);
+
+    const servieVerte = await jouer([oracle, `http://127.0.0.1:${port}/verte`, '--declaration', path.join(dossierFx, 'verte.json')]);
+    ligne(servieVerte.code === 0 && servieVerte.json?.verdict === 'PASS',
+      `page servie par http · verte relue sur le réseau : PASS (obtenu ${servieVerte.json?.verdict}, exit ${servieVerte.code})`);
+    const servieRouge = await jouer([oracle, `http://127.0.0.1:${port}/rouge`, '--declaration', path.join(dossierFx, 'rouge.json')]);
+    ligne(servieRouge.code === 1 && (servieRouge.json?.findings || []).some(f => f.regle === 'VA1' && /v1\.06/.test(f.msg)),
+      `page servie par http · rouge relue sur le réseau : FAIL VA1 sur « v1.06 » (obtenu ${servieRouge.json?.verdict}, exit ${servieRouge.code})`);
+    const absente = await jouer([oracle, `http://127.0.0.1:${port}/absente`, '--declaration', path.join(dossierFx, 'verte.json')]);
+    ligne(absente.code === 2 && absente.json?.verdict === 'SKIP',
+      `page en 404 · SKIP exit 2, une page non servie ne se juge pas (obtenu ${absente.json?.verdict}, exit ${absente.code})`);
+
+    // Le point d'entrée : la même page verte par ailleurs (motion-verte) reçoit un pied qui affiche les valeurs.
+    const piedAffiche = fs.readFileSync(fx('motion-verte.html'), 'utf8').replace('</body>',
+      '  <footer><span class="version">v1.8.0</span> · <span>Environnement : recette</span> · <time class="maj">Mis à jour le 02/11/2026</time></footer>\n</body>');
+    const juste = prepare('agregat-juste', piedAffiche, verteJson);
+    const faux = prepare('agregat-faux', piedAffiche, rougeJson);
+    const sansDecl = prepare('agregat-sans', piedAffiche, null);
+    const trouve = r => (r.json?.oracles || []).find(o => o.oracle === 'oracle-valeur-affichee');
+    const aJuste = await jouer([agregat, path.join(juste, 'page.html')]);
+    ligne(aJuste.code === 0 && aJuste.json?.verdict === 'PASS' && trouve(aJuste)?.verdict === 'PASS',
+      `point d'entrée · déclaration voisine : oracle-valeur-affichee lancé et PASS, verdict PASS exit 0 (obtenu ${aJuste.json?.verdict}, exit ${aJuste.code})`);
+    const aFaux = await jouer([agregat, path.join(faux, 'page.html')]);
+    const autres = (aFaux.json?.oracles || []).filter(o => o.verdict === 'FAIL' && o.oracle !== 'oracle-valeur-affichee');
+    ligne(aFaux.code === 1 && aFaux.json?.verdict === 'FAIL' && trouve(aFaux)?.verdict === 'FAIL' && autres.length === 0,
+      `point d'entrée · déclaration rouge : oracle-valeur-affichee seul en échec, verdict FAIL exit 1 (obtenu ${aFaux.json?.verdict}, exit ${aFaux.code}, autres en échec ×${autres.length})`);
+    const aSans = await jouer([agregat, path.join(sansDecl, 'page.html')]);
+    ligne(aSans.code === 0 && aSans.json?.verdict === 'PASS' && !trouve(aSans)
+      && (aSans.json?.non_juge || []).some(n => /^oracle-valeur-affichee : SANS OBJET — aucune déclaration de valeurs dérivées/.test(n)),
+      `point d'entrée · sans déclaration : SANS OBJET dit au non_juge, non lancé, l'agrégat ne tombe pas en INDÉTERMINÉ (obtenu ${aSans.json?.verdict}, exit ${aSans.code})`);
+    const aSeul = await jouer([agregat, path.join(faux, 'page.html'), '--oracle', 'valeur-affichee', '--contrat-runner']);
+    ligne(aSeul.code === 1 && aSeul.json?.oracle === 'oracle-valeur-affichee' && aSeul.json?.verdict === 'FAIL',
+      `point d'entrée · --oracle valeur-affichee --contrat-runner : verdict FAIL exit 1 hors passe du socle (obtenu ${aSeul.json?.verdict}, exit ${aSeul.code})`);
+  } finally {
+    await new Promise(r => serveur.close(r));
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
   }
 }
 

@@ -736,3 +736,63 @@ la revue du 2026-11-16 retire toute règle dont la moitié des avertissements n'
   }
 ]
 ```
+
+## Entrée du 02/11/2026 — oracle-valeur-affichee (TF-2043)
+
+**Remontée §4 à forge-agents : À FAIRE.** Cette entrée est écrite, exécutée et verrouillée au
+banc local (`self-test.mjs` : 4 règles et un bloc dédié de 12 vérifications) et enrôlée dans
+`run-oracles-design.mjs` sur déclaration du produit. Elle n'est **pas injectée** dans
+`~/.claude/skills/quality-oracles/references/registre-oracles.md` : aucune écriture hors de ce
+dépôt n'a eu lieu pendant la campagne. L'injection est un geste mandaté, à demander au pilot. Tant
+qu'elle n'a pas eu lieu, le statut global reste `candidat`.
+
+Le domaine que rien ne couvrait : **une valeur dérivée affichée égale sa source**. Un produit
+affichait « v1.06 » sous l'étiquette « v1.8.0 » : la version vit dans `package.json`, l'affichage
+dans la page, et tous les oracles du parc jugent la page isolément. Le produit déclare ses valeurs
+dérivées (version, environnement, date) dans `valeurs-derivees.json` : pour chacune, où la page
+l'affiche (un sélecteur à un seul compound, ou un motif sur le texte visible) et la commande qui
+donne la source. L'oracle relit la page servie (URL http ou fichier), rejoue la commande et compare ;
+il ne lit jamais le code qui écrit la valeur dans la page.
+
+**Déclaration absente : SKIP exit 2, dit par VA0, jamais PASS.** Une déclaration sans valeur est
+traitée de la même façon. Dans `run-oracles-design.mjs`, l'oracle est en opt-in par la déclaration
+(`valeurs-derivees.json` voisin de la page, ou `--valeurs-derivees <fichier>`) ; la page jugée est
+chaque `--instance` fournie, sinon la cible. Sans déclaration il est dit SANS OBJET au `non_juge` et
+l'agrégat ne tombe pas en INDÉTERMINÉ : un SKIP sur tout projet qui n'a rien déclaré rendrait
+inutilisable le point d'entrée.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Valeur affichée ↔ source (version, environnement, date) | `node c:/dev/digit-ai-forge-design/oracles/oracle-valeur-affichee.mjs <page.html\|http(s)://…> [--declaration valeurs-derivees.json]` — VA0 SKIP sans déclaration, VA1 la page affiche autre chose que la source (bloquant), VA2 valeur introuvable ou vide dans la page servie (bloquant), VA3 commande en échec, trop lente ou muette (bloquant), VA4 déclaration illisible ou entrée incomplète (bloquant) | cli | candidat (remontée §4 à faire) |
+
+### Ce que cet oracle ne juge PAS
+
+- Une valeur dérivée affichée que le produit **n'a pas déclarée** : il ne juge que le déclaré.
+- Une valeur écrite par un script **après le chargement**, ou une page derrière une connexion :
+  il lit la page telle que le serveur la rend ; VA2 dit alors la valeur absente.
+- Une commande **circulaire** (elle relit la page, ou la même constante que l'affichage) : l'égalité
+  serait vide de sens, et rien ne le détecte.
+- La **pertinence** du choix des valeurs déclarées.
+
+La commande de la déclaration est celle du produit, jouée telle quelle (30 s au plus) : l'oracle ne
+se joue que sur un produit dont on accepte d'exécuter les commandes déclarées.
+
+```json
+[
+  {
+    "domaine": "Valeur affichée ↔ source (version, environnement, date)",
+    "oracle": "oracles/oracle-valeur-affichee.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/valeur-affichee/verte.html",
+      "rouge": "oracles/fixtures/valeur-affichee/rouge.html",
+      "declaration_verte": "oracles/fixtures/valeur-affichee/verte.json",
+      "declaration_rouge": "oracles/fixtures/valeur-affichee/rouge.json"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-11-02", "mandat": "TF-2043", "amont": "retour d'un produit : v1.06 affichée sous l'étiquette v1.8.0" },
+    "regles": 4
+  }
+]
+```
