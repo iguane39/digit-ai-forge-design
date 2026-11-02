@@ -796,8 +796,7 @@ se joue que sur un produit dont on accepte d'exécuter les commandes déclarées
 
 ## Entrée du 02/11/2026 — oracle-faits-commerciaux (TF-2050)
 
-**Remontée §4 à forge-agents : À FAIRE** (registre de `quality-oracles`, lot D133 de la campagne du
-02/11/2026). Cette entrée est écrite, exécutée et verrouillée au banc local (`self-test.mjs` : un bloc
+**Remontée §4 à forge-agents : FAITE le 02/11/2026** (registre de `quality-oracles` 2.51.0). Cette entrée est écrite, exécutée et verrouillée au banc local (`self-test.mjs` : un bloc
 dédié de 31 vérifications, rouge et verte, verte piégeuse, remontée au lanceur) et enrôlée dans
 `run-oracles-design.mjs` pour toute page, sans déclaration du produit.
 
