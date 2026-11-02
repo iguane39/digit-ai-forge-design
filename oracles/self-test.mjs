@@ -2063,6 +2063,158 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2050 (02/11/2026, décision D-132 (a)) — LES FAITS COMMERCIAUX SONT LISTÉS, JAMAIS REFUSÉS, ET LA LISTE REMONTE.
+// L'oracle ne passe pas par CAS : sa rouge doit rester PASS, exit 0, avec des avertissements « à faire
+// confirmer ». Ce bloc joue les deux sens (rouge pleine de formes, verte sans aucune), la verte piégeuse qui
+// mesure le faux positif, l'échec réservé à l'anomalie de l'oracle (table de motifs défaillante, FC9) avec le
+// remède joué, le SKIP d'une page non lue, la table comme DONNÉE (un motif ajouté se trouve), la page servie
+// par http, et surtout la REMONTÉE : l'avertissement doit arriver intact au rapport du lanceur.
+{
+  console.log('\noracle-faits-commerciaux (TF-2050) — avertissant jamais bloquant, faux positif mesuré, remontée au lanceur');
+  const http = await import('node:http');
+  const dossierFx = fx('faits-commerciaux');
+  const oracle = path.join(ici, 'oracle-faits-commerciaux.mjs');
+  const agregat = path.join(ici, 'run-oracles-design.mjs');
+  const jouerBrut = argv => new Promise(resolve => {
+    const p = spawn(process.execPath, argv, { env: process.env });
+    let out = '', err = '';
+    p.stdout.on('data', d => { out += d; });
+    p.stderr.on('data', d => { err += d; });
+    p.on('close', code => { let json = null; try { json = JSON.parse(out.trim()); } catch { /* illisible : la ligne le dira */ } resolve({ code, json, err }); });
+  });
+  const jouer = argv => jouerBrut([...argv, '--json-only']);
+  const avert = j => (j?.findings || []).filter(f => f.sev === 'avertissement');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'fc-'));
+  const tableReelle = fs.readFileSync(path.join(ici, '..', 'corpus', 'faits-commerciaux.json'), 'utf8');
+  const ecrire = (nom, contenu) => { const f = path.join(dossier, nom); fs.writeFileSync(f, contenu, 'utf8'); return f; };
+  const serveur = http.createServer((req, res) => {
+    const fichier = { '/rouge': 'rouge.html', '/verte': 'verte.html' }[req.url];
+    if (!fichier) { res.writeHead(404); res.end('absent'); return; }
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    res.end(fs.readFileSync(path.join(dossierFx, fichier)));
+  });
+  await new Promise(r => serveur.listen(0, '127.0.0.1', r));
+  const port = serveur.address().port;
+  try {
+    // ── sens rouge : sept familles, en avertissement seulement ──
+    const rouge = await jouer([oracle, path.join(dossierFx, 'rouge.html')]);
+    const av = avert(rouge.json);
+    const parFamille = f => av.filter(x => x.regle === f).length;
+    ligne(rouge.code === 0 && rouge.json?.verdict === 'PASS' && !(rouge.json?.findings || []).some(f => f.sev === 'bloquant' || f.sev === 'majeur'),
+      `sens rouge · la page pleine de formes reste PASS exit 0 : un fait trouvé n'échoue jamais (obtenu ${rouge.json?.verdict}, exit ${rouge.code})`);
+    ligne(['FC1', 'FC2', 'FC3', 'FC4', 'FC5', 'FC6', 'FC7'].every(f => parFamille(f) > 0),
+      `sens rouge · les sept familles FC1 à FC7 sont signalées (FC1 ×${parFamille('FC1')}, FC2 ×${parFamille('FC2')}, FC3 ×${parFamille('FC3')}, FC4 ×${parFamille('FC4')}, FC5 ×${parFamille('FC5')}, FC6 ×${parFamille('FC6')}, FC7 ×${parFamille('FC7')})`);
+    ligne(av.length > 0 && av.every(f => /à faire confirmer/.test(f.msg) && f.a_confirmer === true && Number.isInteger(f.ligne) && f.ligne > 0 && typeof f.texte === 'string' && f.texte.length > 0 && /^ligne \d+/.test(f.where)),
+      `sens rouge · chaque constat porte sa ligne, son texte exact, « à faire confirmer » et a_confirmer (${av.length} constats)`);
+    ligne(rouge.json?.a_faire_confirmer === av.length && (rouge.json?.findings || [])[0]?.regle === 'FC0' && /à faire confirmer/.test(rouge.json.findings[0].msg),
+      `sens rouge · le premier constat (FC0, info) résume le compte et le champ a_faire_confirmer le redit (${rouge.json?.a_faire_confirmer})`);
+    ligne(parFamille('FC4') >= 5 && ['<s>', '<del>', 'style en ligne', 'règle CSS', 'ancien prix annoncé'].every(m => av.some(f => f.regle === 'FC4' && f.msg.includes(m))),
+      `sens rouge · FC4 : les cinq techniques d'un prix barré sont vues (<s>, <del>, style en ligne, règle CSS d'une classe, « au lieu de ») — ×${parFamille('FC4')}`);
+    ligne(parFamille('FC1') >= 3 && av.some(f => f.regle === 'FC1' && /JSON-LD/.test(f.msg)) && av.some(f => f.regle === 'FC1' && /microdonnées/.test(f.msg)),
+      `sens rouge · FC1 : JSON-LD (aggregateRating, Review) et microdonnées lus (×${parFamille('FC1')})`);
+    ligne(['4,8/5', '1 240 avis', 'Plus de 10 000 clients nous font confiance'].every(t => av.some(f => f.texte === t)),
+      'sens rouge · le texte exact est celui de la page (« 4,8/5 », « 1 240 avis », « Plus de 10 000 clients nous font confiance »)');
+    ligne(av.some(f => f.regle === 'FC7' && /cliniquement prouvé/i.test(f.texte)) && av.some(f => f.regle === 'FC7' && /clinically proven/i.test(f.texte)),
+      'sens rouge · FC7 : une allégation en français et une en anglais, lues dans la table');
+
+    // ── sens vert, et la verte piégeuse qui mesure le faux positif ──
+    const verte = await jouer([oracle, path.join(dossierFx, 'verte.html')]);
+    ligne(verte.code === 0 && verte.json?.verdict === 'PASS' && avert(verte.json).length === 0 && verte.json?.a_faire_confirmer === 0,
+      `sens vert · une page sans aucun fait commercial : PASS, 0 constat (obtenu ${verte.json?.verdict}, ×${avert(verte.json).length})`);
+    const piegeuse = await jouer([oracle, path.join(dossierFx, 'piegeuse.html')]);
+    ligne(piegeuse.code === 0 && piegeuse.json?.verdict === 'PASS' && avert(piegeuse.json).length === 0,
+      `verte piégeuse · prix non barré, « avis » en phrase ordinaire, « étape 3/5 », citation sans attribution, <del> sans montant, « expire le » d'un jeton, « déjà » sans vente : 0 faux positif sur ${piegeuse.json?.lu?.segments} segments de texte lus (obtenu ×${avert(piegeuse.json).length}${avert(piegeuse.json).length ? ' : ' + avert(piegeuse.json).map(f => f.texte).join(' | ') : ''})`);
+
+    // ── l'échec est réservé à l'anomalie de l'oracle : la table de motifs ──
+    const casse = JSON.parse(tableReelle);
+    casse.motifs[0].exemple = 'rien à voir avec le motif';
+    const fCasse = ecrire('table-casse.json', JSON.stringify(casse));
+    const rCasse = await jouer([oracle, path.join(dossierFx, 'verte.html'), '--motifs', fCasse]);
+    ligne(rCasse.code === 1 && rCasse.json?.verdict === 'FAIL' && (rCasse.json?.findings || []).some(f => f.regle === 'FC9' && f.sev === 'bloquant' && f.msg.includes(casse.motifs[0].id)),
+      `anomalie de l'oracle · un motif qui ne reconnaît pas son exemple : FAIL exit 1, FC9 nomme le motif ${casse.motifs[0].id} (obtenu ${rCasse.json?.verdict}, exit ${rCasse.code})`);
+    const corrige = JSON.parse(tableReelle);
+    const rCorrige = await jouer([oracle, path.join(dossierFx, 'verte.html'), '--motifs', ecrire('table-corrigee.json', JSON.stringify(corrige))]);
+    ligne(rCorrige.code === 0 && rCorrige.json?.verdict === 'PASS',
+      `anomalie de l'oracle · le remède joué (l'exemple rétabli) : PASS exit 0 (obtenu ${rCorrige.json?.verdict}, exit ${rCorrige.code})`);
+    const invalide = JSON.parse(tableReelle);
+    invalide.motifs[1].motif = '(';
+    const rInvalide = await jouer([oracle, path.join(dossierFx, 'verte.html'), '--motifs', ecrire('table-invalide.json', JSON.stringify(invalide))]);
+    ligne(rInvalide.code === 1 && (rInvalide.json?.findings || []).some(f => f.regle === 'FC9' && /expression invalide/.test(f.msg)),
+      `anomalie de l'oracle · une expression invalide : FAIL exit 1, FC9 (obtenu ${rInvalide.json?.verdict}, exit ${rInvalide.code})`);
+    const rIllisible = await jouer([oracle, path.join(dossierFx, 'verte.html'), '--motifs', ecrire('table-illisible.json', '{ pas du json')]);
+    ligne(rIllisible.code === 1 && (rIllisible.json?.findings || []).some(f => f.regle === 'FC9' && /illisible/.test(f.msg)),
+      `anomalie de l'oracle · une table illisible : FAIL exit 1, FC9 (obtenu ${rIllisible.json?.verdict}, exit ${rIllisible.code})`);
+    const rAbsente = await jouer([oracle, path.join(dossierFx, 'verte.html'), '--motifs', path.join(dossier, 'inexistante.json')]);
+    ligne(rAbsente.code === 1 && (rAbsente.json?.findings || []).some(f => f.regle === 'FC9' && /introuvable/.test(f.msg)),
+      `anomalie de l'oracle · une table absente : FAIL exit 1, jamais un repli sur une liste devinée (obtenu ${rAbsente.json?.verdict}, exit ${rAbsente.code})`);
+    const contre = JSON.parse(tableReelle);
+    contre.motifs[0].contre_exemple = contre.motifs[0].exemple;
+    const rContre = await jouer([oracle, path.join(dossierFx, 'verte.html'), '--motifs', ecrire('table-contre.json', JSON.stringify(contre))]);
+    ligne(rContre.code === 1 && (rContre.json?.findings || []).some(f => f.regle === 'FC9' && /contre-exemple/.test(f.msg)),
+      `anomalie de l'oracle · un motif qui reconnaît son contre-exemple : FAIL exit 1, FC9 (obtenu ${rContre.json?.verdict}, exit ${rContre.code})`);
+
+    // ── la table est une DONNÉE : un motif ajouté se trouve, sans toucher au code ──
+    const etendue = JSON.parse(tableReelle);
+    etendue.motifs.push({ id: 'FC6-test', famille: 'FC6', langue: 'fr', libelle: 'motif ajouté pour la recette', motif: 'zorglub certifié', exemple: 'zorglub certifié' });
+    const fEtendue = ecrire('table-etendue.json', JSON.stringify(etendue));
+    const fPage = ecrire('zorglub.html', '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Zorglub</title></head><body><main><p>Un atelier zorglub certifié depuis longtemps.</p></main></body></html>');
+    const sansMotif = await jouer([oracle, fPage]);
+    const avecMotif = await jouer([oracle, fPage, '--motifs', fEtendue]);
+    ligne(avert(sansMotif.json).length === 0 && avert(avecMotif.json).some(f => f.regle === 'FC6' && f.texte === 'zorglub certifié'),
+      `donnée éditable · le motif ajouté à la table est trouvé (×${avert(avecMotif.json).length}), absent de la table réelle (×${avert(sansMotif.json).length}) : aucun code touché`);
+
+    // ── SKIP : une page qu'on n'a pas lue n'est pas une page sans fait commercial ──
+    const sans = await jouer([oracle]);
+    ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && (sans.json?.findings || []).some(f => f.regle === 'FC0'),
+      `SKIP · aucune page fournie : exit 2 dit par FC0, jamais PASS (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+    const introuvable = await jouer([oracle, path.join(dossier, 'absente.html')]);
+    ligne(introuvable.code === 2 && introuvable.json?.verdict === 'SKIP', `SKIP · fichier introuvable : exit 2 (obtenu ${introuvable.json?.verdict}, exit ${introuvable.code})`);
+    const texte = await jouer([oracle, ecrire('texte.txt', 'bonjour, ceci est un texte sans balise')]);
+    ligne(texte.code === 2 && texte.json?.verdict === 'SKIP', `SKIP · contenu qui ne se lit pas comme du HTML : exit 2 (obtenu ${texte.json?.verdict}, exit ${texte.code})`);
+    const absente404 = await jouer([oracle, `http://127.0.0.1:${port}/absente`]);
+    ligne(absente404.code === 2 && absente404.json?.verdict === 'SKIP', `SKIP · page en 404 : exit 2 (obtenu ${absente404.json?.verdict}, exit ${absente404.code})`);
+    const portFerme = await new Promise(resolve => { const s = http.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => resolve(p)); }); });
+    const injoignable = await jouer([oracle, `http://127.0.0.1:${portFerme}/page`]);
+    ligne(injoignable.code === 2 && injoignable.json?.verdict === 'SKIP', `SKIP · page injoignable : exit 2 (obtenu ${injoignable.json?.verdict}, exit ${injoignable.code})`);
+
+    // ── la page SERVIE, relue sur le réseau ──
+    const servieRouge = await jouer([oracle, `http://127.0.0.1:${port}/rouge`]);
+    ligne(servieRouge.code === 0 && servieRouge.json?.verdict === 'PASS' && avert(servieRouge.json).length === av.length,
+      `page servie par http · la rouge relue sur le réseau : mêmes ${av.length} constats que le fichier (obtenu ×${avert(servieRouge.json).length})`);
+    const servieVerte = await jouer([oracle, `http://127.0.0.1:${port}/verte`]);
+    ligne(servieVerte.code === 0 && avert(servieVerte.json).length === 0, `page servie par http · la verte relue sur le réseau : 0 constat (obtenu ×${avert(servieVerte.json).length})`);
+
+    // ── LA REMONTÉE AU RAPPORT DU LANCEUR : c'est tout l'objet ──
+    const injectee = fs.readFileSync(fx('motion-verte.html'), 'utf8').replace('</body>',
+      '  <section><p>Noté 4,8/5 sur 1 240 avis.</p><p><s>129 €</s> 79 €</p></section>\n</body>');
+    const pageLanceur = ecrire('lanceur.html', injectee);
+    const lanceur = await jouerBrut([agregat, pageLanceur]);
+    const entree = (lanceur.json?.oracles || []).find(o => o.oracle === 'oracle-faits-commerciaux');
+    const autresEnEchec = (lanceur.json?.oracles || []).filter(o => o.verdict === 'FAIL' && o.oracle !== 'oracle-faits-commerciaux');
+    ligne(lanceur.code === 0 && lanceur.json?.verdict === 'PASS' && entree?.verdict === 'PASS' && autresEnEchec.length === 0,
+      `lanceur · une page à faits commerciaux reste PASS exit 0, l'oracle y est lancé sans déclaration (obtenu ${lanceur.json?.verdict}, exit ${lanceur.code}, autres en échec ×${autresEnEchec.length})`);
+    ligne(entree && entree.avertissements >= 3 && entree.a_confirmer === entree.avertissements && (entree.findings || []).filter(f => f.a_confirmer && /^ligne \d+/.test(f.where) && f.texte).length === entree.a_confirmer,
+      `lanceur · les avertissements ARRIVENT dans oracles[].findings avec ligne et texte exact (×${entree?.a_confirmer}), rien n'est perdu au passage`);
+    ligne(lanceur.json?.a_faire_confirmer === entree?.a_confirmer && entree?.a_confirmer > 0,
+      `lanceur · l'agrégat porte le total a_faire_confirmer (${lanceur.json?.a_faire_confirmer})`);
+    ligne(/\? FC2 · ligne \d+/.test(lanceur.err) && /\? FC4 · ligne \d+/.test(lanceur.err) && /fait\(s\) commercial\(aux\) à FAIRE CONFIRMER/.test(lanceur.err),
+      'lanceur · le rapport lisible (stderr) écrit les lignes « ? FC2 · ligne N… » et le total à confirmer, sous un PASS');
+    const contrat = await jouer([agregat, path.join(dossierFx, 'rouge.html'), '--oracle', 'faits-commerciaux', '--contrat-runner']);
+    ligne(contrat.code === 0 && contrat.json?.oracle === 'oracle-faits-commerciaux' && contrat.json?.verdict === 'PASS' && avert(contrat.json).length === av.length,
+      `lanceur · --oracle faits-commerciaux --contrat-runner (forme d'entrée du lanceur général) : PASS exit 0 et les ${av.length} avertissements rendus (obtenu ×${avert(contrat.json).length})`);
+    const instance = await jouer([agregat, path.join(dossierFx, 'verte.html'), '--oracle', 'faits-commerciaux', '--instance', `http://127.0.0.1:${port}/rouge`]);
+    const parInstance = (instance.json?.oracles || []).filter(o => o.oracle === 'oracle-faits-commerciaux');
+    ligne(instance.code === 0 && parInstance.length === 2 && parInstance[0].a_confirmer === 0 && parInstance[1].a_confirmer === av.length,
+      `lanceur · --instance : la page servie est lue en plus de la cible (cible ×${parInstance[0]?.a_confirmer}, instance ×${parInstance[1]?.a_confirmer}), verdict PASS exit ${instance.code}`);
+    const instanceMorte = await jouer([agregat, path.join(dossierFx, 'verte.html'), '--oracle', 'faits-commerciaux', '--instance', `http://127.0.0.1:${port}/absente`]);
+    ligne(instanceMorte.code === 2 && (instanceMorte.json?.oracles || []).some(o => o.oracle === 'oracle-faits-commerciaux' && o.verdict === 'SKIP'),
+      `lanceur · une instance injoignable est dite SKIP, l'agrégat devient INDÉTERMINÉ exit 2 (obtenu ${instanceMorte.json?.verdict}, exit ${instanceMorte.code})`);
+  } finally {
+    await new Promise(r => serveur.close(r));
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

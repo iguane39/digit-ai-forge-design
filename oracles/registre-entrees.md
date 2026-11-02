@@ -793,3 +793,69 @@ se joue que sur un produit dont on accepte d'exécuter les commandes déclarées
   }
 ]
 ```
+
+## Entrée du 02/11/2026 — oracle-faits-commerciaux (TF-2050)
+
+**Remontée §4 à forge-agents : À FAIRE** (registre de `quality-oracles`, lot D133 de la campagne du
+02/11/2026). Cette entrée est écrite, exécutée et verrouillée au banc local (`self-test.mjs` : un bloc
+dédié de 31 vérifications, rouge et verte, verte piégeuse, remontée au lanceur) et enrôlée dans
+`run-oracles-design.mjs` pour toute page, sans déclaration du produit.
+
+Le domaine que rien ne couvrait : **les faits commerciaux qu'une page affiche et que seul le produit peut
+attester**. Une note de « 4,8/5 », des données d'avis en JSON-LD, un prix barré, un « plus que 3 en stock »,
+« 10 000 clients », une allégation de santé : tous les oracles du parc jugent la forme de la page, aucun ne
+dit qu'elle porte un fait à faire confirmer. Décision humaine D-132 (a) du 02/11/2026 : un contrôle
+**avertissant**, sans déclaration du produit, qui repère les formes sur la page servie et les liste au
+rapport ; **aucune obligation nouvelle** pour le produit.
+
+**Une forme trouvée n'échoue jamais.** Chaque forme donne un constat de sévérité `avertissement`, avec sa
+ligne, son sélecteur, le texte exact trouvé et la mention « à faire confirmer » : verdict PASS, exit 0.
+FAIL, exit 1, est réservé à une anomalie de l'oracle lui-même (FC9, bloquant) : la table de motifs
+`corpus/faits-commerciaux.json` est absente, illisible, ou se contredit (un motif qui ne reconnaît pas son
+propre exemple, ou qui reconnaît son contre-exemple). Page non fournie, introuvable, en 404, injoignable ou
+qui ne se lit pas comme du HTML : SKIP, exit 2, dit par FC0, jamais PASS. Le premier constat (FC0, `info`)
+résume le compte, pour qu'un lanceur qui n'affiche que les premières lignes dise déjà qu'il y a à confirmer.
+
+La table des motifs est une **donnée** (loi n° 4) : datée (02/11/2026), relecture posée (02/02/2027),
+sourcée, éditable ; ses références juridiques sont citées de mémoire et marquées non relues à la source.
+
+Voisin : `oracle-faits-sources` de make-it-better (`digit-ai-forge-agents`, b29590c) juge UN DOCUMENT
+d'une version contre son origine et refuse (FAIL) tout nombre, nom ou citation absent de l'origine ;
+celui-ci juge UNE PAGE SERVIE sans origine ni source connues et ne refuse rien, il reconnaît la forme d'un
+fait commercial. Ils ne se recoupent pas.
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Faits commerciaux affichés (avis, prix barré, rareté, volume, santé) — à faire confirmer | `node c:/dev/digit-ai-forge-design/oracles/oracle-faits-commerciaux.mjs <page.html\|http(s)://…> [--motifs table.json]` — FC1 données d'avis structurées, FC2 note ou nombre d'avis, FC3 citation de client ou section témoignage, FC4 prix barré, FC5 rareté et urgence, FC6 volume de ventes ou de clients, FC7 allégation de santé (tous en avertissement « à faire confirmer », PASS exit 0) ; FC9 table de motifs défaillante (bloquant, anomalie de l'oracle) ; FC0 SKIP page non lue | cli | candidat (remontée §4 à faire) |
+
+### Ce que cet oracle ne juge PAS
+
+- La **véracité** des faits : il ne sait pas si la note, le prix de référence, le stock ou le nombre de
+  clients est vrai ; une forme trouvée est à faire confirmer par le produit, jamais un défaut.
+- Le contenu **écrit par JavaScript** après le chargement (avis chargés par un widget, JSON-LD injecté,
+  compte à rebours animé) quand seule la page statique est lue ; une page derrière une connexion.
+- Les **images** (une note ou un badge dessinés dans une image) et les attributs `alt`, `title`, `aria-label`.
+- Les formes absentes de la table, et les langues autres que le français et l'anglais ; une **note entière
+  nue** (« 5/5 »), confondue avec un score d'audit ou un numéro d'étape.
+- Faux positifs connus, mesurés le 02/11/2026 sur 1 353 pages du poste : un score d'audit (« 2,4/5 »), un
+  « 0 avis » de sécurité, un « last chance » d'horaire de course. Une citation littéraire attribuée est
+  signalée comme une citation de client, d'où le « à faire confirmer ».
+
+```json
+[
+  {
+    "domaine": "Faits commerciaux affichés (avis, prix barré, rareté, volume, santé) — à faire confirmer",
+    "oracle": "oracles/oracle-faits-commerciaux.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/faits-commerciaux/verte.html",
+      "rouge": "oracles/fixtures/faits-commerciaux/rouge.html",
+      "verte_piegeuse": "oracles/fixtures/faits-commerciaux/piegeuse.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-11-02", "mandat": "TF-2050", "amont": "décision D-132 (a) du 02/11/2026 ; voisin oracle-faits-sources de make-it-better (b29590c)" },
+    "regles": 8
+  }
+]
+```

@@ -40,6 +40,13 @@
 // parents). La page jugée est chaque --instance fournie, sinon la cible. Sans déclaration, l'oracle est dit
 // SANS OBJET à voix haute — il rendrait SKIP, et un SKIP sur tout projet qui n'a rien déclaré ferait tomber
 // l'agrégat en INDÉTERMINÉ ; c'est donc ce rapport, jamais un PASS, qui dit que rien n'a été comparé.
+//
+// oracle-faits-commerciaux (FC1–FC7, TF-2050) tourne SANS déclaration du produit, sur toute page : il
+// repère les formes d'un fait commercial (données d'avis, note, prix barré, rareté, volume de clients,
+// allégation de santé) et les rend en AVERTISSEMENTS « à faire confirmer » — jamais un échec, le verdict
+// reste celui des autres juges. Ces avertissements sont REPRIS dans le rapport : le compte sur stderr, leurs
+// lignes (ligne, sélecteur, texte exact), `a_confirmer` par juge et `a_faire_confirmer` au niveau de l'agrégat. Chaque --instance
+// fournie est lue aussi : c'est la page servie qui porte les vrais avis.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -130,6 +137,8 @@ function sortir(verdict, resultats, nonJuge, code) {
       source: 'corpus/grille-viewports.json', date: GRILLE.date,
     },
     verdict, oracles: resultats, non_juge: nonJuge,
+    // TF-2050 : le total des faits commerciaux « à faire confirmer », pour que l'agrégat le porte lui-même.
+    a_faire_confirmer: resultats.reduce((n, r) => n + (r.a_confirmer || 0), 0),
     ...(socleExempte ? { socle_exempte: socleExempte } : {}),
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -153,6 +162,8 @@ function lancer(oracle, argv) {
       oracle: j.oracle, domaine: j.domaine, verdict: j.verdict, exit: r.status,
       ecarts_durs: durs.length,
       avertissements: (j.findings || []).filter(f => f.sev === 'avertissement').length,
+      // TF-2050 : un constat « à faire confirmer » est compté à part pour que le rapport le nomme.
+      a_confirmer: (j.findings || []).filter(f => f.a_confirmer).length,
       findings: j.findings || [], non_juge: j.non_juge || [],
     };
   } catch {
@@ -399,6 +410,8 @@ function passeFichier(fichier, { muet = false } = {}) {
   // TF-1980 : un octet de contrôle dans la page ou une feuille de style locale (« \25F7 » lu en octal par un script).
   out.push(lancer('oracle-caracteres-controle.mjs', [fichier]));
   out.push(lancer('oracle-taste.mjs', [fichier]));
+  // TF-2050 : les formes d'un fait commercial, en avertissement « à faire confirmer » (jamais un échec).
+  out.push(lancer('oracle-faits-commerciaux.mjs', [fichier]));
 
   if (estMobile) out.push(lancer('oracle-mobile.mjs', [fichier]));
   else if (!muet) sansObjet.push(`oracle-mobile : SANS OBJET — ${MOTIF_SANS_OBJET}`);
@@ -518,6 +531,17 @@ if (!seul || seul === 'valeur-affichee') {
   }
 }
 
+// ── TF-2050 · les faits commerciaux de chaque instance SERVIE ──
+// La passe du fichier a déjà lu la cible. Une instance (URL, ou page rendue au volume réel) porte les
+// vrais avis, les vrais prix : elle est lue aussi. Une instance illisible rend SKIP, dit à voix haute.
+if (!seul || seul === 'faits-commerciaux') {
+  for (const i of instances) {
+    const r = lancer('oracle-faits-commerciaux.mjs', [i]);
+    if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'FC0') || {}).msg || 'non jugé';
+    resultats.push(r);
+  }
+}
+
 if (rendu) resultats.push(...lancerRendu(cible));
 
 // ── Ce que cet orchestrateur ne couvre pas, et qui reste dû ────────────────
@@ -552,6 +576,11 @@ if (!jsonOnly) {
     process.stderr.write(`  ${r.verdict.padEnd(4)} ${r.oracle}` +
       (r.verdict === 'SKIP' ? ` — ${r.raison}` : ` — ${r.ecarts_durs} dur(s), ${r.avertissements} avert.`
         + (r.exemptes_socle ? `, ${r.exemptes_socle} au compte du socle` : '')) + '\n');
+    // TF-2050 : un fait « à faire confirmer » ne se résume pas à un compte — ses lignes sont écrites ici,
+    // bornées à 12 par juge avec le total dit, le JSON gardant tout.
+    const aConfirmer = (r.findings || []).filter(f => f.a_confirmer);
+    for (const f of aConfirmer.slice(0, 12)) process.stderr.write(`         ? ${f.regle} · ${f.where} · « ${f.texte} » — à faire confirmer\n`);
+    if (aConfirmer.length > 12) process.stderr.write(`         ? … et ${aConfirmer.length - 12} autre(s) sur ${aConfirmer.length} : voir findings[] du JSON\n`);
     // TF-1860 : un refus qui porte son remède (`voie`) le dit ici, une fois par remède — le produit
     // ne lit pas toujours le JSON, et n'a pas à deviner qu'une exemption existe.
     const voies = new Set();
@@ -566,6 +595,9 @@ if (!jsonOnly) {
     process.stderr.write(`  socle  ${socleExempte.verifies.map(b => b.nom).join(', ')} — sceau vérifié, `
       + `${socleExempte.findings.length} constat(s) hors du verdict (correction chez le socle)\n`);
   }
+  // TF-2050 : un PASS qui porte des faits à confirmer ne se lit pas comme un PASS sans reste.
+  const totalAConfirmer = resultats.reduce((n, r) => n + (r.a_confirmer || 0), 0);
+  if (totalAConfirmer) process.stderr.write(`\n  ${totalAConfirmer} fait(s) commercial(aux) à FAIRE CONFIRMER par le produit (avertissement, pas un échec) — véracité non jugée\n`);
   process.stderr.write(echecs.length ? `\nFAIL — ${echecs.length} oracle(s) en échec\n`
     : skips.length ? `\nINDÉTERMINÉ — ${skips.length} oracle(s) non exécuté(s)\n`
     : '\nPASS — tous les oracles applicables sont verts\n');

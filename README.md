@@ -30,7 +30,7 @@ Le catalogue consolidé des dix forges vit chez le pilot :
 ## Structure
 
 ```
-corpus/            matière indexée, recherche BM25 hors ligne ; grille-viewports.json
+corpus/            matière indexée, recherche BM25 hors ligne ; grille-viewports.json, faits-commerciaux.json
                    porte la largeur de conception et les grilles de rendu (TF-1066)
 oracles/           les juges exécutés + leurs fixtures + le self-test
 baseline/          captures approuvées de régression visuelle, versionnées (TF-0102)
@@ -182,6 +182,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée ; un rendu figé (ni bouton, ni palette sombre, ni script de thème) n'est qu'un avertissement, comme G1 du socle (TF-1661) |
 | `oracle-caracteres-controle` | CC-P1 | aucun octet de contrôle (C0 hors tabulation et fin de ligne, DEL) dans la page ni dans ses feuilles de style locales liées : un échappement CSS lu en octal par un script, invisible à la capture (TF-1980) |
 | `oracle-valeur-affichee` | VA1–VA4 (VA0 : SKIP) | une valeur dérivée affichée (version, environnement, date) égale sa source : le produit déclare où la page l'affiche et la commande qui la donne (`valeurs-derivees.json`), l'oracle relit la page servie et rejoue la commande ; sans déclaration, SKIP dit, jamais PASS (TF-2043) |
+| `oracle-faits-commerciaux` | FC1–FC7 (avertissements), FC9 (anomalie de l'oracle) | les formes d'un fait commercial sur la page servie (données d'avis JSON-LD et microdonnées, note ou nombre d'avis, citation de client, prix barré, rareté et urgence, volume de ventes ou de clients, allégation de santé) sont listées au rapport « à faire confirmer » : jamais un échec, PASS exit 0, sans déclaration du produit ; la véracité n'est pas jugée ; table de motifs datée en donnée (`corpus/faits-commerciaux.json`) ; page illisible : SKIP (TF-2050) |
 | `oracle-saisie` | SA1–SA7, SA8 (avertissement) | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v ; `autocomplete` ou `inputmode` posé en avertissement (TF-1911) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4, SC5 (avertissement) | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème ; défilement contenu (`overscroll-behavior`) en avertissement (TF-1911) |
