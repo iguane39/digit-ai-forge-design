@@ -1479,6 +1479,39 @@ for (const cas of CAS) {
   }
 }
 
+// RECETTE ROUGE DEPUIS oracles/ (constat du 29/10/2026, cause trouvée le 02/11/2026) — l'en-tête du
+// dérivé se comparait au chemin vu du dossier courant et le socle de D4 s'y cherchait : 5 faux
+// échecs, dont un D4 non jugé. Trois dossiers de lancement, un seul verdict ; et la correction
+// n'ouvre pas la porte que TF-1035 a fermée : un en-tête figé sur un autre fichier reste refusé.
+{
+  console.log(String.fromCharCode(10) + 'oracle-dtcg.mjs — le verdict ne dépend pas du dossier de lancement');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'dtcg-dossier-'));
+  try {
+    const jouer = (source, derive, cwd) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-dtcg.mjs'), source, derive, '--json-only'], { encoding: 'utf8', cwd });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { verdict: j?.verdict, regles: (j?.findings || []).map(f => f.regle) };
+    };
+    const paire = f => [fx(f + '.tokens.json'), fx(f + '.css')];
+    for (const [nom, cwd] of [['la racine de la forge', path.dirname(ici)], ['oracles/', ici], ['hors du dépôt', dossier]]) {
+      ligne(jouer(...paire('dtcg-verte'), cwd).verdict === 'PASS', `depuis ${nom} · dérivé à jour : PASS`);
+      ligne(jouer(...paire('dtcg-fraicheur-verte'), cwd).verdict === 'PASS', `depuis ${nom} · socle inchangé : PASS`);
+      ligne(jouer(...paire('dtcg-fraicheur-rouge'), cwd).regles.includes('D4'), `depuis ${nom} · socle changé : D4 jugé et déclenché`);
+    }
+    const sous = path.join(dossier, 'corpus');
+    fs.mkdirSync(sous);
+    fs.copyFileSync(fx('dtcg-verte.tokens.json'), path.join(sous, 'x.tokens.json'));
+    spawnSync(process.execPath, [path.join(ici, '..', 'scripts', 'generer-tokens-css.mjs'), 'corpus/x.tokens.json', '--sortie', 'corpus/x.css'], { encoding: 'utf8', cwd: dossier });
+    const [source, derive] = [path.join(sous, 'x.tokens.json'), path.join(sous, 'x.css')];
+    ligne(jouer(source, derive, ici).verdict === 'PASS', 'dérivé régénéré ailleurs, juste : PASS');
+    fs.writeFileSync(derive, fs.readFileSync(derive, 'utf8').replaceAll('corpus/x.tokens.json', 'corpus/tokens-digit-ai.tokens.json'), 'utf8');
+    const fige = jouer(source, derive, dossier);
+    ligne(fige.verdict === 'FAIL' && fige.regles.includes('D3'), `sens rouge · en-tête figé sur un autre fichier : D3 (obtenu ${fige.verdict})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-1774 (lot Produit-83 du 15/10) — LA CASCADE DÉCIDE, PAS L'ORDRE DU FICHIER. PC3 et PC2 lisaient
 // la couleur d'un `a.btn` hors du pied de page dans la règle `.pied a` (ancêtre non vérifié, ordre
 // source seul) : 1,22:1 à tort. Les pages sont écrites ici ; trois sens : ancêtre absent, règle moins

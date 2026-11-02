@@ -78,6 +78,22 @@ for (const [chemin, noeud] of feuillesDe(dtcg)) {
   }
 }
 
+// Les chemins de l'en-tête du dérivé et ceux de $fraicheur partent d'un même dossier : celui
+// d'où l'en-tête nomme CE fichier source. Le verdict ne dépend donc pas du dossier de lancement.
+// Un en-tête figé sur un autre fichier ne se résout depuis aucun parent : on retombe sur le
+// dossier courant, et D3 le refuse toujours (TF-1035).
+const baseDesChemins = (() => {
+  const nomme = /Source unique : (.+?) \(format/.exec(fs.readFileSync(derive, 'utf8'))?.[1];
+  const lu = path.resolve(source);
+  if (nomme && !path.isAbsolute(nomme)) {
+    for (let d = path.dirname(lu); ; d = path.dirname(d)) {
+      if (path.resolve(d, nomme) === lu) return d;
+      if (d === path.dirname(d)) break;
+    }
+  }
+  return process.cwd();
+})();
+
 // ── D3 · synchronisation source → dérivé ────────────────────────────────────
 // On ne compare jamais le dérivé "à l'oeil" : on le régénère et on diffe le texte.
 // Indépendant du verdict D1/D2 : une source qui ne génère plus rend le dérivé
@@ -86,10 +102,10 @@ for (const [chemin, noeud] of feuillesDe(dtcg)) {
   // TF-1035 — genererCss nomme désormais la source réellement lue dans l'en-tête du
   // dérivé (l'en-tête était figé sur « corpus/tokens-digit-ai.tokens.json » quelle que
   // soit la source). Comparer à l'octet près exige donc de lui passer LES MÊMES chemins
-  // que ceux reçus sur la ligne de commande — normalisés relatifs au répertoire courant
+  // que ceux reçus sur la ligne de commande — normalisés relatifs à baseDesChemins
   // (et en « / ») pour que le dérivé versionné ne dépende ni de la machine ni de l'OS
   // qui l'a régénéré.
-  const relatif = p => path.relative(process.cwd(), p).split(path.sep).join('/') || p;
+  const relatif = p => path.relative(baseDesChemins, p).split(path.sep).join('/') || p;
   let attendu;
   try {
     attendu = genererCss(dtcg, relatif(source), relatif(derive));
@@ -135,7 +151,7 @@ if (dtcg.$fraicheur && Array.isArray(dtcg.$fraicheur.sources) && dtcg.$fraicheur
       add('avertissement', 'D4', `$fraicheur.sources : clé « ${s.cle} » non reconnue de cet oracle`, source);
       continue;
     }
-    const chemin = dedomicilier(s.chemin);
+    const chemin = path.resolve(baseDesChemins, dedomicilier(s.chemin));
     if (!fs.existsSync(chemin)) {
       NJ.push(`D4 : « ${s.cle} » — fichier externe introuvable (${chemin}) : fraîcheur non vérifiable dans cet environnement`);
       continue;

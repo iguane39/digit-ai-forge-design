@@ -50,8 +50,12 @@
        est la mesure de lecture PRESCRITE par le socle sur le CONTENEUR, jamais sur le
        paragraphe (lisibilite.md, composants.md #11) : render_page.py V18 reconnait
        .closest('.lire, [data-mesure-lecture]') et publie alors « non mesurable » au lieu
-       de bloquer. -->
-  <section class="chap lire">
+       de bloquer.
+       V23 (render_page.py, 21/10/2026, regle E4) refuse un contenu sous 75 % de la fenetre des
+       1920px : cette page n'a qu'une colonne de lecture, et c'est voulu, puisqu'elle ne sert qu'a
+       prouver que la propagation des issues[] n'invente rien. data-colonne-ok le declare, c'est
+       la sortie que le message de V23 prescrit. -->
+  <section class="chap lire" data-colonne-ok>
     <p class="corps">Ce paragraphe compte largement plus de cent vingt caracteres, ce qui le fait entrer dans le perimetre de la mesure L2. Sa largeur reelle est celle que la page lui laisse : le rapport reste au-dessus du seuil et rien n'est compte.</p>
     <p class="note">Un second bloc, tout aussi long, pour que la mesure porte sur plusieurs entrees a plusieurs largeurs de rendu et que le silence de l'oracle ne tienne pas a un cas unique.</p>
   </section>
