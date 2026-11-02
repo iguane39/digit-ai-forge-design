@@ -739,12 +739,9 @@ la revue du 2026-11-16 retire toute règle dont la moitié des avertissements n'
 
 ## Entrée du 02/11/2026 — oracle-valeur-affichee (TF-2043)
 
-**Remontée §4 à forge-agents : À FAIRE.** Cette entrée est écrite, exécutée et verrouillée au
-banc local (`self-test.mjs` : 4 règles et un bloc dédié de 12 vérifications) et enrôlée dans
-`run-oracles-design.mjs` sur déclaration du produit. Elle n'est **pas injectée** dans
-`~/.claude/skills/quality-oracles/references/registre-oracles.md` : aucune écriture hors de ce
-dépôt n'a eu lieu pendant la campagne. L'injection est un geste mandaté, à demander au pilot. Tant
-qu'elle n'a pas eu lieu, le statut global reste `candidat`.
+**Remontée §4 à forge-agents : FAITE le 02/11/2026** (registre de `quality-oracles` 2.50.0). Cette
+entrée est écrite, exécutée et verrouillée au banc local (`self-test.mjs` : 4 règles et un bloc dédié
+de 12 vérifications) et enrôlée dans `run-oracles-design.mjs` sur déclaration du produit.
 
 Le domaine que rien ne couvrait : **une valeur dérivée affichée égale sa source**. Un produit
 affichait « v1.06 » sous l'étiquette « v1.8.0 » : la version vit dans `package.json`, l'affichage
