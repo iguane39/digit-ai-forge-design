@@ -148,6 +148,28 @@ Itération via `la-boucle`, bornée à 3 passes. Si un critère bloquant reste r
 au terme des 3 passes, escalader avec le relevé — ne pas requalifier le critère
 pour le faire passer.
 
+**Une passe de plus se compare à la précédente (D-133 (a), TF-2051).** Sur une
+maquette déjà passée, la 2e passe et les suivantes ne rejouent pas seulement les
+oracles : elles comparent la version précédente et la candidate, et écrivent ce que
+l'ajout apporte — quel critère de C1 à C17 progresse, quel oracle passe du rouge au
+vert —, mesuré quand le livrable s'y prête : poids du fichier, nombre d'écrans,
+d'états, d'écarts durs avant et après. Un ajout qui ne fait progresser aucun critère
+n'est pas un progrès et ne se livre pas comme tel ; un retrait qui ne casse aucun
+critère en est un.
+
+**« Rien à changer » est une sortie valide.** Une maquette dont tous les critères
+passent peut conclure qu'il n'y a rien à changer, et la boucle s'arrête sans passe de
+plus. La conclusion porte sa preuve : les oracles lancés avec leur verdict (`SKIP` et
+`SANS OBJET` compris), les constats lus, et la comparaison des deux versions. Ce n'est
+pas une échappatoire : un critère bloquant resté rouge n'est jamais « rien à changer »,
+c'est l'escalade ci-dessus.
+
+**Ce qui manque se propose toujours une fois (loi n° 3).** « Rien à changer » ne lève
+pas la loi n° 3 du pilot, *l'oubli n'existe pas* : la surface implicite absente (aide,
+onboarding, favicon, états vides) se propose une fois, ou s'écarte explicitement dans la
+note de partis pris, jamais par omission. Proposée à une passe, elle n'est pas
+re-proposée aux suivantes.
+
 ## Restitution
 
 1. **Le fichier**, nommé selon la convention :

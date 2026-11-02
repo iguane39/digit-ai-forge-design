@@ -26,6 +26,10 @@ Les sorties JSON complètes sont jointes.
 ## Red flags
 Aucun · ou la liste, chacun avec sa preuve et sa conséquence.
 
+## Écart avec la passe précédente — seulement si le design a déjà été audité
+Mesuré : écarts durs avant → après, note par dimension, lignes ou poids du fichier.
+Ce que l'ajout apporte : la dimension qui progresse, ou « rien : aucune dimension ne progresse ».
+
 ## Top 5 des corrections — impact × effort
 | # | Correction | Impact | Effort | Dimension |
 |---|---|---|---|---|
@@ -53,7 +57,11 @@ effort n'est pas prioritaire sur une correction à fort impact et faible effort.
 Sans les deux axes, le top 5 est un classement arbitraire.
 
 **Le top 5 est un top 5.** Pas sept, pas douze. Au-delà, on ne priorise plus, on
-liste — et une liste ne se traite pas.
+liste — et une liste ne se traite pas. Au verdict Livrer, sans aucune correction à
+nommer, la section dit « Rien à changer » et porte sa preuve (oracles lancés, constats
+lus, comparaison avec la passe précédente) : cinq lignes remplies pour la forme sont
+pires qu'une section qui dit rien. La loi n° 3 du pilot s'applique encore : la surface
+implicite absente se propose une fois, dans cette section ou dans « Ce qui n'a pas été jugé ».
 
 **Les avant/après sont copiables.** Une correction formulée en principe (« améliorer
 la hiérarchie ») ne se met pas en œuvre. Une correction formulée en code ou en

@@ -152,6 +152,25 @@ Le verdict est calculé, pas ressenti. Si le calcul donne Refondre et que
 l'impression dit Livrer, c'est le calcul qui gagne — ou la grille est fausse, et
 c'est elle qu'il faut corriger, pas le verdict.
 
+### Une seconde passe compare, et « rien à changer » est une sortie valide (D-133 (a), TF-2051)
+
+Sur un design déjà audité, la passe suivante lit l'écart entre l'ancienne version et la
+nouvelle, mesuré quand il se prête à la mesure — écarts durs par oracle, note par
+dimension, lignes ou poids du fichier —, et écrit ce que le changement apporte à une
+dimension. Un ajout qui ne fait progresser aucune dimension n'est pas un progrès ; un
+retrait qui n'en dégrade aucune en est un.
+
+Un verdict **Livrer** peut conclure qu'il n'y a rien à changer : la section « Top 5 »
+dit alors « Rien à changer » et porte sa preuve — oracles lancés avec leur verdict,
+constats lus, comparaison des deux passes — au lieu de remplir cinq lignes pour la
+forme. La sortie n'est valide que sur un verdict **calculé** Livrer : un Renforcer ou un
+Refondre a des corrections à nommer, c'est le tableau ci-dessus qui le dit.
+
+La loi n° 3 du pilot reste entière : *l'oubli n'existe pas*. Ce qui manque — la surface
+implicite absente : aide, onboarding, favicon, états vides — se propose une fois, ou
+s'écarte explicitement, jamais par omission ; proposé à une passe, il n'est pas
+re-proposé aux suivantes.
+
 ## Points de revue de lecture — aucun oracle ne les tranche
 
 Deux exigences importées du skill tiers `taste-skill` (MIT, consulté le 14/08/2026)

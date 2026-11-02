@@ -2215,6 +2215,51 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2051 (02/11/2026, décision D-133 (a)) — « RIEN À CHANGER » EST UNE SORTIE VALIDE, UNE PASSE DE PLUS SE COMPARE
+// À LA PRÉCÉDENTE, ET LA LOI N° 3 RESTE ENTIÈRE. Ces trois points sont de la doctrine écrite dans les deux skills
+// de la forge, pas une règle d'oracle : sans verrou, le prochain remaniement les efface sans qu'aucun contrôle
+// ne rougisse. Chaque document est lu dans les deux sens — le texte réel porte les trois points, le même texte
+// amputé de l'un d'eux est refusé.
+{
+  console.log(String.fromCharCode(10) + 'skills ameliore-le-design et critique-le-design (TF-2051) — rien à changer, comparaison de deux passes, loi n° 3');
+  const plat = t => t.replace(/\s+/g, ' ');
+  const POINTS = {
+    'skills/ameliore-le-design/references/criteres-sortie.md': {
+      rien: /rien à changer » est une sortie valide[\s\S]{0,400}porte sa preuve/i,
+      compare: /compar\w+ la version précédente et la candidate, et écrivent ce que l'ajout apporte/i,
+      loi3: /loi n° 3 du pilot[^.]*surface implicite[^.]*une fois[^.]*jamais par omission[\s\S]{0,80}n'est pas re-proposée/i,
+    },
+    'skills/ameliore-le-design/SKILL.md': {
+      rien: /« rien à changer » est une sortie valide[\s\S]{0,400}avec sa preuve/i,
+      compare: /compare la version précédente et la candidate, et dit ce que l'ajout apporte/i,
+      loi3: /loi n° 3 reste entière[^.]*se propose une fois, jamais par omission/i,
+    },
+    'skills/critique-le-design/references/grille.md': {
+      rien: /« rien à changer » est une sortie valide[\s\S]*« Rien à changer » et porte sa preuve/i,
+      compare: /la passe suivante lit l'écart entre l'ancienne version et la nouvelle[^.]*écrit ce que le changement apporte/i,
+      loi3: /loi n° 3 du pilot reste entière[\s\S]*se propose une fois[^.]*jamais par omission[^.]*n'est pas re-proposé/i,
+    },
+    'skills/critique-le-design/references/restitution.md': {
+      rien: /dit « Rien à changer » et porte sa preuve/i,
+      compare: /Écart avec la passe précédente[\s\S]*Ce que l'ajout apporte/i,
+      loi3: /loi n° 3 du pilot s'applique encore[^.]*surface implicite absente se propose une fois/i,
+    },
+  };
+  // L'amputation qui doit rougir : on retire le point lui-même, pas sa ponctuation.
+  const AMPUTE = {
+    rien: t => t.replace(/rien à changer/gi, 'tout va bien'),
+    compare: t => t.replace(/version précédente|passe précédente|ancienne version/gi, 'version'),
+    loi3: t => t.replace(/loi n° 3/gi, 'loi'),
+  };
+  for (const [doc, points] of Object.entries(POINTS)) {
+    const texte = plat(fs.readFileSync(path.join(ici, '..', doc), 'utf8'));
+    for (const [nom, motif] of Object.entries(points)) {
+      ligne(motif.test(texte), `sens vert · ${doc} écrit le point « ${nom} »`);
+      ligne(!motif.test(AMPUTE[nom](texte)), `sens rouge · ${doc} amputé du point « ${nom} » est refusé`);
+    }
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

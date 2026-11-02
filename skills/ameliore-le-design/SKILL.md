@@ -1,7 +1,7 @@
 ---
 name: ameliore-le-design
 description: Transforme une idée, une spécification, un design ou un produit web existant — URL, screenshot, fichier — en maquette navigable : redesign intégral et parcours d'écrans simulés (landing, connexion, tableau de bord, CRUD, catalogue, galerie, onboarding), cible web ou mobile, en un seul fichier HTML autonome, thèmes clair et sombre, zéro réseau. Deux fidélités, wireframe ou maquette. Use when / déclencher dès que l'utilisateur veut refondre, relooker, moderniser ou repenser le design d'un site ou d'une application, demande une maquette, un prototype cliquable ou une proposition visuelle à partir d'une URL, d'un screenshot ou d'un simple brief, ou veut montrer à un client ce que son produit pourrait devenir. Ne pas déclencher pour une page chartée Digit-AI (→ digit-ai-page-html), une fiche ou un schéma (→ digit-ai-fiches-html), poser les tokens (→ systeme-de-marque), arbitrer entre directions (→ studio-de-direction), ni auditer une appli en production (→ audite-et-corrige-l-appli).
-version: 2.1.0
+version: 2.2.0
 ---
 
 # Améliore le design
@@ -113,6 +113,14 @@ silence.
 
 **Aucun ✓ sans exécution.** `check_maquette.py` et les oracles de la forge sont
 lancés avant toute restitution, verdicts reportés tels quels — `SKIP` compris.
+
+**Une nouvelle passe compare, et « rien à changer » est une sortie valide.** Sur une
+maquette déjà passée, la passe suivante compare la version précédente et la candidate,
+et dit ce que l'ajout apporte à un critère ; un ajout qui n'en fait progresser aucun
+n'est pas un progrès. Quand tous les critères passent, la conclusion « rien à changer »
+est permise, avec sa preuve (oracles lancés, constats lus) et sans passe de plus. La loi
+n° 3 reste entière : ce qui manque (aide, onboarding, favicon, états vides) se propose
+une fois, jamais par omission. Détail : `references/criteres-sortie.md` §Boucle.
 
 ## Références
 

@@ -1,7 +1,7 @@
 ---
 name: critique-le-design
 description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en huit dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
-version: 1.3.0
+version: 1.4.0
 ---
 
 # Critique le design
@@ -108,6 +108,10 @@ Détail des barèmes, red flags et règle de verdict : `references/grille.md`.
   constat. « Contraste 3.1:1 en thème sombre, ligne 214 » en est un.
 - **Top 5 sans effort estimé.** Une liste de corrections sans coût n'est pas
   priorisée : c'est une liste de courses.
+- **Cinq corrections inventées pour remplir le top 5.** Au verdict Livrer calculé, « Rien à
+  changer » est une sortie valide, avec sa preuve ; une seconde passe compare les deux
+  versions et dit ce que l'ajout apporte (`references/grille.md` §Règle de verdict). La
+  loi n° 3 reste entière : ce qui manque se propose une fois, jamais par omission.
 
 ## Troisième mode — critique d'implémentation (aval)
 
