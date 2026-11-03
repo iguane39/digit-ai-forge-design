@@ -40,10 +40,10 @@ Extension de la forge, dérivée par recalcul de contraste, absente de toute cha
 
 ## Bloqué sur l'environnement
 
-**F. Génération d'images Gemini jamais appelée.**
-Clé en place, `oracle-images` écrit et testé sur fixtures, zéro appel réel.
-`gemini-3.1-flash-image` n'est pas vérifié avec cette clé.
-→ **Reco : un appel à une image suffit.** API payante, donc en attente de ton feu vert.
+**F. Génération d'images Gemini — close le 11/08/2026 (TF-0019, design@101e0d3).**
+Premier appel réel servi et jugé par `oracle-images` : une image de hero générée par
+`gemini-3.1-flash-image`, après activation de la facturation par l'humain.
+Correction du 03/11/2026 (TF-2072) : cette section la disait encore jamais appelée.
 
 ## Dette assumée, nommée
 
