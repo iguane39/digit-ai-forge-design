@@ -35,6 +35,16 @@
 // TF-1910 (18/10/2026) : le `title` d'un <th> (ou d'un [role=columnheader|rowheader]) et celui de
 // tout élément à `data-definition` sont des DÉFINITIONS (convention du socle, dictionnaire de colonnes).
 //
+// CE QUE LE LEXIQUE NE CONNAÎT PAS NE BLOQUE PAS (TF-2102, 03/11/2026) — les listes de verbes et d'indices
+// ci-dessous sont une classe OUVERTE de la langue : elles se complètent, elles ne seront jamais exhaustives.
+// Trois garde-fous, pour qu'un mot manquant ne fabrique pas un bloquant faux : (1) un mot en « -ez » (impératif
+// du vouvoiement : « rechargez », « utilisez ») vaut réparation ou invitation, hors « chez », « assez », « avez »,
+// « savez » ; (2) un texte classé erreur ou vide par sa SEULE clé ou son seul contexte, qui dit plus qu'un constat
+// nu (au moins deux mots de contenu), passe en AVERTISSEMENT « hors lexique » — un texte qui s'annonce lui-même
+// (« Une erreur est survenue », « Aucune donnée ») reste jugé comme avant ; (3) un libellé <option> est un choix,
+// jamais un état vide. Le coût assumé : « Impossible de télécharger le fichier », classé par sa clé seule, n'est
+// plus qu'un avertissement.
+//
 // POURQUOI T4-1…T4-4 ET NON TA1…TA4. Le lot du pilot nomme ces règles TA1 à TA4 ; ces
 // quatre identifiants sont DÉJÀ pris dans cette forge par `oracle-taste` (TA1 familles
 // d'accent, TA2 saturation, TA3 filets, TA4 systèmes cohabitants), et `grille.md` les cite
@@ -99,6 +109,10 @@ export const VERBES_REPARATION = [
   'attends', 'attendre', 'attendez',
   'modifie', 'modifier', 'modifiez',
   'ajuste', 'ajuster', 'ajustez',
+  // TF-2102 : formes courantes absentes du lexique (portail francophone, 03/11/2026).
+  'recharge', 'recharger', 'rechargez',
+  'ouvre', 'ouvrir', 'ouvrez',
+  'reviens', 'revenir', 'revenez',
 ];
 
 export const INDICES_CAUSE = [
@@ -117,6 +131,9 @@ export const INDICES_CAUSE = [
   'non pris en charge', 'pas pris en charge', 'non supporte',
   'refuse', 'refusee', 'verrouille', 'verrouillee',
   'hors ligne', 'interrompue', 'interrompu',
+  // TF-2102 : formes courantes absentes du lexique.
+  'absent', 'absente', 'absents', 'absentes',
+  'perime', 'perimee', 'perimes', 'perimees',
 ];
 
 export const VERBES_ACTION = [
@@ -141,6 +158,10 @@ export const VERBES_ACTION = [
   'choisis', 'choisir', 'choisissez',
   'selectionne', 'selectionner', 'selectionnez',
   'enregistre', 'enregistrer', 'enregistrez',
+  // TF-2102 : formes courantes absentes du lexique.
+  'ouvre', 'ouvrir', 'ouvrez',
+  'reviens', 'revenir', 'revenez',
+  'recharge', 'recharger', 'rechargez',
 ];
 
 // Comparés à la chaîne ENTIÈRE normalisée (ponctuation finale retirée), jamais en
@@ -174,6 +195,37 @@ const RX_REPARATION = motif(VERBES_REPARATION);
 const RX_CAUSE = motif(INDICES_CAUSE);
 const RX_ACTION = motif(VERBES_ACTION);
 const RX_EXCUSE = motif(MARQUES_EXCUSE);
+
+// TF-2102 (03/11/2026) — UN LEXIQUE FERMÉ NE FAIT PAS AUTORITÉ SUR LA LANGUE. Les verbes d'invitation et les
+// formes de cause forment une classe OUVERTE : « rechargez », « ouvrez », « revenez » manquaient, et chaque mot
+// manquant fabriquait un bloquant faux. Deux garde-fous s'ajoutent à la complétion du lexique.
+// 1) L'impératif du vouvoiement se reconnaît à sa FORME (mot en « -ez » : « utilisez », « patientez »), pas à une
+//    liste. Les mots en « -ez » qui n'en sont pas sont listés (« chez », « assez », « avez », « savez »).
+const RX_IMPERATIF_VOUS = /(^|[^a-z0-9])(?!(?:chez|assez|nez|rez|lez|avez|savez|suez)(?:[^a-z0-9]|$))[a-z]{2,}ez(?=[^a-z0-9]|$)/;
+// 2) Un texte qui ne s'annonce PAS lui-même comme erreur ou comme vide (classé par sa clé ou son contexte seuls)
+//    et qui dit plus qu'un constat nu n'est pas refusé sur ce que le lexique ne connaît pas : il est signalé en
+//    avertissement. Les mots ci-dessous sont ceux d'un constat nu — mots-outils (classe fermée) et mots qui ne
+//    font qu'annoncer l'incident ou le vide ; tout autre mot porte une information que l'oracle ne sait pas lire.
+const MOTS_DU_CONSTAT_NU = new Set([
+  'le', 'la', 'les', 'un', 'une', 'des', 'du', 'de', 'au', 'aux', 'en', 'et', 'ou', 'ce', 'cet', 'cette', 'ces', 'se',
+  'sa', 'son', 'ses', 'il', 'elle', 'ils', 'elles', 'on', 'ne', 'pas', 'plus', 'est', 'sont', 'etait', 'ete', 'etre',
+  'sera', 'ont', 'as', 'ai', 'avoir', 'pour', 'par', 'sur', 'sous', 'dans', 'avec', 'sans', 'que', 'qui', 'quoi',
+  'dont', 'si', 'mais', 'donc', 'car', 'ni', 'votre', 'vos', 'notre', 'nos', 'mon', 'mes', 'ton', 'tes', 'leur',
+  'leurs', 'tout', 'tous', 'toute', 'toutes', 'ici', 'cela', 'ca', 'ceci', 'nous', 'vous', 'je', 'tu', 'lui',
+  // l'incident, sans un mot de plus
+  'erreur', 'erreurs', 'error', 'errors', 'fail', 'failed', 'failure', 'echec', 'echecs', 'echoue', 'echouee',
+  'survenue', 'survenues', 'survenu', 'inattendue', 'inattendu', 'probleme', 'problemes', 'impossible',
+  'continuer', 'mal', 'passe', 'produit', 'produite', 'quelque', 'chose', 'invalide', 'invalides', 'refus',
+  'refuse', 'refusee', 'oups', 'oops', 'desole', 'desolee', 'sorry', 'navre',
+  // le vide, sans un mot de plus
+  'aucun', 'aucune', 'aucuns', 'aucunes', 'rien', 'donnee', 'donnees', 'resultat', 'resultats', 'element',
+  'elements', 'instant', 'moment', 'encore', 'vide', 'vides', 'empty', 'nothing', 'no', 'result', 'results',
+  'data', 'afficher', 'disponible', 'disponibles', 'trouve', 'trouvee', 'trouves', 'trouvees',
+]);
+// Nombre de mots qui disent quelque chose au-delà du constat nu (les chiffres et les lettres isolées ne comptent pas).
+export const motsDeContenu = nTexte => nTexte.split(/[^a-z0-9]+/)
+  .filter(m => m.length >= 2 && !/\d/.test(m) && !MOTS_DU_CONSTAT_NU.has(m)).length;
+const SEUIL_CONTENU = 2;
 
 // TF-1762 — la négation du vide (« non vide », « non-vide », « pas vide », « jamais vide »).
 const RX_VIDE_NIE = /(^|[^a-z0-9])(non|pas|jamais|plus|ni)[ -](vide|vides|empty)(?=[^a-z0-9]|$)/g;
@@ -220,13 +272,23 @@ export function juger(entrees) {
     // Précédence assumée : une chaîne qui porte les deux marques est jugée comme une
     // ERREUR. « Aucune erreur » relève du message d'erreur, pas de l'état vide, et un
     // état vide accusé de ne pas réparer serait un faux positif bruyant.
-    const estVide = !libelleDeDonnee && !estErreur && RX_VIDE.test(signalVide);
+    // TF-2102 : un libellé de CHOIX (<option>) n'est pas un état vide — « Aucun » y est une valeur à choisir.
+    const estVide = !libelleDeDonnee && !e.choix && !estErreur && RX_VIDE.test(signalVide);
+    // TF-2102 : le texte s'annonce-t-il LUI-MÊME comme erreur ou comme vide, ou seul sa clé / son contexte l'ont classé ?
+    const annonceErreur = RX_ERREUR.test(nTexte);
+    const annonceVide = RX_VIDE.test(nTexte.replace(RX_VIDE_NIE, ' '));
+    const horsLexique = motsDeContenu(nTexte) >= SEUIL_CONTENU;
 
     if (estErreur) {
       erreurs++;
-      const aReparation = RX_REPARATION.test(nTexte);
+      const aReparation = RX_REPARATION.test(nTexte) || RX_IMPERATIF_VOUS.test(nTexte);
       const aCause = RX_CAUSE.test(nTexte);
-      if (!aReparation && !aCause) {
+      if (!aReparation && !aCause && !annonceErreur && horsLexique) {
+        // Classé erreur par sa seule clé ou son seul contexte, et dit plus qu'un constat nu : le lexique ne le
+        // reconnaît pas, il ne prouve pas pour autant qu'il manque la cause et la réparation (TF-2102).
+        add('avertissement', 'T4-1', `erreur dont le lexique ne reconnaît ni la cause ni la réparation : « ${extrait} ». `
+          + 'Le texte dit plus qu\'un constat nu, donc il n\'est pas refusé ; à relire : E-12 demande la cause PUIS la réparation', ou);
+      } else if (!aReparation && !aCause) {
         add('bloquant', 'T4-1', `erreur sans cause ni réparation : « ${extrait} ». E-12 : une erreur dit ce qui `
           + "s'est passé PUIS comment réparer. Ici la personne apprend qu'il y a un problème et rien d'autre", ou);
       } else if (!aReparation) {
@@ -244,7 +306,11 @@ export function juger(entrees) {
 
     if (estVide) {
       vides++;
-      if (!RX_ACTION.test(nTexte)) {
+      if (!RX_ACTION.test(nTexte) && !RX_IMPERATIF_VOUS.test(nTexte) && !annonceVide && horsLexique) {
+        // Classé vide par sa seule clé ou son seul contexte, texte hors lexique : avertissement (TF-2102).
+        add('avertissement', 'T4-2', `état vide dont le lexique ne reconnaît aucune invitation à agir : « ${extrait} ». `
+          + 'Le texte dit plus qu\'un constat nu, donc il n\'est pas refusé ; à relire : E-12 demande qu\'un état vide invite à agir', ou);
+      } else if (!RX_ACTION.test(nTexte) && !RX_IMPERATIF_VOUS.test(nTexte)) {
         add('bloquant', 'T4-2', `état vide sans invitation à agir : « ${extrait} ». E-12 : un état vide invite à `
           + "agir. Un constat de vide laisse l'écran sans issue", ou);
       }
@@ -393,7 +459,7 @@ export function extraireHtml(brut) {
     if (BALISES_TEXTE.includes(el.tag) || estEtat) {
       const t = texteDe(el);
       if (t) out.push({ cle: `<${el.tag}${at(el, 'class') ? ' class="' + at(el, 'class') + '"' : ''}>`, texte: t, contexte: marqueurs(el),
-        ...(estPastille ? { statut: true } : {}) });
+        ...(estPastille ? { statut: true } : {}), ...(el.tag === 'option' ? { choix: true } : {}) });
     }
   }
   return out;
@@ -563,6 +629,71 @@ if (args.includes('--self-test')) {
     if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
   });
 
+  // ── TF-2102 (lot Produit-86 du 03/11) : un lexique fermé ne peut pas faire autorité sur la langue ─
+  // 3 bloquants faux sur 4 sur un portail francophone : « absent », « périmé », « rechargez »,
+  // « ouvrez », « revenez » n'étaient dans aucune liste, et un libellé <option> passait pour un état vide.
+  // Trois sens : les formes courantes passent (lexique complété, impératif du vouvoiement reconnu par sa
+  // forme), ce que le lexique ne connaît pas ne bloque pas (avertissement), les vrais défauts restent refusés.
+  check('VERTE TF-2102 — « Le jeton est périmé. Rechargez la page. » : cause et réparation reconnues, muet', () => {
+    const r = un('erreur.jeton', 'Le jeton est périmé. Rechargez la page.');
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — « La page demandée est absente. Revenez à l\'accueil. » : muet', () => {
+    const r = un('erreur.page', "La page demandée est absente. Revenez à l'accueil.");
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — « Aucun dossier pour l\'instant. Ouvrez le menu Dépôts. » : l\'invitation est vue, muet', () => {
+    const r = un('dossiers.vide', "Aucun dossier pour l'instant. Ouvrez le menu Dépôts.");
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — « Aucune facture. Revenez plus tard. » : muet', () => {
+    const r = un('factures.vide', 'Aucune facture. Revenez plus tard.');
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — verbe du vouvoiement hors lexique (« Utilisez le nouveau lien ») reconnu par sa forme en -ez', () => {
+    const r = un('erreur.lien', 'Erreur de lien : il ne fonctionne plus. Utilisez le nouveau lien.');
+    if (durs(r).length) throw new Error(JSON.stringify(r.findings));
+    if (r.findings.some(f => /sans réparation|ni la cause ni/.test(f.msg))) throw new Error('réparation en -ez non vue : ' + JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — un libellé <option> n\'est pas un état vide (« Aucun », « Aucune sélection »)', () => {
+    const r = juger(extraireHtml('<select><option value="">Aucun</option><option>Aucune sélection</option><option>Tous les dossiers</option></select>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — erreur classée par sa clé seule, cause dite en une forme hors lexique : jamais bloquante', () => {
+    const r = un('erreur.session', 'Votre session est caduque pour des raisons de sécurité');
+    if (durs(r).length) throw new Error('bloquant sur une forme que le lexique ne connaît pas : ' + JSON.stringify(r.findings));
+    if (!r.findings.some(f => f.regle === 'T4-1' && f.sev === 'avertissement')) throw new Error('l\'inconnu doit rester signalé en avertissement : ' + JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2102 — état vide classé par sa clé seule, texte hors lexique : avertissement, jamais bloquant', () => {
+    const r = un('dossiers.vide', 'Les dossiers déposés par votre équipe apparaîtront dans cette liste');
+    if (durs(r).length) throw new Error('bloquant sur une forme que le lexique ne connaît pas : ' + JSON.stringify(r.findings));
+    if (!r.findings.some(f => f.regle === 'T4-2' && f.sev === 'avertissement')) throw new Error('l\'inconnu doit rester signalé : ' + JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2102 — « Une erreur est survenue chez nous » : « chez » n\'est pas un impératif, T4-1 bloquant', () => {
+    const r = un('erreur.generique', 'Une erreur est survenue chez nous');
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2102 — « Aucun dossier chez ce client. » : « chez » n\'est pas une invitation, T4-2 bloquant', () => {
+    const r = un('dossiers.vide', 'Aucun dossier chez ce client.');
+    if (!durs(r).some(f => f.regle === 'T4-2')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2102 — « Erreur, vous n\'avez pas accès » : « avez » n\'est pas un impératif, T4-1 bloquant', () => {
+    const r = un('erreur.quota', "Erreur, vous n'avez pas accès");
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2102 — erreur classée par sa clé seule, constat nu (« Envoi impossible ») : T4-1 bloquant', () => {
+    const r = un('erreur.envoi', 'Envoi impossible');
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2102 — le title d\'une cellule <td> reste jugé : « refus compris » annonce l\'erreur, T4-1 bloquant', () => {
+    const r = juger(extraireHtml('<table><tbody><tr><td title="Date de la décision, refus compris.">Instruit le 03/10</td></tr></tbody></table>'));
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2102 — un état vide hors <option> reste jugé : <div class="empty">Aucune donnée</div> bloquant', () => {
+    const r = juger(extraireHtml('<div class="empty">Aucune donnée</div><select><option>Aucune donnée</option></select>'));
+    if (durs(r).filter(f => f.regle === 'T4-2').length !== 1) throw new Error(JSON.stringify(r.findings));
+  });
+
   // ── Extraction : un format, un cas, aucune supposition ────────────────────
   check('EXTRACTION json imbriqué — les clés sont aplaties en a.b.c', () => {
     const e = extraireJson('{"ecran":{"liste":{"vide":"Aucune donnée"}}}');
@@ -633,6 +764,7 @@ if (EST_POINT_D_ENTREE) {
     "la JUSTESSE du ton et la fidélité à la voix de marque — non décidable par script (voix.md) : cet oracle juge la PRÉSENCE d'une cause, d'une réparation et d'une action, jamais leur pertinence ni leur élégance. Un plancher franchi n'est pas une voix trouvée",
     "les chaînes NON EXTRAITES — texte construit par concaténation ou interpolation, chaînes restées dans le code applicatif, contenu rendu par un <script src=\"…\"> ou un framework, libellés venus d'une API : ce qui n'est pas dans le fichier lu n'est pas jugé, et l'absence de constat ne vaut pas conformité du produit",
     "la LANGUE du fichier — les listes de verbes et d'indices sont françaises ; sur un fichier en anglais ou dans une autre langue, l'oracle ne voit ni réparation ni action et le dirait à tort : le classer en non_juge plutôt que le croire",
+    "les formes HORS LEXIQUE (TF-2102) — un texte classé erreur ou vide par sa seule clé ou son seul contexte, qui dit plus qu'un constat nu, est signalé en avertissement et non refusé : l'oracle ne sait pas lire une cause ou une invitation qu'il ne connaît pas, et le dit au lieu de bloquer",
     'la CONSTANCE des libellés entre écrans (même geste, même mot) — elle se vérifie à la relecture et reste au contrat de voix',
     "les formes ICU (pluriels, genres, variables) : la variante rendue à l'utilisateur dépend de la donnée, pas du fichier",
   ];

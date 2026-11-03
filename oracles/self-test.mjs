@@ -767,6 +767,25 @@ const CAS = [
     rouge: [fx('textes-application-definition-rouge.html')],
   },
   {
+    // TF-2102 (retour Produit-86 du 03/11/2026) : UN LEXIQUE FERMÉ NE FAIT PAS AUTORITÉ SUR LA LANGUE. Sur un
+    // portail francophone, « périmé », « absente », « Rechargez », « Ouvrez », « Revenez » manquaient aux listes
+    // de l'oracle : 3 bloquants faux sur 4. La verte est ce portail, textes corrects ; la rouge garde les vrais
+    // défauts qu'une règle trop large (tout mot en « -ez » vaudrait réparation) ferait passer — « chez » et
+    // « avez » ne sont pas des impératifs, un constat nu reste un constat nu.
+    oracle: 'oracle-textes-application.mjs',
+    regles: ['T4-1', 'T4-2'],
+    verte: [fx('textes-application-lexique-verte.json')],
+    rouge: [fx('textes-application-lexique-rouge.json')],
+  },
+  {
+    // TF-2102 : un libellé <option> est un CHOIX, pas un état vide. « Aucun » et « Aucune sélection » y sont des
+    // valeurs à choisir. La rouge garde, dans la même page, un vrai état vide (div.empty) : il reste refusé.
+    oracle: 'oracle-textes-application.mjs',
+    regles: ['T4-2'],
+    verte: [fx('textes-application-option-verte.html')],
+    rouge: [fx('textes-application-option-rouge.html')],
+  },
+  {
     rendu: true,
     oracle: 'rendu-comparatif.mjs',
     regles: ['RC-1'],
@@ -1549,6 +1568,17 @@ for (const cas of CAS) {
   } finally {
     fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
   }
+}
+
+// TF-2102 — LES CAS PROPRES DE L'ORACLE DE TEXTES NE PROTÈGENT RIEN TANT QU'ILS NE SONT PAS JOUÉS. oracle-textes-application porte ses
+// propres cas (`--self-test` : 52 dont les bornes de TF-1762, TF-1773, TF-1910 et TF-2102), que cette recette
+// ne rejouait pas : un cas pouvait passer au rouge sans que rien ne le dise. Elle les rejoue maintenant.
+{
+  console.log(String.fromCharCode(10) + 'oracle-textes-application.mjs — ses cas propres (--self-test) sont rejoués par la recette');
+  const r = spawnSync(process.execPath, [path.join(ici, 'oracle-textes-application.mjs'), '--self-test'], { encoding: 'utf8' });
+  const m = /: (\d+) PASS, (\d+) FAIL/.exec(r.stdout || '');
+  ligne(r.status === 0 && m && Number(m[2]) === 0 && Number(m[1]) >= 52,
+    `cas propres de l'oracle : ${m ? m[1] + ' PASS, ' + m[2] + ' FAIL' : 'sortie illisible'} (exit ${r.status})`);
 }
 
 // RECETTE ROUGE DEPUIS oracles/ (constat du 29/10/2026, cause trouvée le 02/11/2026) — l'en-tête du

@@ -1,0 +1,14 @@
+{
+  "erreur": {
+    "jeton": "Le jeton est périmé. Rechargez la page.",
+    "page": "La page demandée est absente. Revenez à l'accueil.",
+    "session": "La session a expiré. Reconnectez-vous pour continuer."
+  },
+  "liste": {
+    "dossiers_vide": "Aucun dossier pour l'instant. Ouvrez le menu Dépôts.",
+    "factures_vide": "Aucune facture. Revenez plus tard."
+  },
+  "action": {
+    "enregistrer": "Enregistrer les modifications"
+  }
+}

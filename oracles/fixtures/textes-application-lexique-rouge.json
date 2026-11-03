@@ -1,0 +1,10 @@
+{
+  "erreur": {
+    "generique": "Une erreur est survenue chez nous",
+    "acces": "Erreur, vous n'avez pas accès",
+    "envoi": "Envoi impossible"
+  },
+  "liste": {
+    "dossiers_vide": "Aucun dossier chez ce client."
+  }
+}
