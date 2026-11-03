@@ -1493,6 +1493,64 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2092 (lot Produit-86 du 03/11) — UN SCRIPT QUI CITE « DIALOG » N'EST PAS UNE SUR-COUCHE. Récidive de
+// TF-1772 par une autre voie : le lanceur cherchait `showModal(`, `role="dialog"`, `<dialog` dans le TEXTE
+// de la page, script compris. Une mire de connexion ou une 404 anonyme sans aucun <dialog>, dont le script
+// cite ces mots dans une chaîne ou un test de capacité, lançait oracle-surcouche : SKIP (rien à juger), et
+// l'agrégat tombait en SKIP exit 2. La sur-couche se décide sur l'ARBRE : élément <dialog>, attribut
+// popover, role="dialog" ou "alertdialog", y compris dans un gabarit de script (que l'oracle juge), ou
+// règle ::backdrop d'une feuille de style. Deux sens : le texte d'un script ne lance rien, l'arbre lance toujours.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design.mjs (TF-2092) — la sur-couche se décide sur l\'arbre DOM, pas sur le texte d\'un script');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'surcouche-script-'));
+  try {
+    const base = fs.readFileSync(fx('tokens-verte.html'), 'utf8');
+    const avecScript = js => base.replace('</body>', `<script>${js}</script></body>`);
+    const avecCorps = (corps, js = '') => base.replace('</body>', `${corps}${js ? `<script>${js}</script>` : ''}</body>`);
+    const jouer = (nom, contenu) => {
+      const page = path.join(dossier, nom + '.html');
+      fs.writeFileSync(page, contenu, 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), page, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      const sc = (j?.oracles || []).find(o => o.oracle === 'oracle-surcouche');
+      return { lances: (j?.oracles || []).map(o => o.oracle), surcouche: sc?.verdict, verdict: j?.verdict, code: r.status };
+    };
+    const sansSurcouche = {
+      'chaîne role="dialog" dans un script': avecScript('const sel = \'[role="dialog"]\'; document.querySelector(sel);'),
+      'appel showModal( dans un script': avecScript('function ouvrir(d) { d.showModal(); }'),
+      'chaîne <dialog> dans un script': avecScript('const html = \'<dialog open>x</dialog>\';'),
+      'chaîne dialog::backdrop dans un script': avecScript('const regle = "dialog::backdrop { background: red }";'),
+      'mot popover> dans un script': avecScript('const t = "un popover> ici";'),
+      'balise <dialog> dans un commentaire HTML': avecCorps('<!-- <dialog>à venir</dialog> -->'),
+    };
+    for (const [nom, page] of Object.entries(sansSurcouche)) {
+      const r = jouer('sans-' + Object.keys(sansSurcouche).indexOf(nom), page);
+      ligne(!r.lances.includes('oracle-surcouche') && r.surcouche !== 'SKIP',
+        `sens vert · ${nom}, aucun élément de sur-couche : oracle-surcouche non lancé, pas de SKIP (lancés : ${r.lances.join(' ')})`);
+    }
+    const avecSurcouche = {
+      '<dialog> dans le DOM, script qui le cite': avecCorps('<dialog id="d">x</dialog>', 'document.getElementById("d").showModal();'),
+      '[popover] dans le DOM': avecCorps('<div popover id="p">x</div>'),
+      'role="dialog" dans le DOM': avecCorps('<div role="dialog" aria-label="x">x</div>'),
+      'role="alertdialog" dans le DOM': avecCorps('<div role="alertdialog" aria-label="x">x</div>'),
+      '<dialog> dans un gabarit de script': avecScript('const vue = () => `<dialog id="d"><p>x</p></dialog>`;'),
+    };
+    for (const [nom, page] of Object.entries(avecSurcouche)) {
+      const r = jouer('avec-' + Object.keys(avecSurcouche).indexOf(nom), page);
+      ligne(r.lances.includes('oracle-surcouche'), `sens rouge · ${nom} : oracle-surcouche lancé (lancés : ${r.lances.join(' ')})`);
+    }
+    // La mire de connexion du retour : page sans sur-couche, script qui cite le mot, aucun autre échec.
+    // Base : une page dont tous les autres juges passent, pour que l'agrégat ne puisse tomber QUE sur ce SKIP.
+    const propre = fs.readFileSync(fx('declencheurs-verte.html'), 'utf8');
+    const mire = jouer('mire', propre.replace('</body>', '<script>if (typeof HTMLDialogElement === "undefined") { document.body.dataset.dialog = "absent"; }\n'
+      + 'const roleDialog = \'role="dialog"\'; window.fermer = d => d.showModal();</script></body>'));
+    ligne(mire.verdict === 'PASS' && mire.code === 0 && !mire.lances.includes('oracle-surcouche'),
+      `sens vert · mire de connexion (script qui cite dialog, aucun <dialog>) : agrégat PASS exit 0, sans SKIP (obtenu ${mire.verdict}, exit ${mire.code})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // RECETTE ROUGE DEPUIS oracles/ (constat du 29/10/2026, cause trouvée le 02/11/2026) — l'en-tête du
 // dérivé se comparait au chemin vu du dossier courant et le socle de D4 s'y cherchait : 5 faux
 // échecs, dont un D4 non jugé. Trois dossiers de lancement, un seul verdict ; et la correction

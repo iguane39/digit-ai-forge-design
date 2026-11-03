@@ -57,6 +57,7 @@ import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
+import { pageAUneSurcouche } from './lib/surcouche.mjs';
 import { trouverDeclaration, NOM_DECLARATION } from './lib/declaration-valeurs.mjs';
 
 const args = process.argv.slice(2);
@@ -377,8 +378,11 @@ const aUnDeclencheur = /<button[\s>]|<a[\s>]|<summary[\s>]|data-action|onclick|r
 // TF-1772 (lot Produit-83 du 15/10) : le mot « ::backdrop » cité dans un COMMENTAIRE de tokens.css
 // lançait oracle-surcouche sur une page sans sur-couche — SKIP, et l'agrégat tombait en SKIP exit 2.
 // La détection se fait sur le document sans ses commentaires HTML ni CSS : ce qui est cité n'agit pas.
-const htmlSansCommentaires = html.replace(/<!--[\s\S]*?-->/g, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ');
-const aUneSurcouche = /<dialog\b|\spopover(\s|=|>)|::backdrop|showModal\s*\(|role\s*=\s*["'](alert)?dialog["']/i.test(htmlSansCommentaires);
+// TF-2092 (lot Produit-86 du 03/11) : récidive par la voie du SCRIPT. Une page sans <dialog> dont le script
+// citait `showModal(`, `role="dialog"` ou `<dialog` en chaîne lançait l'oracle, qui ne trouvait rien : SKIP,
+// agrégat SKIP exit 2. La détection ne lit plus de texte : elle lit l'ARBRE, par la même règle que l'oracle
+// (lib/surcouche.mjs — éléments du DOM et des gabarits de script, règles ::backdrop des feuilles de style).
+const aUneSurcouche = pageAUneSurcouche(html);
 // TF-1219 : une action nommée par une exigence (data-exigence="<id>", convention posée au
 // 10e oracle) — une page sans aucune action nommée n'a rien à juger en perceptibilité.
 const aUneActionNommee = /data-exigence\s*=/i.test(html);

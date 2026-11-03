@@ -298,8 +298,10 @@ top-layer, `color-scheme` absent du socle. Tous les oracles du registre jugent c
 dessine ; la boîte d'un `dialog`, son voile `::backdrop`, les contrôles natifs et les barres
 de défilement suivent `color-scheme`, et rien ne le vérifiait.
 
-Déclenchement **par contenu**, jamais par extension : présence de `<dialog`, d'un attribut
-`popover`, d'un `role="dialog"`/`"alertdialog"`, d'un `::backdrop` ou d'un `showModal(`.
+Déclenchement **par contenu**, jamais par extension, et décidé sur **l'arbre** (TF-2092,
+`lib/surcouche.mjs`) : un élément `<dialog>`, un attribut `popover`, un `role="dialog"`/`"alertdialog"`
+dans le DOM ou dans un gabarit de script, ou une règle `::backdrop` d'une feuille de style. Le texte
+d'un script ou d'un commentaire qui cite ces mots (`showModal(`, `role="dialog"`) n'en est pas un.
 Hors de ces marqueurs, `run-oracles-design.mjs` le déclare `SANS OBJET` avec sa raison, et
 l'oracle lancé seul rend `SKIP` motivé — jamais un `PASS` par défaut.
 

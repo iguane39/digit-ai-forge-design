@@ -45,6 +45,7 @@
 import fs from 'node:fs';
 import { parse as parseHtml, elements, arbres, css, cssRulesDeep } from './lib/html.mjs';
 import { declarationsPour as declarationsDe } from './lib/selecteurs.mjs';
+import { estSurcouche } from './lib/surcouche.mjs';
 
 const DOM = 'Composant dynamique et sur-couche : habillage explicite depuis les jetons';
 const args = process.argv.slice(2);
@@ -101,12 +102,7 @@ const classesDe = el => String((el.attrs && el.attrs.class) || '').split(/\s+/).
 const roleDe = el => String((el.attrs && el.attrs.role) || '').toLowerCase();
 const aAttribut = (el, n) => Object.prototype.hasOwnProperty.call(el.attrs || {}, n);
 
-function estSurcouche(el) {
-  if (el.tag.startsWith('#')) return false;
-  if (el.tag === 'dialog') return true;
-  if (aAttribut(el, 'popover')) return true;
-  return roleDe(el) === 'dialog' || roleDe(el) === 'alertdialog';
-}
+// TF-2092 : la définition d'une sur-couche vit dans lib/surcouche.mjs, partagée avec le lanceur.
 function estNatif(el) {
   return el.tag === 'dialog' || aAttribut(el, 'popover');
 }
