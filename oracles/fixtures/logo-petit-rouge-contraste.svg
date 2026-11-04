@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Logo d'essai gris clair : deux équerres et un carré creux">
+  <!-- Fixture rouge (TF-2074) : gris très clair, jugé sur fond blanc (LP3). Même géométrie que la verte : gros traits (48 et 32 unités sur 256, soit 3 et 2 px à 16 px), trois pièces
+       séparées par 32 unités (2 px), un trou de 32 unités (2 px) : tout survit à 16 px. -->
+  <g fill="#E8E8E8">
+    <path d="M16 16 H128 V64 H64 V128 H16 Z"/>
+    <path d="M240 240 H128 V192 H192 V128 H240 Z"/>
+    <path fill-rule="evenodd" d="M96 96 H160 V160 H96 Z M112 112 V144 H144 V112 Z"/>
+  </g>
+</svg>

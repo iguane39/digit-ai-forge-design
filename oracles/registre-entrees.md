@@ -873,3 +873,58 @@ fait commercial. Ils ne se recoupent pas.
 ]
 ```
 
+
+## Entrée du 04/11/2026 — oracle-logo-petit (TF-2074)
+
+**Statut d'usage de la forge : `candidat`.** Écrit et verrouillé au banc local (`self-test.mjs` : trois
+paires de fixtures, un bloc d'isolation des règles et de remèdes joués). Son inscription au registre de
+`quality-oracles` relève de la part forge-agents : ce fichier ne dit pas qu'elle est faite.
+
+Le domaine que rien ne couvrait : **un logo SVG tient-il à la taille d'un onglet ?** Le 03/11/2026, l'essai
+du skill logo-design-skill sur un produit en construction a vu son audit rendre 100/100 à trois SVG qui,
+rendus à 16 px, se réduisaient à des points en diagonale. Cet audit juge la propreté du fichier ; `oracle-images`
+juge alt, poids, réseau et variantes. Celui-ci rend le SVG dans Chromium à 16 et 32 px (fond transparent) et à
+128 px (référence), et mesure sur les pixels. Critères et seuils figés dans l'en-tête de l'oracle :
+
+| Règle | Critère mesurable | Sévérité |
+|---|---|---|
+| LP1 | part de l'encre plus fine qu'un pixel de la taille jugée (ouverture de la référence par un disque d'un pixel) : plus de 20 % | majeur à 16 px, avertissement à 32 px (de 5 à 20 % : avertissement à 16 px) |
+| LP2 | nombre de pièces d'encre ou de trous différent de la référence ; un trou d'un seul pixel à 16 px | majeur à 16 px, avertissement à 32 px et pour le trou d'un pixel |
+| LP3 | avec `--fond <#hex>` : part de l'encre à 16 px sous 3:1 de contraste WCAG avec ce fond : plus de 20 % | majeur |
+| LP4 | aucun pixel d'opacité 25 % ou plus à 16 px ; pictogramme sur moins de la moitié de la boîte | majeur ; avertissement |
+| LP5 | texte vivant `<text>` dans le SVG | avertissement |
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Logo : lisibilité d'un pictogramme SVG à 16 et 32 px | `node c:/dev/digit-ai-forge-design/oracles/oracle-logo-petit.mjs <logo.svg>… [--fond '#FFFFFF']… [--sortie <dossier>]` — LP1 trait plus fin qu'un pixel, LP2 détail fusionné ou perdu, LP3 contraste sur le fond déclaré, LP4 présence à 16 px, LP5 texte vivant | cli | candidat |
+
+```json
+[
+  {
+    "domaine": "Logo : lisibilité d'un pictogramme SVG à 16 et 32 px",
+    "oracle": "oracles/oracle-logo-petit.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".svg"],
+    "fixtures": {
+      "verte": "oracles/fixtures/logo-petit-verte.svg",
+      "rouge": "oracles/fixtures/logo-petit-rouge-trait-fin.svg",
+      "rouge_fusion": "oracles/fixtures/logo-petit-rouge-fusion.svg",
+      "rouge_contraste": "oracles/fixtures/logo-petit-rouge-contraste.svg"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-11-04", "mandat": "TF-2074", "amont": "essai du skill logo-design-skill du 03/11/2026 (note 20261103b), décision D-156 (a)" },
+    "regles": 5
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- Le **goût**, la distinction et la ressemblance avec une marque existante : un logo peut tenir à 16 px et
+  être mauvais. Il juge si la forme survit, pas si elle est bonne ; `--sortie` écrit les PNG pour l'œil.
+- La **lisibilité sémantique** : une lettre qui garde sa topologie peut se lire autre chose (« P! »).
+- Les autres moteurs de rendu (Safari, Firefox, un favicon .ico) et les tailles autres que 16, 32 et 128 px.
+- Mesure sur les trois logos de l'essai tels qu'ils sont dans le dossier de l'essai (état final, après l'épaississement
+  du second tour d'après la note) : PASS pour A et C, avertissement LP2 pour B (trou d'un seul pixel), ce qui rejoint
+  le « B reste faible à 16 px » de la note. Les fichiers du premier tour, ceux de l'audit à 100/100, n'ont pas été
+  retrouvés : le refus de l'oracle sur eux n'est pas mesuré, seul l'est celui des fixtures.

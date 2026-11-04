@@ -819,6 +819,39 @@ const CAS = [
     verte: [fx('onglets-milieu-verte.html')],
     rouge: [fx('onglets-milieu-rouge.html')],
   },
+  {
+    // TF-2074 (essai logo-design-skill du 03/11/2026) — un audit tiers avait rendu 100/100 à trois SVG qui se
+    // réduisaient à des points à 16 px. La rouge est la verte dessinée en FILET de 3 unités sur 256 (0,19 px à 16 px) :
+    // aussi propre qu'un SVG peut l'être, invisible dans un onglet. Elle déclenche LP1 (trait plus fin qu'un pixel)
+    // et LP4 (rien à 16 px) ; LP2 se déclenche par contrecoup, la topologie disparaissant avec l'encre. La verte est
+    // faite de gros traits (48 et 32 unités) et de séparations de 2 px. Dépend de l'outillage de rendu.
+    rendu: true,
+    oracle: 'oracle-logo-petit.mjs',
+    regles: ['LP1', 'LP4'],
+    contrat: [...CONTRAT_MJS, 'mesures'],
+    verte: [fx('logo-petit-verte.svg')],
+    rouge: [fx('logo-petit-rouge-trait-fin.svg')],
+  },
+  {
+    // TF-2074 — des formes épaisses, mais deux barres séparées de 0,25 px et un trou de 0,5 px à 16 px : ils existent
+    // à 128 px et fusionnent à 16 px. LP2 seule (LP1 se tait : rien n'est fin), dans un bloc dédié plus bas.
+    rendu: true,
+    oracle: 'oracle-logo-petit.mjs',
+    regles: ['LP2'],
+    contrat: [...CONTRAT_MJS, 'mesures'],
+    verte: [fx('logo-petit-verte.svg')],
+    rouge: [fx('logo-petit-rouge-fusion.svg')],
+  },
+  {
+    // TF-2074 — la même géométrie que la verte, en gris très clair (#E8E8E8) : sur fond blanc, 1,2:1. La verte (#14202B)
+    // passe sur le même fond. LP3 ne se joue que sur un fond déclaré (--fond).
+    rendu: true,
+    oracle: 'oracle-logo-petit.mjs',
+    regles: ['LP3'],
+    contrat: [...CONTRAT_MJS, 'mesures'],
+    verte: [fx('logo-petit-verte.svg'), '--fond', '#FFFFFF'],
+    rouge: [fx('logo-petit-rouge-contraste.svg'), '--fond', '#FFFFFF'],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
@@ -1693,6 +1726,81 @@ for (const cas of CAS) {
     }
     const mauvais = PREFERES.concat(REPLI.modeles).filter(id => { const m = vrai.modeles.find(x => x.id === id); return m && m.etat !== 'courant'; });
     ligne(mauvais.length === 0, `sens vert · les modèles préférés et la liste en dur sont « courants » au calendrier du pilot (${vrai.date}) (obtenu hors courant : ${mauvais.join(', ') || 'aucun'})`);
+  }
+}
+
+// TF-2074 — CHAQUE RÈGLE DE LISIBILITÉ À 16 PX SE DÉCLENCHE POUR SA RAISON, ET LE REMÈDE QU'ELLE PRESCRIT PASSE. Le banc
+// des CAS exige que toutes les règles d'une rouge se déclenchent ; il ne dit pas qu'une rouge ne déclenche QUE la sienne.
+// Ici : la fusion ne déclenche pas LP1 (rien n'est fin), le contraste ne déclenche ni LP1 ni LP2 ; le remède de LP3 (un fond
+// sur lequel le gris clair contraste) et celui de LP1 (épaissir le filet) sont joués et passent ; LP4 « marge » et LP5 sont
+// des avertissements, jamais un échec.
+{
+  console.log(String.fromCharCode(10) + 'oracle-logo-petit (TF-2074) — une règle par raison, remèdes joués');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const jouer = (fichier, ...a) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-logo-petit.mjs'), fichier, ...a, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json, regles: new Set((json?.findings || []).filter(f => f.sev === 'bloquant' || f.sev === 'majeur').map(f => f.regle)) };
+    };
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'logo-petit-'));
+    try {
+      const verte = fs.readFileSync(fx('logo-petit-verte.svg'), 'utf8');
+      const fusion = jouer(fx('logo-petit-rouge-fusion.svg'));
+      ligne(fusion.code === 1 && fusion.regles.has('LP2') && !fusion.regles.has('LP1') && !fusion.regles.has('LP4'),
+        `fusion · LP2 seule en dur : deux barres soudées et un trou rebouché, rien n'est fin, rien ne disparaît (obtenu ${[...fusion.regles].join(' ')})`);
+      const contraste = jouer(fx('logo-petit-rouge-contraste.svg'), '--fond', '#FFFFFF');
+      ligne(contraste.code === 1 && contraste.regles.has('LP3') && !contraste.regles.has('LP1') && !contraste.regles.has('LP2'),
+        `contraste · LP3 seule en dur : la géométrie est celle de la verte (obtenu ${[...contraste.regles].join(' ')})`);
+      const remedeFond = jouer(fx('logo-petit-rouge-contraste.svg'), '--fond', '#0B0F14');
+      ligne(remedeFond.code === 0 && remedeFond.json?.verdict === 'PASS',
+        `remède LP3 · le même gris clair sur un fond sombre (#0B0F14) : PASS exit 0 (obtenu ${remedeFond.json?.verdict}, exit ${remedeFond.code})`);
+      const sansFond = jouer(fx('logo-petit-rouge-contraste.svg'));
+      ligne(sansFond.code === 0 && (sansFond.json?.non_juge || []).some(n => /^LP3 .* non jouée : aucun --fond fourni/.test(n)),
+        'sans --fond · LP3 n\'est pas jouée et le non_juge le dit, jamais un PASS de contraste muet');
+      // Remède de LP1 : le même tracé en filet de 3 unités (0,19 px à 16 px) est refusé, épaissi à 40 unités (2,5 px) il passe.
+      const trace = ep => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path d="M40 224 L128 40 L216 224" fill="none" stroke="#14202B" stroke-width="${ep}" stroke-linejoin="miter" stroke-linecap="butt"/></svg>`;
+      const fin = path.join(dossier, 'fin.svg'); const epais = path.join(dossier, 'epais.svg');
+      fs.writeFileSync(fin, trace(3), 'utf8'); fs.writeFileSync(epais, trace(40), 'utf8');
+      const avantRemede = jouer(fin);
+      ligne(avantRemede.code === 1 && avantRemede.regles.has('LP1'), `remède LP1 · avant : le tracé en filet de 3 unités est refusé (obtenu ${avantRemede.json?.verdict}, ${[...avantRemede.regles].join(' ')})`);
+      const remedeTrait = jouer(epais);
+      ligne(remedeTrait.code === 0 && remedeTrait.json?.verdict === 'PASS' && !remedeTrait.regles.has('LP1') && !remedeTrait.regles.has('LP4'),
+        `remède LP1 · après : le même tracé épaissi à 40 unités (2,5 px à 16 px) passe (obtenu ${remedeTrait.json?.verdict}, ${[...remedeTrait.regles].join(' ') || 'aucune dure'})`);
+      // LP5 : du texte vivant se dit, sans faire échouer.
+      const texte = path.join(dossier, 'texte.svg');
+      fs.writeFileSync(texte, verte.replace('</svg>', '<text x="0" y="0" font-size="1">.</text></svg>'), 'utf8');
+      const t = jouer(texte);
+      ligne(t.code === 0 && (t.json?.findings || []).some(f => f.regle === 'LP5' && f.sev === 'avertissement'),
+        `LP5 · un <text> est un avertissement, le verdict reste PASS (obtenu ${t.json?.verdict})`);
+      // LP4 marge : le même logo dans un viewBox cinq fois plus grand ne tient que sur ~3 px.
+      const marge = path.join(dossier, 'marge.svg');
+      fs.writeFileSync(marge, verte.replace('viewBox="0 0 256 256"', 'viewBox="-512 -512 1280 1280"'), 'utf8');
+      const m = jouer(marge);
+      ligne((m.json?.findings || []).some(f => f.regle === 'LP4' && f.sev === 'avertissement' && /marge excessive/.test(f.msg)),
+        'LP4 · un logo noyé dans la marge de son viewBox est signalé (avertissement)');
+      // LP2 limite : un trou d'un seul pixel à 16 px survit, mais à la limite — avertissement, jamais un échec (cas du concept B de l'essai).
+      const limite = path.join(dossier, 'limite.svg');
+      fs.writeFileSync(limite, verte.replace('M112 112 V144 H144 V112 Z', 'M112 112 V128 H128 V112 Z'), 'utf8');
+      const l = jouer(limite);
+      ligne(l.code === 0 && (l.json?.findings || []).some(f => f.regle === 'LP2' && f.sev === 'avertissement' && /un trou ne survit que sur 1 pixel/.test(f.msg)),
+        `LP2 limite · un trou de 1 px à 16 px est signalé en avertissement, le verdict reste PASS (obtenu ${l.json?.verdict})`);
+      ligne(!(jouer(fx('logo-petit-verte.svg')).json?.findings || []).some(f => f.regle === 'LP2'), 'LP2 limite · la verte (trou de 2 px) ne porte aucun avertissement de trou');
+      // Entrées refusées : pas de .svg, fichier absent, fond illisible — SKIP exit 2, jamais PASS.
+      const html = jouer(fx('motion-verte.html'));
+      ligne(html.code === 2 && html.json?.verdict === 'SKIP', `entrée · un fichier qui n'est pas un .svg : SKIP exit 2 (obtenu ${html.json?.verdict}, exit ${html.code})`);
+      const fondIllisible = jouer(fx('logo-petit-verte.svg'), '--fond', 'rouge-ish');
+      ligne(fondIllisible.code === 2 && fondIllisible.json?.verdict === 'SKIP', `entrée · --fond illisible : SKIP exit 2 (obtenu ${fondIllisible.json?.verdict}, exit ${fondIllisible.code})`);
+      // --sortie écrit les PNG que l'œil regardera.
+      const sortieDossier = path.join(dossier, 'png');
+      const avecSortie = jouer(fx('logo-petit-verte.svg'), '--sortie', sortieDossier);
+      ligne(avecSortie.code === 0 && fs.existsSync(path.join(sortieDossier, 'logo-petit-verte-16.png')) && fs.existsSync(path.join(sortieDossier, 'logo-petit-verte-32.png')),
+        '--sortie · les rendus à 16 et 32 px sont écrits en PNG pour être regardés');
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
   }
 }
 

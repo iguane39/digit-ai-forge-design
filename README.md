@@ -110,6 +110,7 @@ node oracles/oracle-exploitabilite.mjs <page.html|url>… \
 node oracles/oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit> [--approuver [--motif "<écart voulu>"]]  # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
+node oracles/oracle-logo-petit.mjs <logo.svg>… [--fond '#FFFFFF']… [--sortie <dossier>]   # LP1–LP5 : le logo tient-il à 16 et 32 px ? (TF-2074)
 
 node scripts/generer-images.mjs <page.html> [--env <fichier>] [--modele <m>] [--referentiel <fichier>]   # producteur d'images (API payante, sur GO)
 node scripts/generer-images.mjs --lister-modeles [--modele <m>]    # la liste des modèles retenue, sans clé ni appel (TF-2111)
@@ -209,6 +210,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-caracteres-controle` | CC-P1 | aucun octet de contrôle (C0 hors tabulation et fin de ligne, DEL) dans la page ni dans ses feuilles de style locales liées : un échappement CSS lu en octal par un script, invisible à la capture (TF-1980) |
 | `oracle-valeur-affichee` | VA1–VA4 (VA0 : SKIP) | une valeur dérivée affichée (version, environnement, date) égale sa source : le produit déclare où la page l'affiche et la commande qui la donne (`valeurs-derivees.json`), l'oracle relit la page servie et rejoue la commande ; sans déclaration, SKIP dit, jamais PASS (TF-2043) |
 | `oracle-faits-commerciaux` | FC1–FC7 (avertissements), FC9 (anomalie de l'oracle) | les formes d'un fait commercial sur la page servie (données d'avis JSON-LD et microdonnées, note ou nombre d'avis, citation de client, prix barré, rareté et urgence, volume de ventes ou de clients, allégation de santé) sont listées au rapport « à faire confirmer » : jamais un échec, PASS exit 0, sans déclaration du produit ; la véracité n'est pas jugée ; table de motifs datée en donnée (`corpus/faits-commerciaux.json`) ; page illisible : SKIP (TF-2050) |
+| `oracle-logo-petit` | LP1–LP5 | logo SVG rendu à 16 et 32 px (Chromium, fond transparent) contre sa référence à 128 px : LP1 trait plus fin qu'un pixel (plus de 20 % de l'encre), LP2 pièce ou trou fusionné ou perdu, LP3 contraste sous 3:1 sur le fond déclaré (`--fond`), LP4 rien à 16 px ou marge excessive, LP5 texte vivant ; le goût et la lisibilité sémantique ne sont pas jugés (TF-2074) |
 | `oracle-saisie` | SA1–SA7, SA8 (avertissement) | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v ; `autocomplete` ou `inputmode` posé en avertissement (TF-1911) |
 | `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
 | `oracle-surcouche` | SC1–SC4, SC5 (avertissement) | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème ; défilement contenu (`overscroll-behavior`) en avertissement (TF-1911) |

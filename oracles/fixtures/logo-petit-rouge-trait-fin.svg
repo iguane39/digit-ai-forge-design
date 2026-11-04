@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Logo d'essai : les mêmes formes en filet">
+  <!-- Fixture rouge (TF-2074) : les formes de la verte dessinées en filet de 3 unités sur 256, soit 0,19 px à 16 px.
+       Propre pour un audit de SVG, invisible dans un onglet : LP1 (traits plus fins qu'un pixel), LP4 (rien à 16 px). -->
+  <g fill="none" stroke="#14202B" stroke-width="3">
+    <path d="M16 16 H128 V64 H64 V128 H16 Z"/>
+    <path d="M240 240 H128 V192 H192 V128 H240 Z"/>
+    <path d="M96 96 H160 V160 H96 Z"/>
+    <path d="M112 112 H144 V144 H112 Z"/>
+  </g>
+</svg>

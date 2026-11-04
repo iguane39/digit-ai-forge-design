@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Logo d'essai : deux barres serrées et un carré à trou minuscule">
+  <!-- Fixture rouge (TF-2074) : formes épaisses (LP1 se tait), mais deux barres séparées de 4 unités sur 256 (0,25 px à 16 px)
+       et un trou de 8 unités (0,5 px). À 128 px les deux barres sont séparées et le trou existe ; à 16 px les barres
+       se soudent et le trou est rebouché : LP2. -->
+  <g fill="#14202B">
+    <rect x="16" y="16" width="104" height="96"/>
+    <rect x="124" y="16" width="116" height="96"/>
+    <path fill-rule="evenodd" d="M64 144 H192 V240 H64 Z M124 184 V192 H132 V184 Z"/>
+  </g>
+</svg>
