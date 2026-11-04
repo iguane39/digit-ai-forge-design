@@ -1804,6 +1804,50 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2073 (décision D-156 (a) du 03/11/2026, essai) — RIEN NE GUIDAIT UN PRODUIT QUI N'A PAS ENCORE DE LOGO. La branche « produit
+// sans logo » de systeme-de-marque reprend la MÉTHODE de logo-design-skill (MIT), sans sa bibliothèque de 1 432 logos d'autrui.
+// C'est de la doctrine écrite, pas une règle d'oracle : sans verrou, le prochain remaniement l'efface sans que rien ne rougisse.
+// Chaque point est lu dans les deux sens — le texte réel le porte, le même texte amputé du point est refusé.
+{
+  console.log(String.fromCharCode(10) + 'skill systeme-de-marque (TF-2073) — branche « produit sans logo », méthode reprise, bibliothèque non installée');
+  const plat = t => t.replace(/\s+/g, ' ');
+  const dossierSkill = path.join(ici, '..', 'skills', 'systeme-de-marque');
+  const branche = plat(fs.readFileSync(path.join(dossierSkill, 'references', 'produit-sans-logo.md'), 'utf8'));
+  const skill = plat(fs.readFileSync(path.join(dossierSkill, 'SKILL.md'), 'utf8'));
+  const POINTS = {
+    cliches: /liste des clichés de la catégorie/i,
+    troisConcepts: /trois concepts d'idées différentes[\s\S]{0,400}ne\s+peuvent pas se décrire par la même phrase/i,
+    familiarite: /test de familiarité, avant de dessiner[\s\S]{0,700}est remplacé, pas retouché/i,
+    etagere: /épreuve de l'étagère[\s\S]{0,500}se fond dans l'étagère est écarté/i,
+    revueHumaine: /arrêt pour revue humaine[\s\S]{0,300}arbitre des \*{0,2}images/i,
+    lectureEnPetit: /oracle-logo-petit\.mjs[\s\S]{0,300}Regarder les PNG/i,
+    attributionMit: /logo-design-skill[^.]{0,120}licence MIT[^.]{0,120}version 1\.4\.5/i,
+    bibliothequeNonInstallee: /ne s'installe pas[\s\S]{0,200}bibliothèque de 1 432 logos[\s\S]{0,400}TRADEMARKS\.md/i,
+  };
+  const AMPUTE = {
+    cliches: t => t.replace(/clichés de la catégorie/gi, 'habitudes'),
+    troisConcepts: t => t.replace(/ne peuvent pas se décrire par la même phrase/gi, 'peuvent se ressembler'),
+    familiarite: t => t.replace(/est remplacé, pas retouché/gi, 'est retouché'),
+    etagere: t => t.replace(/se fond dans l'étagère est écarté/gi, 'se fond dans l\'étagère est gardé'),
+    revueHumaine: t => t.replace(/arbitre des \*{0,2}images\*{0,2}/gi, 'lit la description'),
+    lectureEnPetit: t => t.replace(/Regarder les PNG/gi, 'Lire le verdict'),
+    attributionMit: t => t.replace(/licence MIT/gi, 'licence libre'),
+    bibliothequeNonInstallee: t => t.replace(/ne s'installe pas/gi, 's\'installe'),
+  };
+  for (const [nom, motif] of Object.entries(POINTS)) {
+    ligne(motif.test(branche), `sens vert · references/produit-sans-logo.md écrit le point « ${nom} »`);
+    ligne(!motif.test(AMPUTE[nom](branche)), `sens rouge · references/produit-sans-logo.md amputé du point « ${nom} » est refusé`);
+  }
+  // Le SKILL.md aiguille vers la branche, et le fichier existe : une affordance câblée ou inexistante (loi n° 1).
+  const renvoi = t => /produit-sans-logo\.md/.test(t) && /Sans logo/i.test(t);
+  ligne(renvoi(skill), 'sens vert · SKILL.md aiguille vers references/produit-sans-logo.md (quick start et table des références)');
+  ligne(!renvoi(skill.replace(/produit-sans-logo\.md/g, 'autre.md')), 'sens rouge · SKILL.md dont le renvoi pointe ailleurs est refusé');
+  const frontmatter = /^---\s*([\s\S]*?)---/.exec(fs.readFileSync(path.join(dossierSkill, 'SKILL.md'), 'utf8'))?.[1] || '';
+  const description = /^description:\s*(.*)$/m.exec(frontmatter)?.[1] || '';
+  ligne(description.length > 0 && description.length <= 1024 && /sans logo/i.test(description),
+    `sens vert · la description du skill (${description.length} caractères, limite 1 024) annonce le cas « sans logo »`);
+}
+
 // TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en
 // pointer-events: none dont un descendant repasse en pointer-events: auto peut porter un lien
 // focalisable : ses surfaces redeviennent des fonds d'anneau. Page écrite ici, dérivée de la verte.

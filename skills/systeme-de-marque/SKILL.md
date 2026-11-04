@@ -1,7 +1,7 @@
 ---
 name: systeme-de-marque
-description: Verrouille l'identité visuelle et verbale d'une marque en artefacts exécutables — un tokens.css (couleurs OKLCH, échelle typographique, espacement 4pt, mouvement — durées et easings, thèmes clair et sombre) et un MARQUE.md (voix, ton, vocabulaire, anti-références) — réutilisés ensuite par tous les livrables produits pour ce client. Use when / déclencher dès que l'utilisateur veut poser, extraire, figer ou documenter la charte d'un client, demande des tokens de design, une palette, un choix de polices ou une ligne éditoriale à partir d'un logo, d'un site, d'une charte PDF ou de trois mots de ton, ou veut que plusieurs livrables partagent la même identité. Ne pas déclencher pour appliquer la charte Digit-AI maison (→ digit-ai-page-html, digit-ai-pptx), pour arbitrer entre plusieurs directions artistiques concurrentes (→ studio-de-direction), ni pour construire une maquette (→ ameliore-le-design).
-version: 1.3.0
+description: Verrouille l'identité visuelle et verbale d'une marque en artefacts exécutables — un tokens.css (couleurs OKLCH, échelle typographique, espacement 4pt, mouvement — durées et easings, thèmes clair et sombre) et un MARQUE.md (voix, ton, vocabulaire, anti-références) — réutilisés ensuite par tous les livrables produits pour ce client. Sans logo : trois concepts jugés, arrêtés pour revue humaine. Use when / déclencher dès que l'utilisateur veut poser, extraire, figer ou documenter la charte d'un client, demande des tokens de design, une palette, un choix de polices ou une ligne éditoriale à partir d'un logo, d'un site, d'une charte PDF ou de trois mots de ton, veut que plusieurs livrables partagent la même identité, ou n'a pas de logo. Ne pas déclencher pour appliquer la charte Digit-AI maison (→ digit-ai-page-html, digit-ai-pptx), pour arbitrer entre plusieurs directions artistiques concurrentes (→ studio-de-direction), ni pour construire une maquette (→ ameliore-le-design).
+version: 1.4.0
 ---
 
 # Système de marque
@@ -26,6 +26,7 @@ des deux artefacts, et le fait que la sortie soit **jugée par oracle**, pas rel
                    node oracles/oracle-barre-externe.mjs BARRE-EXTERNE.md
 1. Mode          → client (défaut) ou digit-ai
 2. Extraction    → references/extraction.md
+   Sans logo     → references/produit-sans-logo.md  (trois concepts, puis arrêt pour revue humaine)
 3. Proposition   → python corpus/recherche.py "<secteur> <cible> <ton>" --systeme-de-design
 4. Artefacts     → references/tokens.md + references/voix.md
 5. Contrôle      → node oracles/oracle-tokens.mjs <page-témoin.html> --tokens tokens.css
@@ -127,6 +128,7 @@ tranché ailleurs.
 |---|---|
 | `references/barre-externe.md` | AVANT toute proposition — l'étape 0 |
 | `references/extraction.md` | au démarrage, pour tout entrant de marque |
+| `references/produit-sans-logo.md` | quand le produit n'a pas encore de logo — la branche « Sans logo » |
 | `references/tokens.md` | avant d'écrire la première ligne de CSS |
 | `references/voix.md` | pour la partie verbale, souvent bâclée |
 
