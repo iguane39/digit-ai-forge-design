@@ -1,0 +1,26 @@
+{
+  "schema": "pilot/modeles-tiers@1",
+  "version": "fixture",
+  "date": "2026-11-03",
+  "regle": "Fixture de self-test (TF-2111) : même schéma que references/MODELES-TIERS.json du pilot, réduit aux modèles d'image. Les états sont ceux du calendrier relu le 03/11/2026 ; rien ici ne remplace le référentiel du pilot.",
+  "etats": {
+    "courant": "listé sans déprécation",
+    "deprecie": "déprécié, avec ou sans date d'arrêt annoncée",
+    "arrete": "date d'arrêt atteinte ou rangé parmi les modèles arrêtés"
+  },
+  "fournisseurs": {
+    "gemini": {
+      "lu_le": "2026-11-03",
+      "modeles": [
+        { "id": "gemini-3-pro-image", "famille": "image", "etat": "courant", "arret": null, "remplacant": null },
+        { "id": "gemini-3.1-flash-lite-image", "famille": "image", "etat": "courant", "arret": null, "remplacant": null },
+        { "id": "gemini-nano-banana-2.1", "famille": "image", "etat": "courant", "arret": null, "remplacant": null },
+        { "id": "gemini-3.1-flash-image", "famille": "image", "etat": "deprecie", "arret": null, "remplacant": "gemini-nano-banana-2.1" },
+        { "id": "gemini-2.5-flash-image", "famille": "image", "etat": "deprecie", "arret": "2027-03-15", "remplacant": "gemini-3.1-flash-lite-image" },
+        { "id": "gemini-3.1-flash-image-preview", "famille": "image", "etat": "arrete", "arret": "2026-06-25", "remplacant": "gemini-nano-banana-2.1" },
+        { "id": "gemini-3-pro-image-preview", "famille": "image", "etat": "arrete", "arret": "2026-06-25", "remplacant": "gemini-3-pro-image" },
+        { "id": "gemini-3.8-flash", "famille": "texte", "etat": "courant", "arret": null, "remplacant": null }
+      ]
+    }
+  }
+}

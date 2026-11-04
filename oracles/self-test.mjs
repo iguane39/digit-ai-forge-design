@@ -1635,6 +1635,67 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2111 (03/11/2026, calendrier du fournisseur croisé par TF-2109) — LA LISTE DES MODÈLES D'IMAGE EST UNE DONNÉE.
+// scripts/generer-images.mjs portait un modèle déprécié en tête et deux modèles de repli ARRÊTÉS depuis le 25/06/2026.
+// La liste se compose maintenant depuis references/MODELES-TIERS.json du pilot (loi n° 4), avec une liste en dur datée
+// pour le cas où il est injoignable. Aucun appel à l'API n'est joué ici : `--lister-modeles` s'arrête avant la clé.
+{
+  console.log(String.fromCharCode(10) + 'scripts/generer-images.mjs (TF-2111) — modèles d\'image lus au calendrier, arrêtés refusés, aucun appel');
+  const { composerListe, lireReferentiel, cheminReferentiel, PREFERES, REPLI } = await import('../scripts/lib/modeles-image.mjs');
+  const referentielFx = fx('modeles-tiers-image.json');
+  const ref = lireReferentiel(referentielFx);
+  const ARRETES_FX = ['gemini-3.1-flash-image-preview', 'gemini-3-pro-image-preview'];
+  const liste = composerListe({ referentiel: ref, aujourdhui: '2026-11-04' });
+  ligne(ref.ok && JSON.stringify(liste.modeles) === JSON.stringify(['gemini-nano-banana-2.1', 'gemini-3.1-flash-lite-image', 'gemini-3-pro-image']) && liste.avertissements.length === 0,
+    `sens vert · référentiel lu : les seuls modèles d'image « courants », le remplaçant courant d'abord (obtenu ${liste.modeles.join(', ')})`);
+  ligne(!liste.modeles.some(m => ARRETES_FX.includes(m)) && !liste.modeles.includes('gemini-3.1-flash-image') && !liste.modeles.includes('gemini-2.5-flash-image') && !liste.modeles.includes('gemini-3.8-flash'),
+    'sens vert · ni arrêté, ni déprécié, ni modèle de texte dans la liste');
+  const refuse = composerListe({ explicite: 'gemini-3.1-flash-image-preview', referentiel: ref, aujourdhui: '2026-11-04' });
+  ligne(/ARRÊTÉ depuis le 2026-06-25/.test(refuse.refus || '') && /gemini-nano-banana-2\.1/.test(refuse.refus || '') && /aucun appel/.test(refuse.refus || ''),
+    'sens rouge · --modele arrêté : refusé avec sa date d\'arrêt et son remplaçant, avant tout appel');
+  const deprecie = composerListe({ explicite: 'gemini-3.1-flash-image', referentiel: ref, aujourdhui: '2026-11-04' });
+  ligne(!deprecie.refus && deprecie.modeles[0] === 'gemini-3.1-flash-image' && deprecie.avertissements.some(a => /déprécié.*remplaçant « gemini-nano-banana-2\.1 »/.test(a)),
+    'sens vert · --modele déprécié : admis, premier de la liste, avertissement avec son remplaçant');
+  const inconnu = composerListe({ explicite: 'gemini-futur-image', referentiel: ref, aujourdhui: '2026-11-04' });
+  ligne(!inconnu.refus && inconnu.avertissements.some(a => /absent du calendrier lu/.test(a)), 'sens vert · --modele absent du calendrier : admis, avertissement « non vérifié »');
+  const absent = composerListe({ referentiel: lireReferentiel(path.join(os.tmpdir(), 'modeles-tiers-absent-tf2111.json')), aujourdhui: '2026-11-04' });
+  ligne(JSON.stringify(absent.modeles) === JSON.stringify(REPLI.modeles) && /liste en dur du 2026-11-03/.test(absent.source) && absent.avertissements.some(a => /introuvable.*liste en dur datée du 2026-11-03/.test(a)),
+    'sens vert · référentiel injoignable : liste en dur datée et sourcée, et le repli est dit');
+  ligne(REPLI.source.includes('deprecations.md.txt') && /^\d{4}-\d{2}-\d{2}$/.test(REPLI.lu_le), 'sens vert · la liste en dur porte sa date et sa source');
+  const perimee = composerListe({ referentiel: ref, aujourdhui: '2026-12-10' });
+  ligne(perimee.avertissements.some(a => /la liste date du 2026-11-03 \(37 jours\)/.test(a)), 'sens rouge · une liste de plus de 30 jours est dite périmée (même seuil que MT4 du pilot)');
+  const sansImage = composerListe({ referentiel: { ok: true, date: '2026-11-03', chemin: 'x', modeles: [{ id: 'gemini-3.8-flash', famille: 'texte', etat: 'courant' }] }, aujourdhui: '2026-11-04' });
+  ligne(JSON.stringify(sansImage.modeles) === JSON.stringify(REPLI.modeles) && sansImage.avertissements.some(a => /aucun modèle d'image/.test(a)),
+    'sens vert · un référentiel sans modèle d\'image courant ne vide pas la liste : repli dit');
+  // Le script de bout en bout, SANS clé dans l'environnement : la liste s'imprime, aucun appel n'est possible.
+  const envSansCle = { ...process.env, GEMINI_API_KEY: '' };
+  const cli = (...a) => spawnSync(process.execPath, [path.join(ici, '..', 'scripts', 'generer-images.mjs'), ...a], { encoding: 'utf8', env: envSansCle });
+  const dry = cli('--lister-modeles', '--referentiel', referentielFx);
+  let jDry = null; try { jDry = JSON.parse(dry.stdout); } catch { /* illisible : la ligne le dira */ }
+  ligne(dry.status === 0 && jDry?.modeles?.[0] === 'gemini-nano-banana-2.1' && jDry.modeles.length === 3,
+    `script · --lister-modeles : liste imprimée exit 0 sans clé ni page, donc sans appel possible (obtenu exit ${dry.status}, ${jDry?.modeles?.length} modèles)`);
+  const refCli = cli('--lister-modeles', '--modele', 'gemini-3-pro-image-preview', '--referentiel', referentielFx);
+  ligne(refCli.status === 2 && /refus : le modèle « gemini-3-pro-image-preview » est ARRÊTÉ/.test(refCli.stderr), `script · --modele arrêté : exit 2 et motif, rien n'est appelé (obtenu exit ${refCli.status})`);
+  const horsLigne = cli('--lister-modeles', '--referentiel', path.join(os.tmpdir(), 'modeles-tiers-absent-tf2111.json'));
+  ligne(horsLigne.status === 0 && /liste en dur du 2026-11-03/.test(horsLigne.stdout) && /introuvable/.test(horsLigne.stderr), 'script · référentiel absent : liste en dur imprimée exit 0, repli dit sur stderr');
+  // Le garde-fou : aucun identifiant arrêté ou déprécié dans le code, le modèle d'exemple ou la liste en dur — contre le VRAI calendrier du pilot.
+  const sourcesModeles = ['scripts/generer-images.mjs', 'scripts/lib/modeles-image.mjs', '.env.example'];
+  const arretesDe = (referentiel, texte) => referentiel.modeles.filter(m => m.famille === 'image' && (m.etat === 'arrete') && texte.includes(m.id)).map(m => m.id);
+  const rouge = arretesDe(ref, 'const MODELES = ["gemini-3.1-flash-image", "gemini-3.1-flash-image-preview", "gemini-3-pro-image-preview"];');
+  ligne(rouge.length === 2 && ARRETES_FX.every(m => rouge.includes(m)), 'sens rouge · l\'ancienne liste en dur est reconnue : ses deux modèles arrêtés sont dénoncés par le garde-fou');
+  const vrai = lireReferentiel(cheminReferentiel());
+  if (!vrai.ok) {
+    console.log(`  SKIP  garde-fou contre le calendrier du pilot : ${vrai.raison}`);
+  } else {
+    for (const f of sourcesModeles) {
+      const trouves = arretesDe(vrai, fs.readFileSync(path.join(ici, '..', f), 'utf8'));
+      ligne(trouves.length === 0, `sens vert · ${f} ne cite aucun modèle d'image arrêté au calendrier du pilot (${vrai.date}) (obtenu ${trouves.join(', ') || 'aucun'})`);
+    }
+    const mauvais = PREFERES.concat(REPLI.modeles).filter(id => { const m = vrai.modeles.find(x => x.id === id); return m && m.etat !== 'courant'; });
+    ligne(mauvais.length === 0, `sens vert · les modèles préférés et la liste en dur sont « courants » au calendrier du pilot (${vrai.date}) (obtenu hors courant : ${mauvais.join(', ') || 'aucun'})`);
+  }
+}
+
 // TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en
 // pointer-events: none dont un descendant repasse en pointer-events: auto peut porter un lien
 // focalisable : ses surfaces redeviennent des fonds d'anneau. Page écrite ici, dérivée de la verte.

@@ -98,6 +98,8 @@ node oracles/oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit>
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
 
 
+node scripts/generer-images.mjs <page.html> [--env <fichier>] [--modele <m>] [--referentiel <fichier>]   # producteur d'images (API payante, sur GO)
+node scripts/generer-images.mjs --lister-modeles [--modele <m>]    # la liste des modèles retenue, sans clé ni appel (TF-2111)
 
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
 node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
@@ -202,6 +204,16 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et
 les images qu'il ne voit pas.
+
+### Les modèles d'image du producteur sont une donnée (TF-2111)
+
+`scripts/generer-images.mjs` ne tient plus sa liste de modèles Gemini de mémoire. Il lit le calendrier du
+fournisseur dans `references/MODELES-TIERS.json` du pilot (`<racine des forges>/digit-ai-factory/`,
+`$FORGE_ROOT` d'abord, ou `--referentiel <fichier>`) : les modèles d'image à l'état « courant », le remplaçant
+courant d'abord. Référentiel injoignable : liste en dur datée et sourcée (`scripts/lib/modeles-image.mjs`), et
+l'avertissement le dit. Un `--modele` arrêté est refusé avant tout appel (exit 2, remplaçant nommé) ; déprécié ou
+absent du calendrier, il passe avec un avertissement. `--lister-modeles` imprime la liste retenue et s'arrête, sans
+clé ni appel. Le juge croisé est `oracle-modeles-tiers.mjs` du pilot (MT1 à MT4).
 
 ### « L'affordance existe » ne suffit pas — `oracle-saisie` et `oracle-panneau-tache`
 

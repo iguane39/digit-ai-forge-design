@@ -23,7 +23,7 @@
 //
 // Manifeste attendu dans le fichier :
 //   <script type="application/json" id="manifeste-images">
-//     [{"id":"hero","modele":"gemini-3.1-flash-image","prompt":"…","date":"2026-08-04","genere":true},
+//     [{"id":"hero","modele":"gemini-nano-banana-2.1","prompt":"…","date":"2026-08-04","genere":true},
 //      {"id":"vitrine","genere":false,"source":"photothèque du propriétaire, mandat du 12/08/2026","date":"2026-08-12"}]
 //   </script>
 // et chaque <img> embarquée porte data-image-id="hero".

@@ -10,13 +10,29 @@
 // uniquement les entrées demandées (--seulement) ou marquées genere:false — jamais de
 // régénération silencieuse d'une image déjà générée.
 //
+// Modèles (TF-2111) : la liste suit le calendrier du fournisseur, elle ne le recopie pas — lue dans
+// references/MODELES-TIERS.json du pilot s'il est joignable (--referentiel <fichier> pour en désigner un autre),
+// sinon liste en dur datée et sourcée (scripts/lib/modeles-image.mjs). `--lister-modeles` imprime la liste
+// retenue et s'arrête : aucun appel à l'API, aucune clé lue, aucune dépense.
+//
 // Usage : node scripts/generer-images.mjs <page.html> [--env <fichier>] [--modele <m>]
-//         [--seulement id1,id2] [--max-ko 400]
+//         [--seulement id1,id2] [--max-ko 400] [--referentiel <fichier>]
+//         node scripts/generer-images.mjs --lister-modeles [--modele <m>] [--referentiel <fichier>]
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { cheminReferentiel, lireReferentiel, composerListe } from "./lib/modeles-image.mjs";
 
 const args = process.argv.slice(2);
-const page = args.find((a) => !a.startsWith("--"));
+const AVEC_VALEUR = ["--env", "--modele", "--seulement", "--max-ko", "--referentiel"];
+const page = args.find((a, i) => !a.startsWith("--") && !AVEC_VALEUR.includes(args[i - 1]));
 const opt = (n) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : null; };
+
+const liste = composerListe({ explicite: opt("--modele"), referentiel: lireReferentiel(cheminReferentiel({ explicite: opt("--referentiel") })) });
+for (const a of liste.avertissements) console.error(`  ! modèles : ${a}`);
+if (liste.refus) { console.error(`refus : ${liste.refus}`); process.exit(2); }
+if (args.includes("--lister-modeles")) {
+  console.log(JSON.stringify({ source: liste.source, date: liste.date, modeles: liste.modeles, avertissements: liste.avertissements }, null, 2));
+  process.exit(0);
+}
 if (!page || !existsSync(page)) { console.error("usage : generer-images.mjs <page.html> [--env <fichier>] [--modele <m>] [--seulement ids] [--max-ko N]"); process.exit(2); }
 
 let cle = process.env.GEMINI_API_KEY || "";
@@ -27,10 +43,10 @@ if (!cle && envFichier && existsSync(envFichier)) {
 }
 if (!cle) { console.error("clé absente : GEMINI_API_KEY (environnement) ou --env <fichier> — la clé n'est jamais demandée ailleurs"); process.exit(2); }
 
-// Modèles image : le déclaré d'abord (fixture du 04/08), replis documentés ensuite —
+// Modèles image : le remplaçant courant d'abord, replis courants ensuite (liste composée plus haut, TF-2111) —
 // le manifeste consigne le modèle RÉELLEMENT servi, jamais le souhaité.
-const MODELES = [opt("--modele"), "gemini-3.1-flash-image", "gemini-3.1-flash-lite-image",
-  "gemini-3.1-flash-image-preview", "gemini-3-pro-image-preview", "gemini-2.5-flash-image"].filter(Boolean);
+const MODELES = liste.modeles;
+console.log(`modèles image (${liste.source}) : ${MODELES.join(", ")}`);
 const maxKo = +(opt("--max-ko") || 400);
 const seulement = opt("--seulement") ? new Set(opt("--seulement").split(",").map((s) => s.trim())) : null;
 
