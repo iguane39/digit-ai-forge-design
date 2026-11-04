@@ -33,6 +33,15 @@
 // rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
 // est déclaré SANS OBJET à voix haute et ne pèse pas sur le verdict d'un projet sans instance.
 // --etat-connexion passe l'état Playwright (storageState) d'une application derrière une connexion.
+// --accepter-certificat-local (TF-2122) : l'instance est servie en https avec un certificat auto-signé ; transmis à
+// oracle-exploitabilite, oracle-faits-commerciaux et oracle-valeur-affichee (qui lisent l'instance), et n'est accepté que pour un hôte de
+// boucle locale (localhost, 127.0.0.1, ::1) ; tout autre hôte avec l'option est refusé (SKIP).
+//
+// TF-2121 — une page d'APPLICATION sans --instance ne rend plus « SANS OBJET » : elle rend FAIL (X7, oracle-exploitabilite),
+// car un contrôle jamais joué ne se lit pas « vert » (lot Produit-86 : dix pages PASS, deux défauts à l'instance). La
+// nature de la page vient de l'appel (--type-page application|editoriale), de la page (<meta name="forge-type-page">
+// ou data-type-page) ou de sa structure (data-panneau-tache, data-branche, data-exigence) — lib/type-page.mjs. Une MAQUETTE
+// n'a pas d'instance par nature : --maquette l'exempte, à voix haute (SANS OBJET dit au non_juge, jamais un PASS).
 //
 // --valeurs-derivees <valeurs-derivees.json> (TF-2043) : enrôle oracle-valeur-affichee (VA1–VA4), qui compare
 // chaque valeur dérivée affichée (version, environnement, date) à la commande qui la donne. Opt-in par la
@@ -59,6 +68,7 @@ import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
 import { pageAUneSurcouche } from './lib/surcouche.mjs';
 import { trouverDeclaration, NOM_DECLARATION } from './lib/declaration-valeurs.mjs';
+import { typerPage } from './lib/type-page.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -73,10 +83,15 @@ const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 
 const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !== '--racine'
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus'
   && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
-  && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees');
+  && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
+  && args[args.indexOf(a) - 1] !== '--type-page');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
+// TF-2122 — certificat auto-signé accepté pour une instance locale (boucle locale seulement, dit à l'oracle).
+const certificatLocal = args.includes('--accepter-certificat-local');
+// TF-2121 — une page d'application sans instance servie n'est pas « sans objet » ; --maquette l'exempte à voix haute.
+const maquette = args.includes('--maquette');
 
 // ── TF-1241 (22/09/2026) · UN SEUL JUGE, AVEC LA PASSE DU SOCLE, À LA FORME DU LANCEUR GÉNÉRAL ──
 // Le lanceur général de quality-oracles (`run-oracles.mjs`) indexait oracle-slop et oracle-tokens
@@ -361,6 +376,11 @@ if (!cible || !fs.existsSync(cible)) {
 }
 
 const html = fs.readFileSync(cible, 'utf8');
+// TF-2121 — la nature de la page (application | éditoriale), qui décide si l'absence d'instance échoue.
+const typePage = typerPage(html, args);
+if (typePage.valeur_inconnue !== undefined) {
+  sortir('SKIP', [], [`--type-page « ${typePage.valeur_inconnue} » inconnu : application ou editoriale`], 2);
+}
 const aDesImages = /<img\b|<source\b[^>]*srcset/i.test(html);
 // TF-0736/TF-0739 et TF-0707/TF-0708 : deux domaines qui n'existaient nulle part avant les
 // retours Produit-12. Détection par contenu, jamais imposée — une page sans champ de saisie
@@ -509,11 +529,34 @@ if (socle.verifies.length) {
 if (!seul) {
   if (instances.length) {
     resultats.push(lancer('oracle-exploitabilite.mjs',
-      [...instances, ...(etatConnexion ? ['--etat-connexion', etatConnexion] : [])]));
+      [...instances, ...(etatConnexion ? ['--etat-connexion', etatConnexion] : []),
+        ...(certificatLocal ? ['--accepter-certificat-local'] : [])]));
+  } else if (typePage.type === 'application' && !maquette) {
+    // TF-2121 — une page d'APPLICATION sans instance servie : le contrôle n'a pas eu lieu, et le dire
+    // dans le non_juge laissait lire un PASS (lot Produit-86 : dix pages PASS, deux défauts à l'instance).
+    resultats.push({
+      oracle: 'oracle-exploitabilite', domaine: 'Écran d\'application : exploitabilité au volume réel des données',
+      verdict: 'FAIL', exit: 1, ecarts_durs: 1, avertissements: 0, a_confirmer: 0,
+      findings: [{
+        sev: 'bloquant', regle: 'X7', where: cible,
+        msg: `page d'application (${typePage.source}) jugée sans instance servie : l'exploitabilité au volume réel (X0–X6) n'a pas été jouée, `
+          + 'et un écran jamais mesuré ne se déclare pas conforme',
+        voie: 'fournir l\'instance alimentée (--instance <url|page rendue au volume réel> [--etat-connexion etat.json]) ; '
+          + 'pour une maquette, qui n\'a pas d\'instance par nature : --maquette ; pour une page éditoriale : --type-page editoriale ou <meta name="forge-type-page" content="editoriale">',
+      }],
+      non_juge: [],
+    });
+  } else if (typePage.type === 'application') {
+    sansObjet.push('oracle-exploitabilite : SANS OBJET — page d\'application déclarée MAQUETTE (--maquette) : aucune instance n\'existe encore. '
+      + 'Ce n\'est pas un PASS de l\'exploitabilité : elle se rejoue sur l\'instance alimentée (--instance) après la première alimentation réelle');
   } else {
     sansObjet.push('oracle-exploitabilite : SANS OBJET — aucune instance alimentée fournie '
       + '(--instance <url|page rendue au volume réel> [--etat-connexion etat.json]) : l\'exploitabilité '
-      + 'au volume réel ne se juge pas sur le fichier de conception, elle se rejoue après la première alimentation réelle');
+      + 'au volume réel ne se juge pas sur le fichier de conception, elle se rejoue après la première alimentation réelle'
+      + (typePage.type === 'editoriale' ? ` — page déclarée éditoriale (${typePage.source}), le contrôle ne lui est pas dû`
+        : typePage.probable ? ' — ATTENTION : la page porte un champ de saisie et un tableau, elle ressemble à une APPLICATION mais n\'est pas classée comme telle ; '
+          + 'la déclarer (--type-page application, ou <meta name="forge-type-page" content="application">) pour que l\'absence d\'instance échoue'
+          : ' — page non classée application (ni déclaration, ni marqueur data-panneau-tache / data-branche / data-exigence), traitée comme éditoriale'));
   }
 }
 
@@ -525,7 +568,7 @@ if (!seul || seul === 'valeur-affichee') {
   if (declaration || seul) {
     const pages = instances.length ? instances : [cible];
     for (const p of pages) {
-      const r = lancer('oracle-valeur-affichee.mjs', [p, ...(declaration ? ['--declaration', declaration] : [])]);
+      const r = lancer('oracle-valeur-affichee.mjs', [p, ...(declaration ? ['--declaration', declaration] : []), ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
       if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'VA0') || {}).msg || 'non jugé';
       resultats.push(r);
     }
@@ -540,7 +583,7 @@ if (!seul || seul === 'valeur-affichee') {
 // vrais avis, les vrais prix : elle est lue aussi. Une instance illisible rend SKIP, dit à voix haute.
 if (!seul || seul === 'faits-commerciaux') {
   for (const i of instances) {
-    const r = lancer('oracle-faits-commerciaux.mjs', [i]);
+    const r = lancer('oracle-faits-commerciaux.mjs', [i, ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
     if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'FC0') || {}).msg || 'non jugé';
     resultats.push(r);
   }

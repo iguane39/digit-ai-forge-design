@@ -75,8 +75,10 @@ node oracles/self-test.mjs                                   # non-régression, 
 
 node oracles/run-oracles-design.mjs <page.html> \
   [--mobile] [--tokens tokens.css] [--json-only] [--racine <chemin>] \
-  [--instance <url|page alimentée>… [--etat-connexion etat.json]]      # point d'entrée unique ;
-# --instance : exploitabilité X0–X6 en opt-in (TF-1687, onglets TF-1916), SANS OBJET dit sans instance
+  [--instance <url|page alimentée>… [--etat-connexion etat.json] [--accepter-certificat-local]] \
+  [--maquette | --type-page application|editoriale]                    # point d'entrée unique ;
+# --instance : exploitabilité X0–X6 (TF-1687, onglets TF-1916). Sans instance : SANS OBJET dit pour une page
+# éditoriale, mais FAIL (X7) pour une page d'APPLICATION (TF-2121) ; --maquette l'exempte à voix haute
 
 node oracles/run-oracles-design.mjs --corpus <dossier-corpus>          # mode corpus (oracle-corpus seul)
 
@@ -87,11 +89,15 @@ node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choi
 node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
 node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
 node oracles/oracle-exploitabilite.mjs <page.html|url>… \
-  [--etat-connexion etat.json] [--theme dark] [--largeur N]   # X0–X6 : écran rendu au volume réel (TF-1654), onglets sous le premier écran (TF-1916) ;
-# URL servie derrière une connexion : état Playwright (storageState) du produit (TF-1674)
+  [--etat-connexion etat.json] [--theme dark] [--largeur N] \
+  [--accepter-certificat-local]                               # X0–X6 : écran rendu au volume réel (TF-1654), onglets sous le premier écran (TF-1916) ;
+# URL servie derrière une connexion : état Playwright (storageState) du produit (TF-1674) ;
+# instance locale en https à certificat auto-signé : --accepter-certificat-local, hôtes de boucle locale seulement (TF-2122)
 
 node oracles/oracle-baseline.mjs <page.html|url> --slug <nom> --racine <produit> [--approuver [--motif "<écart voulu>"]]  # régression visuelle
 node oracles/self-test-baseline.mjs                           # verrou dédié (SKIP motivé si outillage absent)
+
+
 
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
 node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
@@ -135,6 +141,11 @@ Options de `run-oracles-design.mjs` :
 | `--racine <chemin>` | force la racine de forge, prioritaire sur `$FORGE_DESIGN_ROOT` et sur le `.env` |
 | `--corpus <dossier>` | bascule en mode corpus : lance uniquement `oracle-corpus` sur le dossier donné |
 | `--dtcg <source.tokens.json> <tokens.css>` | bascule en mode pipeline de tokens : lance uniquement `oracle-dtcg`, qui régénère le CSS depuis la source DTCG et le compare au fichier livré |
+| `--instance <url\|page>` | enrôle `oracle-exploitabilite` (X0–X6) sur l'instance alimentée, et lit la même instance pour `oracle-faits-commerciaux` et `oracle-valeur-affichee`. Répétable. Sans elle, la page est jugée sans instance : **SANS OBJET** dit au `non_juge` si elle est éditoriale ou non classée, **FAIL** (X7) si elle est d'application (voir `--type-page`) |
+| `--etat-connexion <etat.json>` | état de connexion Playwright (`storageState`) d'une instance servie derrière une connexion (TF-1674) |
+| `--accepter-certificat-local` | l'instance est servie en https avec un certificat auto-signé (TF-2122) : le certificat est accepté **pour les hôtes de boucle locale seulement** (`localhost`, `127.0.0.1`, `::1`) par les trois juges qui lisent l'instance. Un autre hôte avec cette option est refusé (SKIP, exit 2, rien n'est jugé), toute requête https de la page vers un hôte non local est bloquée et nommée au `non_juge`, aucun nom hors boucle locale n'est résolu. Sans l'option, un certificat non reconnu échoue comme avant, et le message nomme l'option |
+| `--type-page application\|editoriale` | nature de la page (TF-2121), prioritaire sur la déclaration de la page. Sans lui : `<meta name="forge-type-page" content="application">` ou `data-type-page="application"` sur un élément, puis un marqueur de structure (`data-panneau-tache`, `data-branche`, `data-exigence`). Un tableau filtrable ou une recherche ne classent **pas** (les pages d'étude du pilot en portent). Une page qui porte un champ de saisie et un tableau sans être classée est dite « application probable » au `non_juge`, jamais échouée. Valeur inconnue : SKIP |
+| `--maquette` | la page d'application est une maquette, sans instance par nature : l'absence d'instance est dite **SANS OBJET** au `non_juge` (« ce n'est pas un PASS de l'exploitabilité ») au lieu d'échouer en X7. À ne pas passer à une critique d'implémentation |
 | `--rendu` | si l'outillage est détecté (Python du PATH avec `playwright`, à défaut l'interpréteur que `uv run python` désigne dans le dossier courant (TF-1674), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`

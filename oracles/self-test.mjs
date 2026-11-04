@@ -1466,6 +1466,175 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2121 (lot Produit-86 du 03/11/2026) — UNE PAGE D'APPLICATION SANS INSTANCE SERVIE N'EST PAS UN PASS. Dix pages
+// d'application avaient passé la critique : le point d'entrée disait « SANS OBJET » au non_juge et rendait PASS,
+// pendant que l'instance, jouée ensuite, donnait deux défauts. La page de base (motion-verte.html) est verte pour
+// tous les juges ; seule la déclaration « application » la distingue de la page éditoriale. Trois remèdes que le
+// message prescrit sont JOUÉS et doivent passer : l'instance, la déclaration de maquette, la déclaration éditoriale.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design · page d\'application sans instance (TF-2121) — FAIL X7, trois remèdes joués');
+  const { typerPage } = await import('./lib/type-page.mjs');
+  const base = fs.readFileSync(fx('motion-verte.html'), 'utf8');
+  const meta = '<meta name="forge-type-page" content="application">';
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'type-page-'));
+  try {
+    const appli = path.join(dossier, 'application.html');
+    fs.writeFileSync(appli, base.replace('</head>', `${meta}\n</head>`), 'utf8');
+    const jouer = (...a) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), ...a, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+      let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json, explo: (json?.oracles || []).find(o => o.oracle === 'oracle-exploitabilite') };
+    };
+    const editoriale = jouer(fx('motion-verte.html'));
+    ligne(editoriale.code === 0 && editoriale.json?.verdict === 'PASS' && !editoriale.explo,
+      `témoin · la même page SANS déclaration reste éditoriale : SANS OBJET, PASS exit 0 (obtenu ${editoriale.json?.verdict}, exit ${editoriale.code})`);
+    const rouge = jouer(appli);
+    const autres = (rouge.json?.oracles || []).filter(o => o.verdict === 'FAIL' && o.oracle !== 'oracle-exploitabilite');
+    ligne(rouge.code === 1 && rouge.json?.verdict === 'FAIL' && rouge.explo?.verdict === 'FAIL' && autres.length === 0
+      && (rouge.explo?.findings || []).some(f => f.regle === 'X7' && f.sev === 'bloquant' && /sans instance servie/.test(f.msg) && /--instance/.test(f.voie) && /--maquette/.test(f.voie)),
+      `sens rouge · page déclarée application, sans instance : X7 bloquant, oracle-exploitabilite seul en échec, FAIL exit 1, remèdes dits (obtenu ${rouge.json?.verdict}, exit ${rouge.code}, autres en échec ${autres.length})`);
+    ligne(!(rouge.json?.non_juge || []).some(n => /^oracle-exploitabilite : SANS OBJET/.test(n)),
+      'sens rouge · le FAIL remplace la ligne « SANS OBJET » : le même contrôle n\'est pas dit à la fois échoué et sans objet');
+    const maquette = jouer(appli, '--maquette');
+    ligne(maquette.code === 0 && maquette.json?.verdict === 'PASS' && !maquette.explo
+      && (maquette.json?.non_juge || []).some(n => /^oracle-exploitabilite : SANS OBJET — page d'application déclarée MAQUETTE/.test(n) && /Ce n'est pas un PASS de l'exploitabilité/.test(n)),
+      `sens vert · remède --maquette : PASS exit 0, l'exemption est écrite au non_juge et dit que ce n'est pas un PASS de l'exploitabilité (obtenu ${maquette.json?.verdict}, exit ${maquette.code})`);
+    const edito = jouer(appli, '--type-page', 'editoriale');
+    ligne(edito.code === 0 && edito.json?.verdict === 'PASS' && !edito.explo
+      && (edito.json?.non_juge || []).some(n => /^oracle-exploitabilite : SANS OBJET.*déclarée éditoriale \(appel/.test(n)),
+      `sens vert · remède --type-page editoriale : l'appel l'emporte sur la déclaration de la page, PASS exit 0 (obtenu ${edito.json?.verdict}, exit ${edito.code})`);
+    const inconnu = jouer(appli, '--type-page', 'brochure');
+    ligne(inconnu.code === 2 && inconnu.json?.verdict === 'SKIP' && (inconnu.json?.non_juge || []).some(n => /« brochure » inconnu/.test(n)),
+      `sens rouge · --type-page inconnu : SKIP exit 2, jamais ignoré en silence (obtenu ${inconnu.json?.verdict}, exit ${inconnu.code})`);
+    const seul = jouer(appli, '--oracle', 'slop');
+    ligne(seul.code === 0 && seul.json?.verdict === 'PASS' && !seul.explo,
+      `--oracle slop · un juge seul ne porte pas X7, il n'a pas été demandé (obtenu ${seul.json?.verdict}, exit ${seul.code})`);
+    if (!OUTILLAGE_RENDU.ok) {
+      console.log(`  SKIP  remède --instance : outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+    } else {
+      const instance = jouer(appli, '--instance', fx('exploitabilite-verte.html'));
+      ligne(instance.code === 0 && instance.json?.verdict === 'PASS' && instance.explo?.verdict === 'PASS'
+        && !(instance.explo?.findings || []).some(f => f.regle === 'X7'),
+        `sens vert · remède --instance : oracle-exploitabilite joué et PASS, aucun X7, exit 0 (obtenu ${instance.json?.verdict}, exit ${instance.code})`);
+      const instanceRouge = jouer(appli, '--instance', fx('exploitabilite-rouge.html'));
+      ligne(instanceRouge.code === 1 && instanceRouge.explo?.verdict === 'FAIL' && !(instanceRouge.explo?.findings || []).some(f => f.regle === 'X7'),
+        `sens rouge · instance au volume réel : l'échec vient de X1 à X5, pas de X7 (obtenu ${instanceRouge.explo?.verdict})`);
+    }
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+  // La classification, source par source : l'appel, la déclaration, la structure, puis l'absence de tout cela.
+  const cas = (html, args = []) => typerPage(html, args);
+  ligne(cas('<html><head>' + meta + '</head></html>').type === 'application' && cas('<html><head>' + meta + '</head></html>').source === 'déclaration de la page',
+    'classement · <meta name="forge-type-page" content="application"> classe application');
+  ligne(cas('<body data-type-page="application"></body>').type === 'application', 'classement · data-type-page="application" sur un élément classe application');
+  ligne(cas('<body data-type-page="editoriale" data-exigence="X"></body>').type === 'editoriale',
+    'classement · la déclaration éditoriale de la page l\'emporte sur un marqueur de structure');
+  ligne(cas('<body data-type-page="editoriale"></body>', ['--type-page', 'application']).type === 'application',
+    'classement · l\'appel l\'emporte sur la déclaration de la page');
+  for (const marqueur of ['data-panneau-tache', 'data-branche="a"', 'data-exigence="EX-1"']) {
+    ligne(cas(`<main><section ${marqueur}></section></main>`).type === 'application' && /structure/.test(cas(`<main><section ${marqueur}></section></main>`).source),
+      `classement · le marqueur de structure « ${marqueur} » classe application`);
+  }
+  ligne(cas('<!-- <meta name="forge-type-page" content="application"> data-exigence="X" --><main></main>').type === 'non_classee',
+    'classement · un marqueur cité dans un commentaire HTML ne classe rien');
+  const filtrable = '<main><input type="search"><table data-filterable><tr><td>a</td></tr></table></main>';
+  ligne(cas(filtrable).type === 'non_classee' && !cas(filtrable).probable,
+    'classement · un tableau filtrable et une recherche (page d\'étude du pilot) ne classent PAS application, et ne sont pas « probables »');
+  ligne(cas('<main><input type="text"><table><tr><td>a</td></tr></table></main>').probable === true,
+    'classement · un champ de saisie ET un tableau, sans déclaration : « application probable », dite au non_juge, jamais échouée');
+  ligne(cas('<html></html>', ['--type-page', 'x']).valeur_inconnue === 'x', 'classement · une valeur de --type-page inconnue est rapportée');
+}
+
+// TF-2122 (lot Produit-86 du 03/11/2026) — UNE INSTANCE LOCALE EN TLS AUTO-SIGNÉ. Le même commit servi en HTTP local
+// passait ; en https avec le certificat du serveur de développement, rien n'était jugé. L'option
+// --accepter-certificat-local accepte le certificat POUR LES HÔTES DE BOUCLE LOCALE SEULEMENT. Un vrai serveur https
+// à certificat auto-signé est monté ici (certificat jetable, hors dépôt) : sans l'option l'oracle échoue et le dit,
+// avec elle il juge l'écran, un hôte distant est refusé avant toute connexion, et une redirection vers un hôte
+// distant est bloquée.
+{
+  console.log(String.fromCharCode(10) + 'oracle-exploitabilite · certificat auto-signé d\'une instance locale (TF-2122) — hôte local accepté, hôte distant refusé');
+  const jouerOracle = (...a) => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-exploitabilite.mjs'), ...a, '--json-only'],
+      { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+    let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, json };
+  };
+  // Hôte distant : refusé avant toute connexion, donc sans réseau ni navigateur.
+  for (const [cible, pourquoi] of [
+    ['https://exemple.invalid/ecran', 'un hôte distant'],
+    ['https://127.0.0.1.exemple.invalid/ecran', 'un nom qui COMMENCE par une adresse locale'],
+    ['https://localhost.exemple.invalid/ecran', 'un sous-domaine de localhost'],
+    ['https://127.0.0.1@exemple.invalid/ecran', 'une adresse locale placée en identifiant de l\'URL'],
+  ]) {
+    const ref = jouerOracle(cible, '--accepter-certificat-local');
+    ligne(ref.code === 2 && ref.json?.verdict === 'SKIP' && (ref.json?.non_juge || []).some(n => /--accepter-certificat-local REFUSÉ pour .*bornée aux hôtes de boucle locale/.test(n)),
+      `sens rouge · ${pourquoi} avec l'option : refusé, SKIP exit 2, rien jugé (obtenu ${ref.json?.verdict}, exit ${ref.code})`);
+  }
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  instance https locale jugée : outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'tls-local-'));
+    const cle = path.join(dossier, 'cle.pem'); const cert = path.join(dossier, 'cert.pem');
+    const gen = spawnSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', cle, '-out', cert, '-days', '2',
+      '-subj', '/CN=localhost', '-addext', 'subjectAltName=DNS:localhost,IP:127.0.0.1,IP:::1'], { encoding: 'utf8' });
+    if (gen.error || gen.status !== 0 || !fs.existsSync(cert)) {
+      console.log(`  SKIP  instance https locale jugée : openssl indisponible pour fabriquer le certificat jetable (${gen.error?.message || (gen.stderr || '').trim().split(/\r?\n/).pop()})`);
+    } else {
+      const code = `const https=require('https');const fs=require('fs');const ecran=fs.readFileSync(${JSON.stringify(fx('exploitabilite-verte.html'))},'utf8');`
+        + `const s=https.createServer({key:fs.readFileSync(${JSON.stringify(cle)}),cert:fs.readFileSync(${JSON.stringify(cert)})},(q,r)=>{`
+        + `if(q.url==='/sortie'){r.writeHead(302,{Location:'https://exemple.invalid/x'});return r.end();}`
+        + `if(q.url==='/vers-ecran'){r.writeHead(302,{Location:'/ecran'});return r.end();}`
+        + `r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});r.end(ecran);});`
+        + `s.listen(0,'127.0.0.1',()=>console.log(s.address().port));`;
+      const serveur = spawn(process.execPath, ['-e', code], { stdio: ['ignore', 'pipe', 'ignore'] });
+      try {
+        const port = await new Promise((ok, ko) => {
+          serveur.stdout.once('data', d => ok(Number(String(d).trim())));
+          serveur.once('exit', () => ko(new Error('serveur https d\'essai arrêté')));
+        });
+        const base = `https://127.0.0.1:${port}`;
+        const sans = jouerOracle(`${base}/ecran`);
+        ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && (sans.json?.non_juge || []).some(n => /ERR_CERT/.test(n) && /--accepter-certificat-local/.test(n)),
+          `sens rouge · sans l'option, le certificat auto-signé échoue et le remède est nommé : SKIP exit 2, jamais PASS (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+        const avec = jouerOracle(`${base}/ecran`, '--accepter-certificat-local');
+        ligne(avec.code === 0 && avec.json?.verdict === 'PASS' && !(avec.json?.non_juge || []).includes('aucun écran jugé')
+          && (avec.json?.non_juge || []).some(n => /^certificat auto-signé accepté pour les hôtes de boucle locale seulement/.test(n)),
+          `sens vert · avec l'option, l'écran servi en https local est jugé, la limite est dite au non_juge : PASS exit 0 (obtenu ${avec.json?.verdict}, exit ${avec.code})`);
+        const localeRedirigee = jouerOracle(`${base}/vers-ecran`, '--accepter-certificat-local');
+        ligne(localeRedirigee.code === 2 && (localeRedirigee.json?.findings || []).some(f => f.regle === 'X0' && /redirigé vers https:\/\/127\.0\.0\.1:\d+\/ecran/.test(f.msg))
+          && !(localeRedirigee.json?.non_juge || []).some(n => /BLOQUÉE/.test(n)),
+          `sens vert · une redirection vers une autre page LOCALE reste suivie, puis dite par X0 comme avant (écran non jugé), jamais bloquée (obtenu ${localeRedirigee.json?.verdict}, exit ${localeRedirigee.code})`);
+        const sortie = jouerOracle(`${base}/sortie`, '--accepter-certificat-local');
+        ligne(sortie.code === 2 && sortie.json?.verdict === 'SKIP' && (sortie.json?.non_juge || []).some(n => /BLOQUÉE\(S\).*exemple\.invalid/.test(n)),
+          `sens rouge · une redirection vers un hôte distant est bloquée et nommée, rien n'est jugé : SKIP exit 2 (obtenu ${sortie.json?.verdict}, exit ${sortie.code})`);
+        // Le point d'entrée transmet l'option à l'oracle.
+        const agregat = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), '--instance', `${base}/ecran`, '--accepter-certificat-local', '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let jAgregat = null; try { jAgregat = JSON.parse(agregat.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        const exploAgregat = (jAgregat?.oracles || []).find(o => o.oracle === 'oracle-exploitabilite');
+        ligne(exploAgregat?.verdict === 'PASS' && (exploAgregat?.non_juge || []).some(n => /^certificat auto-signé accepté/.test(n)),
+          `run-oracles-design · --accepter-certificat-local transmis à oracle-exploitabilite : joué et PASS (obtenu ${exploAgregat?.verdict})`);
+        // Les deux autres juges qui LISENT l'instance par le réseau reçoivent l'option, sinon l'agrégat tombait en INDÉTERMINÉ.
+        const lusParInstance = (jAgregat?.oracles || []).filter(o => o.oracle === 'oracle-faits-commerciaux');
+        ligne(agregat.status === 0 && jAgregat?.verdict === 'PASS' && lusParInstance.length === 2 && lusParInstance.every(o => o.verdict === 'PASS'),
+          `run-oracles-design · l'instance https locale est LUE par oracle-faits-commerciaux aussi : l'agrégat est PASS exit 0, pas INDÉTERMINÉ (obtenu ${jAgregat?.verdict}, exit ${agregat.status}, ${lusParInstance.map(o => o.verdict).join('/')})`);
+        const sansOption = spawnSync(process.execPath, [path.join(ici, 'oracle-faits-commerciaux.mjs'), `${base}/ecran`, '--json-only'], { encoding: 'utf8' });
+        let jSans = null; try { jSans = JSON.parse(sansOption.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        ligne(sansOption.status === 2 && jSans?.verdict === 'SKIP', `sens rouge · oracle-faits-commerciaux sans l'option : le certificat auto-signé reste refusé, SKIP exit 2 (obtenu ${jSans?.verdict})`);
+        const distant = spawnSync(process.execPath, [path.join(ici, 'oracle-faits-commerciaux.mjs'), 'https://exemple.invalid/ecran', '--accepter-certificat-local', '--json-only'], { encoding: 'utf8' });
+        let jDistant = null; try { jDistant = JSON.parse(distant.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        ligne(distant.status === 2 && jDistant?.verdict === 'SKIP' && JSON.stringify(jDistant).includes('CERTIFICAT_LOCAL_HOTE_NON_LOCAL'),
+          `sens rouge · oracle-faits-commerciaux, hôte distant avec l'option : refusé (CERTIFICAT_LOCAL_HOTE_NON_LOCAL), SKIP exit 2 (obtenu ${jDistant?.verdict})`);
+      } finally {
+        serveur.kill();
+        fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+      }
+    }
+  }
+}
+
 // TF-1662 — L'ÉCART PAR STRUCTURE SE PERD DÈS QUE LE SOUS-ARBRE EST RÉACTIVÉ. Une infobulle en
 // pointer-events: none dont un descendant repasse en pointer-events: auto peut porter un lien
 // focalisable : ses surfaces redeviennent des fonds d'anneau. Page écrite ici, dérivée de la verte.

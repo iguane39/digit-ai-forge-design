@@ -94,6 +94,13 @@ node "$FORGE_DESIGN_ROOT/oracles/oracle-textes-application.mjs" <fichier.html>  
 puis déduit du dossier parent du script. **Racine non résolue ⇒ exit 2 et verdict
 `SKIP`** : un contrôle qui ne trouve pas ses oracles ne se tait jamais.
 
+**Une maquette d'application passe `--maquette` (TF-2121).** Une page déclarée d'application
+(`<meta name="forge-type-page" content="application">`, ou portant `data-panneau-tache`, `data-branche`,
+`data-exigence`) échoue en X7 tant qu'aucune `--instance` n'est fournie : l'exploitabilité au volume
+réel n'a pas été jouée. Une maquette n'a pas d'instance par nature ; `--maquette` l'exempte et le dit
+au `non_juge` (« ce n'est pas un PASS de l'exploitabilité »). La même page, une fois implémentée,
+se juge avec `--instance` (critique d'implémentation, `critique-le-design`).
+
 Sans `--rendu` : `render_page.py` (V1–V7) et `oracle-a11y.py` restent `non_juge` —
 c'est au parcours de contrôle de les lancer à la main, sur les **deux** thèmes.
 Avec `--rendu` : si l'outillage est détecté (Python, module `playwright`, les deux

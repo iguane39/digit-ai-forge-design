@@ -78,6 +78,16 @@ déclare — jamais de conformité jugée sans référentiel.
    alimentés, 5 220 px en colonnes déséquilibrées. Sans instance alimentée, le contrôle est
    **NON JOUÉ** et se déclare au rapport, jamais vert ; il se rejoue après la première
    alimentation réelle.
+   **Une page d'application sans instance échoue (TF-2121).** Le point d'entrée ne la dit plus « SANS
+   OBJET » : il rend FAIL (X7, `oracle-exploitabilite`) tant que `--instance` manque, parce qu'une ligne
+   « sans objet » au `non_juge` laissait lire un PASS. *Mesure qui l'impose* : dix pages d'application du
+   lot Produit-86 (03/11/2026) rendues PASS à la critique, sans aide de champ ni filtre, deux défauts
+   trouvés dès l'instance jouée. La critique d'implémentation **déclare la nature de la page** :
+   `--type-page application` (ou `<meta name="forge-type-page" content="application">` dans la page ; la
+   structure `data-panneau-tache`, `data-branche`, `data-exigence` la classe d'elle-même). `--maquette`
+   exempte une maquette, qui n'a pas d'instance par nature, et ne s'emploie jamais ici. Une instance
+   locale en https à certificat auto-signé se joint avec `--accepter-certificat-local`, réservé aux hôtes
+   `localhost`, `127.0.0.1` et `::1` (TF-2122).
 
 ## La promesse cite la demande, et un modèle désigné se joue (TF-1940, 21/10/2026)
 

@@ -40,16 +40,19 @@
 //     affiche un fait de ce genre, quelqu'un doit en répondre ».
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0 PASS / 1 FAIL / 2 SKIP.
-// Usage : node oracles/oracle-faits-commerciaux.mjs <page.html|http(s)://…> [--motifs table.json] [--json-only]
+// Usage : node oracles/oracle-faits-commerciaux.mjs <page.html|http(s)://…> [--motifs table.json] [--accepter-certificat-local] [--json-only]
 
 import fs from 'node:fs';
 import { parse, elements, css, cssRules, lineOf } from './lib/html.mjs';
 import { correspond, decouper, classesDe, ETAT } from './lib/selecteurs.mjs';
 import { lireMotifs, FICHIER_MOTIFS } from './lib/faits-commerciaux.mjs';
+import { lirePageServie } from './lib/lire-page-servie.mjs';
 
 const DOM = 'Faits commerciaux affichés (avis, prix barré, rareté, volume, santé) — à faire confirmer';
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
+// TF-2122 : certificat auto-signé accepté pour une instance de la boucle locale seulement (lib/lire-page-servie.mjs).
+const certificatLocal = args.includes('--accepter-certificat-local');
 const iMotifs = args.indexOf('--motifs');
 const motifsArg = iMotifs >= 0 ? args[iMotifs + 1] : null;
 const page = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--motifs');
@@ -104,7 +107,7 @@ if (!page) sauter('aucune page fournie (fichier .html ou URL http/https)');
 let html;
 if (/^https?:\/\//i.test(page)) {
   try {
-    const rep = await fetch(page, { signal: AbortSignal.timeout(15000), redirect: 'follow' });
+    const rep = await lirePageServie(page, { certificatLocal });
     if (!rep.ok) sauter(`page non servie : ${page} répond ${rep.status}`);
     html = await rep.text();
   } catch (e) {

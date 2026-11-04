@@ -516,6 +516,18 @@ première alimentation réelle. Il est enrôlé dans `run-oracles-design.mjs` **
 jamais par lui. Une instance fournie mais injugeable (outillage de rendu absent, état de
 connexion introuvable, redirection) rend le point d'entrée indéterminé, jamais PASS.
 
+**Deux évolutions du 04/11/2026 (lot Produit-86 du 03/11).** TF-2121 : pour une page
+d'**application** (déclarée par `<meta name="forge-type-page" content="application">` ou
+`--type-page application`, ou portant `data-panneau-tache`, `data-branche` ou
+`data-exigence`), l'absence d'instance n'est plus « sans objet » : le point d'entrée rend
+FAIL, règle X7, tant que `--instance` manque ; `--maquette` exempte une maquette et le dit au
+`non_juge`. Dix pages d'application avaient été rendues PASS sur cette seule ligne de
+`non_juge`, deux défauts apparaissant à l'instance jouée. Une page éditoriale garde le
+comportement d'avant. TF-2122 : `--accepter-certificat-local` accepte le certificat
+auto-signé d'une instance servie en https, pour les seuls hôtes `localhost`, `127.0.0.1` et
+`::1` ; il est transmis aux trois juges qui lisent l'instance (exploitabilité, faits
+commerciaux, valeur affichée).
+
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
 | Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes ; enrôlé en opt-in par `run-oracles-design.mjs <page.html> --instance <url\|page> [--etat-connexion etat.json]` | cli | ✅ |
@@ -860,3 +872,4 @@ fait commercial. Ils ne se recoupent pas.
   }
 ]
 ```
+
