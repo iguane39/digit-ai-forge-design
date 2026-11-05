@@ -786,6 +786,17 @@ const CAS = [
     rouge: [fx('textes-application-option-rouge.html')],
   },
   {
+    // TF-2162 (retour Produit-86 du 04/11/2026, rattaché à TF-1762) : une CARTE DE CHOIX n'est pas un état vide.
+    // « Aucun système réel n'est touché », description d'une carte « Simulation », se lisait comme un état vide
+    // sans invitation (2 constats bloquants). La verte porte trois cartes en négation (label, bouton, rôle radio)
+    // et un état vide qui invite à agir ; la rouge garde les mêmes cartes et un vrai état vide « Aucune donnée » :
+    // l'exemption ne désarme pas la règle.
+    oracle: 'oracle-textes-application.mjs',
+    regles: ['T4-2'],
+    verte: [fx('textes-application-carte-choix-verte.html')],
+    rouge: [fx('textes-application-carte-choix-rouge.html')],
+  },
+  {
     rendu: true,
     oracle: 'rendu-comparatif.mjs',
     regles: ['RC-1'],

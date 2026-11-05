@@ -34,6 +34,11 @@
 // où le mot d'erreur est complément de nom (« Date du refus »). Un `role="alert"` reste jugé.
 // TF-1910 (18/10/2026) : le `title` d'un <th> (ou d'un [role=columnheader|rowheader]) et celui de
 // tout élément à `data-definition` sont des DÉFINITIONS (convention du socle, dictionnaire de colonnes).
+// TF-2162 (04/11/2026, rattaché à TF-1762) : une CARTE DE CHOIX rédigée en négation (« Aucun système réel n'est
+// touché ») n'est pas un état vide. Le texte d'un <label>, d'un <button> ou d'une <option>, et les attributs d'un
+// <label>, d'une <option> ou d'un élément à rôle de choix (radio, checkbox, option, switch, tab, menuitem…) ne
+// sont plus jugés par T4-2 ; un bloc qui se déclare vide (classe empty|vide, data-etat="vide") et le title d'un
+// <button> (une infobulle est un message) le restent.
 //
 // CE QUE LE LEXIQUE NE CONNAÎT PAS NE BLOQUE PAS (TF-2102, 03/11/2026) — les listes de verbes et d'indices
 // ci-dessous sont une classe OUVERTE de la langue : elles se complètent, elles ne seront jamais exhaustives.
@@ -418,7 +423,8 @@ const ATTRS_TEXTE = ['placeholder', 'title', 'aria-label', 'alt'];
 const BALISES_TEXTE = ['button', 'label', 'option'];
 const BALISES_CODE = ['abbr', 'code', 'dfn', 'kbd', 'samp', 'var'];
 const RX_IDENTIFIANT_CODE = /^[A-Z]{1,5}[-_]?\d{1,4}[a-z]?$/;
-const RX_CLASSE_PASTILLE = /(^|[ _-])(badge|pastille|chip|pill|tag|statut|status|etiquette)([ _-]|$)/;
+const RX_ROLE_CHOIX = /^(radio|checkbox|option|switch|tab|menuitem|menuitemradio|menuitemcheckbox)$/;
+const RX_CLASSE_PASTILLE =/(^|[ _-])(badge|pastille|chip|pill|tag|statut|status|etiquette)([ _-]|$)/;
 
 export function extraireHtml(brut) {
   const racine = parseHtml(brut);
@@ -445,21 +451,31 @@ export function extraireHtml(brut) {
     // durs sur une page sans une erreur. Un `role="alert"` reste jugé (voir juger).
     const definitionEntete = el.tag === 'th' || /^(columnheader|rowheader)$/.test(at(el, 'role'))
       || Object.prototype.hasOwnProperty.call(el.attrs || {}, 'data-definition');
-    for (const a of ATTRS_TEXTE) {
-      const v = at(el, a);
-      if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el),
-        ...(a === 'title' && (estCode || definitionEntete) ? { definition: true } : {}) });
-    }
     const classe = normaliser(at(el, 'class'));
     const estEtat = at(el, 'role') === 'alert'
       || /(^| )(error|erreur|empty|vide)([ -]|$)/.test(classe)
       || normaliser(at(el, 'data-etat')) === 'vide';
+    // TF-2162 (rattaché à TF-1762) — une CARTE DE CHOIX n'est pas un état vide. « Aucun système réel n'est
+    // touché », description d'une carte « Simulation », se lisait comme un état vide sans invitation (2 constats
+    // bloquants le 04/11/2026). Un contrôle qu'on CHOISIT (<label>, <option>, élément à rôle radio, checkbox,
+    // option, switch, tab, menuitem…) a un libellé, pas un message d'écran ; le texte d'un <button> aussi. Un bloc
+    // qui se déclare lui-même vide (classe empty|vide, data-etat="vide") reste jugé, et l'infobulle (title,
+    // aria-label) d'un <button> ordinaire aussi : c'est un message (« Aucune donnée à exporter »), pas un choix.
+    const videDeclare = /(^| )(empty|vide)([ -]|$)/.test(classe) || normaliser(at(el, 'data-etat')) === 'vide';
+    const estControleDeChoix = el.tag === 'label' || el.tag === 'option' || RX_ROLE_CHOIX.test(at(el, 'role'));
+    for (const a of ATTRS_TEXTE) {
+      const v = at(el, a);
+      if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el),
+        ...(a === 'title' && (estCode || definitionEntete) ? { definition: true } : {}),
+        ...(estControleDeChoix && !videDeclare ? { choix: true } : {}) });
+    }
     // TF-1773 — une pastille de statut (« badge erreur ») affiche une VALEUR, pas un message.
     const estPastille = RX_CLASSE_PASTILLE.test(classe) && at(el, 'role') !== 'alert';
     if (BALISES_TEXTE.includes(el.tag) || estEtat) {
       const t = texteDe(el);
       if (t) out.push({ cle: `<${el.tag}${at(el, 'class') ? ' class="' + at(el, 'class') + '"' : ''}>`, texte: t, contexte: marqueurs(el),
-        ...(estPastille ? { statut: true } : {}), ...(el.tag === 'option' ? { choix: true } : {}) });
+        ...(estPastille ? { statut: true } : {}),
+        ...(BALISES_TEXTE.includes(el.tag) && !videDeclare ? { choix: true } : {}) });
     }
   }
   return out;
@@ -692,6 +708,32 @@ if (args.includes('--self-test')) {
   check('ROUGE TF-2102 — un état vide hors <option> reste jugé : <div class="empty">Aucune donnée</div> bloquant', () => {
     const r = juger(extraireHtml('<div class="empty">Aucune donnée</div><select><option>Aucune donnée</option></select>'));
     if (durs(r).filter(f => f.regle === 'T4-2').length !== 1) throw new Error(JSON.stringify(r.findings));
+  });
+
+  // ── TF-2162 (lot Produit-86 du 04/11, rattaché à TF-1762) : une carte de choix n'est pas un état vide ─
+  // « Aucun système réel n'est touché », description d'une carte « Simulation », se lisait comme un état vide
+  // sans invitation (2 constats bloquants). T4-2 ne juge plus le libellé d'un contrôle qu'on choisit.
+  const carte = n => fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', n), 'utf8');
+  check('VERTE TF-2162 — trois cartes de choix en négation (label, button, rôle radio) : aucun constat', () => {
+    const r = juger(extraireHtml(carte('textes-application-carte-choix-verte.html')));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2162 — mêmes cartes + un vrai état vide (div.empty « Aucune donnée ») : exactement 1 T4-2 bloquant', () => {
+    const r = juger(extraireHtml(carte('textes-application-carte-choix-rouge.html')));
+    const t42 = durs(r).filter(f => f.regle === 'T4-2');
+    if (t42.length !== 1 || !/Aucune donnée/.test(t42[0].msg)) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2162 — une carte qui se déclare vide (label class="empty") reste jugée', () => {
+    const r = juger(extraireHtml('<label class="empty">Aucune donnée</label>'));
+    if (!durs(r).some(f => f.regle === 'T4-2')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2162 — le title d\'un <button> ordinaire est un message, il reste jugé (T4-2 bloquant)', () => {
+    const r = juger(extraireHtml('<button title="Aucune donnée à exporter">Exporter</button>'));
+    if (!durs(r).some(f => f.regle === 'T4-2')) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2162 — l\'exemption ne touche pas T4-1 : <p role="alert">Échec</p> reste une erreur sans réparation', () => {
+    const r = juger(extraireHtml('<p role="alert">Échec</p><label>Aucune donnée</label>'));
+    if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
   });
 
   // ── Extraction : un format, un cas, aucune supposition ────────────────────

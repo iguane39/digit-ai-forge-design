@@ -1,0 +1,18 @@
+<!doctype html>
+<!-- FIXTURE ROUGE — oracle-textes-application, TF-2162 (rattaché à TF-1762).
+     Les mêmes trois cartes de choix que la verte (jamais fautives), et à côté un VRAI état vide qui
+     constate le vide sans inviter à agir : il reste le seul constat T4-2 bloquant. La rouge prouve que
+     l'exemption des cartes de choix ne désarme pas la règle. -->
+<html lang="fr">
+<head><meta charset="utf-8"><title>Mode d'exécution</title></head>
+<body>
+  <fieldset>
+    <legend>Mode d'exécution</legend>
+    <label class="carte"><input type="radio" name="mode" value="simulation"><strong>Simulation</strong>
+      <span>Aucun système réel n'est touché.</span></label>
+    <button type="button" class="carte"><strong>Essai à blanc</strong> <span>Aucune écriture n'est faite.</span></button>
+    <div class="carte" role="radio" aria-checked="false" aria-label="Lecture seule : aucune modification n'est possible">Lecture seule</div>
+  </fieldset>
+  <div class="empty">Aucune donnée</div>
+</body>
+</html>

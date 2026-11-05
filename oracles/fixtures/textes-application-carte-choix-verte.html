@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- FIXTURE VERTE — oracle-textes-application, TF-2162 (rattaché à TF-1762), lot Produit-86 du 04/11/2026.
+     Trois cartes de CHOIX dont la description est rédigée en négation (« Aucun système réel n'est
+     touché ») : une carte d'étiquette <label>, une carte-bouton, une carte à rôle radio. Ce sont des
+     choix à faire, jamais un état vide ; la verte garde en plus un vrai état vide qui invite à agir.
+     Attendu : PASS, aucun constat. -->
+<html lang="fr">
+<head><meta charset="utf-8"><title>Mode d'exécution</title></head>
+<body>
+  <fieldset>
+    <legend>Mode d'exécution</legend>
+    <label class="carte"><input type="radio" name="mode" value="simulation"><strong>Simulation</strong>
+      <span>Aucun système réel n'est touché.</span></label>
+    <button type="button" class="carte"><strong>Essai à blanc</strong> <span>Aucune écriture n'est faite.</span></button>
+    <div class="carte" role="radio" aria-checked="false" aria-label="Lecture seule : aucune modification n'est possible">Lecture seule</div>
+  </fieldset>
+  <div class="empty">Aucun dossier pour l'instant. Créez le premier.</div>
+</body>
+</html>
