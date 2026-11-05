@@ -466,7 +466,7 @@ critère **C14** de `criteres-sortie.md`, avant C15.
       "chantier": "forge-design",
       "date": "2026-09-12",
       "mandat": "TF-1064",
-      "amont": "plancher d'écriture E-12 du pilot (references\ECRITURE.md, 12/09/2026), lot pilot - TRAVAUX - 20260912b"
+      "amont": "plancher d'écriture E-12 du pilot (references\\ECRITURE.md, 12/09/2026), lot pilot - TRAVAUX - 20260912b"
     },
     "regles": 4
   }

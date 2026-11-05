@@ -2952,6 +2952,41 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2180 (05/11/2026) — LES BLOCS JSON DU REGISTRE D'ENTRÉES SE LISENT, ET LA CRITIQUE D'IMPLÉMENTATION NE COMPTE PAS
+// LES RÈGLES D'UN ORACLE EN DUR. Aucun oracle ne lisait `oracles/registre-entrees.md` : un bloc ```json y est resté
+// invalide (« references\ECRITURE.md », un \E que JSON refuse) sur 13 blocs, sans qu'aucun contrôle ne rougisse.
+// Et `critique-implementation.md` citait « X0–X6 » quand `oracle-exploitabilite` porte aussi X7, X8 et X9. Chaque
+// contrôle est joué dans les deux sens : le texte réel passe, le même défaut posé à la main est refusé.
+{
+  console.log(String.fromCharCode(10) + 'registre-entrees.md et critique-implementation.md (TF-2180) — blocs JSON lisibles, règles non comptées en dur');
+  const FENCE = String.fromCharCode(96).repeat(3);
+  const blocsJson = t => [...t.replace(/\r\n/g, '\n').matchAll(new RegExp(FENCE + 'json\\n([\\s\\S]*?)\\n' + FENCE, 'g'))].map(m => m[1]);
+  const invalides = t => blocsJson(t).map((b, i) => { try { JSON.parse(b); return null; } catch (e) { return `bloc ${i + 1} : ${e.message}`; } }).filter(Boolean);
+  const registre = fs.readFileSync(path.join(ici, 'registre-entrees.md'), 'utf8');
+  const blocs = blocsJson(registre).length;
+  ligne(blocs > 0 && invalides(registre).length === 0,
+    `sens vert · les ${blocs} blocs JSON de registre-entrees.md se lisent${invalides(registre).length ? ' — ' + invalides(registre).join(' ; ') : ''}`);
+  // Le défaut réel du 12/09 : un antislash de chemin Windows non échappé dans une chaîne JSON.
+  const BS = String.fromCharCode(92);
+  const bloc = chemin => FENCE + 'json\n[\n  { "amont": "plancher (' + chemin + ', 12/09/2026)" }\n]\n' + FENCE + '\n';
+  const rouge = bloc('references' + BS + 'ECRITURE.md');
+  ligne(blocsJson(rouge).length === 1 && invalides(rouge).length === 1,
+    'sens rouge · un bloc au chemin « references\\ECRITURE.md » non échappé est refusé (le défaut du 12/09)');
+  // Le remède que le message prescrit (antislash doublé) se joue lui aussi : il doit PASSER.
+  const remede = bloc('references' + BS + BS + 'ECRITURE.md');
+  ligne(blocsJson(remede).length === 1 && invalides(remede).length === 0 && JSON.parse(blocsJson(remede)[0])[0].amont.includes('references' + BS + 'ECRITURE.md'),
+    'sens vert · le même chemin à l\'antislash doublé se lit et redonne le chemin d\'origine');
+  ligne(blocsJson('aucun bloc ici').length === 0, 'sens rouge · un texte sans bloc JSON n\'en compte aucun (le contrôle réel exige au moins un bloc)');
+
+  const critique = fs.readFileSync(path.join(ici, '..', 'skills', 'critique-le-design', 'references', 'critique-implementation.md'), 'utf8').replace(/\s+/g, ' ');
+  const citePlage = t => /X0\s*[–-]\s*X\d/.test(t);
+  const renvoie = t => /oracle-exploitabilite[^.]{0,200}README/.test(t);
+  ligne(!citePlage(critique) && renvoie(critique),
+    'sens vert · critique-implementation.md ne cite plus de plage « X0–Xn » et renvoie au README pour les règles d\'oracle-exploitabilite');
+  ligne(citePlage('Oracle : `oracle-exploitabilite` (X0–X6 : hauteur, densité)') && !renvoie('Oracle : `oracle-exploitabilite` (X0–X6 : hauteur, densité)'),
+    'sens rouge · l\'ancienne phrase « (X0–X6 : hauteur… » est refusée (plage en dur, aucun renvoi)');
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
