@@ -851,6 +851,20 @@ const CAS = [
     rouge: [fx('exploitabilite-lexique-rouge.html')],
   },
   {
+    // TF-2172 (demande du porteur, lot Produit-86 du 05/11/2026) — une saisie refusée s'affichait en bandeau en tête de page,
+    // loin du formulaire, avec un code technique en titre (« Refusé : CIBLE_INVALIDE »), sans champ désigné, seulement à
+    // l'envoi. Aucun des 15 juges de run-oracles-design n'envoie une valeur fausse ni ne regarde où tombe l'erreur. La verte
+    // est le formulaire bâti avec le composant corpus/composants/saisie-erreurs.js (erreur sous le champ, aria-invalid,
+    // aria-describedby, résumé à liens, envoi retenu) ; la rouge est le défaut du porteur : le bandeau en tête de page.
+    // Dépend de l'outillage de rendu (une valeur est saisie, un envoi est tenté).
+    rendu: true,
+    oracle: 'oracle-erreurs-formulaire.mjs',
+    regles: ['EF1'],
+    contrat: [...CONTRAT_MJS, 'champs_eprouves', 'mesures'],
+    verte: [fx('erreurs-formulaire-verte.html')],
+    rouge: [fx('erreurs-formulaire-rouge.html')],
+  },
+  {
     // TF-2074 (essai logo-design-skill du 03/11/2026) — un audit tiers avait rendu 100/100 à trois SVG qui se
     // réduisaient à des points à 16 px. La rouge est la verte dessinée en FILET de 3 unités sur 256 (0,19 px à 16 px) :
     // aussi propre qu'un SVG peut l'être, invisible dans un onglet. Elle déclenche LP1 (trait plus fin qu'un pixel)
@@ -2446,6 +2460,110 @@ for (const cas of CAS) {
         .replace(SANS_LEXIQUE, '').replace(SANS_VISITE, '')));
       ligne(edito.code === 0 && edito.f8.length === 0 && edito.f9.length === 0 && edito.nj.some(n => /^X8 et X9 non dues : écran déclaré éditorial/.test(n)),
         `page déclarée éditoriale · X8 et X9 non dues, dites au non_juge, PASS exit 0 (obtenu ${edito.json?.verdict}, exit ${edito.code})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
+// TF-2172 — oracle-erreurs-formulaire hors de la paire de la matrice : chaque règle a sa rouge, dans un formulaire
+// jetable à UN champ dont le script ne se trompe que d'UNE chose (où le message tombe, ce qu'il dit, si l'envoi part,
+// quand il apparaît). Le composant, lui, est prouvé par la verte : erreur à la sortie du champ, résumé à liens qui vise
+// le champ, aucune requête d'écriture partie. Les requêtes d'écriture sont interceptées par l'oracle : rien n'est créé.
+{
+  console.log(String.fromCharCode(10) + 'oracle-erreurs-formulaire (TF-2172) — le composant et une rouge par règle');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'erreurs-ef-'));
+    try {
+      // Un formulaire à un champ (domaine, valeur fausse « costcontrol »). `o` règle le seul écart voulu.
+      const BON = '« costcontrol » n\'est pas un domaine complet. Forme attendue : costcontrol.client.fr.';
+      const page = o => {
+        const message = o.message ?? BON;
+        const zone = '<p id="e" class="e" hidden></p>';
+        return '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Formulaire jetable</title>'
+          + '<style>body{margin:0;font:16px/24px sans-serif}main{padding:24px;max-width:640px}.espace{height:480px}'
+          + 'input{box-sizing:border-box;width:100%;padding:8px;font:inherit}.e{color:#b00020;margin:4px 0 0}</style></head><body><main>'
+          + (o.loin ? zone + '<div class="espace"></div>' : '')
+          + '<form id="f" action="http://127.0.0.1:9/clients" method="post" novalidate>'
+          + '<label for="d">Domaine du client</label>'
+          + '<input id="d" name="domaine" type="text" required pattern="[a-z0-9]+(\\.[a-z0-9]+)+" data-valeur-fausse="costcontrol" aria-describedby="e">'
+          + (o.loin ? '' : zone)
+          + '<button type="submit">Enregistrer</button></form></main>'
+          + '<script>(function(){var f=document.getElementById("f"),d=document.getElementById("d"),e=document.getElementById("e");'
+          + 'function dire(){e.textContent=' + JSON.stringify(message) + ';e.hidden=false;' + (o.invalideOmis ? '' : 'd.setAttribute("aria-invalid","true");') + '}'
+          + (o.tardif ? '' : 'd.addEventListener("blur",dire);')
+          + 'f.addEventListener("submit",function(ev){ev.preventDefault();'
+          + (o.envoiPart ? 'fetch("http://127.0.0.1:9/clients",{method:"POST"}).catch(function(){});' : '') + 'dire();});'
+          + '})();</script></body></html>';
+      };
+      const ecrire = (nom, o) => { const f = path.join(dossier, nom + '.html'); fs.writeFileSync(f, page(o), 'utf8'); return f; };
+      const jouer = f => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'oracle-erreurs-formulaire.mjs'), f, '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        const par = rg => (j?.findings || []).filter(x => x.regle === rg);
+        return { code: r.status, json: j, par, regles: new Set((j?.findings || []).map(x => x.regle)) };
+      };
+      const seule = (x, rg) => x.regles.has(rg) && [...x.regles].filter(y => y !== rg).length === 0;
+
+      // Le composant : la verte, jouée en détail.
+      const verte = jouer(fx('erreurs-formulaire-verte.html'));
+      const mv = verte.json?.mesures || [];
+      ligne(verte.code === 0 && verte.json?.champs_eprouves === 2 && mv.length === 2 && mv.every(m => m.apres_sortie && m.invalide && m.requetes_ecriture === 0 && !m.navigation),
+        `sens vert · composant saisie-erreurs : 2 champs éprouvés, l'erreur paraît dès la SORTIE du champ, le champ est invalide, aucune requête d'écriture ne part, PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code})`);
+      ligne(mv.length === 2 && mv.every(m => m.resume_liens >= 1 && m.resume_vise_le_champ),
+        `sens vert · résumé d'erreurs à liens : posé à l'envoi fautif, ses liens visent le champ (liens ${mv.map(m => m.resume_liens).join('/')})`);
+      ligne(mv.length === 2 && /« costcontrol »/.test(mv[0].message || '') && /costcontrol\.client\.fr/.test(mv[0].message || '') && mv[0].distance_px <= 40,
+        `sens vert · le message reprend la saisie « costcontrol », donne la forme « costcontrol.client.fr » et tombe à ${mv[0]?.distance_px} px du champ`);
+
+      // Le défaut du porteur : le bandeau en tête de page (fixture rouge de la matrice) — le texte du bandeau est cité.
+      const bandeau = jouer(fx('erreurs-formulaire-rouge.html'));
+      ligne(bandeau.code === 1 && bandeau.par('EF1').length === 2 && bandeau.par('EF1').every(x => x.sev === 'bloquant' && /Refusé : CIBLE_INVALIDE/.test(x.msg) && /ailleurs/.test(x.msg)),
+        `sens rouge · bandeau « Refusé : CIBLE_INVALIDE » en tête de page : EF1 bloquant sur chaque champ, le bandeau cité, FAIL exit 1 (obtenu ${bandeau.json?.verdict}, ×${bandeau.par('EF1').length})`);
+
+      // Une rouge par règle, sur un formulaire jetable ; le témoin (message correct, près, à la sortie, envoi retenu) passe.
+      const temoin = jouer(ecrire('temoin', {}));
+      ligne(temoin.code === 0 && temoin.json?.champs_eprouves === 1 && [...temoin.regles].join() === '—',
+        `témoin · formulaire jetable au message correct, près du champ, à la sortie, envoi retenu : aucun constat, PASS exit 0 (obtenu ${temoin.json?.verdict}, ${[...temoin.regles].join(',')})`);
+      const loin = jouer(ecrire('loin', { loin: true }));
+      ligne(loin.code === 1 && seule(loin, 'EF2') && loin.par('EF2')[0].sev === 'majeur',
+        `sens rouge · message relié mais à plus de 120 px du champ : EF2 majeur seul, FAIL exit 1 (obtenu ${loin.json?.verdict}, ${[...loin.regles].join(',')})`);
+      const generique = jouer(ecrire('generique', { message: 'Valeur invalide' }));
+      ligne(generique.code === 1 && seule(generique, 'EF3') && generique.par('EF3')[0].sev === 'majeur',
+        `sens rouge · message « Valeur invalide » (ni la saisie ni la forme) : EF3 majeur seul, FAIL exit 1 (obtenu ${generique.json?.verdict}, ${[...generique.regles].join(',')})`);
+      const sansInvalide = jouer(ecrire('sans-invalide', { invalideOmis: true }));
+      ligne(sansInvalide.code === 1 && seule(sansInvalide, 'EF1') && sansInvalide.par('EF1')[0].sev === 'majeur' && /aria-invalid/.test(sansInvalide.par('EF1')[0].msg),
+        `sens rouge · message relié mais champ sans aria-invalid : EF1 majeur seul, FAIL exit 1 (obtenu ${sansInvalide.json?.verdict}, ${[...sansInvalide.regles].join(',')})`);
+      const part = jouer(ecrire('part', { envoiPart: true }));
+      ligne(part.code === 1 && seule(part, 'EF4') && part.par('EF4')[0].sev === 'bloquant',
+        `sens rouge · l'envoi part malgré la valeur fausse : EF4 bloquant seul (requête interceptée), FAIL exit 1 (obtenu ${part.json?.verdict}, ${[...part.regles].join(',')})`);
+      const tardif = jouer(ecrire('tardif', { tardif: true }));
+      ligne(tardif.code === 0 && seule(tardif, 'EF5') && tardif.par('EF5')[0].sev === 'avertissement',
+        `sens rouge · le message n'apparaît qu'à l'envoi : EF5 en avertissement, qui ne rougit pas, PASS exit 0 (obtenu ${tardif.json?.verdict}, ${[...tardif.regles].join(',')})`);
+      // Sans champ éprouvable : SKIP dit, jamais PASS (un vert sans objet n'est pas un vert).
+      const vide = path.join(dossier, 'sans-champ.html');
+      fs.writeFileSync(vide, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Sans formulaire</title></head><body><main><h1>Rien à saisir</h1></main></body></html>', 'utf8');
+      const sans = jouer(vide);
+      ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && (sans.json?.findings || []).some(x => x.regle === 'EF0' && x.sans_objet),
+        `sans champ éprouvable · SKIP exit 2 marqué sans_objet, jamais PASS (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+      // Sur le chemin de run-oracles-design --instance (un oracle qui n'est sur aucun chemin n'est jamais joué, TF-1687).
+      const agreger = (...a) => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), ...a, '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        return { code: r.status, json, ef: (json?.oracles || []).find(o => o.oracle === 'oracle-erreurs-formulaire') };
+      };
+      const aRouge = agreger('--instance', fx('erreurs-formulaire-rouge.html'));
+      ligne(aRouge.ef?.verdict === 'FAIL' && aRouge.ef.findings.some(x => x.regle === 'EF1') && aRouge.json?.verdict === 'FAIL' && aRouge.code === 1,
+        `run-oracles-design --instance · le bandeau en tête de page est vu : oracle-erreurs-formulaire FAIL EF1, verdict FAIL exit 1 (obtenu ${aRouge.ef?.verdict}, ${aRouge.json?.verdict}, exit ${aRouge.code})`);
+      const aVerte = agreger('--instance', fx('erreurs-formulaire-verte.html'));
+      ligne(aVerte.ef?.verdict === 'PASS' && aVerte.ef.ecarts_durs === 0,
+        `run-oracles-design --instance · le formulaire du composant est joué et passe : oracle-erreurs-formulaire PASS (obtenu ${aVerte.ef?.verdict})`);
+      const aSans = agreger('--instance', fx('exploitabilite-verte.html'));
+      ligne(!aSans.ef && aSans.json?.verdict === 'PASS' && aSans.code === 0 && (aSans.json?.non_juge || []).some(n => /^oracle-erreurs-formulaire : SANS OBJET — aucun champ éprouvable/.test(n)),
+        `run-oracles-design --instance · écran sans champ éprouvable : SANS OBJET dit au non_juge, jamais un SKIP qui rend l'agrégat INDÉTERMINÉ (obtenu ${aSans.json?.verdict}, exit ${aSans.code})`);
     } finally {
       fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
     }

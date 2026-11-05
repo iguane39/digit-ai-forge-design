@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- FIXTURE VERTE — oracle-erreurs-formulaire (TF-2172, lot Produit-86 du 05/11/2026).
+     Un formulaire bâti avec le composant corpus/composants/saisie-erreurs.js (et sa feuille) : une valeur fausse se
+     dit SOUS son champ (aria-invalid, message relié par aria-describedby), reprend la saisie et donne la forme
+     attendue, dès la sortie du champ ; l'envoi fautif est retenu et un résumé à liens se pose en tête.
+     Le premier champ déclare sa valeur fausse (« costcontrol », le cas du porteur) ; le second la tire de son type.
+     Attendu : PASS, exit 0, 2 champs éprouvés. -->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture oracle-erreurs-formulaire (verte, erreur sous le champ)</title>
+  <link rel="stylesheet" href="../../corpus/tokens-digit-ai.css">
+  <link rel="stylesheet" href="../../corpus/composants/saisie-erreurs.css">
+  <style>
+    body { margin: 0; font-family: sans-serif; font-size: 16px; line-height: 24px; color: var(--ink); background: var(--bg); }
+    main { max-width: 640px; padding: var(--espace-lg); }
+    .champ { margin: 0 0 var(--espace-md); }
+    label { display: block; font-weight: 600; margin-bottom: var(--espace-xs); }
+    input { box-sizing: border-box; width: 100%; padding: var(--espace-sm); border: 1px solid var(--line); border-radius: var(--r-sm); font: inherit; }
+    button { padding: var(--espace-sm) var(--espace-md); font: inherit; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Ajouter un client</h1>
+  <form data-saisie action="http://127.0.0.1:9/clients" method="post">
+    <div class="champ">
+      <label for="domaine">Domaine du client</label>
+      <input id="domaine" name="domaine" type="text" required pattern="[a-z0-9]+(\.[a-z0-9]+)+"
+             data-valeur-fausse="costcontrol" data-exemple="costcontrol.client.fr">
+    </div>
+    <div class="champ">
+      <label for="courriel">Courriel du contact</label>
+      <input id="courriel" name="courriel" type="email" required data-exemple="prenom.nom@client.fr">
+    </div>
+    <button type="submit">Enregistrer le client</button>
+  </form>
+</main>
+<script src="../../corpus/composants/saisie-erreurs.js"></script>
+</body>
+</html>

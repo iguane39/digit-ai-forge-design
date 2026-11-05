@@ -32,6 +32,8 @@
 // oracle-exploitabilite (X0–X6) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
 // rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
 // est déclaré SANS OBJET à voix haute et ne pèse pas sur le verdict d'un projet sans instance.
+// TF-2172 : la même option enrôle oracle-erreurs-formulaire (EF0–EF5), qui saisit une valeur fausse par champ de l'instance,
+// tente l'envoi (les écritures sont interceptées) et mesure où le refus se dit ; SANS OBJET dit si l'instance n'a aucun champ éprouvable.
 // --etat-connexion passe l'état Playwright (storageState) d'une application derrière une connexion.
 // --accepter-certificat-local (TF-2122) : l'instance est servie en https avec un certificat auto-signé ; transmis à
 // oracle-exploitabilite, oracle-faits-commerciaux et oracle-valeur-affichee (qui lisent l'instance), et n'est accepté que pour un hôte de
@@ -557,6 +559,25 @@ if (!seul) {
         : typePage.probable ? ' — ATTENTION : la page porte un champ de saisie et un tableau, elle ressemble à une APPLICATION mais n\'est pas classée comme telle ; '
           + 'la déclarer (--type-page application, ou <meta name="forge-type-page" content="application">) pour que l\'absence d\'instance échoue'
           : ' — page non classée application (ni déclaration, ni marqueur data-panneau-tache / data-branche / data-exigence), traitée comme éditoriale'));
+  }
+}
+
+// ── TF-2172 · une saisie refusée se dit sous son champ, sur l'instance servie ──
+// oracle-erreurs-formulaire saisit une valeur fausse par champ, quitte le champ, tente l'envoi (les écritures sont
+// interceptées) et mesure où le refus se dit. Même chemin que l'exploitabilité, pour la même raison : joué sur le
+// fichier de conception il ne prouverait rien, et sans lui aucun des juges n'envoie une valeur fausse (lot Produit-86
+// du 05/11/2026). Une instance sans champ éprouvable est dite SANS OBJET à voix haute — son SKIP ferait tomber
+// l'agrégat en INDÉTERMINÉ sur tout écran sans formulaire.
+if (!seul && instances.length) {
+  const ef = lancer('oracle-erreurs-formulaire.mjs',
+    [...instances, ...(etatConnexion ? ['--etat-connexion', etatConnexion] : []),
+      ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
+  if (ef.verdict === 'SKIP' && (ef.findings || []).some(f => f.regle === 'EF0' && f.sans_objet)) {
+    sansObjet.push('oracle-erreurs-formulaire : SANS OBJET — aucun champ éprouvable sur l\'instance (aucun formulaire visible, ou aucun champ à contrainte ni à data-valeur-fausse) : '
+      + 'aucune valeur fausse n\'a été saisie. Ce n\'est pas un PASS des erreurs de formulaire ; déclarer data-valeur-fausse sur un champ à règle du produit');
+  } else {
+    if (ef.verdict === 'SKIP' && !ef.raison) ef.raison = (ef.non_juge || []).slice(-1)[0] || 'non jugé';
+    resultats.push(ef);
   }
 }
 

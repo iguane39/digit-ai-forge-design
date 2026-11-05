@@ -1,0 +1,49 @@
+/* saisie-erreurs.css — la feuille du composant saisie-erreurs.js (TF-2172, lot Produit-86 du 05/11/2026).
+   Tokens du socle seulement (corpus/tokens-digit-ai.css) : aucune couleur ni espacement en dur. La mise en évidence
+   est un contour et un texte « Erreur : », jamais la couleur seule ni un filet latéral de 4 px (oracle-slop S1). */
+
+.champ-erreur {
+  margin: var(--espace-xs) 0 0;
+  color: var(--red);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.champ-erreur::before {
+  content: "Erreur : ";
+  font-weight: 600;
+}
+
+[aria-invalid="true"] {
+  border-color: var(--red);
+  outline: 1px solid var(--red);
+}
+
+[aria-invalid="true"]:focus-visible {
+  outline: 2px solid var(--focus-anneau);
+  outline-offset: var(--focus-decalage);
+}
+
+.resume-erreurs {
+  margin: 0 0 var(--espace-md);
+  padding: var(--espace-md);
+  border: 1px solid var(--red-line);
+  border-radius: var(--r-sm);
+  background: var(--red-fill);
+  color: var(--ink);
+}
+
+.resume-erreurs:focus-visible {
+  outline: 2px solid var(--focus-anneau);
+  outline-offset: var(--focus-decalage);
+}
+
+.resume-erreurs-titre {
+  margin: 0 0 var(--espace-sm);
+  font-weight: 600;
+}
+
+.resume-erreurs ul {
+  margin: 0;
+  padding-left: var(--espace-lg);
+}

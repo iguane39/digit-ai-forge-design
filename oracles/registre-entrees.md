@@ -939,3 +939,64 @@ juge alt, poids, réseau et variantes. Celui-ci rend le SVG dans Chromium à 16 
   du second tour d'après la note) : PASS pour A et C, avertissement LP2 pour B (trou d'un seul pixel), ce qui rejoint
   le « B reste faible à 16 px » de la note. Les fichiers du premier tour, ceux de l'audit à 100/100, n'ont pas été
   retrouvés : le refus de l'oracle sur eux n'est pas mesuré, seul l'est celui des fixtures.
+
+## Entrée du 05/11/2026 — oracle-erreurs-formulaire et composant saisie-erreurs (TF-2172)
+
+**Statut d'usage de la forge : `candidat`.** Écrit et verrouillé au banc local (`self-test.mjs` : une paire de
+fixtures dans la matrice, un bloc de six rouges isolées et de remèdes joués). Il est enrôlé dans
+`run-oracles-design.mjs` sur le chemin de `--instance`, comme `oracle-exploitabilite`. Son inscription au registre de
+`quality-oracles` relève de la part forge-agents : ce fichier ne dit pas qu'elle est faite. La **version est minimale
+et prouvée**, comme la décision du 05/11/2026 le pose.
+
+Le domaine que rien ne couvrait : **où et comment une saisie refusée se dit**. Le 05/11/2026, à la demande du porteur,
+une saisie refusée s'affichait en bandeau en tête de page, loin du formulaire, avec un code technique en titre
+(« Refusé : CIBLE_INVALIDE »), sans désigner le champ ni la ligne fautive, avec un exemple générique, et seulement à
+l'envoi. Le champ n'avait ni `aria-invalid` ni message relié. Les quinze juges de `run-oracles-design` avaient rendu PASS
+sur ces écrans le 04/11 : aucun n'envoie une valeur fausse, aucun ne regarde où tombe l'erreur. L'oracle rend l'écran,
+saisit une valeur fausse par champ (déclarée par `data-valeur-fausse`, ou dérivée de `pattern`, `type`, `min`, `max`,
+`minlength`, `required`), quitte le champ, tente l'envoi, et mesure.
+
+| Règle | Critère mesurable | Sévérité |
+|---|---|---|
+| EF0 | cible jugeable (HTTP < 400, pas de redirection) et au moins un champ éprouvable ; sinon SKIP, marqué `sans_objet` | SKIP exit 2 |
+| EF1 | le champ porte `aria-invalid="true"` ET un message neuf visible relié par `aria-describedby` ou `aria-errormessage` ; un refus affiché ailleurs est cité | bloquant ; majeur si le message est relié sans `aria-invalid` |
+| EF2 | message à 120 px au plus du champ (`--proximite`) et dans la fenêtre | majeur |
+| EF3 | le message reprend la saisie ou donne la forme attendue (exemple, format, citation) | majeur si court ; avertissement si long et non reconnu |
+| EF4 | aucune requête d'écriture ni navigation ne part avec la valeur fausse (les écritures sont interceptées et refusées) | bloquant |
+| EF5 | le message paraît à la sortie du champ, pas seulement à l'envoi | avertissement |
+
+Le composant qui fait passer l'oracle vit à `corpus/composants/saisie-erreurs.js` et `saisie-erreurs.css` : erreur sous
+le champ, `aria-invalid`, `aria-describedby`, résumé d'erreurs à liens, vérification à la sortie du champ, effacement
+dès la correction, envoi retenu tant qu'un champ est invalide, et `SaisieErreurs.refuser` pour un refus du serveur. Il
+n'est **pas encore** au socle `digit-ai-page-html` (dépôt de forge-agents, hors du périmètre d'écriture de ce chantier) :
+sa pose au socle et son sceau `COMPOSANT-EMBARQUE` restent à faire.
+
+```json
+[
+  {
+    "domaine": "Formulaire : une saisie refusée se dit sous son champ",
+    "oracle": "oracles/oracle-erreurs-formulaire.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".html"],
+    "fixtures": {
+      "verte": "oracles/fixtures/erreurs-formulaire-verte.html",
+      "rouge": "oracles/fixtures/erreurs-formulaire-rouge.html"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-11-05", "mandat": "TF-2172", "amont": "demande du porteur du 05/11/2026, lot Produit-86 20261105a RP-12, décision « en version minimale prouvée »" },
+    "regles": 6
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- Un refus **venu du serveur** : les requêtes d'écriture sont interceptées pour ne rien créer chez l'instance, donc la
+  réponse d'un serveur n'est jamais observée. Le composant offre `SaisieErreurs.refuser` ; sa tenue se juge à la main.
+- La **justesse** de l'exemple, la clarté de la cause, le ton : EF3 lit la présence d'une reprise ou d'une forme, par des
+  formulations françaises reconnues (liste ouverte).
+- Les **combinaisons** de champs, les erreurs croisées, les listes déroulantes, cases, boutons radio, dates et fichiers :
+  une valeur fausse par champ, un champ à la fois, douze champs par écran au plus.
+- Le **résumé d'erreurs** : rapporté (`mesures[].resume_liens`), non jugé.
+- La règle d'écriture « un message d'erreur reprend la saisie et donne la forme corrigée » de `ECRITURE.md` du pilot : EF3
+  la mesure sur l'écran rendu, mais son texte vit au pilot.
