@@ -831,6 +831,26 @@ const CAS = [
     rouge: [fx('onglets-milieu-rouge.html')],
   },
   {
+    // TF-2158 (retour Produit-86 du 04/11/2026) — « ni visite guidée ni infobulle de terme », vus d'emblée par le porteur
+    // après une critique PASS et des filtres PASS. X8 : l'application offre une visite guidée CÂBLÉE. La verte est l'écran
+    // d'exploitabilité de TF-1654 muni d'un bouton « Visite guidée » qui ouvre une étape ; la rouge est le même écran sans
+    // l'entrée, les autres règles restant tenues. Dépend de l'outillage de rendu (un clic est joué).
+    rendu: true,
+    oracle: 'oracle-exploitabilite.mjs',
+    regles: ['X8'],
+    verte: [fx('exploitabilite-verte.html')],
+    rouge: [fx('exploitabilite-visite-rouge.html')],
+  },
+  {
+    // TF-2158 — X9 : chaque terme du lexique déclaré porte son infobulle là où l'écran l'affiche. La rouge est la verte dont
+    // les deux termes (« registre », « lot ») s'affichent sans infobulle ; la visite guidée y reste câblée.
+    rendu: true,
+    oracle: 'oracle-exploitabilite.mjs',
+    regles: ['X9'],
+    verte: [fx('exploitabilite-verte.html')],
+    rouge: [fx('exploitabilite-lexique-rouge.html')],
+  },
+  {
     // TF-2074 (essai logo-design-skill du 03/11/2026) — un audit tiers avait rendu 100/100 à trois SVG qui se
     // réduisaient à des points à 16 px. La rouge est la verte dessinée en FILET de 3 unités sur 256 (0,19 px à 16 px) :
     // aussi propre qu'un SVG peut l'être, invisible dans un onglet. Elle déclenche LP1 (trait plus fin qu'un pixel)
@@ -2338,7 +2358,7 @@ for (const cas of CAS) {
       ligne(rouge.code === 1 && rouge.x6.length === 1 && rouge.x6[0].sev === 'majeur' && /page rechargée/.test(rouge.x6[0].msg),
         `sens rouge · simples liens vers une page sœur : X6 majeur, page rechargée, FAIL exit 1 (obtenu ${rouge.json?.verdict}, exit ${rouge.code}, ×${rouge.x6.length})`);
       // Repli par ancre : la page sœur recharge, mais retombe sur le groupe (id="onglets") : position conservée.
-      const page = (courant, autre) => '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Gîte ' + courant + '</title>'
+      const page = (courant, autre) => '<!doctype html><html lang="fr" data-sans-visite-guidee="page de la règle X6 (repli par ancre)" data-sans-lexique="page de la règle X6 (repli par ancre)"><head><meta charset="utf-8"><title>Gîte ' + courant + '</title>'
         + '<style>body { margin: 0; } .bandeau { height: 1400px; } .onglets { display: flex; gap: 8px; padding: 12px 32px; } .calendrier { min-height: 1600px; }</style></head><body>'
         + '<header class="bandeau"><h1>Réservation</h1></header>'
         + '<nav class="onglets" id="onglets" role="tablist"><a role="tab" href="gite-' + courant + '.html#onglets" aria-selected="true">Gîte ' + courant + '</a>'
@@ -2353,6 +2373,79 @@ for (const cas of CAS) {
       const sans = jouer(fx('exploitabilite-verte.html'));
       ligne(sans.json?.onglets_joues === 0 && (sans.json?.non_juge || []).some(n => /^X6 non joué : aucun groupe/.test(n)),
         `écran sans onglets sous le premier écran · X6 dit non joué au non_juge (onglets_joues ${sans.json?.onglets_joues})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
+// TF-2158 — X8 et X9 hors des fixtures de la matrice : le câblage de la visite (un clic sans étape est refusé), une entrée
+// reconnue à son NOM seul, l'absence de lexique, un terme sans définition, l'écart motivé (admis) et l'écart sans motif
+// (refusé), la page déclarée éditoriale (non due, et dite). Chaque variante est l'écran vert modifié d'UNE seule chose.
+{
+  console.log(String.fromCharCode(10) + "oracle-exploitabilite X8 et X9 (TF-2158) — visite guidée et lexique, variantes de l'écran vert");
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'visite-x8-'));
+    try {
+      const base = fs.readFileSync(fx('exploitabilite-verte.html'), 'utf8');
+      const SANS_LEXIQUE = /<dl data-lexique>[\s\S]*?<\/dl>/;
+      const SANS_VISITE = /  <p><button type="button" id="visite"[\s\S]*?<\/dialog>/;
+      const variante = (nom, transformer) => {
+        const brut = transformer(base);
+        if (brut === base) throw new Error('variante ' + nom + " : la transformation n'a rien changé");
+        const f = path.join(dossier, nom + '.html');
+        fs.writeFileSync(f, brut, 'utf8');
+        return f;
+      };
+      const jouer = f => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'oracle-exploitabilite.mjs'), f, '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        const f8 = (j?.findings || []).filter(x => x.regle === 'X8');
+        const f9 = (j?.findings || []).filter(x => x.regle === 'X9');
+        return { code: r.status, json: j, f8, f9, nj: j?.non_juge || [] };
+      };
+      // La verte elle-même : le clic a été joué (un vert sans clic n'est pas un vert).
+      const verte = jouer(fx('exploitabilite-verte.html'));
+      ligne(verte.code === 0 && verte.f8.length === 0 && verte.f9.length === 0 && verte.nj.some(n => /^X9 : 2 terme\(s\) du lexique retrouvé\(s\) à l'écran sur 2/.test(n)),
+        `sens vert · visite câblée et lexique tenu : X8 et X9 se taisent, deux termes retrouvés à l'écran, PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code})`);
+      // Rouge de câblage : le bouton existe, il ne fait rien.
+      const mort = jouer(variante('visite-morte', b => b.replace(/<script>[\s\S]*?<\/script>/, '')));
+      ligne(mort.code === 1 && mort.f8.length === 1 && mort.f8[0].sev === 'majeur' && /aucune étape ne s'affiche/.test(mort.f8[0].msg) && mort.f9.length === 0,
+        `sens rouge · bouton « Visite guidée » sans étape : X8 majeur « aucune étape », X9 se tait, FAIL exit 1 (obtenu ${mort.json?.verdict}, exit ${mort.code}, ×${mort.f8.length})`);
+      // Entrée reconnue à son nom seul (sans data-visite-guidee) : le remède joué.
+      const parNom = jouer(variante('visite-par-nom', b => b.replace(' data-visite-guidee>', '>')));
+      ligne(parNom.code === 0 && parNom.f8.length === 0,
+        `remède · entrée reconnue à son nom (« Visite guidée », sans data-visite-guidee) : X8 se tait, PASS exit 0 (obtenu ${parNom.json?.verdict}, exit ${parNom.code})`);
+      // Aucun lexique déclaré.
+      const sansLexique = jouer(variante('sans-lexique', b => b.replace(SANS_LEXIQUE, '')));
+      ligne(sansLexique.code === 1 && sansLexique.f9.length === 1 && /aucun lexique déclaré/.test(sansLexique.f9[0].msg) && sansLexique.f8.length === 0,
+        `sens rouge · aucun lexique déclaré : X9 majeur, X8 se tait, FAIL exit 1 (obtenu ${sansLexique.json?.verdict}, exit ${sansLexique.code})`);
+      // Un terme sans définition.
+      const sansDef = jouer(variante('terme-sans-definition', b => b.replace('<dd>Groupe de demandes traitées ensemble.</dd>', '<dd></dd>')));
+      ligne(sansDef.code === 1 && sansDef.f9.some(x => /« lot » du lexique n'a pas de définition/.test(x.msg)),
+        `sens rouge · terme « lot » sans définition au lexique : X9 majeur, FAIL exit 1 (obtenu ${sansDef.json?.verdict}, exit ${sansDef.code})`);
+      // Écart motivé (admis, dit au non_juge) et écart sans motif (refusé).
+      const ecart = jouer(variante('ecart-motive', b => b
+        .replace('<html lang="fr">', '<html lang="fr" data-sans-visite-guidee="écran de connexion, sans visite" data-sans-lexique="aucun terme métier à ce stade">')
+        .replace(SANS_LEXIQUE, '').replace(SANS_VISITE, '')));
+      ligne(ecart.code === 0 && ecart.f8.length === 0 && ecart.f9.length === 0
+        && ecart.nj.some(n => /visite guidée écartée, motif déclaré « écran de connexion, sans visite »/.test(n))
+        && ecart.nj.some(n => /lexique écarté, motif déclaré « aucun terme métier à ce stade »/.test(n)),
+        `remède · écarts explicites MOTIVÉS : X8 et X9 se taisent et le motif est dit au non_juge, PASS exit 0 (obtenu ${ecart.json?.verdict}, exit ${ecart.code})`);
+      const sansMotif = jouer(variante('ecart-sans-motif', b => b
+        .replace('<html lang="fr">', '<html lang="fr" data-sans-visite-guidee data-sans-lexique>')
+        .replace(SANS_LEXIQUE, '').replace(SANS_VISITE, '')));
+      ligne(sansMotif.code === 1 && sansMotif.f8.length === 1 && sansMotif.f9.length === 1 && /sans motif/.test(sansMotif.f8[0].msg) && /sans motif/.test(sansMotif.f9[0].msg),
+        `sens rouge · écarts posés SANS motif : X8 et X9 majeurs « sans motif », FAIL exit 1 (obtenu ${sansMotif.json?.verdict}, exit ${sansMotif.code})`);
+      // Page déclarée éditoriale : le contrôle n'est pas dû, et le dit.
+      const edito = jouer(variante('editoriale', b => b
+        .replace('<html lang="fr">', '<html lang="fr" data-type-page="editoriale">')
+        .replace(SANS_LEXIQUE, '').replace(SANS_VISITE, '')));
+      ligne(edito.code === 0 && edito.f8.length === 0 && edito.f9.length === 0 && edito.nj.some(n => /^X8 et X9 non dues : écran déclaré éditorial/.test(n)),
+        `page déclarée éditoriale · X8 et X9 non dues, dites au non_juge, PASS exit 0 (obtenu ${edito.json?.verdict}, exit ${edito.code})`);
     } finally {
       fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
     }

@@ -528,9 +528,20 @@ auto-signé d'une instance servie en https, pour les seuls hôtes `localhost`, `
 `::1` ; il est transmis aux trois juges qui lisent l'instance (exploitabilité, faits
 commerciaux, valeur affichée).
 
+**Évolution du 05/11/2026 (TF-2158, lot Produit-86 du 04/11).** Le porteur a relevé d'emblée, sur la préproduction,
+« ni visite guidée ni infobulle de terme » (jeton d'agent, job de lab, OBSERVED sans explication), après une critique PASS
+et des filtres PASS. Deux règles entrent, dues à une application (une page déclarée éditoriale ne les doit pas) :
+**X8** l'application offre une visite guidée CÂBLÉE — l'entrée (`[data-visite-guidee]`, ou un lien ou bouton nommé
+« visite guidée ») est cliquée et une étape neuve s'affiche ; **X9** l'écran déclare son lexique (`[data-lexique]`, un `<dl>`)
+et chaque occurrence visible d'un terme du lexique porte une infobulle (`title`, `data-definition` ou `aria-describedby`).
+Écarts explicites et motivés : `data-sans-visite-guidee="<raison>"`, `data-sans-lexique="<raison>"` (sans motif, ils sont
+eux-mêmes refusés). Les fixtures d'onglets (X6) les posent, l'écran vert de TF-1654 porte une visite et un lexique.
+Numérotation : X7 est déjà la règle du point d'entrée (page d'application sans instance, TF-2121) ; les deux règles neuves
+prennent X8 et X9.
+
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes ; enrôlé en opt-in par `run-oracles-design.mjs <page.html> --instance <url\|page> [--etat-connexion etat.json]` | cli | ✅ |
+| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes, X8 visite guidée câblée (TF-2158), X9 lexique déclaré et infobulles de ses termes (TF-2158) ; enrôlé en opt-in par `run-oracles-design.mjs <page.html> --instance <url\|page> [--etat-connexion etat.json]` | cli | ✅ |
 
 ```json
 [
@@ -547,10 +558,10 @@ commerciaux, valeur affichée).
     "provenance": {
       "chantier": "forge-design",
       "date": "2026-10-14",
-      "mandat": "TF-1654, TF-1674, TF-1687",
+      "mandat": "TF-1654, TF-1674, TF-1687, TF-2158",
       "amont": "juge d'exploitabilité écrit par un produit (X1 à X5, seuils mesurés chez lui), rendu générique"
     },
-    "regles": 6
+    "regles": 8
   }
 ]
 ```
