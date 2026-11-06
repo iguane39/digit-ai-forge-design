@@ -119,6 +119,7 @@ node scripts/generer-images.mjs --lister-modeles [--modele <m>]    # la liste de
 
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
 node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
+node oracles/self-test-exploitabilite.mjs                     # verrou dédié d'oracle-exploitabilite : X2 volume minimal (TF-2199), X9 lexique (TF-2219), deux sens
 
 node oracles/rendu-comparatif.mjs --avant <fichier|url> --apres <fichier|url> \
   [--zone <sélecteur>] [--largeurs <grille du corpus>] [--sortie <dossier>] \

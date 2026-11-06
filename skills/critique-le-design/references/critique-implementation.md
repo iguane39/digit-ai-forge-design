@@ -89,6 +89,15 @@ déclare — jamais de conformité jugée sans référentiel.
    exempte une maquette, qui n'a pas d'instance par nature, et ne s'emploie jamais ici. Une instance
    locale en https à certificat auto-signé se joint avec `--accepter-certificat-local`, réservé aux hôtes
    `localhost`, `127.0.0.1` et `::1` (TF-2122).
+   **Un volume minimal pour juger un écran de données (TF-2199).** La critique d'un écran à tableau se joue
+   sur au moins 5 lignes visibles par tableau (le seuil de la règle X2) ; en deçà, la densité n'est pas
+   mesurée et `oracle-exploitabilite` le dit en avertissement « X2 NON JOUÉ » (jamais en vert muet). Le
+   rapport déclare ce contrôle NON JOUÉ tant que l'instance n'a pas ce volume, et le rejoue après
+   l'alimentation. *Mesure qui l'impose* : une file d'approbation rendue PASS à la critique le 04/11/2026
+   rendait, au volume réel, 13 contrôles sur 15 avec 25 demandes, les mêmes écarts sur HEAD et sur la
+   branche corrigée. Règle jouée par `node oracles\self-test-exploitabilite.mjs` (tableau de 3 lignes
+   contre l'écran vert de 12). *Reste* : la visite guidée dont la bulle recouvre la page statique du rendu
+   `--rendu` (V7, V25) n'est pas encore neutralisée dans `run-oracles-design.mjs`.
 
 ## La promesse cite la demande, et un modèle désigné se joue (TF-1940, 21/10/2026)
 
