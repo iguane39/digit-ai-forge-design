@@ -2985,6 +2985,10 @@ for (const cas of CAS) {
     'sens vert · critique-implementation.md ne cite plus de plage « X0–Xn » et renvoie au README pour les règles d\'oracle-exploitabilite');
   ligne(citePlage('Oracle : `oracle-exploitabilite` (X0–X6 : hauteur, densité)') && !renvoie('Oracle : `oracle-exploitabilite` (X0–X6 : hauteur, densité)'),
     'sens rouge · l\'ancienne phrase « (X0–X6 : hauteur… » est refusée (plage en dur, aucun renvoi)');
+  // TF-2183 (06/11/2026) : le même compte en dur restait dans l'agrégat, dont un message affiché à l'utilisateur.
+  const agregat = fs.readFileSync(path.join(ici, 'run-oracles-design.mjs'), 'utf8');
+  ligne(!citePlage(agregat), 'sens vert · run-oracles-design.mjs ne cite plus de plage « X0–Xn » (TF-2183)');
+  ligne(citePlage('l\'exploitabilité au volume réel (X0–X6) n\'a pas été jouée'), 'sens rouge · l\'ancien message « (X0–X6) n\'a pas été jouée » est refusé (TF-2183)');
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

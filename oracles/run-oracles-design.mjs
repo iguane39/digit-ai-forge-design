@@ -29,7 +29,7 @@
 // ⇒ SKIP motivé dans les résultats, jamais une erreur.
 //
 // --instance <url|page.html> [--instance …] [--etat-connexion etat.json] (TF-1687) : enrôle
-// oracle-exploitabilite (X0–X6) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
+// oracle-exploitabilite (règles au README de la forge) sur l'instance ALIMENTÉE fournie — une URL servie, ou la page
 // rendue au volume réel —, jamais sur le fichier de conception. Opt-in : sans --instance, l'oracle
 // est déclaré SANS OBJET à voix haute et ne pèse pas sur le verdict d'un projet sans instance.
 // TF-2172 : la même option enrôle oracle-erreurs-formulaire (EF0–EF5), qui saisit une valeur fausse par champ de l'instance,
@@ -541,7 +541,7 @@ if (!seul) {
       verdict: 'FAIL', exit: 1, ecarts_durs: 1, avertissements: 0, a_confirmer: 0,
       findings: [{
         sev: 'bloquant', regle: 'X7', where: cible,
-        msg: `page d'application (${typePage.source}) jugée sans instance servie : l'exploitabilité au volume réel (X0–X6) n'a pas été jouée, `
+        msg: `page d'application (${typePage.source}) jugée sans instance servie : l'exploitabilité au volume réel (oracle-exploitabilite, règles au README de la forge) n'a pas été jouée, `
           + 'et un écran jamais mesuré ne se déclare pas conforme',
         voie: 'fournir l\'instance alimentée (--instance <url|page rendue au volume réel> [--etat-connexion etat.json]) ; '
           + 'pour une maquette, qui n\'a pas d\'instance par nature : --maquette ; pour une page éditoriale : --type-page editoriale ou <meta name="forge-type-page" content="editoriale">',
