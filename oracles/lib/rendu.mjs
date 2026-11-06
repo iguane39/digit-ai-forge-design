@@ -72,6 +72,21 @@ export function choisirInterpreteur(sondes) {
 }
 
 /**
+ * Copie du HTML sans la visite guidée à l'écran (TF-2199, 06/11/2026). Une application qui ouvre sa visite au premier
+ * affichage montre sa bulle dans le rendu statique : elle recouvre la page et fabrique des écarts (V1, V7, V25) que le
+ * produit n'a pas — la critique d'implémentation d'une file d'approbation en a rendu 25 sur HEAD comme sur la branche
+ * corrigée. Le style masque les éléments `[data-visite-etape]` (la convention d'oracle-exploitabilite X8), y compris
+ * ceux que le script de la page crée après le chargement. Le câblage de la visite est jugé par X8, sur l'instance,
+ * jamais par ce rendu. Une copie de rendu seulement : le livrable n'est pas modifié.
+ */
+export function neutraliserVisite(html) {
+  const style = '<style data-forge-visite-neutralisee>[data-visite-etape]{display:none !important}</style>';
+  if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, m => m + style);
+  if (/<html\b[^>]*>/i.test(html)) return html.replace(/<html\b[^>]*>/i, m => m + style);
+  return style + html;
+}
+
+/**
  * Copie du HTML forcée en thème sombre — `data-theme="dark"` sur <html>, posé ou
  * réécrit. Mutualisée ici (TF-0286) : run-oracles-design et rendu-comparatif
  * doivent capturer le sombre exactement de la même façon, sinon deux rendus

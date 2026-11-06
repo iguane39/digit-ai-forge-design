@@ -2203,6 +2203,56 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2199 (lot Produit-86 du 05/11/2026) — LA VISITE GUIDÉE N'EST PAS JUGÉE PAR LE RENDU STATIQUE. Une application qui ouvre sa
+// visite au premier affichage montre sa bulle dans la copie rendue : elle recouvre la page et fabrique des écarts (V1…) que le
+// produit n'a pas. `lancerRendu` masque `[data-visite-etape]` dans ses copies (neutraliserVisite), et le dit au non_juge.
+// La page est l'écran vert de TF-0278 plus une bulle fixe de 360 px, qui déborde d'un viewport de 390 px.
+{
+  console.log(String.fromCharCode(10) + 'lib/rendu.mjs neutraliserVisite (TF-2199) — la bulle de la visite guidée ne fabrique pas d\'écarts au rendu statique');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'visite-statique-'));
+    try {
+      const base = fs.readFileSync(fx('rendu-l2-verte.html'), 'utf8');
+      const bulle = marqueur => '<div ' + marqueur + ' role="dialog" aria-label="Visite guidée" style="position:fixed;top:40px;left:40px;width:360px;padding:16px;'
+        + 'background:#fff;color:#000;border:1px solid #000;z-index:99"><p>Étape 1 sur 5 : voici le tableau des demandes. Cliquez sur Suivant pour continuer la visite guidée.</p>'
+        + '<button type="button">Suivant</button></div>';
+      const poser = (nom, html) => { const f = path.join(dossier, nom + '.html'); fs.writeFileSync(f, html, 'utf8'); return f; };
+      const rendu = f => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), f, '--rendu', '--json-only'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        const rp = (j?.oracles || []).filter(o => /^render_page/.test(o.oracle));
+        return { rp, tous: rp.length === 2 && rp.every(o => o.verdict === 'PASS'), dit: rp.length > 0 && rp.every(o => (o.non_juge || []).some(n => /visite guidée masquée/.test(n))) };
+      };
+      const avecMarqueur = poser('bulle-marquee', base.replace('</body>', bulle('data-visite-etape') + '</body>'));
+      const sansMarqueur = poser('bulle-nue', base.replace('</body>', bulle('data-sans-convention') + '</body>'));
+      // Témoin : la page brute, rendue sans la neutralisation, est refusée (la bulle déborde à 390 px).
+      const brut = spawnSync(OUTILLAGE_RENDU.python, [OUTILLAGE_RENDU.renderPage, avecMarqueur, '--widths', '390', '--output', 'json', '--out', dossier], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+      let jb = null; try { jb = JSON.parse(brut.stdout.trim()); } catch { /* illisible */ }
+      ligne(jb?.verdict === 'FAIL', `sens rouge · page brute avec sa bulle rendue par render_page.py sans neutralisation : FAIL (témoin ; obtenu ${jb?.verdict})`);
+      const marquee = rendu(avecMarqueur);
+      ligne(marquee.tous, `sens vert · --rendu : la bulle [data-visite-etape] est masquée dans les copies claire et sombre, render_page(clair) et (sombre) PASS (obtenu ${marquee.rp.map(o => o.verdict).join('/')})`);
+      ligne(marquee.dit, 'sens vert · --rendu : le masquage est DIT au non_juge de chaque passe de rendu');
+      const nue = rendu(sansMarqueur);
+      ligne(!nue.tous, `sens rouge · une bulle qui ne porte pas [data-visite-etape] n'est pas masquée : la convention fait la règle (obtenu ${nue.rp.map(o => o.verdict).join('/')})`);
+      const sans = rendu(fx('rendu-l2-verte.html'));
+      ligne(sans.tous && !sans.dit, 'sens vert · une page sans visite guidée : rendu inchangé et aucune ligne de masquage au non_juge');
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
+// TF-2219, TF-2199 — le verrou dédié d'oracle-exploitabilite (X2 volume minimal, X9 lexique) est rejoué par la recette d'ensemble.
+// Il a son propre fichier (comme self-test-baseline et self-test-decouverte) ; sans outillage de rendu il sort 0 avec un SKIP motivé.
+{
+  console.log(String.fromCharCode(10) + 'self-test-exploitabilite.mjs (TF-2219, TF-2199) — X2 et X9 de oracle-exploitabilite, deux sens');
+  const r = spawnSync(process.execPath, [path.join(ici, 'self-test-exploitabilite.mjs')], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  const dernier = (r.stdout || '').trim().split(/\r?\n/).filter(Boolean).pop() || '';
+  ligne(r.status === 0, `verrou dédié · exit 0 (obtenu ${r.status}) — ${dernier.slice(0, 120)}`);
+}
+
 // TF-1797 (lot Produit-83 du 15/10) — UNE INSTANCE SERVIE SE JUGE AUSSI. oracle-taste ne lisait qu'un
 // fichier : sur une URL, « fichier introuvable », SKIP. Il lit désormais une URL LOCALE telle que le
 // serveur la sert, et refuse une origine distante en nommant le geste. Trois sens sur les fixtures.

@@ -96,8 +96,11 @@ déclare — jamais de conformité jugée sans référentiel.
    l'alimentation. *Mesure qui l'impose* : une file d'approbation rendue PASS à la critique le 04/11/2026
    rendait, au volume réel, 13 contrôles sur 15 avec 25 demandes, les mêmes écarts sur HEAD et sur la
    branche corrigée. Règle jouée par `node oracles\self-test-exploitabilite.mjs` (tableau de 3 lignes
-   contre l'écran vert de 12). *Reste* : la visite guidée dont la bulle recouvre la page statique du rendu
-   `--rendu` (V7, V25) n'est pas encore neutralisée dans `run-oracles-design.mjs`.
+   contre l'écran vert de 12). **La visite guidée ne se juge pas au rendu statique.** Une application qui ouvre sa
+   visite au premier affichage en montre la bulle sur la page rendue, qui recouvre l'écran et fabrique des écarts
+   (V1, V7, V25) que le produit n'a pas. `run-oracles-design.mjs --rendu` masque les éléments
+   `[data-visite-etape]` dans ses copies de rendu (`neutraliserVisite`, `lib/rendu.mjs`) et le dit au `non_juge` ;
+   le câblage de la visite est jugé par X8, sur l'instance. Une bulle qui ne porte pas ce marqueur n'est pas masquée.
 
 ## La promesse cite la demande, et un modèle désigné se joue (TF-1940, 21/10/2026)
 

@@ -64,7 +64,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
+import { detecterOutillageRendu, injecterThemeSombre, neutraliserVisite } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
@@ -339,8 +339,11 @@ function lancerRendu(cible) {
   const base = `forge-design-rendu-${process.pid}-${Date.now()}`;
   const tmpClair = path.join(os.tmpdir(), `${base}-clair.html`);
   const tmpSombre = path.join(os.tmpdir(), `${base}-sombre.html`);
-  fs.writeFileSync(tmpClair, html, 'utf8');
-  fs.writeFileSync(tmpSombre, injecterThemeSombre(html), 'utf8');
+  // TF-2199 : la visite guidée ouverte au premier affichage recouvre la page statique et fabrique des écarts ; elle est
+  // masquée dans les copies de rendu (son câblage est jugé par X8 sur l'instance), et le rapport le dit.
+  const statique = neutraliserVisite(html);
+  fs.writeFileSync(tmpClair, statique, 'utf8');
+  fs.writeFileSync(tmpSombre, injecterThemeSombre(statique), 'utf8');
   const out = [];
   try {
     out.push(lancerRenderPage(tmpClair, 'clair', outillage));
@@ -349,6 +352,11 @@ function lancerRendu(cible) {
   } finally {
     nettoyerRendu(tmpClair);
     nettoyerRendu(tmpSombre);
+  }
+  if (/data-visite/.test(html)) {
+    const note = 'visite guidée masquée dans la copie rendue (style sur [data-visite-etape], TF-2199) : le rendu statique ne juge pas la page recouverte par sa bulle ; '
+      + 'le câblage de la visite est jugé par X8 (--instance), et une bulle qui ne porte pas [data-visite-etape] n\'est pas masquée';
+    for (const r of out) r.non_juge = [...(r.non_juge || []), note];
   }
   out.push(lancerOracleA11y(cible, outillage)); // structurel, non sensible au thème — sur l'original, lecture seule
   return out;
