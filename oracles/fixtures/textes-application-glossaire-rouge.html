@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — le glossaire en infobulle ne rend pas l'oracle aveugle aux vrais messages</title>
+<!--
+  TF-2276, le sens rouge du même motif. La page reprend le glossaire de textes-application-glossaire-verte.html
+  (mêmes termes, même lexique), puis y ajoute les vrais messages que T4-1 doit continuer à voir : une alerte, un
+  message de classe error, le title d'une cellule de donnée et le title d'un bouton qui ne sont pas des termes du
+  lexique. Exempter les infobulles d'un glossaire ne désarme pas la règle : les quatre restent des erreurs sans
+  cause ni réparation.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; padding: 32px; }
+  td { border: 1px solid var(--trait); padding: 8px 16px; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Fiche de mission</h1>
+    <p>Périmètre : un <span tabindex="0" title="Déni : actif listé pour être interdit explicitement, tout refus d'accès est consigné.">déni</span> est posé sur la base de production.</p>
+    <dl data-lexique>
+      <dt title="Déni : actif listé pour être interdit explicitement.">déni</dt>
+      <dd>Actif listé pour être interdit explicitement, tout refus d'accès est consigné.</dd>
+    </dl>
+    <p role="alert">Une erreur est survenue</p>
+    <div class="error">Échec de l'envoi</div>
+    <table><tbody><tr><td title="Date de la décision, refus compris.">Instruit le 03/10</td></tr></tbody></table>
+    <button type="button" title="Échec de l'envoi">Transmettre la décision</button>
+  </main>
+</body>
+</html>

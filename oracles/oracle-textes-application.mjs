@@ -39,6 +39,10 @@
 // <label>, d'une <option> ou d'un élément à rôle de choix (radio, checkbox, option, switch, tab, menuitem…) ne
 // sont plus jugés par T4-2 ; un bloc qui se déclare vide (classe empty|vide, data-etat="vide") et le title d'un
 // <button> (une infobulle est un message) le restent.
+// TF-2276 (06/11/2026, retour Produit-86, RP-49) : le GLOSSAIRE EN INFOBULLE, forme que la forge recommande (X9 d'oracle-exploitabilite),
+// n'est pas un message d'erreur. Sont des définitions, jamais lues en erreur ni en vide : tout ce qui est dans un `[data-lexique]`, un
+// élément `role="tooltip"` (attributs et texte) et l'infobulle (title, aria-label) d'un terme déclaré au lexique, hors <button>.
+// Le title d'une cellule de donnée ou d'un bouton qui n'est pas un terme du lexique reste jugé, comme `role="alert"` et `.error`.
 //
 // CE QUE LE LEXIQUE NE CONNAÎT PAS NE BLOQUE PAS (TF-2102, 03/11/2026) — les listes de verbes et d'indices
 // ci-dessous sont une classe OUVERTE de la langue : elles se complètent, elles ne seront jamais exhaustives.
@@ -438,6 +442,34 @@ export function extraireHtml(brut) {
   const marqueurs = el => [el.tag, at(el, 'class'), at(el, 'role'), at(el, 'id'), at(el, 'data-etat'), at(el, 'name')]
     .filter(Boolean).join(' ');
 
+  // TF-2276 (retour Produit-86 du 06/11/2026, RP-49, rattaché à TF-1910) — LE GLOSSAIRE EN INFOBULLE EST UNE AIDE, PAS UNE
+  // ERREUR. La forge recommande elle-même cette forme (X9 d'oracle-exploitabilite) : l'écran déclare son lexique
+  // (`[data-lexique]`, un <dl> dont chaque <dt> est un terme), chaque terme de l'écran porte sa définition en `title` (ou
+  // `aria-label`), et une aide peut vivre dans un élément `role="tooltip"`. Ces définitions disent « refus », « échec »,
+  // « invalide » parce que le métier en parle : 12 constats durs sur la fiche servie, aucun sur une erreur. Sont donc des
+  // définitions, jamais lues en erreur ni en vide : (1) tout ce qui se trouve DANS un [data-lexique] ; (2) l'élément
+  // role="tooltip" (ses attributs et son texte) ; (3) l'infobulle d'un terme déclaré au lexique, dans une prose courte
+  // (cinq mots au plus) qui contient le terme à la frontière de mot — un <button> en est exclu, son infobulle est un message.
+  // Une erreur reste une erreur : role="alert" est toujours jugé, et le title d'une cellule de donnée ou d'un bouton qui
+  // n'est pas un terme du lexique aussi (TF-1910, TF-2102, TF-2162).
+  const aLexique = el => Object.prototype.hasOwnProperty.call(el.attrs || {}, 'data-lexique');
+  const termesDuLexique = [];
+  for (const lx of elements(racine).filter(aLexique)) {
+    walk(lx, n => {
+      if (n.tag !== 'dt') return;
+      const t = normaliser(texteDe(n)).replace(/[.!?…:;]+$/, '').trim();
+      if (t && !termesDuLexique.includes(t)) termesDuLexique.push(t);
+    });
+  }
+  const dansLexique = el => { for (let p = el; p; p = p.parent) if (aLexique(p)) return true; return false; };
+  const termeDuLexique = el => {
+    if (el.tag === 'button' || !termesDuLexique.length) return false;
+    const t = normaliser(texteDe(el)).replace(/[.!?…:;]+$/, '').trim();
+    return !!t && t.split(' ').length <= 5
+      && termesDuLexique.some(x => new RegExp('(^|[^a-z0-9])' + echapper(x) + '([^a-z0-9]|$)').test(t));
+  };
+  const infobulleDeGlossaire = el => at(el, 'role') === 'tooltip' || dansLexique(el) || termeDuLexique(el);
+
   for (const el of elements(racine)) {
     if (el.tag === 'script' || el.tag === 'style') continue;
     // TF-1762 — l'infobulle d'un CODE (balise de code, ou élément dont le texte est un
@@ -476,7 +508,7 @@ export function extraireHtml(brut) {
     for (const a of ATTRS_TEXTE) {
       const v = at(el, a);
       if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el),
-        ...(a === 'title' && (estCode || definitionEntete) ? { definition: true } : {}),
+        ...((a === 'title' && (estCode || definitionEntete)) || ((a === 'title' || a === 'aria-label') && infobulleDeGlossaire(el)) ? { definition: true } : {}),
         ...((estControleDeChoix && !videDeclare) || ((a === 'title' || a === 'aria-label') && reprendLeBouton(v)) ? { choix: true } : {}) });
     }
     // TF-1773 — une pastille de statut (« badge erreur ») affiche une VALEUR, pas un message.
@@ -485,6 +517,7 @@ export function extraireHtml(brut) {
       const t = texteDe(el);
       if (t) out.push({ cle: `<${el.tag}${at(el, 'class') ? ' class="' + at(el, 'class') + '"' : ''}>`, texte: t, contexte: marqueurs(el),
         ...(estPastille ? { statut: true } : {}),
+        ...(at(el, 'role') === 'tooltip' || dansLexique(el) ? { definition: true } : {}),
         ...(BALISES_TEXTE.includes(el.tag) && !videDeclare ? { choix: true } : {}) });
     }
   }
@@ -766,6 +799,38 @@ if (args.includes('--self-test')) {
   check('ROUGE TF-2200 — un bloc qui se déclare vide reste jugé (div.empty « Aucun résultat »)', () => {
     const r = juger(extraireHtml(panneauFiltre(' title="Aucun"') + '<div class="empty">Aucun résultat</div>'));
     if (durs(r).filter(f => f.regle === 'T4-2').length !== 1) throw new Error(JSON.stringify(r.findings));
+  });
+
+  // ── TF-2276 (lot Produit-86 du 06/11, RP-49, rattaché à TF-1910) : le glossaire en infobulle n'est pas une erreur ─
+  const lexiqueDeni = '<dl data-lexique><dt>déni</dt><dd>Actif interdit explicitement.</dd></dl>';
+  check('VERTE TF-2276 — l\'infobulle (title) d\'un terme déclaré au lexique dit « refus » : aucun constat', () => {
+    const r = juger(extraireHtml('<p>Un <span title="Déni : actif interdit, tout refus d\'accès est consigné.">déni</span> est posé.</p>' + lexiqueDeni));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2276 — le aria-label d\'un terme du lexique, et son title dans une prose de quelques mots : aucun constat', () => {
+    const r = juger(extraireHtml('<p><span aria-label="Échec : tentative invalide.">le déni de service</span></p>'
+      + '<dl data-lexique><dt>déni de service</dt><dd>Tentative invalide.</dd></dl>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2276 — tout ce qui est dans un [data-lexique] est une définition (dt title, dd title)', () => {
+    const r = juger(extraireHtml('<dl data-lexique><dt title="Échec : tentative invalide, refusée.">échec</dt><dd title="Un refus invalide l\'essai.">Tentative refusée.</dd></dl>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2276 — un élément role="tooltip" est une aide : son title et son texte (classe error-help) ne sont pas une erreur', () => {
+    const r = juger(extraireHtml('<span role="tooltip" id="t" class="error-help" title="Un refus d\'accès invalide l\'essai.">Un refus d\'accès invalide l\'essai.</span>'));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2276 — le même title sur un élément qui n\'est pas un terme du lexique reste jugé (T4-1 bloquant)', () => {
+    const r = juger(extraireHtml('<p><span title="Un refus d\'accès, sans plus.">Vendredi</span></p>' + lexiqueDeni));
+    if (durs(r).filter(f => f.regle === 'T4-1').length !== 1) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2276 — le title d\'un <button> reste un message même si son texte est un terme du lexique (T4-1 bloquant)', () => {
+    const r = juger(extraireHtml('<dl data-lexique><dt>envoi</dt><dd>Transmission de la décision.</dd></dl><button type="button" title="Échec de l\'envoi">envoi</button>'));
+    if (durs(r).filter(f => f.regle === 'T4-1').length !== 1) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2276 — un role="alert" reste jugé, terme du lexique ou non (T4-1 bloquant)', () => {
+    const r = juger(extraireHtml('<dl data-lexique><dt>envoi</dt><dd>Transmission.</dd></dl><p role="alert" title="Échec de l\'envoi">envoi</p><p role="alert">Une erreur est survenue</p>'));
+    if (durs(r).filter(f => f.regle === 'T4-1').length < 2) throw new Error(JSON.stringify(r.findings));
   });
 
   // ── Extraction : un format, un cas, aucune supposition ────────────────────

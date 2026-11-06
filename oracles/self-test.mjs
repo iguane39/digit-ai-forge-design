@@ -797,6 +797,18 @@ const CAS = [
     rouge: [fx('textes-application-carte-choix-rouge.html')],
   },
   {
+    // TF-2276 (retour Produit-86 du 06/11/2026, RP-49, rattaché à TF-1910) : le GLOSSAIRE EN INFOBULLE n'est pas un
+    // message d'erreur. La fiche de mission servie déclarait son lexique (X9 d'oracle-exploitabilite) et posait la
+    // définition de chaque terme en title, avec une aide en role="tooltip" : ces définitions disent « refus », « échec »,
+    // « invalide », et T4-1 en rendait 12 constats (1 bloquant) sur une page sans erreur. La verte est ce glossaire dans
+    // la forme que la forge recommande ; la rouge garde le même glossaire et y ajoute les vrais messages (alerte, .error,
+    // title d'une cellule de donnée et d'un bouton qui ne sont pas des termes) : l'exemption ne désarme pas T4-1.
+    oracle: 'oracle-textes-application.mjs',
+    regles: ['T4-1'],
+    verte: [fx('textes-application-glossaire-verte.html')],
+    rouge: [fx('textes-application-glossaire-rouge.html')],
+  },
+  {
     rendu: true,
     oracle: 'rendu-comparatif.mjs',
     regles: ['RC-1'],

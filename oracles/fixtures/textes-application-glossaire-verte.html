@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — glossaire en infobulle, forme recommandée par la forge</title>
+<!--
+  TF-2276 (retour Produit-86 du 06/11/2026, RP-49) : la fiche de mission servie portait son glossaire en infobulle,
+  dans la forme que la forge recommande elle-même (X9 d'oracle-exploitabilite) : chaque terme de l'écran porte sa
+  définition en `title`, l'écran déclare son lexique (`<dl data-lexique>`), et une aide en `role="tooltip"` complète
+  les termes les plus denses. Ces définitions emploient les mots « refus », « échec », « invalide » parce que le
+  métier en parle : T4-1 en rendait 12 constats, dont 1 bloquant, sur une page sans une seule erreur.
+
+  Quatre formes, toutes des définitions : l'infobulle d'un terme déclaré au lexique (span title), l'entrée du lexique
+  lui-même (dt title), l'aide d'un role="tooltip" (title et texte, même rangé sous une classe error-…), et le
+  aria-label d'un terme du lexique. Le texte « Enregistrer les modifications » est un libellé correct.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; padding: 32px; }
+  [role="tooltip"] { display: none; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Fiche de mission</h1>
+    <p>Périmètre : un <span tabindex="0" title="Déni : actif listé pour être interdit explicitement, l'équipe ne le touche jamais et tout refus d'accès est consigné.">déni</span> est posé sur la base de production.</p>
+    <p>Résultat du test : un <span tabindex="0" aria-label="Échec : tentative invalide, consignée avec son motif de refus.">échec</span> n'est pas une erreur de l'écran.</p>
+    <p>Voir aussi la <span tabindex="0" aria-describedby="t-regle">règle</span>.
+      <span role="tooltip" id="t-regle" class="error-help" title="Règle : un refus d'accès invalide l'essai et doit être rejoué.">Règle : un refus d'accès invalide l'essai et doit être rejoué.</span></p>
+    <dl data-lexique>
+      <dt title="Déni : actif listé pour être interdit explicitement.">déni</dt>
+      <dd>Actif listé pour être interdit explicitement : l'équipe ne le touche jamais, tout refus d'accès est consigné.</dd>
+      <dt title="Échec : tentative invalide, consignée.">échec</dt>
+      <dd>Tentative invalide, consignée avec son motif de refus.</dd>
+      <dt>règle</dt>
+      <dd>Un refus d'accès invalide l'essai et doit être rejoué.</dd>
+    </dl>
+    <button type="button">Enregistrer les modifications</button>
+  </main>
+</body>
+</html>
