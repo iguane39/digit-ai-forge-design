@@ -463,11 +463,21 @@ export function extraireHtml(brut) {
     // aria-label) d'un <button> ordinaire aussi : c'est un message (« Aucune donnée à exporter »), pas un choix.
     const videDeclare = /(^| )(empty|vide)([ -]|$)/.test(classe) || normaliser(at(el, 'data-etat')) === 'vide';
     const estControleDeChoix = el.tag === 'label' || el.tag === 'option' || RX_ROLE_CHOIX.test(at(el, 'role'));
+    // TF-2200 (rattaché à TF-2162) — le title ou l'aria-label d'un <button> qui REPREND son texte visible (« Aucun » sur le
+    // bouton « Aucun », « Aucun filtre » sur « Aucun ») est le nom du contrôle, pas un message : 2 T4-2 bloquants par
+    // bouton « Aucun » du panneau de filtre (4 par écran filtrable, 05/11/2026). Une infobulle qui dit autre chose que
+    // le bouton (« Aucune donnée à exporter » sur « Exporter ») reste un message, donc reste jugée.
+    const texteBouton = el.tag === 'button' && !videDeclare ? normaliser(texteDe(el)).replace(/[.!?…:;]+$/, '').trim() : '';
+    const reprendLeBouton = v => {
+      if (!texteBouton) return false;
+      const n = normaliser(v).replace(/[.!?…:;]+$/, '').trim();
+      return n === texteBouton || n.startsWith(texteBouton + ' ');
+    };
     for (const a of ATTRS_TEXTE) {
       const v = at(el, a);
       if (v.trim()) out.push({ cle: `${el.tag}[${a}]`, texte: v, contexte: marqueurs(el),
         ...(a === 'title' && (estCode || definitionEntete) ? { definition: true } : {}),
-        ...(estControleDeChoix && !videDeclare ? { choix: true } : {}) });
+        ...((estControleDeChoix && !videDeclare) || ((a === 'title' || a === 'aria-label') && reprendLeBouton(v)) ? { choix: true } : {}) });
     }
     // TF-1773 — une pastille de statut (« badge erreur ») affiche une VALEUR, pas un message.
     const estPastille = RX_CLASSE_PASTILLE.test(classe) && at(el, 'role') !== 'alert';
@@ -734,6 +744,28 @@ if (args.includes('--self-test')) {
   check('ROUGE TF-2162 — l\'exemption ne touche pas T4-1 : <p role="alert">Échec</p> reste une erreur sans réparation', () => {
     const r = juger(extraireHtml('<p role="alert">Échec</p><label>Aucune donnée</label>'));
     if (!durs(r).some(f => f.regle === 'T4-1')) throw new Error(JSON.stringify(r.findings));
+  });
+
+  // ── TF-2200 (lot Produit-86 du 05/11, rattaché à TF-2162) : le bouton « Aucun » du panneau de filtre ─
+  // Le composant `table-filters` du socle rend `<button class="tf-none">Aucun</button>` ; un produit y pose title et
+  // aria-label. Chaque attribut qui reprend le texte du bouton était un T4-2 bloquant (2 par bouton).
+  const panneauFiltre = (attrs) => '<div class="tf-panel" role="group" aria-label="Filtrer Statut"><div class="tf-actions">'
+    + '<button type="button" class="tf-all">Tous</button><button type="button" class="tf-none"' + attrs + '>Aucun</button></div></div>';
+  check('VERTE TF-2200 — panneau de filtre du socle (« Tous », « Aucun » en texte) : aucun constat', () => {
+    const r = juger(extraireHtml(panneauFiltre('')));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('VERTE TF-2200 — « Aucun » avec title et aria-label qui reprennent le bouton (« Aucun », « Aucun filtre ») : aucun constat', () => {
+    const r = juger(extraireHtml(panneauFiltre(' title="Aucun" aria-label="Aucun filtre"')));
+    if (r.findings.length) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2200 — même bouton dont le title dit autre chose (« Aucune donnée à afficher ») : T4-2 bloquant, l\'exemption ne couvre que le nom du bouton', () => {
+    const r = juger(extraireHtml(panneauFiltre(' title="Aucune donnée à afficher"')));
+    if (durs(r).filter(f => f.regle === 'T4-2').length !== 1) throw new Error(JSON.stringify(r.findings));
+  });
+  check('ROUGE TF-2200 — un bloc qui se déclare vide reste jugé (div.empty « Aucun résultat »)', () => {
+    const r = juger(extraireHtml(panneauFiltre(' title="Aucun"') + '<div class="empty">Aucun résultat</div>'));
+    if (durs(r).filter(f => f.regle === 'T4-2').length !== 1) throw new Error(JSON.stringify(r.findings));
   });
 
   // ── Extraction : un format, un cas, aucune supposition ────────────────────
