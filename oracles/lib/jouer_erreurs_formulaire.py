@@ -6,6 +6,12 @@ sur stdout. Les seuils et le verdict vivent dans l'oracle, en un seul endroit.
 
 Garde-fou : toute requête d'ÉCRITURE (POST, PUT, PATCH, DELETE) est interceptée et refusée. Une instance servie et
 alimentée ne reçoit jamais la valeur fausse : rien n'est créé chez elle. La requête tentée est comptée (EF4).
+Une seule exception, étroite (TF-2307) : la requête de VÉRIFICATION AU CHAMP que la page déclare sans effet. Elle passe
+si TOUT ceci est vrai : POST, émise par fetch ou XHR (jamais une navigation, donc jamais l'envoi natif du formulaire),
+vers l'origine de la page, sur un chemin qui n'est l'`action` d'aucun formulaire de la page, et qui est soit celui que
+déclare un formulaire par `data-verifier="/chemin"`, soit un chemin dont le dernier segment est `verifier`. Toute autre
+requête d'écriture reste interceptée. Les requêtes passées sont comptées à part (`verifications_passees`) : l'absence
+d'effet est la promesse du produit, l'oracle ne la prouve pas.
 
 Entrée (JSON sur stdin) :
   cibles, largeur, hauteur, etat, certificat_local, attente : comme mesure_exploitabilite.py (TF-2122 : le certificat
@@ -44,23 +50,71 @@ ENVOI = """(cle) => {
 }"""
 
 
+# Ce que la page déclare : l'action de chaque formulaire (résolue contre l'adresse du document ; vide = le document
+# lui-même) et le chemin de vérification que déclare `data-verifier` (vide = la convention du dernier segment).
+DECLARATIONS = """() => {
+  const absolu = (u) => { try { return new URL(u, document.baseURI).href; } catch (e) { return ''; } };
+  const formulaires = [...document.querySelectorAll('form')];
+  return {
+    actions: formulaires.map((f) => absolu(f.getAttribute('action') || '')),
+    verifiers: formulaires.filter((f) => f.hasAttribute('data-verifier'))
+      .map((f) => (f.getAttribute('data-verifier') || '').trim()).map((v) => (v ? absolu(v) : '')),
+  };
+}"""
+
+
 def nom_court(e):
     return str(e).splitlines()[0][:200]
 
 
-def eprouver(page, entree, cible, champ, requetes):
+def origine(url):
+    cadre = urlsplit(url)
+    return (cadre.scheme, cadre.netloc.lower())
+
+
+def chemin(url):
+    return urlsplit(url).path.rstrip("/")
+
+
+def verification_declaree(requete, decl):
+    """Vrai si la requête d'écriture est la vérification au champ que la page déclare sans effet (TF-2307).
+    Étroit par construction : POST, fetch ou XHR, jamais une navigation, même origine que la page, jamais l'action d'un
+    formulaire, et soit le chemin déclaré par data-verifier, soit un dernier segment « verifier »."""
+    try:
+        if requete.method != "POST" or requete.resource_type not in ("fetch", "xhr") or requete.is_navigation_request():
+            return False
+        if not decl.get("page") or origine(requete.url) != origine(decl["page"]):
+            return False
+        c = chemin(requete.url)
+        if c in {chemin(a) for a in decl.get("actions", []) if a and origine(a) == origine(decl["page"])}:
+            return False  # c'est l'envoi du formulaire, quel que soit son chemin
+        declares = {chemin(v) for v in decl.get("verifiers", []) if v and origine(v) == origine(decl["page"])}
+        return c in declares or c.rsplit("/", 1)[-1] == "verifier"
+    except ValueError:
+        return False
+
+
+def declarer(page, decl, cible):
+    """Relit les déclarations de la page chargée : la décision de laisser passer se prend sur la page rendue."""
+    lues = page.evaluate(DECLARATIONS)
+    decl.update({"page": cible, "actions": lues["actions"], "verifiers": lues["verifiers"]})
+
+
+def eprouver(page, entree, cible, champ, requetes, verifs, decl):
     """Un champ : chargement neuf, base, valeur fausse, sortie du champ, envoi. Rend les mesures brutes."""
     attente = int(entree.get("attente", 600))
     cle = champ["cle"]
     page.goto(cible, wait_until="networkidle", timeout=60000)
     page.wait_for_timeout(attente)
     page.evaluate(entree["plan"], entree["max_champs"])  # remarque les champs après le rechargement
+    declarer(page, decl, cible)
     base0 = page.evaluate(entree["etat_champ"], {"cle": cle, "base": None})
     if base0.get("absent"):
         return {"erreur": "champ introuvable après rechargement"}
     base = {"reliees": base0["base_reliees"], "orphelines": base0["base_orphelines"]}
     page.evaluate(ECOUTE)
     del requetes[:]
+    del verifs[:]
     sel = '[data-forge-champ="%s"]' % cle
     loc = page.locator(sel)
     loc.scroll_into_view_if_needed(timeout=5000)
@@ -87,9 +141,9 @@ def eprouver(page, entree, cible, champ, requetes):
         soumis = []
         champ_erreur = nom_court(e)
         return {"apres_sortie": apres_sortie, "apres_envoi": apres_envoi, "soumis": soumis,
-                "requetes_ecriture": len(requetes), "navigation": navigation, "detail": champ_erreur}
+                "requetes_ecriture": len(requetes), "verifications_passees": len(verifs), "navigation": navigation, "detail": champ_erreur}
     return {"apres_sortie": apres_sortie, "apres_envoi": apres_envoi, "soumis": soumis,
-            "requetes_ecriture": len(requetes), "navigation": navigation}
+            "requetes_ecriture": len(requetes), "verifications_passees": len(verifs), "navigation": navigation}
 
 
 def main():
@@ -113,6 +167,8 @@ def main():
             options["storage_state"] = entree["etat"]
         bloques = []
         requetes = []
+        verifs = []
+        decl = {}
         if entree.get("certificat_local"):
             options["ignore_https_errors"] = True
         contexte = navigateur.new_context(**options)
@@ -127,9 +183,12 @@ def main():
         def garder(route):
             requete = route.request
             if requete.method not in METHODES_LECTURE:
-                requetes.append(requete.method + " " + requete.url[:120])
-                route.abort()
-                return
+                if verification_declaree(requete, decl):
+                    verifs.append(requete.method + " " + requete.url[:120])  # passe : la suite contrôle l'hôte comme pour une lecture
+                else:
+                    requetes.append(requete.method + " " + requete.url[:120])
+                    route.abort()
+                    return
             if entree.get("certificat_local"):
                 refuse, hote = hote_non_local(requete.url)
                 if refuse:
@@ -165,7 +224,7 @@ def main():
                     for c in plan["champs"]:
                         fiche = dict(c)
                         try:
-                            fiche.update(eprouver(page, entree, cible, c, requetes))
+                            fiche.update(eprouver(page, entree, cible, c, requetes, verifs, decl))
                         except Exception as e:
                             fiche["erreur"] = nom_court(e)
                         champs.append(fiche)

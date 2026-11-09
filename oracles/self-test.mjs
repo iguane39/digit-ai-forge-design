@@ -2641,6 +2641,103 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2307 (lot Produit-81 du 09/11/2026) — LA VÉRIFICATION AU CHAMP SE LAISSE PASSER, LE RESTE RESTE INTERCEPTÉ. Toute
+// requête POST était refusée pendant l'épreuve, dont la vérification qu'un formulaire demande au serveur à la sortie du
+// champ et qui n'écrit rien : le champ ne recevait jamais la réponse, et un formulaire conforme rendait EF1 et EF4.
+// La recette sert les pages depuis 127.0.0.1 (lib/serveur-recette-verification.mjs) et relit son JOURNAL de POST : c'est
+// la preuve qu'une écriture interceptée n'arrive jamais jusqu'au serveur, et qu'une vérification déclarée y arrive.
+// Sens vert : la fixture qui déclare data-verifier, et la convention du dernier segment /verifier sans déclaration.
+// Sens rouge, chacun avec un journal VIDE : une écriture non déclarée, une déclaration qui ne couvre pas le chemin
+// appelé, un envoi natif du formulaire dont l'action est en /verifier, un envoi par fetch vers cette action, une
+// vérification vers une autre origine.
+{
+  console.log(String.fromCharCode(10) + 'oracle-erreurs-formulaire (TF-2307) — la vérification au champ déclarée passe, le reste reste intercepté');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'erreurs-ver-'));
+    const journal = path.join(dossier, 'journal.txt');
+    const port = 19400 + Math.floor(Math.random() * 500);
+    const BON = '« costcontrol » n\'est pas un domaine complet. Forme attendue : costcontrol.client.fr.';
+    // Un formulaire à un champ. `o.verifie` : adresse que la sortie du champ interroge en POST (sinon le message est local) ;
+    // `o.declare` : valeur de data-verifier ; `o.action` : action du formulaire ; `o.natif` : aucun script d'envoi, le
+    // navigateur envoie ; `o.envoiFetch` : l'envoi se fait par fetch vers form.action, valeur fausse ou non.
+    const page = o => '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Vérification jetable</title>'
+      + '<style>body{margin:0;font:16px/24px sans-serif}main{padding:24px;max-width:640px}input{box-sizing:border-box;width:100%;padding:8px;font:inherit}.e{color:#b00020;margin:4px 0 0}</style></head><body><main>'
+      + '<form id="f" action="' + (o.action ?? '/mandat') + '" method="post"' + (o.declare ? ' data-verifier="' + o.declare + '"' : '') + ' novalidate>'
+      + '<label for="d">Domaine du client</label>'
+      + '<input id="d" name="domaine" type="text" required pattern="[a-z0-9]+([.][a-z0-9]+)+" data-valeur-fausse="costcontrol" aria-describedby="e">'
+      + '<p id="e" class="e" hidden></p><button type="submit">Ouvrir</button></form></main>'
+      + '<script>(function(){var f=document.getElementById("f"),d=document.getElementById("d"),e=document.getElementById("e");'
+      + 'function dire(t){e.textContent=t;e.hidden=false;d.setAttribute("aria-invalid","true");}'
+      + (o.verifie
+        ? 'd.addEventListener("blur",function(){fetch(' + JSON.stringify(o.verifie) + ',{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({valeur:d.value})})'
+          + '.then(function(r){return r.json();}).then(function(j){if(!j.ok)dire(j.message);}).catch(function(){});});'
+        : 'd.addEventListener("blur",function(){dire(' + JSON.stringify(BON) + ');});')
+      + (o.natif ? '' : 'f.addEventListener("submit",function(ev){ev.preventDefault();'
+        + (o.envoiFetch ? 'fetch(f.action,{method:"POST"}).catch(function(){});'
+          : 'if(d.getAttribute("aria-invalid")==="true")return;fetch("/mandat",{method:"POST"}).catch(function(){});') + '});')
+      + '})();</script></body></html>';
+    const serveur = spawn(process.execPath, [path.join(ici, 'lib', 'serveur-recette-verification.mjs'), dossier, String(port), journal], { stdio: 'ignore' });
+    try {
+      fs.copyFileSync(fx('erreurs-formulaire-verifier-verte.html'), path.join(dossier, 'erreurs-formulaire-verifier-verte.html'));
+      let pret = false;
+      for (let i = 0; i < 40 && !pret; i++) {
+        const s = spawnSync(process.execPath, ['-e', 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))', `http://127.0.0.1:${port}/erreurs-formulaire-verifier-verte.html`]);
+        pret = s.status === 0;
+      }
+      if (!pret) {
+        ligne(false, 'serveur local de recette indisponible');
+      } else {
+        const jouerHttp = nom => {
+          fs.writeFileSync(journal, '');
+          const r = spawnSync(process.execPath, [path.join(ici, 'oracle-erreurs-formulaire.mjs'), `http://127.0.0.1:${port}/${nom}`, '--json-only'],
+            { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+          let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+          const regles = new Set((j?.findings || []).map(x => x.regle));
+          const posts = fs.readFileSync(journal, 'utf8').split(/\r?\n/).filter(Boolean);
+          return { code: r.status, json: j, regles, posts, m: (j?.mesures || [])[0] || {} };
+        };
+        const ecrire = (nom, o) => { fs.writeFileSync(path.join(dossier, nom + '.html'), page(o), 'utf8'); return nom + '.html'; };
+        const seule = (x, rg) => x.regles.has(rg) && [...x.regles].filter(y => y !== rg).length === 0;
+
+        // Sens vert : la déclaration data-verifier (fixture), puis la convention du dernier segment sans déclaration.
+        const verte = jouerHttp('erreurs-formulaire-verifier-verte.html');
+        ligne(verte.code === 0 && verte.json?.champs_eprouves === 1 && verte.m.invalide && verte.m.apres_sortie && verte.m.requetes_ecriture === 0 && verte.m.verifications_passees === 1,
+          `sens vert · data-verifier : la réponse du serveur est dite sous le champ à la sortie, aria-invalid, 1 vérification passée, 0 écriture interceptée, PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code}, passées ${verte.m.verifications_passees}, écritures ${verte.m.requetes_ecriture})`);
+        ligne(verte.posts.join() === 'POST /mandat/verifier' && /« costcontrol » n'est pas un domaine connu/.test(verte.m.message || ''),
+          `sens vert · le serveur a reçu la seule vérification déclarée (journal « ${verte.posts.join(' ; ')} ») et le message reprend la saisie`);
+        ligne((verte.json?.non_juge || []).some(n => /^1 requête\(s\) de vérification au champ DÉCLARÉE\(S\) sans effet/.test(n)),
+          'sens vert · l\'absence d\'effet n\'est pas prouvée : la promesse du produit et le compte des requêtes passées sont dits au non_juge');
+        const conv = jouerHttp(ecrire('convention', { verifie: '/clients/verifier' }));
+        ligne(conv.code === 0 && conv.m.verifications_passees === 1 && conv.posts.join() === 'POST /clients/verifier',
+          `sens vert · dernier segment /verifier sans data-verifier : la vérification passe (journal « ${conv.posts.join(' ; ')} »), PASS exit 0 (obtenu ${conv.json?.verdict}, exit ${conv.code})`);
+
+        // Sens rouge : le journal du serveur reste VIDE, preuve que rien d'autre n'arrive jusqu'à lui.
+        const nonDeclare = jouerHttp(ecrire('non-declare', { verifie: '/mandat/enregistrer' }));
+        ligne(nonDeclare.code === 1 && nonDeclare.regles.has('EF4') && nonDeclare.m.verifications_passees === 0 && nonDeclare.posts.length === 0,
+          `sens rouge · écriture non déclarée (POST /mandat/enregistrer à la sortie du champ) : interceptée, EF4, journal vide (obtenu ${nonDeclare.json?.verdict}, journal « ${nonDeclare.posts.join(' ; ')} »)`);
+        const autreChemin = jouerHttp(ecrire('autre-chemin', { declare: '/mandat/verifier', verifie: '/mandat/creer' }));
+        ligne(autreChemin.code === 1 && autreChemin.regles.has('EF4') && autreChemin.m.verifications_passees === 0 && autreChemin.posts.length === 0,
+          `sens rouge · data-verifier ne couvre que son chemin (POST /mandat/creer appelé) : interceptée, EF4, journal vide (obtenu ${autreChemin.json?.verdict}, journal « ${autreChemin.posts.join(' ; ')} »)`);
+        const natif = jouerHttp(ecrire('envoi-natif', { action: '/mandat/verifier', declare: '/mandat/verifier', natif: true }));
+        ligne(natif.code === 1 && seule(natif, 'EF4') && natif.m.verifications_passees === 0 && natif.posts.length === 0,
+          `sens rouge · l'envoi natif du formulaire dont l'action est /mandat/verifier reste intercepté : EF4 seul, journal vide (obtenu ${natif.json?.verdict}, ${[...natif.regles].join(',')}, journal « ${natif.posts.join(' ; ')} »)`);
+        const parFetch = jouerHttp(ecrire('envoi-fetch', { action: '/mandat/verifier', declare: '/mandat/verifier', envoiFetch: true }));
+        ligne(parFetch.code === 1 && seule(parFetch, 'EF4') && parFetch.m.verifications_passees === 0 && parFetch.posts.length === 0,
+          `sens rouge · l'envoi par fetch vers l'action en /verifier reste intercepté : EF4 seul, journal vide (obtenu ${parFetch.json?.verdict}, ${[...parFetch.regles].join(',')}, journal « ${parFetch.posts.join(' ; ')} »)`);
+        const autreOrigine = `http://localhost:${port}/mandat/verifier`;
+        const ailleurs = jouerHttp(ecrire('autre-origine', { declare: autreOrigine, verifie: autreOrigine }));
+        ligne(ailleurs.code === 1 && ailleurs.regles.has('EF4') && ailleurs.m.verifications_passees === 0 && ailleurs.posts.length === 0,
+          `sens rouge · vérification déclarée vers une autre origine que la page : interceptée, EF4, journal vide (obtenu ${ailleurs.json?.verdict}, journal « ${ailleurs.posts.join(' ; ')} »)`);
+      }
+    } finally {
+      serveur.kill();
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
 // TF-1904 (étude 20261019i, mesuré le 19/10/2026) — une page jetable de 9 lignes portant une
 // boucle infinie de 40 s, une animation JavaScript de 1,2 s et une révocation reduced-motion qui
 // ne couvre qu'un des deux éléments animés rendait PASS, exit 0, sans une alerte. R11, R12 et

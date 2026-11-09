@@ -1001,6 +1001,32 @@ sa pose au socle et son sceau `COMPOSANT-EMBARQUE` restent à faire.
 - La règle d'écriture « un message d'erreur reprend la saisie et donne la forme corrigée » de `ECRITURE.md` du pilot : EF3
   la mesure sur l'écran rendu, mais son texte vit au pilot.
 
+## Entrée du 09/11/2026 — oracle-erreurs-formulaire, la vérification au champ déclarée passe (TF-2307)
+
+Le fait (lot Produit-81 du 09/11/2026). Un formulaire conforme demandait au serveur, à la sortie du champ, si la valeur
+était acceptable (`POST /mandat/verifier`, qui n'écrit rien). L'oracle refusait toute requête POST pendant l'épreuve : le
+champ ne recevait jamais la réponse, et la page rendait EF1 (champ non désigné) puis EF4 (l'envoi part, puisque le champ
+n'était jamais invalide). Mesuré avant correction sur la fixture `erreurs-formulaire-verifier-verte.html` servie en
+local : FAIL, EF1 et EF4 bloquants, 2 écritures interceptées. Après : PASS, 1 vérification passée, 0 écriture.
+
+La règle, étroite. Une requête d'écriture passe si TOUT est vrai : POST ; émise par fetch ou XHR (donc jamais l'envoi natif
+du formulaire, qui est une navigation) ; vers l'origine de la page ; sur un chemin qui n'est l'`action` d'aucun formulaire
+de la page (un envoi par fetch vers une action en `/verifier` reste intercepté) ; et soit le chemin que déclare un
+formulaire par `data-verifier="/chemin"`, soit un chemin dont le dernier segment est `verifier`. Tout le reste reste
+intercepté et compte pour EF4. Les requêtes passées sont comptées à part (`mesures[].verifications_passees`) et dites au
+non_juge : l'absence d'effet est la promesse du produit, l'oracle ne la prouve pas.
+
+Ce que la forge prescrit, relu le 09/11/2026. Aucun document de forge-design ne prescrit la vérification au champ par une
+requête sans effet : le composant `corpus/composants/saisie-erreurs.js` écrit au contraire qu'une règle qui n'existe que
+côté serveur ne se vérifie qu'à l'envoi (`SaisieErreurs.refuser`). La forme décrite par le lot est donc une pratique de
+produit que l'oracle accepte, pas une prescription de la forge ; le composant n'en est pas modifié.
+
+La preuve vit dans `self-test.mjs`, bloc « oracle-erreurs-formulaire (TF-2307) » : deux sens verts (déclaration, convention du
+dernier segment) et cinq rouges, chacune relue au JOURNAL des POST que le serveur de recette
+(`oracles/lib/serveur-recette-verification.mjs`, 127.0.0.1) tient : vide pour une écriture non déclarée, un chemin que la
+déclaration ne couvre pas, un envoi natif ou par fetch vers une action en `/verifier`, une vérification vers une autre
+origine.
+
 ## Entrée du 09/11/2026 — oracle-slop S11 et S12, deux signes du skill tiers « unslop »
 
 Voie taste-skill, sans rien installer. Essai court choisi par le porteur le 09/11/2026, suite du tri des favoris TikTok du pilot. Sur les 9 signes que nomme la description d’unslop, 4 étaient couverts par S2, S5 et S6 ; 2 entrent en **avertissement** dans `oracle-slop`, et 3 sont écartés. Attribution CC BY 4.0, table de disposition, mesure et signes écartés : [regles-importees-unslop.md](regles-importees-unslop.md).

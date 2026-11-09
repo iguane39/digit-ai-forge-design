@@ -19,7 +19,8 @@
 //        Écris-le ainsi : costcontrol.domaine-du-client.fr ». Un message court qui ne fait ni l'un ni l'autre est majeur ;
 //        un message long dont aucune formulation n'est reconnue est un avertissement (la classe des formulations est ouverte)
 //   EF4  envoi RETENU — une requête d'écriture (POST, PUT, PATCH, DELETE) ou une navigation part malgré la valeur
-//        fausse : bloquant. Les requêtes d'écriture sont interceptées et refusées : rien n'est créé chez l'instance
+//        fausse : bloquant. Les requêtes d'écriture sont interceptées et refusées : rien n'est créé chez l'instance.
+//        Une seule exception, étroite (TF-2307) : la vérification AU CHAMP que la page déclare sans effet (voir plus bas)
 //   EF5  vérification à la SORTIE du champ — le message n'apparaît qu'à l'envoi, pas à la sortie du champ : avertissement
 //
 // LA VALEUR FAUSSE vient du champ lui-même, jamais devinée au hasard : `data-valeur-fausse="…"` (déclarée par le produit,
@@ -27,6 +28,15 @@
 // `url`, `min` / `max`, `minlength`, `required` (vide). Un champ sans contrainte ni déclaration n'est pas éprouvé, et le
 // non_juge le liste. Sont éprouvés les champs de texte, nombre, courriel, URL, téléphone, mot de passe, recherche et
 // les zones de texte, 12 par écran au plus (la borne se dit).
+//
+// LA VÉRIFICATION AU CHAMP (TF-2307). Un produit peut demander au serveur, à la sortie du champ, si la valeur est
+// acceptable (règle qui n'existe que côté serveur : mandat déjà pris, domaine inconnu). Cette requête est un POST qui
+// n'écrit rien ; l'interdire empêche le champ de recevoir la réponse et fait rendre EF1 sur un formulaire conforme. Elle
+// passe SI le formulaire la déclare par `data-verifier="/chemin"` (ou, sans chemin, si le dernier segment de l'adresse
+// est `verifier`), SI elle part en fetch ou XHR vers l'origine de la page, et SI son chemin n'est l'`action` d'aucun
+// formulaire. Tout le reste reste intercepté : une requête non déclarée, et l'envoi du formulaire (navigation) même
+// quand son `action` pointe un chemin en /verifier. L'oracle ne prouve pas l'absence d'effet : c'est la promesse du
+// produit, dite au non_juge avec le compte des requêtes passées (`mesures[].verifications_passees`).
 //
 // LE COMPOSANT QUI LE FAIT PASSER : `corpus/composants/saisie-erreurs.js` et `.css` (TF-2172) — erreur sous le champ,
 // aria-invalid, aria-describedby, résumé d'erreurs à liens, vérification à la sortie du champ, envoi retenu.
@@ -66,7 +76,7 @@ const MAX_CHAMPS = 12;
 
 const NJ = [
   'la valeur FAUSSE est dérivée des contraintes natives du champ (pattern, type, min, max, minlength, required) ou déclarée par data-valeur-fausse : un champ sans contrainte ni déclaration n\'est pas éprouvé (liste au non_juge), et une règle qui n\'existe que côté serveur n\'est pas jouée',
-  'les requêtes d\'ÉCRITURE (POST, PUT, PATCH, DELETE) sont interceptées et refusées pendant l\'épreuve : aucune donnée n\'est créée chez l\'instance, mais un refus venu du serveur n\'est donc jamais observé — le message d\'un refus serveur se juge à la main ou par le composant (SaisieErreurs.refuser)',
+  'les requêtes d\'ÉCRITURE (POST, PUT, PATCH, DELETE) sont interceptées et refusées pendant l\'épreuve : aucune donnée n\'est créée chez l\'instance, mais le refus que le serveur opposerait À L\'ENVOI n\'est donc jamais observé — il se juge à la main ou par le composant (SaisieErreurs.refuser). Seule exception : la vérification au champ que la page déclare sans effet (data-verifier, ou dernier segment /verifier ; POST en fetch ou XHR, même origine, jamais l\'action du formulaire ni une navigation), dont la réponse est observée',
   'EF3 lit la PRÉSENCE de la saisie reprise ou d\'une forme attendue (formulations françaises reconnues, liste ouverte) : elle ne juge ni la justesse de l\'exemple, ni la clarté de la cause, ni le ton — voix de marque et lisibilité restent à l\'arbitrage (voix.md)',
   `UNE valeur fausse par champ, un champ à la fois, ${MAX_CHAMPS} champs par écran au plus : les combinaisons de champs, les erreurs croisées entre champs, les listes déroulantes, cases, boutons radio, dates et fichiers ne sont pas éprouvés`,
   'le résumé d\'erreurs à liens est rapporté (mesures[].resume_liens) mais non jugé : il n\'est dû qu\'au-delà d\'un champ fautif, et l\'oracle n\'en fautifie qu\'un à la fois',
@@ -264,7 +274,7 @@ for (const res of sortie.resultats) {
     MESURES.push({ cible: ou, champ: c.nom, valeur_fausse: c.valeur, source: c.source, apres_sortie: neuves1.length > 0, apres_envoi: neuves2.length > 0,
       invalide, message: msgs[0] ? msgs[0].texte : null, distance_px: msgs[0] ? msgs[0].distance : null,
       resume_liens: (s2.resume || {}).liens || 0, resume_vise_le_champ: !!(s2.resume || {}).cible_le_champ,
-      requetes_ecriture: c.requetes_ecriture || 0, navigation: !!c.navigation, orphelines: orph.map(o => o.texte).slice(0, 3) });
+      requetes_ecriture: c.requetes_ecriture || 0, verifications_passees: c.verifications_passees || 0, navigation: !!c.navigation, orphelines: orph.map(o => o.texte).slice(0, 3) });
 
     // EF1 — champ désigné.
     if (!msgs.length && !invalide) {
@@ -319,6 +329,9 @@ if (CERT_LOCAL) {
   NJ.push('certificat auto-signé accepté pour les hôtes de boucle locale seulement (--accepter-certificat-local)'
     + (bloques.length ? ` ; requête(s) https vers un hôte non local BLOQUÉE(S) : ${bloques.join(', ')}` : ''));
 }
+const passees = MESURES.reduce((n, m) => n + (m.verifications_passees || 0), 0);
+if (passees) NJ.push(`${passees} requête(s) de vérification au champ DÉCLARÉE(S) sans effet (data-verifier, ou dernier segment /verifier) laissée(s) passer au serveur : `
+  + 'l\'oracle ne prouve pas qu\'elles n\'écrivent rien, c\'est la promesse du produit ; toute autre requête d\'écriture, et l\'envoi du formulaire, sont restés interceptés');
 if (outillage.via === 'uv') NJ.push(`rendu par l'interpréteur de l'environnement uv du dossier courant (${outillage.python})`);
 if (ETAT) NJ.push(`état de connexion chargé : ${ETAT} — l'oracle ne vérifie pas qu'il est encore valide au-delà du constat EF0 de redirection`);
 

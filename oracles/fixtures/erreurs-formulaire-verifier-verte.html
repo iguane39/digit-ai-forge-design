@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- FIXTURE VERTE — oracle-erreurs-formulaire, vérification au champ par le serveur (TF-2307, lot Produit-81 du 09/11/2026).
+     Une règle qui n'existe que côté serveur (le domaine est-il connu ?) se vérifie à la SORTIE du champ par un POST
+     qui n'écrit rien. Le formulaire le déclare : data-verifier="/mandat/verifier". La réponse du serveur se dit sous le
+     champ (aria-invalid, message relié par aria-describedby, reprise de la saisie et forme attendue). L'envoi du
+     formulaire (action="/mandat") reste retenu tant que le champ est invalide.
+     Cette page ne se lit qu'en HTTP : la recette la sert depuis oracles/lib/serveur-recette-verification.mjs.
+     Attendu : PASS, exit 0, 1 champ éprouvé, 1 vérification passée, aucun POST sur /mandat. -->
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Fixture oracle-erreurs-formulaire (verte, vérification au champ)</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; font-size: 16px; line-height: 24px; color: #1a1a1a; background: #ffffff; }
+    main { max-width: 640px; padding: 24px; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; }
+    input { box-sizing: border-box; width: 100%; padding: 8px; border: 1px solid #767676; border-radius: 4px; font: inherit; }
+    .e { color: #b00020; margin: 4px 0 16px; }
+    button { padding: 8px 16px; font: inherit; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Ouvrir un mandat</h1>
+  <form id="f" action="/mandat" method="post" data-verifier="/mandat/verifier" novalidate>
+    <label for="d">Domaine du client</label>
+    <input id="d" name="domaine" type="text" required pattern="[a-z0-9]+(\.[a-z0-9]+)+"
+           data-valeur-fausse="costcontrol" data-exemple="costcontrol.client.fr" aria-describedby="e">
+    <p id="e" class="e" hidden></p>
+    <button type="submit">Ouvrir le mandat</button>
+  </form>
+</main>
+<script>
+(function () {
+  var f = document.getElementById('f'), d = document.getElementById('d'), e = document.getElementById('e');
+  function dire(texte) { e.textContent = texte; e.hidden = false; d.setAttribute('aria-invalid', 'true'); }
+  function taire() { e.textContent = ''; e.hidden = true; d.removeAttribute('aria-invalid'); }
+  d.addEventListener('blur', function () {
+    fetch('/mandat/verifier', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ valeur: d.value }) })
+      .then(function (r) { return r.json(); })
+      .then(function (j) { if (j.ok) taire(); else dire(j.message); })
+      .catch(function () { /* serveur injoignable : rien à dire sous le champ */ });
+  });
+  f.addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    if (d.getAttribute('aria-invalid') === 'true') return;
+    fetch('/mandat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ valeur: d.value }) }).catch(function () {});
+  });
+})();
+</script>
+</body>
+</html>
