@@ -27,7 +27,7 @@ après cette date vivent dans les chapitres datés du bas de ce fichier, pas ici
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Design généré : marqueurs de slop | `oracles/oracle-slop.mjs <page.html>` — S1 bandeau latéral > 1px, S2 texte en dégradé, S3 polices réflexes, S4 noir/blanc purs, S5 palette IA (violet→bleu, néon sur sombre), S6 emojis en production, S7 grille de cartes clonée, S8 easing à dépassement, S9 rayon uniforme + ombre non teintée, S10 sparkline décoratif | cli | ✅ |
+| Design généré : marqueurs de slop | `oracles/oracle-slop.mjs <page.html>` — S1 bandeau latéral > 1px, S2 texte en dégradé, S3 polices réflexes, S4 noir/blanc purs, S5 palette IA (violet→bleu, néon sur sombre), S6 emojis en production, S7 grille de cartes clonée, S8 easing à dépassement, S9 rayon uniforme + ombre non teintée, S10 sparkline décoratif, S11 halo coloré (avertissement), S12 forme floue (avertissement) | cli | ✅ |
 | Système de marque : traçabilité des tokens | `oracles/oracle-tokens.mjs <page.html> [--tokens tokens.css]` — T1 couleur en dur, T2 police en dur, T3 échelle 4pt, T4 parité clair/sombre, T5 contraste ≥ 4.5:1 sur paires résolvables, T6 chroma aux extrêmes (OKLCH) | cli | ✅ |
 | Cible mobile : contrat d'usage tactile | `oracles/oracle-mobile.mjs <page.html>` — M1 viewport et zoom, M2 cibles ≥ 44 px, M3 safe-area-inset, M4 reflow des tables sous 768 px, M5 orientation paysage, M6 prefers-reduced-motion | cli | ✅ |
 | Visuels générés : traçabilité et budget | `oracles/oracle-images.mjs <page.html> [--env .env]` — I1 alt utile, I2 plafond unitaire, I3 plafond global 10 Mo, I4 zéro image réseau, I5 manifeste de génération, I6 complétude prompt/modèle/date, I7 deux actifs déclarés variantes rendent différemment (empreintes identiques, ou encres identiques à empreintes différentes) | cli | ✅ |
@@ -45,7 +45,7 @@ après cette date vivent dans les chapitres datés du bas de ce fichier, pas ici
     "extensions": [".html"],
     "fixtures": { "verte": "oracles/fixtures/slop-verte.html", "rouge": "oracles/fixtures/slop-rouge.html" },
     "provenance": { "chantier": "forge-design", "date": "2026-08-04" },
-    "regles": 10
+    "regles": 12
   },
   {
     "domaine": "Système de marque : traçabilité des tokens",
@@ -1000,3 +1000,14 @@ sa pose au socle et son sceau `COMPOSANT-EMBARQUE` restent à faire.
 - Le **résumé d'erreurs** : rapporté (`mesures[].resume_liens`), non jugé.
 - La règle d'écriture « un message d'erreur reprend la saisie et donne la forme corrigée » de `ECRITURE.md` du pilot : EF3
   la mesure sur l'écran rendu, mais son texte vit au pilot.
+
+## Entrée du 09/11/2026 — oracle-slop S11 et S12, deux signes du skill tiers « unslop »
+
+Voie taste-skill, sans rien installer. Essai court choisi par le porteur le 09/11/2026, suite du tri des favoris TikTok du pilot. Sur les 9 signes que nomme la description d’unslop, 4 étaient couverts par S2, S5 et S6 ; 2 entrent en **avertissement** dans `oracle-slop`, et 3 sont écartés. Attribution CC BY 4.0, table de disposition, mesure et signes écartés : [regles-importees-unslop.md](regles-importees-unslop.md).
+
+| Règle | Oracle | Défaut visé |
+|---|---|---|
+| S11 | `oracle-slop` | halo coloré : ombre sans décalage, flou de 12px au moins, couleur saturée (CSS, `drop-shadow`, classe Tailwind `shadow-[0_0_…]`) |
+| S12 | `oracle-slop` | forme floue : `filter: blur()` de 20px au moins, ou classes `blur-xl` à `blur-3xl` |
+
+Bruit mesuré le 09/11/2026 sur 2 799 pages uniques de `C:dev`, avant l’inscription : S11 0 constat, S12 13 constats, tous vrais à la lecture. Aucun verdict ne change : les deux règles avertissent. Preuves : 2 paires de fixtures, verrouillées par le bloc « oracle-slop S11 et S12 (essai unslop du 09/11/2026) » de `self-test.mjs`.

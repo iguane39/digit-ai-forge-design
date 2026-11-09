@@ -204,7 +204,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 
 | Oracle | Règles | Domaine |
 |---|---|---|
-| `oracle-slop` | S1–S10 | marqueurs de design généré |
+| `oracle-slop` | S1–S12 | marqueurs de design généré ; S11 et S12 adaptées d’unslop (CC BY 4.0), voir `oracles/regles-importees-unslop.md` |
 | `oracle-tokens` | T1–T6 | traçabilité des tokens, parité des thèmes, contraste |
 | `oracle-mobile` | M1–M8, M10–M11 (avertissements) | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante ; délai de tap et `theme-color` en avertissement (TF-1911) |
 | `oracle-images` | I1–I7, I8 (avertissement) | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment ; `width` et `height` posés en avertissement (TF-1911) |

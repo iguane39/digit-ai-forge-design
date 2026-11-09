@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>S11 verte — ombres sans halo</title>
+<style>
+  :root { --fond: #f6f4ef; --texte: #23211c; --accent: #3b6fd1; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 24px; }
+  .carte { padding: 16px; box-shadow: 0 4px 12px rgba(20, 20, 40, 0.15); }
+  .bouton:focus-visible { box-shadow: 0 0 0 3px rgba(59, 111, 209, 0.9); }
+  .creux { box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.5); }
+  .gris { box-shadow: 0 0 24px rgba(30, 30, 30, 0.3); }
+  .halo-variable { box-shadow: 0 0 20px var(--accent); }
+</style>
+</head>
+<body>
+  <div class="carte">Revenus du mois</div>
+  <button class="bouton" type="button">Exporter</button>
+  <div class="creux">Zone</div>
+  <div class="gris">Encart</div>
+  <span class="shadow-[0_4px_12px_rgba(20,20,40,0.15)]">Étiquette</span>
+</body>
+</html>

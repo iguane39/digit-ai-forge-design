@@ -4,6 +4,12 @@
 // frontend-design. Aucune ne demande de jugement : chacune matche un motif CSS,
 // HTML ou colorimétrique localisable.
 //
+// S11 et S12 (essai du 09/11/2026, en AVERTISSEMENT) sont adaptées de « unslop » de Damir
+// Sokolovsky, https://github.com/heydamir/unslop, fichier skills/unslop/references/signs.md,
+// commit 97daa3e, licence CC BY 4.0 (https://creativecommons.org/licenses/by/4.0/). Adaptation :
+// deux signes de la section « Surfaces and color » réécrits en règles statiques, seuils posés ici.
+// Attribution, table de disposition et signes écartés : regles-importees-unslop.md.
+//
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-slop.mjs <fichier.html> [--json-only]
 
@@ -14,7 +20,7 @@ import { charteDePoliceDuSocle } from './lib/socle.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
 // TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
-const REGLES_JOUEES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10'];
+const REGLES_JOUEES = ['S1', 'S2', 'S3', 'S4', 'S5', 'S6', 'S7', 'S8', 'S9', 'S10', 'S11', 'S12'];
 const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Design généré : marqueurs de slop';
@@ -22,6 +28,8 @@ const NON_JUGE = [
   'généricité de la direction artistique (crème+serif+terracotta, noir+accent acide, broadsheet à filets) — indices seulement, jugement humain',
   'qualité du contenu rédactionnel et pertinence des choix pour le brief',
   'rendu réel : débordements, chevauchements, contraste mesuré — déléguer à render_page.py',
+  'S11 : halo dont la couleur passe par une variable CSS (seules les couleurs littérales sont lues) ; lavis radial de couleur derrière le contenu (radial-gradient), non mécanisé',
+  'S12 : forme floue dessinée dans une image ou un SVG, et non par filter: blur',
 ];
 
 // Les 22 familles réflexes listées par impeccable <reflex_fonts_to_reject>.
@@ -419,6 +427,68 @@ const refusee = (libelle, msg, ou) => {
     if (w > 0 && h > 0 && w >= 60 && w <= 220 && h <= 90 && w / h >= 2) {
       add('avertissement', 'S10', `mini-graphique ${w}×${h} sans axe, sans légende, sans libellé : décoration qui mime la sophistication`,
         ou(a, svg));
+    }
+  }
+}
+
+// ── S11 · Halo coloré ──────────────────────────────────────────────────────
+// unslop, signs.md : « Colored glows, like `shadow-[0_0_20px_rgba(139,92,246,0.5)]`, `drop-shadow`
+// on emoji or glowing pills → remove, depth from surface steps and hairlines ». Un halo est une
+// ombre SANS décalage (x et y à 1px au plus), au flou large (12px au moins), d'une couleur saturée
+// (saturation 45 % au moins, ni quasi noire ni quasi blanche). Restent hors règle : l'ombre portée
+// décalée, l'ombre noire ou grise, l'anneau de focus (flou nul) et l'ombre intérieure (inset).
+// Mesuré le 09/11/2026 sur 2 799 pages uniques du parc : 0 constat ; aucune ombre de ce gabarit
+// n'y est colorée. La règle est préventive, et sa rouge prouve qu'elle mord.
+{
+  const sature = c => { const h = hsl(c); return c.a >= 0.2 && h.s >= 0.45 && h.l > 0.15 && h.l < 0.9; };
+  const enPx = v => { const m = /^(-?[\d.]+)(px|rem|em)?$/.exec(v); return m ? parseFloat(m[1]) * (m[2] === 'rem' || m[2] === 'em' ? 16 : 1) : null; };
+  const couper = val => { const out = []; let p = 0, cur = ''; for (const ch of val) { if (ch === '(') p++; if (ch === ')') p--; if (ch === ',' && p === 0) { out.push(cur); cur = ''; } else cur += ch; } if (cur.trim()) out.push(cur); return out.map(s => s.trim()); };
+  const halo = o => {
+    if (/^inset\b/i.test(o)) return false;
+    const n = o.replace(/(rgba?|hsla?|oklch|color-mix)\([^)]*\)|#[0-9a-f]{3,8}\b|var\([^)]*\)/gi, ' ').trim().split(/\s+/).map(enPx).filter(x => x !== null);
+    return n.length >= 3 && Math.abs(n[0]) <= 1 && Math.abs(n[1]) <= 1 && n[2] >= 12 && findColors(o).some(sature);
+  };
+  const vus = new Set();
+  const signaler = (extrait, where) => {
+    if (vus.has(extrait) || vus.size >= 8) return;
+    vus.add(extrait);
+    add('avertissement', 'S11', `halo coloré « ${extrait.slice(0, 70)} » : retirer, la profondeur vient des paliers de surface et des filets (unslop, CC BY 4.0)`, where);
+  };
+  for (const r of regles) {
+    for (const m of r.body.matchAll(/(box-shadow|text-shadow)\s*:\s*([^;]+)/gi))
+      for (const o of couper(m[2])) if (halo(o)) signaler(`${m[1]}: ${o}`, `sélecteur « ${r.selector.trim().slice(0, 60)} »`);
+    for (const m of r.body.matchAll(/drop-shadow\(((?:[^()]|\([^()]*\))*)\)/gi))
+      if (halo(m[1].trim())) signaler(`drop-shadow(${m[1].trim()})`, `sélecteur « ${r.selector.trim().slice(0, 60)} »`);
+  }
+  for (const { a, el } of tous()) {
+    for (const m of String(el.attrs.class || '').matchAll(/(?:^|\s)(?:\w+:)*(?:drop-)?shadow-\[0_0_(\d+)px_([^\]]+)\]/g))
+      if (Number(m[1]) >= 12 && findColors(m[2].replace(/_/g, ' ')).some(sature)) signaler(m[0].trim(), ou(a, el));
+  }
+}
+
+// ── S12 · Forme floue ──────────────────────────────────────────────────────
+// unslop, signs.md : « Radial color washes or blurred blobs behind content → remove ». Est jugée
+// la forme floutée par `filter: blur()` de 20px au moins, ou par les classes Tailwind blur-xl,
+// blur-2xl et blur-3xl. Le flou d'arrière-plan d'une surcouche (`backdrop-filter`) et un flou
+// léger, sous 20px, restent hors règle. Mesuré le 09/11/2026 sur 2 799 pages uniques du parc :
+// 1 constat, un fond de section à blur(64px), vrai à la lecture.
+{
+  const vus = new Set();
+  for (const r of regles) {
+    for (const m of r.body.matchAll(/(^|[;\s{])filter\s*:\s*[^;]*?blur\(\s*([\d.]+)(px|rem|em)\s*\)/gi)) {
+      const v = parseFloat(m[2]) * (m[3] === 'px' ? 1 : 16);
+      const cle = r.selector.trim();
+      if (v < 20 || vus.has(cle)) continue;
+      vus.add(cle);
+      add('avertissement', 'S12', `forme floue (filter: blur(${m[2]}${m[3]})) : la retirer, ou montrer un visuel réel du produit (unslop, CC BY 4.0)`,
+        `sélecteur « ${cle.slice(0, 60)} »`);
+    }
+  }
+  for (const { a, el } of tous()) {
+    const m = /(?:^|\s)(blur-(?:xl|2xl|3xl))(?:\s|$)/.exec(String(el.attrs.class || ''));
+    if (m && !vus.has(m[1] + ou(a, el))) {
+      vus.add(m[1] + ou(a, el));
+      add('avertissement', 'S12', `forme floue (classe « ${m[1]} ») : la retirer, ou montrer un visuel réel du produit (unslop, CC BY 4.0)`, ou(a, el));
     }
   }
 }

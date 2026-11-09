@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>S12 rouge — formes floues</title>
+<style>
+  :root { --fond: #f6f4ef; --texte: #23211c; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 24px; }
+  .appel { position: relative; padding: 48px 24px; }
+  .appel .tache { position: absolute; inset: 0; background: rgba(139, 92, 246, 0.4); border-radius: 50%; filter: blur(64px); }
+</style>
+</head>
+<body>
+  <section class="appel">
+    <div class="tache" aria-hidden="true"></div>
+    <h2>Essayez gratuitement</h2>
+  </section>
+  <div class="blur-3xl" aria-hidden="true"></div>
+</body>
+</html>

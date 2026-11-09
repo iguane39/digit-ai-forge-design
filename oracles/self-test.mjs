@@ -2729,6 +2729,30 @@ for (const cas of CAS) {
   }
 }
 
+// Essai unslop du 09/11/2026 — deux signes de « unslop » (Damir Sokolovsky, CC BY 4.0, attribution
+// `regles-importees-unslop.md`) entrent dans oracle-slop en AVERTISSEMENT : S11 halo coloré, S12 forme
+// floue. Même contrat que le bloc TF-1911 : la verte reste sans S11 ni S12, la rouge reste PASS, exit 0,
+// avec un avertissement de SA règle seulement.
+{
+  console.log(String.fromCharCode(10) + 'oracle-slop S11 et S12 (essai unslop du 09/11/2026) — avertissements, deux sens, aucun livrable rougi');
+  const NEUVES = ['S11', 'S12'];
+  const jouer = (f) => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-slop.mjs'), f, '--json-only'], { encoding: 'utf8' });
+    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, verdict: j?.verdict, f: j?.findings || [] };
+  };
+  for (const [regle, base, attendus] of [['S11', 'slop-s11', 4], ['S12', 'slop-s12', 2]]) {
+    const v = jouer(fx(`${base}-verte.html`)), r = jouer(fx(`${base}-rouge.html`));
+    ligne(v.code === 0 && v.verdict === 'PASS' && !v.f.some(x => NEUVES.includes(x.regle)),
+      `${regle} · sens vert : ${base}-verte.html sans S11 ni S12 (ombre décalée, anneau de focus, inset, gris, variable ; backdrop-filter, flou léger) (exit ${v.code}, ${v.verdict})`);
+    const siennes = r.f.filter(x => x.regle === regle);
+    ligne(r.code === 0 && r.verdict === 'PASS' && siennes.length === attendus && siennes.every(x => x.sev === 'avertissement'),
+      `${regle} · sens rouge : ${base}-rouge.html lève ${attendus} ${regle} en avertissement SANS rougir la page (exit ${r.code}, ${r.verdict}, ×${siennes.length})`);
+    const autres = r.f.filter(x => NEUVES.includes(x.regle) && x.regle !== regle);
+    ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune autre règle neuve (obtenu ×${autres.length})`);
+  }
+}
+
 // TF-2043 (02/11/2026) — LA VALEUR AFFICHÉE ÉGALE SA SOURCE, ET SANS DÉCLARATION L'ORACLE SE TAIT EN LE DISANT.
 // Le cas de la table ci-dessus joue la verte et la rouge. Ce bloc joue ce que la table ne sait pas dire :
 // la déclaration absente ou vide rend SKIP exit 2 (jamais PASS), la déclaration voisine de la page est

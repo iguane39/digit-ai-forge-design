@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>S12 verte — flous admis</title>
+<style>
+  :root { --fond: #f6f4ef; --texte: #23211c; }
+  body { background: var(--fond); color: var(--texte); margin: 0; padding: 24px; }
+  .voile { backdrop-filter: blur(24px); background: rgba(246, 244, 239, 0.7); }
+  .apercu-flou { filter: blur(4px); }
+</style>
+</head>
+<body>
+  <div class="voile">Fenêtre</div>
+  <img class="apercu-flou" src="apercu.png" alt="Aperçu en chargement" width="120" height="80">
+  <div class="backdrop-blur-xl">Barre</div>
+</body>
+</html>
