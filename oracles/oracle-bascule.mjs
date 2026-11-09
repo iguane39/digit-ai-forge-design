@@ -52,6 +52,11 @@
 import fs from 'node:fs';
 import { parse as parseHtml, elements, css, cssRulesDeep } from './lib/html.mjs';
 import { findColors } from './lib/color.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['B-T1', 'B-T2', 'B-T3', 'B-T4'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Bascule sombre : présence, câblage, dérivation';
 const args = process.argv.slice(2);
@@ -72,7 +77,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-bascule', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'B-T1–B-T4 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -380,7 +385,7 @@ conclure();
 function conclure() {
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — B-T1–B-T4 sans écart\n');
+if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : `PASS — ${PLAGE_JOUEE} sans écart\n`);
 if (durs.length) sortir('FAIL', 1);
 sortir('PASS', 0);
 }

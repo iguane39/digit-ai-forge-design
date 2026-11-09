@@ -21,6 +21,11 @@
 // Usage : node oracle-theme-powerbi.mjs <source.tokens.json> <theme.json> [--json-only]
 import fs from 'node:fs';
 import { genererTheme, serialiserTheme } from '../scripts/generer-theme-powerbi.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['TP1', 'TP2', 'TP3'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Thème Power BI dérivé de la marque : forme, synchronisation DTCG, absence de généricité (TP1-TP3)';
 const NJ = [
@@ -41,7 +46,7 @@ const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({ oracle: 'oracle-theme-powerbi', domaine: DOM, artefact: theme || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'TP1–TP3 sans écart', where: theme }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: theme }],
     non_juge: NJ }, null, jsonOnly ? 0 : 2));
   process.exit(code);
 }

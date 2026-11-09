@@ -68,6 +68,11 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, elements, walk, css, cssRulesDeep, arbres } from './lib/html.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['PA1', 'PA2', 'PA3', 'PA4', 'PA5', 'PA6', 'PA7'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Panneau de tâche : choix exclusif, branches, coexistence';
 const args = process.argv.slice(2);
@@ -88,7 +93,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-panneau-tache', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'PA1–PA7 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -357,6 +362,6 @@ const soumetUnFormulaire = el => {
 const RANG = { bloquant: 0, majeur: 1, avertissement: 2, info: 3 };
 F.sort((x, y) => RANG[x.sev] - RANG[y.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : 'PASS — PA1–PA7 sans écart\n');
+if (!jsonOnly) process.stderr.write(durs.length ? `FAIL — ${durs.length} écart(s) dur(s)\n` : `PASS — ${PLAGE_JOUEE} sans écart\n`);
 if (durs.length) sortir('FAIL', 1);
 sortir('PASS', 0);

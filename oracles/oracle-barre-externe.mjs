@@ -28,6 +28,11 @@
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracles/oracle-barre-externe.mjs <BARRE-EXTERNE.md> [--minimum 5] [--json]
 import fs from "node:fs";
+import { plageDeRegles } from "./lib/regles-jouees.mjs";
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ["B1", "B2", "B3", "B4"];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES, "-");
 
 const DOM = "Barre externe du domaine et arbitrage humain sur captures";
 const NON_JUGE = [
@@ -53,7 +58,7 @@ const add = (sev, regle, msg, ou) => F.push({ sev, regle, msg, where: ou });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: "oracle-barre-externe", domaine: DOM, artefact: cible || null, verdict,
-    findings: F.length ? F : [{ sev: "info", regle: "B1-B4", msg: "relevé daté, sourcé, tranché, et arbitrage humain déclaré sur captures", where: cible }],
+    findings: F.length ? F : [{ sev: "info", regle: PLAGE_JOUEE, msg: "relevé daté, sourcé, tranché, et arbitrage humain déclaré sur captures", where: cible }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2) + "\n");
   process.exit(code);

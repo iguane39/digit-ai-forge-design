@@ -58,6 +58,11 @@
 import fs from 'node:fs';
 import { parse, css, arbres, elements } from './lib/html.mjs';
 import { correspond } from './lib/selecteurs.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['R1', 'R2', 'R3', 'R4', 'R5', 'R6', 'R7', 'R8', 'R9', 'R10', 'R11', 'R12', 'R13', 'R14'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Mouvement : craft de l\'animation';
 
@@ -480,4 +485,4 @@ if (html) {
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
 if (durs.length) sortir('FAIL', F, 1);
-sortir('PASS', F.length ? F : [{ sev: 'info', regle: '—', msg: 'R1–R7 sans écart', where: file }], 0);
+sortir('PASS', F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }], 0);

@@ -39,6 +39,12 @@
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracles/oracle-liste-demande.mjs <REVUE.md> [--json]
 import fs from "node:fs";
+import { plageDeRegles } from "./lib/regles-jouees.mjs";
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ["D1", "D2", "D3", "D4", "D5"];
+const REGLES_HORS_PLAGE = ["D0"];   // D0 : cible illisible
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES, "-");
 
 const DOM = "Traçabilité d'une demande client";
 const NON_JUGE = [
@@ -65,7 +71,7 @@ const add = (sev, regle, msg, ou) => F.push({ sev, regle, msg, where: ou });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: "oracle-liste-demande", domaine: DOM, artefact: cible || null, verdict,
-    findings: F.length ? F : [{ sev: "info", regle: "D1-D5", msg: "chaque point demandé est cité, porte sa correction et sa preuve, et son modèle désigné son critère de comparaison", where: cible }],
+    findings: F.length ? F : [{ sev: "info", regle: PLAGE_JOUEE, msg: "chaque point demandé est cité, porte sa correction et sa preuve, et son modèle désigné son critère de comparaison", where: cible }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2) + "\n");
   process.exit(code);

@@ -38,6 +38,11 @@
 import fs from 'node:fs';
 import { parse, arbres, elements, css, cssRules } from './lib/html.mjs';
 import { hsl, findColors } from './lib/color.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['TA1', 'TA2', 'TA3', 'TA4'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Page générée : discipline d\'accent, de filets et de système';
 const NON_JUGE = [
@@ -278,4 +283,4 @@ if (!jsonOnly) {
     : `PASS${n ? ` — ${n} avertissement(s)` : ' — aucun écart'}\n`);
 }
 if (dur.length) sortir('FAIL', F, 1);
-sortir('PASS', F.length ? F : [{ sev: 'info', regle: '—', msg: 'aucune des règles TA1–TA4 déclenchée', where: file }], 0);
+sortir('PASS', F.length ? F : [{ sev: 'info', regle: '—', msg: `aucune des règles ${PLAGE_JOUEE} déclenchée`, where: file }], 0);

@@ -18,6 +18,11 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Corpus design : résolution des sources';
 const args = process.argv.slice(2);
@@ -51,7 +56,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-corpus', domaine: DOM, artefact: dossier || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'C1–C6 sans écart', where: dossier }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: dossier }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

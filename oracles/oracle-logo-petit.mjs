@@ -43,6 +43,11 @@ import { fileURLToPath } from 'node:url';
 import { detecterOutillageRendu } from './lib/rendu.mjs';
 import { decoderPng } from './lib/png.mjs';
 import { parse, contrast } from './lib/color.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['LP1', 'LP2', 'LP3', 'LP4', 'LP5'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Logo : lisibilité d\'un pictogramme SVG à 16 et 32 px';
 const ici = path.dirname(fileURLToPath(import.meta.url));
@@ -74,7 +79,7 @@ function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-logo-petit', domaine: DOM, artefact: fichiers.join(' ') || null,
     verdict, tailles: TAILLES, reference: REFERENCE, seuils: SEUILS, mesures,
-    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'LP1–LP5 sans écart', where: fichiers.join(' ') }],
+    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: fichiers.join(' ') }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

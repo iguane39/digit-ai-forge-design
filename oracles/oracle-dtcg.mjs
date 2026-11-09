@@ -25,6 +25,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { createHash } from 'node:crypto';
 import { estFeuille, estAlias, resoudreChemin, feuillesDe, genererCss } from '../scripts/generer-tokens-css.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['D1', 'D2', 'D3', 'D4'];
+const REGLES_HORS_PLAGE = ['D0'];   // D0 : source illisible
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Pipeline de tokens : source DTCG → tokens.css dérivé';
 const args = process.argv.slice(2);
@@ -40,7 +46,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-dtcg', domaine: DOM, artefact: derive || source || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'D1–D3 sans écart', where: derive }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: derive }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

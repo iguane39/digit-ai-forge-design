@@ -41,6 +41,12 @@
 import fs from 'node:fs';
 import { parse as parseHtml, css, cssRulesDeep, lineOf } from './lib/html.mjs';
 import { parse as color, hsl, contrast, findColors, resoudreVar, extraireCouleurRaccourci, neutraliserVar } from './lib/color.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['T1', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'T8'];
+const REGLES_HORS_PLAGE = ['T0'];   // T0 : aucun token déclaré
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Système de marque : traçabilité des tokens';
 const args = process.argv.slice(2);
@@ -55,7 +61,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-tokens', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'T1–T6 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

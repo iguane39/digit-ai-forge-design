@@ -30,6 +30,11 @@
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracles/oracle-coherence-promesse.mjs <page.html> --cadrage <CONSTITUTION.md> [--json]
 import fs from "node:fs";
+import { plageDeRegles } from "./lib/regles-jouees.mjs";
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ["P1", "P2", "P3"];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES, "-");
 
 const ORACLE = "oracle-coherence-promesse";
 const DOMAINE = "Cohérence entre la promesse affichée et l'offre décrite";
@@ -164,7 +169,7 @@ if (args.includes("--self-test")) {
     if (r.statut !== "PASS") throw new Error(`${r.statut} — une offre collaborative est accusée à tort`);
   });
 
-  console.log(`\nCohérence promesse (P1-P3) : ${pass} PASS, ${fail} FAIL`);
+  console.log(`\nCohérence promesse (${PLAGE_JOUEE}) : ${pass} PASS, ${fail} FAIL`);
   process.exit(fail ? 1 : 0);
 }
 

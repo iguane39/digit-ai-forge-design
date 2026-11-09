@@ -83,10 +83,17 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parse as parseHtml, elements, walk } from './lib/html.mjs';
+import { plageDeRegles, ecartDeListe, reglesEmises } from './lib/regles-jouees.mjs';
 
 const DOM = "Textes d'application (T4) : libellés, erreurs, états vides";
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; le message « sans écart » et le titre du self-test en dérivent
+// leur plage au lieu de la citer en dur. Une règle neuve s'ajoute ici : le --self-test refuse la liste qui s'écarte des
+// `add(…, 'T4-n', …)` de ce fichier (lib/regles-jouees.mjs).
+export const REGLES_JOUEES = ['T4-1', 'T4-2', 'T4-3', 'T4-4'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES, '…');
 
 // ── Constantes de langue, volontairement EXTENSIBLES ────────────────────────
 // Une donnée périssable est une donnée, pas du code : ces listes se complètent par
@@ -890,7 +897,35 @@ if (args.includes('--self-test')) {
     if (r.findings.length) throw new Error(JSON.stringify(r.findings));
   });
 
-  console.log(`\nTextes d'application (T4-1…T4-4) : ${pass} PASS, ${fail} FAIL`);
+  // ── TF-2287 — la plage citée dérive de la liste jouée, et la liste égale les règles émises ───────────
+  const source = fs.readFileSync(fileURLToPath(import.meta.url), 'utf8');
+  check('PLAGE TF-2287 — sens vert : le message de sortie « sans écart » dit la plage dérivée de REGLES_JOUEES (T4-1…T4-4)', () => {
+    const sortie = spawnSync(process.execPath, [fileURLToPath(import.meta.url), fx('textes-application-verte.json'), '--json-only'], { encoding: 'utf8' });
+    const json = JSON.parse(sortie.stdout);
+    // Le format est épinglé, mais assemblé : le verrou de self-test-regles-jouees.mjs refuse un littéral « plage sans écart ».
+    const attendu = ['T4-1…T4-4', 'sans écart'].join(' ');
+    if (sortie.status !== 0 || json.findings.length !== 1 || json.findings[0].msg !== attendu)
+      throw new Error(`exit ${sortie.status} · ${JSON.stringify(json.findings)}`);
+  });
+  check('PLAGE TF-2287 — sens vert : la liste REGLES_JOUEES égale les règles que le fichier émet', () => {
+    const e = ecartDeListe(source);
+    if (e.emises_non_declarees.length || e.declarees_non_emises.length || reglesEmises(source).length < 4)
+      throw new Error(JSON.stringify({ ...e, emises: reglesEmises(source) }));
+  });
+  check('PLAGE TF-2287 — sens rouge : une règle T4-5 émise sans figurer à REGLES_JOUEES est vue', () => {
+    const e = ecartDeListe(source + "\nadd('avertissement', 'T4-5', 'règle neuve non déclarée', ou);\n");
+    if (e.emises_non_declarees.join(' ') !== 'T4-5') throw new Error(JSON.stringify(e));
+  });
+  check('PLAGE TF-2287 — sens rouge : une règle déclarée sans être émise est vue', () => {
+    const e = ecartDeListe(source.replace("['T4-1', 'T4-2', 'T4-3', 'T4-4']", "['T4-1', 'T4-2', 'T4-3', 'T4-4', 'T4-7']"));
+    if (e.declarees_non_emises.join(' ') !== 'T4-7') throw new Error(JSON.stringify(e));
+  });
+  check('PLAGE TF-2287 — sens rouge : une règle ajoutée à la liste apparaît dans le message (T4-1…T4-5), plus de plage figée', () => {
+    const plage = plageDeRegles([...REGLES_JOUEES, 'T4-5'], '…');
+    if (plage !== 'T4-1…T4-5') throw new Error(plage);
+  });
+
+  console.log(`\nTextes d'application (${PLAGE_JOUEE}) : ${pass} PASS, ${fail} FAIL`);
   process.exit(fail ? 1 : 0);
 }
 
@@ -913,7 +948,7 @@ if (EST_POINT_D_ENTREE) {
       oracle: 'oracle-textes-application', domaine: DOM, artefact: file || null,
       verdict,
       findings: findings && findings.length ? findings
-        : [{ sev: 'info', regle: '—', msg: 'T4-1…T4-4 sans écart', where: file || null }],
+        : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file || null }],
       non_juge: NON_JUGE,
     }, null, jsonOnly ? 0 : 2));
     process.exit(code);

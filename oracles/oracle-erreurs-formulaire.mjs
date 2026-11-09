@@ -41,6 +41,11 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { detecterOutillageRendu } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['EF0', 'EF1', 'EF2', 'EF3', 'EF4', 'EF5'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Formulaire : une saisie refusée se dit sous son champ';
 const ici = path.dirname(fileURLToPath(import.meta.url));
@@ -75,7 +80,7 @@ function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-erreurs-formulaire', domaine: DOM, artefact: cibles.join(' ') || null,
     verdict, largeur: LARGEUR, hauteur_ecran: HAUTEUR, proximite_px: PROXIMITE, champs_eprouves: eprouves,
-    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'EF0–EF5 sans écart', where: cibles.join(' ') }],
+    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: cibles.join(' ') }],
     non_juge: NJ, mesures: MESURES,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

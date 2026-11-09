@@ -38,6 +38,11 @@ import fs from 'node:fs';
 import { parse as parseHtml, arbres, elements, css, cssRulesDeep, lineOf } from './lib/html.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
 import { correspond } from './lib/selecteurs.mjs';
+import { plageDeRegles } from './lib/regles-jouees.mjs';
+// TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
+// Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
+const REGLES_JOUEES = ['M1', 'M2', 'M3', 'M4', 'M5', 'M6', 'M7', 'M8', 'M9', 'M10', 'M11'];
+const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
 
 const DOM = 'Cible mobile : contrat d\'usage tactile';
 const args = process.argv.slice(2);
@@ -65,7 +70,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-mobile', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'M1–M8 sans écart', where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -417,6 +422,6 @@ const regles = cssRulesDeep(cssText);
 // ── Verdict ────────────────────────────────────────────────────────────────
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const dur = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
-if (!jsonOnly) process.stderr.write(dur.length ? `FAIL — ${dur.length} écart(s) dur(s)\n` : 'PASS — M1–M8 sans écart dur\n');
+if (!jsonOnly) process.stderr.write(dur.length ? `FAIL — ${dur.length} écart(s) dur(s)\n` : `PASS — ${PLAGE_JOUEE} sans écart dur\n`);
 if (dur.length) sortir('FAIL', 1);
 sortir('PASS', 0);

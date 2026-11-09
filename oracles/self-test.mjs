@@ -2265,6 +2265,15 @@ for (const cas of CAS) {
   ligne(r.status === 0, `verrou dédié · exit 0 (obtenu ${r.status}) — ${dernier.slice(0, 120)}`);
 }
 
+// TF-2287 — le verrou dédié des plages de règles citées à la sortie des oracles est rejoué par la recette d'ensemble.
+// Il a son propre fichier (comme self-test-exploitabilite) ; il ne demande aucun outillage de rendu.
+{
+  console.log(String.fromCharCode(10) + 'self-test-regles-jouees.mjs (TF-2287) — la plage citée par un oracle dérive de sa liste jouée, deux sens');
+  const r = spawnSync(process.execPath, [path.join(ici, 'self-test-regles-jouees.mjs')], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+  const dernier = (r.stdout || '').trim().split(/\r?\n/).filter(Boolean).pop() || '';
+  ligne(r.status === 0, `verrou dédié · exit 0 (obtenu ${r.status}) — ${dernier.slice(0, 120)}`);
+}
+
 // TF-1797 (lot Produit-83 du 15/10) — UNE INSTANCE SERVIE SE JUGE AUSSI. oracle-taste ne lisait qu'un
 // fichier : sur une URL, « fichier introuvable », SKIP. Il lit désormais une URL LOCALE telle que le
 // serveur la sert, et refuse une origine distante en nommant le geste. Trois sens sur les fixtures.
