@@ -1027,6 +1027,35 @@ dernier segment) et cinq rouges, chacune relue au JOURNAL des POST que le serveu
 déclaration ne couvre pas, un envoi natif ou par fetch vers une action en `/verifier`, une vérification vers une autre
 origine.
 
+## Entrée du 09/11/2026 — run-oracles-design --origine, une page capturée est rendue autonome (TF-2309)
+
+Le fait (lot Produit-81 du 09/11/2026). Une page capturée d'une instance servie garde ses feuilles de style et ses scripts en
+ressources externes (`/assets/app.css`), introuvables à côté du fichier. Les oracles statiques jugeaient une page sans CSS ni
+script, et `render_page.py` une copie aux liens cassés (un débordement factice de 737 px à 390 px). Le produit contournait par
+un script d'intégration écrit chez lui, avant chaque passe.
+
+Le remède vit dans `run-oracles-design`, pas dans un capteur à part : `--origine <url>` lit chaque ressource liée qui ne se
+retrouve pas à côté du fichier et l'intègre à une copie temporaire (`lib/rendre-autonome.mjs`), avant la première passe ; les
+oracles statiques et `--rendu` jugent cette copie, les constats citent la capture, rien n'est écrit à côté de la cible. La
+borne est la boucle locale (`localhost`, `127.0.0.1`, `::1`) : une `--origine` d'un autre hôte est refusée (SKIP exit 2), une
+ressource d'un hôte tiers n'est jamais lue, une redirection n'est pas suivie. Avec une origine, une adresse « racine du site »
+se lit à l'origine (le servi fait foi) et non dans un fichier de même chemin trouvé en remontant l'arborescence. Une page déjà
+autonome, ou dont les liens se résolvent sur le disque, repart octet pour octet : le comportement d'avant ne change pas.
+
+Mesuré avant et après sur la fixture `fixtures/capture-externe/capture.html`, la page `motion-verte.html` dont le style est sorti
+en feuille liée et à laquelle un script lié est ajouté : sans l'option (ou sur l'état de départ), `oracle-tokens` FAIL, verdict
+FAIL ; avec `--origine` servie par la recette, PASS, avec le même verdict par oracle que la page autonome d'origine. Sur
+`capture-rendu.html`, `render_page` rend sans la feuille un débordement (V1, `scrollWidth 551px > viewport 390px`, clair et
+sombre) et, avec la feuille lue à l'origine, PASS sans écart dur.
+
+Ce que l'intégration ne fait PAS, dit au non_juge de chaque passe : les images, les polices, les `@import` et les imports
+relatifs d'un module ne sont pas intégrés ; une ressource derrière une connexion n'est pas lue (aucun état de connexion
+n'est transmis, elle reste liée et dite) ; la page n'est pas capturée par la forge, elle est fournie. Le capteur qui produirait
+la page depuis une URL et un état de connexion n'est pas écrit : la décision du 09/11/2026 place le remède dans l'oracle.
+La preuve vit dans `self-test.mjs`, bloc « run-oracles-design --origine (TF-2309) » : dix cas de lib sans réseau (lecture
+injectée, la borne du tiers se prouve par ce que la lecture n'a PAS reçu) et, de bout en bout contre le serveur de recette
+(`oracles/lib/serveur-recette-verification.mjs`), cinq cas de capture et deux de rendu.
+
 ## Entrée du 09/11/2026 — oracle-slop S11 et S12, deux signes du skill tiers « unslop »
 
 Voie taste-skill, sans rien installer. Essai court choisi par le porteur le 09/11/2026, suite du tri des favoris TikTok du pilot. Sur les 9 signes que nomme la description d’unslop, 4 étaient couverts par S2, S5 et S6 ; 2 entrent en **avertissement** dans `oracle-slop`, et 3 sont écartés. Attribution CC BY 4.0, table de disposition, mesure et signes écartés : [regles-importees-unslop.md](regles-importees-unslop.md).

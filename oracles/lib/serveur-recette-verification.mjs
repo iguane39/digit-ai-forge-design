@@ -6,6 +6,9 @@
 // rend {ok:true}. CHAQUE POST reçu est ajouté au journal (une ligne « POST /chemin ») : c'est ce journal que la recette
 // relit pour prouver qu'une écriture interceptée n'est jamais arrivée jusqu'au serveur.
 //
+// Il sert aussi, depuis le même dossier et sans en sortir, les ressources d'une page capturée (.css, .js) : c'est la
+// recette de `run-oracles-design --origine` (TF-2309).
+//
 // Usage : node serveur-recette-verification.mjs <dossier> <port> <journal>      (127.0.0.1 seulement, rien d'externe)
 
 import http from 'node:http';
@@ -33,9 +36,13 @@ http.createServer((req, res) => {
     });
     return;
   }
-  fs.readFile(path.join(dossier, path.basename(chemin)), (e, d) => {
+  // TF-2309 : le même serveur sert aussi les ressources d'une page capturée (/assets/app.css, /assets/app.js), sans sortir du dossier.
+  const fichier = path.resolve(dossier, '.' + chemin);
+  if (fichier !== path.resolve(dossier) && !fichier.startsWith(path.resolve(dossier) + path.sep)) { res.writeHead(403); res.end(); return; }
+  fs.readFile(fichier, (e, d) => {
     if (e) { res.writeHead(404); res.end(); return; }
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+    const types = { '.css': 'text/css', '.js': 'text/javascript', '.html': 'text/html' };
+    res.writeHead(200, { 'content-type': `${types[path.extname(fichier)] || 'application/octet-stream'}; charset=utf-8` });
     res.end(d);
   });
 }).listen(Number(port), '127.0.0.1');

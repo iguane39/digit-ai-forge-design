@@ -2738,6 +2738,135 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2309 (lot Produit-81 du 09/11/2026) — UNE PAGE CAPTURÉE D'UNE INSTANCE SERVIE SE REND AUTONOME AVANT LES ORACLES.
+// Ses feuilles de style et ses scripts restaient des ressources externes (/assets/app.css), introuvables à côté du fichier :
+// les oracles statiques jugeaient une page sans CSS (oracle-tokens FAIL sur une page conforme) et render_page.py une copie aux
+// liens cassés (un débordement factice à 390 px). run-oracles-design --origine lit ces ressources à l'origine servie, de la
+// boucle locale seulement, et les intègre à une copie temporaire. Deux étages : la lib sans réseau (lecture injectée, la
+// borne du tiers se prouve par ce que la lecture N'A PAS reçu), puis de bout en bout contre le serveur de recette.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design --origine (TF-2309) — une page capturée est rendue autonome avant les oracles');
+  const { rendreAutonome } = await import('./lib/rendre-autonome.mjs');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'autonome-'));
+  try {
+    const O = 'http://127.0.0.1:1';
+    const espion = (reponse = () => 'p { color: #111; }') => { const appels = []; return { appels, lire: async u => { appels.push(u); return reponse(u); } }; };
+    const entete = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Capture</title>';
+    const fin = '</head><body><main><h1>Capture</h1></main></body></html>';
+
+    // Lib — le sens vert : la feuille et le script liés à l'origine sont intégrés, le script ne ferme pas sa balise.
+    const e1 = espion(u => (u.endsWith('.js') ? 'var f = "</script>";' : 'a { background: url(img/x.png); }'));
+    const r1 = await rendreAutonome(entete + '<link rel="stylesheet" href="/assets/app.css" media="print">'
+      + '<script type="module" src="/assets/app.js" integrity="sha384-x" crossorigin="anonymous"></script>' + fin, { dossier, origine: O, lire: e1.lire });
+    ligne(r1.declenche && r1.integrees.length === 2 && e1.appels.join() === `${O}/assets/app.css,${O}/assets/app.js`
+      && /<style data-origine="\/assets\/app\.css" media="print">/.test(r1.html) && !/<link rel="stylesheet"/.test(r1.html),
+      `lib · sens vert : une feuille liée à l'origine est intégrée en <style data-origine> (media gardé), lue à ${e1.appels[0]} (obtenu ${r1.integrees.length} intégrées)`);
+    ligne(/<script data-origine="\/assets\/app\.js" type="module">/.test(r1.html) && !/integrity|crossorigin|src=/.test(r1.html.split('<script')[1] || '') && r1.html.includes('var f = "<\\/script>";') && (r1.html.match(/<\/script>/g) || []).length === 1,
+      'lib · sens vert : le script lié est intégré (type gardé, src, integrity et crossorigin retirés) et la balise fermante citée dans son texte est protégée');
+    ligne(r1.html.includes(`url(${O}/assets/img/x.png)`),
+      'lib · sens vert : un url() relatif de la feuille devient absolu contre la feuille (la police ou l\'image la suit hors de son dossier)');
+
+    // Lib — la borne : rien n'est lu chez un tiers, et ce qui reste lié est dit.
+    const e2 = espion();
+    const r2 = await rendreAutonome(entete + '<link rel="stylesheet" href="/assets/app.css"><link rel="stylesheet" href="http://exemple.invalid/tiers.css">'
+      + '<script src="https://cdn.exemple.invalid/x.js"></script>' + fin, { dossier, origine: O, lire: e2.lire });
+    ligne(e2.appels.length === 1 && e2.appels[0] === `${O}/assets/app.css` && r2.non_integrees.length === 2 && r2.non_integrees.every(x => /tiers/.test(x.raison))
+      && r2.html.includes('href="http://exemple.invalid/tiers.css"') && r2.html.includes('src="https://cdn.exemple.invalid/x.js"'),
+      `lib · sens rouge : une ressource d'un hôte tiers n'est JAMAIS lue (la lecture a reçu ${e2.appels.length} adresse : ${e2.appels.join(' ')}), elle reste liée et est listée non intégrée`);
+
+    // Lib — sans origine à lire, la page repart octet pour octet (comportement d'avant), et ce qui manque est dit avec son remède.
+    const autonome = entete + '<style>p{color:#111}</style>' + fin;
+    const e3 = espion();
+    const r3 = await rendreAutonome(autonome, { dossier, origine: O, lire: e3.lire });
+    ligne(!r3.declenche && r3.html === autonome && e3.appels.length === 0 && r3.non_integrees.length === 0,
+      'lib · page déjà autonome : repart octet pour octet, aucune lecture');
+    fs.writeFileSync(path.join(dossier, 'voisine.css'), 'p { color: #222; }');
+    const relatif = entete + '<link rel="stylesheet" href="voisine.css">' + fin;
+    const r4 = await rendreAutonome(relatif, { dossier, origine: O, lire: e3.lire });
+    ligne(!r4.declenche && r4.html === relatif && e3.appels.length === 0,
+      'lib · lien relatif qui se résout à côté de la page : rien à aller chercher, la page repart telle quelle, aucune lecture');
+    const r5 = await rendreAutonome(entete + '<link rel="stylesheet" href="/assets/app.css">' + fin, { dossier });
+    ligne(!r5.declenche && r5.non_integrees.length === 1 && /--origine/.test(r5.non_integrees[0].raison),
+      'lib · sens rouge : ressource introuvable et aucune origine : rien de lu, dite non intégrée avec le remède (--origine)');
+
+    // Lib — l'origine fait foi pour une adresse « racine du site », une ressource illisible n'arrête rien, un commentaire n'agit pas.
+    fs.mkdirSync(path.join(dossier, 'assets'), { recursive: true });
+    fs.writeFileSync(path.join(dossier, 'assets', 'app.css'), '.local { color: red; }');
+    const e6 = espion(() => '.servi { color: blue; }');
+    const r6 = await rendreAutonome(entete + '<link rel="stylesheet" href="/assets/app.css">' + fin, { dossier, origine: O, lire: e6.lire });
+    ligne(r6.html.includes('.servi') && !r6.html.includes('.local'),
+      'lib · /assets/app.css avec une origine : le servi fait foi, pas un fichier de même chemin trouvé en remontant l\'arborescence');
+    const e7 = { appels: [] };
+    const r7 = await rendreAutonome(entete + '<!-- <link rel="stylesheet" href="/assets/mort.css"> --><link rel="stylesheet" href="/assets/ok.css"><link rel="stylesheet" href="/assets/absent.css">' + fin,
+      { dossier, origine: O, lire: async u => { e7.appels.push(u); if (/absent/.test(u)) throw new Error('HTTP 404'); return 'b{color:#000}'; } });
+    ligne(e7.appels.length === 2 && !e7.appels.some(u => /mort/.test(u)) && r7.integrees.length === 1 && r7.non_integrees.length === 1 && /HTTP 404/.test(r7.non_integrees[0].raison) && r7.html.includes('href="/assets/absent.css"'),
+      'lib · une ressource en HTTP 404 reste liée et dite, les autres sont intégrées ; une balise en commentaire n\'est pas lue');
+    const e8 = espion();
+    const r8 = await rendreAutonome(entete + `<link rel="stylesheet" href="${O}/a.css">` + fin, { dossier, lire: e8.lire });
+    ligne(r8.declenche && e8.appels.join() === `${O}/a.css`,
+      'lib · adresse absolue de la boucle locale dans la capture : lue sans --origine');
+
+    // De bout en bout — la capture seule dans un dossier, ses ressources servies par la recette. Le faux « /assets » des
+    // essais de lib est retiré : une adresse racine se cherche aussi en remontant, et la capture doit être SEULE.
+    fs.rmSync(path.join(dossier, 'assets'), { recursive: true, force: true });
+    const journal = path.join(dossier, 'journal.txt');
+    const port = 19900 + Math.floor(Math.random() * 90);
+    const capt = path.join(dossier, 'capture');
+    fs.mkdirSync(capt);
+    fs.copyFileSync(fx('capture-externe/capture.html'), path.join(capt, 'capture.html'));
+    fs.copyFileSync(fx('capture-externe/capture-rendu.html'), path.join(capt, 'capture-rendu.html'));
+    const serveur = spawn(process.execPath, [path.join(ici, 'lib', 'serveur-recette-verification.mjs'), fx('capture-externe'), String(port), journal], { stdio: 'ignore' });
+    try {
+      let pret = false;
+      for (let i = 0; i < 40 && !pret; i++) {
+        const s = spawnSync(process.execPath, ['-e', 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))', `http://127.0.0.1:${port}/assets/app.css`]);
+        pret = s.status === 0;
+      }
+      if (!pret) {
+        ligne(false, 'serveur local de recette indisponible');
+      } else {
+        const lancer = (cible, ...a) => {
+          const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, ...a, '--json-only'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, env: { ...process.env, PYTHONUTF8: '1' } });
+          let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+          const verdicts = Object.fromEntries((j?.oracles || []).map(o => [o.oracle, o.verdict]));
+          return { code: r.status, json: j, verdicts, nj: j?.non_juge || [] };
+        };
+        const origine = `http://127.0.0.1:${port}`;
+        const reference = lancer(fx('motion-verte.html'));
+        const sans = lancer(path.join(capt, 'capture.html'));
+        ligne(sans.code === 1 && sans.verdicts['oracle-tokens'] === 'FAIL' && sans.nj.some(n => /NON intégrée\(s\)/.test(n) && /\/assets\/app\.css/.test(n) && /--origine/.test(n)),
+          `capture · sans --origine : la page est jugée sans CSS, oracle-tokens FAIL, et le non_juge nomme /assets/app.css et le remède --origine (obtenu ${sans.verdicts['oracle-tokens']}, exit ${sans.code})`);
+        const avec = lancer(path.join(capt, 'capture.html'), '--origine', origine);
+        ligne(avec.code === 0 && avec.json?.verdict === 'PASS' && JSON.stringify(avec.verdicts) === JSON.stringify(reference.verdicts) && reference.code === 0,
+          `capture · avec --origine : rendue autonome, PASS exit 0 et le même verdict par oracle que la page autonome d'origine (obtenu ${avec.json?.verdict}, exit ${avec.code} ; référence ${reference.json?.verdict})`);
+        ligne(avec.nj.some(n => /rendue AUTONOME avant les oracles \(TF-2309\) : 1 feuille\(s\) de style et 1 script\(s\) intégrés/.test(n)) && (avec.json?.page_rendue_autonome?.integrees || []).length === 2,
+          'capture · avec --origine : le non_juge dit ce qui a été intégré (1 feuille, 1 script) et le JSON porte page_rendue_autonome.integrees');
+        ligne(!JSON.stringify(avec.json).includes('forge-design-autonome') && fs.readdirSync(capt).sort().join() === 'capture-rendu.html,capture.html',
+          'capture · les constats citent la capture, jamais la copie temporaire, et rien n\'est écrit à côté de la cible');
+        const tiers = lancer(path.join(capt, 'capture.html'), '--origine', 'https://exemple.invalid');
+        ligne(tiers.code === 2 && tiers.json?.verdict === 'SKIP' && tiers.nj.some(n => /^--origine REFUSÉ pour https:\/\/exemple\.invalid/.test(n)),
+          `capture · sens rouge · --origine d'un hôte tiers : REFUSÉ, SKIP exit 2, rien n'est jugé (obtenu ${tiers.json?.verdict}, exit ${tiers.code})`);
+        if (!OUTILLAGE_RENDU.ok) {
+          console.log(`  SKIP  rendu des captures : outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+        } else {
+          // Le symptôme du lot : sans la feuille, un tableau déborde à 390 px (551 px) ; avec elle lue à l'origine, aucun débordement.
+          const rendus = j => (j.json?.oracles || []).filter(o => /^render_page/.test(o.oracle));
+          const rs = lancer(path.join(capt, 'capture-rendu.html'), '--rendu');
+          ligne(rendus(rs).length === 2 && rendus(rs).every(o => o.verdict === 'FAIL' && o.findings.some(f => f.regle === 'V1' && /scrollWidth \d+px > viewport 390px/.test(f.msg))),
+            `rendu · sans --origine : render_page voit le débordement factice du document sans feuille (V1, FAIL clair et sombre) (obtenu ${rendus(rs).map(o => o.verdict).join('/')})`);
+          const ra = lancer(path.join(capt, 'capture-rendu.html'), '--origine', origine, '--rendu');
+          ligne(rendus(ra).length === 2 && rendus(ra).every(o => o.verdict === 'PASS' && o.ecarts_durs === 0),
+            `rendu · avec --origine : la feuille intégrée met la page en forme, render_page PASS en clair et en sombre, 0 écart dur (obtenu ${rendus(ra).map(o => `${o.verdict}/${o.ecarts_durs}`).join(' ')})`);
+        }
+      }
+    } finally {
+      serveur.kill();
+    }
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-1904 (étude 20261019i, mesuré le 19/10/2026) — une page jetable de 9 lignes portant une
 // boucle infinie de 40 s, une animation JavaScript de 1,2 s et une révocation reduced-motion qui
 // ne couvre qu'un des deux éléments animés rendait PASS, exit 0, sans une alerte. R11, R12 et

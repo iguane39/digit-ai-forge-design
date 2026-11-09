@@ -1,0 +1,38 @@
+  /* Le mouvement est PRESCRIT avant d'être écrit (TF-0321) : durées par taille de
+     geste sous le plafond de 300 ms, courbes nommées par la phase qu'elles servent,
+     échelle de naissance. Ce sont les tokens du contrat systeme-de-marque. */
+  :root {
+    --dur-etat: 120ms;
+    --dur-local: 160ms;
+    --dur-ancre: 200ms;
+    --dur-surface: 280ms;
+    --dur-plafond: 300ms;
+    --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-disparition: cubic-bezier(0.4, 0, 1, 1);
+    --ease-deplacement: cubic-bezier(0.4, 0, 0.2, 1);
+    --echelle-entree: 0.96;
+  }
+
+  /* Transitions ciblées, décélérantes, sous 300 ms, transform/opacity uniquement —
+     et les durées viennent des tokens, jamais d'un littéral (R8) */
+  .card { transition: opacity var(--dur-local) var(--ease-apparition), transform var(--dur-local) var(--ease-apparition); }
+
+  /* Entrée depuis l'échelle prescrite, jamais scale(0) */
+  .modal { opacity: 0; transform: scale(var(--echelle-entree)); }
+  .modal.ouverte { opacity: 1; transform: scale(1); transition: opacity var(--dur-surface) var(--ease-apparition), transform var(--dur-surface) var(--ease-apparition); }
+
+  /* Élément ancré : le mouvement naît du déclencheur */
+  .dropdown { transform: scale(var(--echelle-entree)); transform-origin: top left; transition: transform var(--dur-ancre) var(--ease-apparition), opacity var(--dur-ancre) var(--ease-apparition); }
+
+  /* Sortie : la seule place légitime d'une courbe qui accélère */
+  .toast--sortant { opacity: 0; transition: opacity var(--dur-local) var(--ease-disparition); }
+
+  /* Survol animé protégé : ne colle pas sur tactile */
+  @media (hover: hover) {
+    .btn:hover { transform: translateY(-1px); transition: transform var(--dur-etat) var(--ease-deplacement); }
+  }
+
+  /* Révocation du mouvement — présente ET effective (R10) */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }

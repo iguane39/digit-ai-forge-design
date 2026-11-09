@@ -45,6 +45,14 @@
 // ou data-type-page) ou de sa structure (data-panneau-tache, data-branche, data-exigence) — lib/type-page.mjs. Une MAQUETTE
 // n'a pas d'instance par nature : --maquette l'exempte, à voix haute (SANS OBJET dit au non_juge, jamais un PASS).
 //
+// --origine <url> (TF-2309) : la cible est une PAGE CAPTURÉE d'une instance servie, dont les feuilles de style et les
+// scripts sont restés des ressources externes (`/assets/app.css`). Avant la première passe, chaque ressource liée qui ne se
+// retrouve pas à côté du fichier est lue à cette origine et INTÉGRÉE à la page (lib/rendre-autonome.mjs) : sans cela les
+// oracles statiques jugent une page sans CSS ni script, et render_page.py une copie aux liens cassés. L'origine doit être de
+// la boucle locale (localhost, 127.0.0.1, ::1) : aucun accès réseau vers un tiers, une ressource d'un autre hôte reste liée
+// et est dite au non_juge. Sans --origine, une page dont toutes les ressources se résolvent sur le disque est jugée telle
+// quelle, comme avant ; ce qui ne se résout pas est listé au non_juge avec le remède.
+//
 // --valeurs-derivees <valeurs-derivees.json> (TF-2043) : enrôle oracle-valeur-affichee (VA1–VA4), qui compare
 // chaque valeur dérivée affichée (version, environnement, date) à la commande qui la donne. Opt-in par la
 // DÉCLARATION du produit : le fichier passé, sinon `valeurs-derivees.json` voisin de la page (dossier puis
@@ -71,6 +79,8 @@ import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
 import { pageAUneSurcouche } from './lib/surcouche.mjs';
 import { trouverDeclaration, NOM_DECLARATION } from './lib/declaration-valeurs.mjs';
 import { typerPage } from './lib/type-page.mjs';
+import { rendreAutonome } from './lib/rendre-autonome.mjs';
+import { estHoteLocal } from './lib/lire-page-servie.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -86,7 +96,7 @@ const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !=
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus'
   && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
   && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
-  && args[args.indexOf(a) - 1] !== '--type-page');
+  && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
@@ -130,6 +140,8 @@ const ORACLES = path.join(RACINE, 'oracles');
 // reconnus, ceux qui n'ont pas pu l'être avec leur raison, et — nommés un par un — les
 // constats mis au compte du socle. Rien n'est effacé : ce qui sort du verdict reste lisible.
 let socleExempte = null;
+// TF-2309 : ce que l'intégration des ressources d'une page capturée a fait, dit au rapport quand elle a eu lieu.
+let autonomieDite = null;
 
 function sortir(verdict, resultats, nonJuge, code) {
   // TF-1241 — la forme d'ENTRÉE du lanceur général, pour un seul juge. Le verdict et le code sont
@@ -155,6 +167,7 @@ function sortir(verdict, resultats, nonJuge, code) {
       source: 'corpus/grille-viewports.json', date: GRILLE.date,
     },
     verdict, oracles: resultats, non_juge: nonJuge,
+    ...(autonomieDite ? { page_rendue_autonome: autonomieDite } : {}),
     // TF-2050 : le total des faits commerciaux « à faire confirmer », pour que l'agrégat le porte lui-même.
     a_faire_confirmer: resultats.reduce((n, r) => n + (r.a_confirmer || 0), 0),
     ...(socleExempte ? { socle_exempte: socleExempte } : {}),
@@ -385,7 +398,38 @@ if (!cible || !fs.existsSync(cible)) {
   sortir('SKIP', [], ['cible absente : passer un fichier .html ou --corpus <dossier>'], 2);
 }
 
-const html = fs.readFileSync(cible, 'utf8');
+let html = fs.readFileSync(cible, 'utf8');
+// TF-2309 — une page capturée d'une instance servie est rendue AUTONOME avant toute passe : ses feuilles de style et ses
+// scripts liés sont lus (à côté du fichier, ou à l'origine donnée) et intégrés. Les oracles et le rendu jugent alors le
+// fichier autonome (copie temporaire, jamais d'écriture à côté de la cible) ; les constats citent la cible.
+const origine = opt('--origine');
+if (origine) {
+  let refus = null;
+  try {
+    const u = new URL(origine);
+    if (!/^https?:$/.test(u.protocol)) refus = 'ni http ni https';
+    else if (!estHoteLocal(origine)) refus = `hôte « ${u.hostname} » non local`;
+  } catch { refus = 'adresse illisible'; }
+  if (refus) sortir('SKIP', [], [`--origine REFUSÉ pour ${origine} (${refus}) : l'origine d'une page capturée est bornée aux hôtes de boucle locale (localhost, 127.0.0.1, ::1), aucun accès réseau vers un tiers — rien n'a été jugé`], 2);
+}
+const autonomie = await rendreAutonome(html, { dossier: path.dirname(path.resolve(cible)), origine, certificatLocal });
+let fichierJuge = cible;
+if (autonomie.declenche) {
+  html = autonomie.html;
+  const tmpAutonome = path.join(os.tmpdir(), `forge-design-autonome-${process.pid}-${Date.now()}.html`);
+  fs.writeFileSync(tmpAutonome, html, 'utf8');
+  process.on('exit', () => { try { fs.unlinkSync(tmpAutonome); } catch { /* best-effort */ } });
+  fichierJuge = tmpAutonome;
+}
+if (autonomie.declenche || autonomie.non_integrees.length) {
+  autonomieDite = { integrees: autonomie.integrees, non_integrees: autonomie.non_integrees, notes: autonomie.notes };
+}
+// Les constats d'une passe sur la copie autonome citent la cible, jamais le chemin temporaire.
+const citerLaCible = r => {
+  if (fichierJuge === cible) return r;
+  const jeton = s => JSON.stringify(s).slice(1, -1);
+  return JSON.parse(JSON.stringify(r).split(jeton(fichierJuge)).join(jeton(cible)));
+};
 // TF-2121 — la nature de la page (application | éditoriale), qui décide si l'absence d'instance échoue.
 const typePage = typerPage(html, args);
 if (typePage.valeur_inconnue !== undefined) {
@@ -474,7 +518,7 @@ function passeFichier(fichier, { muet = false } = {}) {
   return out;
 }
 
-const resultats = passeFichier(cible);
+const resultats = passeFichier(fichierJuge).map(citerLaCible);
 
 // ── TF-0830 · ce que l'auteur n'a pas le droit de changer ne lui est pas imputé ──
 // Les blocs `COMPOSANT-EMBARQUE` scellés viennent du socle et sont sous parité d'asset :
@@ -618,7 +662,7 @@ if (!seul || seul === 'faits-commerciaux') {
   }
 }
 
-if (rendu) resultats.push(...lancerRendu(cible));
+if (rendu) resultats.push(...lancerRendu(fichierJuge).map(citerLaCible));
 
 // ── Ce que cet orchestrateur ne couvre pas, et qui reste dû ────────────────
 const nonJuge = [
@@ -628,6 +672,16 @@ const nonJuge = [
     'rendu réel (V1–V7) — render_page.py de digit-ai-page-html, 5 breakpoints × 2 thèmes : NON LANCÉ par cet orchestrateur',
     'accessibilité structurelle — oracle-a11y.py de quality-oracles : NON LANCÉ par cet orchestrateur',
   ]),
+  ...(autonomie.declenche ? [
+    `page capturée rendue AUTONOME avant les oracles (TF-2309) : ${autonomie.integrees.filter(x => x.type === 'style').length} feuille(s) de style et `
+    + `${autonomie.integrees.filter(x => x.type === 'script').length} script(s) intégrés (${autonomie.integrees.map(x => x.ref).join(', ')}), lus à côté du fichier ou à l'origine ${origine || 'déclarée dans la page'} ; `
+    + 'les images, les polices, les @import et les imports relatifs d\'un module ne sont pas intégrés'
+    + (autonomie.notes.length ? ` — ${autonomie.notes.join(' ; ')}` : ''),
+  ] : []),
+  ...(autonomie.non_integrees.length ? [
+    `${autonomie.non_integrees.length} ressource(s) liée(s) NON intégrée(s), la page est jugée sans elle(s) : `
+    + autonomie.non_integrees.map(x => `${x.ref} (${x.raison})`).join(' ; '),
+  ] : []),
   'parcours de bout en bout (C13) — trace à produire à la main, voir references/criteres-sortie.md',
   ...(socleExempte && socleExempte.verifies.length ? [
     `conformité de ${socleExempte.verifies.length} composant(s) embarqué(s) du socle `

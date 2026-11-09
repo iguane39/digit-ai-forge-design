@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<!-- FIXTURE — run-oracles-design --origine (TF-2309, lot Produit-81 du 09/11/2026).
+     La capture d'une instance servie : ses ressources sont restées EXTERNES et ne se retrouvent pas à côté du fichier
+     (/assets/app.css, /assets/app.js). C'est la page fixtures/motion-verte.html, dont le <style> est sorti en feuille liée,
+     avec en plus un script lié. Seule, elle fait rendre FAIL à oracle-tokens (aucun jeton lu) ; rendue autonome par la lecture
+     des deux ressources à l'origine servie par la recette (127.0.0.1), elle rend PASS comme motion-verte.html.
+     Attendu : sans --origine, FAIL (oracle-tokens) et la ressource introuvable dite au non_juge ; avec --origine, PASS. -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte — oracle-motion (mouvement soigné ET prescrit)</title>
+<link rel="stylesheet" href="/assets/app.css">
+<script src="/assets/app.js"></script>
+</head>
+<body>
+  <h1>Fixture verte motion</h1>
+  <div class="card">carte</div>
+  <div class="modal ouverte">modale</div>
+  <div class="dropdown">menu déroulant</div>
+  <div class="toast--sortant">notification qui sort</div>
+  <button class="btn">bouton</button>
+</body>
+</html>

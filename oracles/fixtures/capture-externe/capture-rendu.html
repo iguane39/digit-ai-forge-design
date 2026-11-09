@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- FIXTURE — run-oracles-design --origine --rendu (TF-2309, lot Produit-81 du 09/11/2026).
+     La capture d'une instance servie dont la mise en page tient à sa feuille externe (/assets/rendu.css) : un tableau large
+     est posé dans un conteneur qui défile. Sans la feuille, le conteneur ne défile pas et la page déborde à 390 px (le
+     débordement factice d'une copie aux liens cassés) ; la feuille lue à l'origine servie par la recette le corrige.
+     Attendu avec --rendu : sans --origine, render_page rend un débordement (V1) ; avec --origine, aucun. -->
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture capture — tableau large dans un conteneur qui défile</title>
+<link rel="stylesheet" href="/assets/rendu.css">
+</head>
+<body>
+  <main>
+    <h1>Mandats en cours</h1>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Identifiant</th><th>Domaine du client</th><th>Responsable</th><th>Ouverture</th><th>Échéance</th><th>Statut</th></tr></thead>
+        <tbody>
+          <tr><td>MANDAT-000001</td><td>costcontrol.client.fr</td><td>responsable.principal</td><td>2026-11-01</td><td>2026-12-31</td><td>actif-en-cours</td></tr>
+          <tr><td>MANDAT-000002</td><td>budget.autre-client.fr</td><td>responsable.suppleant</td><td>2026-11-03</td><td>2027-01-15</td><td>actif-en-cours</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
