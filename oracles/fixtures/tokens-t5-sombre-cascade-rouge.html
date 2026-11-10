@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>T5 — composant redéfini en thème sombre, mal (TF-2380)</title>
+<style>
+  /* Fixture ROUGE de T5 (TF-2380) : même page que la verte, mais la règle sombre redéfinit « .passer »
+     avec une paire illisible (--passer-encre #4B5563 sur --passer-fond #1F2937, 1.94:1). La cascade ne
+     doit PAS aveugler T5 : la paire réellement posée en sombre reste jugée, et refusée. La base claire
+     (--solid-ink sur --blue, 6.7:1) est bonne : le seul défaut vit dans la règle qui remplace. */
+  :root {
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --blue: #1D4ED8;
+    --solid-ink: #FFFFFF;
+    --passer-fond: #E5E7EB;
+    --passer-encre: #111827;
+    --police: system-ui, sans-serif;
+    --focus-anneau: 2px solid var(--texte);
+    --focus-decalage: 2px;
+  }
+  :root[data-theme="dark"] {
+    --fond: #0B1220;
+    --texte: #E5E7EB;
+    --blue: #60A5FA;
+    --solid-ink: #FFFFFF;
+    --passer-fond: #1F2937;
+    --passer-encre: #4B5563;
+    --focus-anneau: 2px solid var(--texte);
+    --focus-decalage: 2px;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); }
+  .bouton:focus-visible { outline: var(--focus-anneau); outline-offset: var(--focus-decalage); }
+  .passer { background: var(--blue); color: var(--solid-ink); padding: 8px 16px; }
+  :root[data-theme="dark"] .passer { background: var(--passer-fond); color: var(--passer-encre); }
+</style></head>
+<body>
+  <h1>Étape suivante</h1>
+  <button class="passer bouton">Passer</button>
+</body></html>

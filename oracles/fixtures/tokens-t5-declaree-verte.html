@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>T5 — la paire déclarée lève la paire présumée (TF-2381)</title>
+<style>
+  /* Fixture VERTE de T5 (TF-2381) : une page de garde à fond sombre. Les textes clairs
+     (.garde-titre, .garde-sous-titre) sont posés par des règles que rien ne relie, dans le CSS, à la
+     bande qui les porte : T5 les présume donc sur le fond de page clair (1.05:1 et 1.5:1, une paire
+     qui n'existe pas) et AVERTIT, en invitant à déclarer la paire réelle par --paires-contraste.
+     Avant : la paire réelle déclarée (texte clair sur --bande) était bien jugée, mais les deux
+     avertissements présumés restaient, la déclaration n'ôtait rien. Après : la déclaration couvre
+     ces deux textes, leurs paires présumées sont retirées (et dites au non_juge), la page passe sans
+     avertissement T5. */
+  :root {
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --bande: #0B1F3A;
+    --texte-clair: #F9FAFB;
+    --texte-doux: #CBD5E1;
+    --paires-contraste: --texte-clair sur --bande, --texte-doux sur --bande, --texte sur --fond;
+    --police: system-ui, sans-serif;
+    --focus-anneau: 2px solid var(--texte);
+    --focus-decalage: 2px;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); }
+  .bande { background: var(--bande); padding: 32px; }
+  .garde-titre { color: var(--texte-clair); }
+  .garde-sous-titre { color: var(--texte-doux); }
+</style></head>
+<body>
+  <div class="bande">
+    <h1 class="garde-titre">Livret de compétences</h1>
+    <p class="garde-sous-titre">Édition de novembre</p>
+  </div>
+  <p>Corps de page sur fond clair.</p>
+</body></html>

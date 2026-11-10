@@ -34,6 +34,9 @@
 // La convention de nommage (texte|text|fg|encre|ink × fond|bg|surface|papier|canvas)
 // ne sert plus qu'à ÉNUMÉRER les paires non jugées, jamais à en fabriquer.
 // Aucune paire résolvable ⇒ T5 déclaré non jugé, jamais approuvé par défaut.
+// Les paires se forment PAR THÈME (TF-2380) : en sombre, une règle [data-theme="dark"] remplace la pose de la
+// règle de base de même sélecteur ; en clair, elle ne pose rien. Une paire déclarée par --paires-contraste retire
+// les paires PRÉSUMÉES de son texte (TF-2381) et le dit au non_juge.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0/1/2.
 // Usage : node oracle-tokens.mjs <fichier.html> [--tokens tokens.css] [--json-only]
@@ -217,6 +220,19 @@ const pseudoSansTexte = sel => decouper(sel).length > 0 && decouper(sel)
   .every(p => EST_PSEUDO_GENERE.test(p) && (contenusPseudo.get(p) || []).every(contenuSansTexte));
 let posesPseudoVides = 0;
 
+// TF-2380 (retour du 16/09/2026, RV-200) — LA CASCADE DU THÈME SOMBRE. `.passer { background: var(--blue);
+// color: var(--solid-ink) }` puis `:root[data-theme="dark"] .passer { … }` : en sombre, la seconde règle REMPLACE
+// la propriété posée par la première. T5 jugeait pourtant la paire de base (--solid-ink sur --blue) contre les
+// jetons sombres, une paire qui n'existe nulle part au rendu, et render_page.py rendait PASS sur la même page. La
+// portée sombre d'un sélecteur est lue ici ([data-theme="dark"] ou .theme-dark, avec ou sans :root/html devant) ;
+// la clé d'un sélecteur est ce même sélecteur débarrassé de cette portée, ce qui permet de le rapprocher de sa règle
+// de base. Un bloc @media (prefers-color-scheme: dark) n'est pas le thème sombre (R-30) : il n'est pas lu ici.
+const RE_PORTEE_SOMBRE = /(?:html|:root)?\[data-theme\s*[~|^$*]?=\s*["']?dark["']?\s*\]|\.theme-dark(?![\w-])/i;
+const RE_PORTEE_SOMBRE_G = new RegExp(RE_PORTEE_SOMBRE.source, 'gi');
+const cleDeSelecteur = sel => decouper(sel)
+  .map(p => p.replace(RE_PORTEE_SOMBRE_G, ' ').replace(/\s+/g, ' ').trim() || ':root')
+  .join(', ');
+
 // 1. Relevé des poses : ce que chaque règle met en texte et en fond.
 const poses = [];
 const ambiance = { texte: new Set(), fond: new Set() };
@@ -233,7 +249,10 @@ for (const r of regles) {
   if (!t.length && !f.length) continue;
   if (pseudoSansTexte(r.selector)) { posesPseudoVides++; continue; }
   if (EST_AMBIANCE(r.selector)) { for (const x of t) ambiance.texte.add(x); for (const x of f) ambiance.fond.add(x); }
-  poses.push({ sel: r.selector, t, f });
+  // TF-2380 — une pose sous [data-theme="dark"] ne vaut QUE pour le thème sombre, et là elle REMPLACE la
+  // pose de base de même sélecteur : `sombre` et `cle` (le sélecteur débarrassé de sa portée) servent à T5.
+  const sombre = decouper(r.selector).some(p => RE_PORTEE_SOMBRE.test(p));
+  poses.push({ sel: r.selector, t, f, sombre, cle: cleDeSelecteur(r.selector) });
 }
 
 // 2. Héritage : une règle qui ne pose qu'une des deux couleurs complète l'autre
@@ -259,26 +278,77 @@ function heriter(selecteur, sources, defaut, quoi) {
 const sourcesFond = poses.filter(p => p.f.length).map(p => ({ sel: p.sel, vals: p.f }));
 const sourcesTexte = poses.filter(p => p.t.length).map(p => ({ sel: p.sel, vals: p.t }));
 
-// 3. Paires : co-occurrence dans la même règle, ou complétée par l'héritage.
-const paires = new Map(); // "t|f" -> origine lisible
-const noter = (t, f, origine) => { if (t !== f && !paires.has(t + '|' + f)) paires.set(t + '|' + f, origine); };
-for (const p of poses) {
-  let textes = p.t, fonds = p.f, origine = 'posés par la même règle';
-  if (!textes.length) { const h = heriter(p.sel, sourcesTexte, [...ambiance.texte], 'texte'); textes = h.vals; origine = h.origine; }
-  if (!fonds.length) { const h = heriter(p.sel, sourcesFond, [...ambiance.fond], 'fond'); fonds = h.vals; origine = h.origine; }
-  for (const a of textes) for (const b of fonds) noter(a, b, origine);
+// 3. Paires : co-occurrence dans la même règle, ou complétée par l'héritage — UNE table par thème.
+// TF-2380 : en thème sombre, la pose d'une règle [data-theme="dark"] REMPLACE, propriété par propriété, celle de la
+// règle de base de même sélecteur (la cascade) ; en thème clair, une règle sombre ne pose rien. Une règle sombre
+// sans règle de base est une pose de plein droit du seul thème sombre.
+function posesDuTheme(theme) {
+  const base = poses.filter(p => !p.sombre);
+  if (theme === 'clair') return base;
+  const surcharge = new Map(); // clé de sélecteur -> { t, f } posés par la règle sombre (la dernière l'emporte)
+  for (const p of poses.filter(x => x.sombre)) {
+    const cur = surcharge.get(p.cle) || { t: [], f: [] };
+    if (p.t.length) cur.t = p.t;
+    if (p.f.length) cur.f = p.f;
+    surcharge.set(p.cle, cur);
+  }
+  const effectives = base.map(p => {
+    const s = surcharge.get(p.cle);
+    return s ? { ...p, t: s.t.length ? s.t : p.t, f: s.f.length ? s.f : p.f } : p;
+  });
+  for (const [cle, s] of surcharge) {
+    if (!base.some(p => p.cle === cle)) effectives.push({ sel: cle, cle, sombre: true, t: s.t, f: s.f });
+  }
+  return effectives;
 }
+function pairesPosees(theme) {
+  const ps = posesDuTheme(theme);
+  const amb = { texte: new Set(), fond: new Set() };
+  for (const p of ps) if (EST_AMBIANCE(p.sel)) { for (const x of p.t) amb.texte.add(x); for (const x of p.f) amb.fond.add(x); }
+  const srcF = ps.filter(p => p.f.length).map(p => ({ sel: p.sel, vals: p.f }));
+  const srcT = ps.filter(p => p.t.length).map(p => ({ sel: p.sel, vals: p.t }));
+  const table = new Map(); // "t|f" -> origine lisible
+  for (const p of ps) {
+    let textes = p.t, fonds = p.f, origine = 'posés par la même règle';
+    if (!textes.length) { const h = heriter(p.sel, srcT, [...amb.texte], 'texte'); textes = h.vals; origine = h.origine; }
+    if (!fonds.length) { const h = heriter(p.sel, srcF, [...amb.fond], 'fond'); fonds = h.vals; origine = h.origine; }
+    for (const a of textes) for (const b of fonds) if (a !== b && !table.has(a + '|' + b)) table.set(a + '|' + b, origine);
+  }
+  return table;
+}
+const pairesParTheme = new Map([['clair', pairesPosees('clair')], ['sombre', pairesPosees('sombre')]]);
 
 // 4. Paires déclarées à la main — pour ce que le CSS du fichier ne dit pas.
+const declarees = new Set(); // "t|f"
 for (const table of [tokens.clair, tokens.sombre]) {
   const v = table.get('--paires-contraste');
   if (!v) continue;
   for (const morceau of v.split(',')) {
     const m = /(--[\w-]+)\s+sur\s+(--[\w-]+)/i.exec(morceau);
-    if (m) noter(m[1], m[2], 'déclarée par --paires-contraste');
+    if (m) { if (m[1] !== m[2]) declarees.add(m[1] + '|' + m[2]); }
     else add('avertissement', 'T5', `--paires-contraste : « ${morceau.trim().slice(0, 50)} » illisible (forme attendue : --texte sur --fond)`, 'bloc de tokens');
   }
 }
+// TF-2381 (retour du 24/09/2026, RV-201) — LA DÉCLARATION LÈVE LA PRÉSOMPTION QU'ELLE EST CENSÉE LEVER. Le message
+// d'une paire PRÉSUMÉE prescrit « déclarer la paire réelle par --paires-contraste » ; la déclaration jugeait bien la
+// paire réelle, mais les paires présumées du même texte restaient avertissement : 4 avant, 4 après sur la page de
+// garde du livret du 24/09. L'auteur qui déclare où se pose un texte a dit où il se pose : les paires PRÉSUMÉES de ce
+// texte (fond hérité de l'ambiance, jamais posé) sont retirées et portées au non_juge, jamais jugées en silence. Une
+// paire déclarée identique à une présumée devient la paire déclarée (jugée en majeur), pas un avertissement.
+const textesDeclares = new Set([...declarees].map(c => c.split('|')[0]));
+const presumeeRetirees = [];
+const estPresumee = origine => /hérité de l'ambiance/.test(origine);
+for (const [theme, table] of pairesParTheme) {
+  for (const cle of declarees) table.set(cle, 'déclarée par --paires-contraste');
+  for (const [cle, origine] of [...table]) {
+    if (!estPresumee(origine) || declarees.has(cle) || !textesDeclares.has(cle.split('|')[0])) continue;
+    table.delete(cle);
+    presumeeRetirees.push(`${cle.split('|')[0]} sur ${cle.split('|')[1]} (${theme})`);
+  }
+}
+// Union des paires jugées ou retirées sur au moins un thème : sert à énumérer ce qu'aucune règle ne pose.
+const paires = new Map();
+for (const table of pairesParTheme.values()) for (const [cle, origine] of table) if (!paires.has(cle)) paires.set(cle, origine);
 
 let pairesTestees = 0;
 let pairesComposees = 0;
@@ -286,7 +356,7 @@ let pairesComposees = 0;
 // contraste n'est pas décidable sur le seul fichier. La déclarer, ne pas
 // l'inventer — c'est render_page.py V2 qui mesure le rendu composé.
 for (const [theme, table] of [['clair', tokens.clair], ['sombre', tokens.sombre]]) {
-  for (const [cle, origine] of paires) {
+  for (const [cle, origine] of pairesParTheme.get(theme)) {
     const [kt, ks] = cle.split('|');
     const vt = table.get(kt), vs = table.get(ks);
     if (vt === undefined || vs === undefined) continue; // paire absente de ce thème
@@ -316,6 +386,9 @@ if (pairesTestees === 0) {
   add('avertissement', 'T5', 'aucune paire texte/fond posée par le CSS : AUCUN contraste n\'a été mesuré. Poser les couleurs par var(--token), déclarer les paires par --paires-contraste, ou mesurer par render_page.py V2',
     'CSS du document');
   NJ.push('T5 : contraste non mesuré faute de paire posée — le PASS de cet oracle ne vaut pas validation du contraste');
+}
+if (presumeeRetirees.length > 0) {
+  NJ.push(`T5 : ${presumeeRetirees.length} paire(s) PRÉSUMÉE(S) retirée(s) parce que --paires-contraste déclare où se pose leur texte (TF-2381) — non jugée(s) : ${presumeeRetirees.slice(0, 8).join(', ')}${presumeeRetirees.length > 8 ? ', …' : ''}. Un texte déclaré est jugé sur la ou les paires déclarées seulement : la déclaration engage l'auteur`);
 }
 if (posesPseudoVides > 0) {
   NJ.push(`T5 : ${posesPseudoVides} pose(s) sur un pseudo-élément ::before/::after sans contenu textuel écartée(s) (TF-1662) — aucun texte n'y est rendu, aucune paire n'y est présumée`);

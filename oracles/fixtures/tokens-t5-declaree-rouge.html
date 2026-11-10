@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>T5 — la déclaration ne couvre que son texte (TF-2381)</title>
+<style>
+  /* Fixture ROUGE de T5 (TF-2381) : même page de garde que la verte, avec deux différences qui
+     prouvent que la déclaration n'est pas une porte de sortie.
+     1. --texte-doux est déclaré sur --bande mais ne tient que 1.9:1 : la paire DÉCLARÉE reste jugée, en
+        majeur, la présomption retirée n'efface pas la mesure de la paire réelle.
+     2. --texte-pale n'est couvert par AUCUNE déclaration : sa paire présumée sur le fond de page reste
+        un avertissement. La déclaration retire le texte qu'elle couvre, pas ceux d'à côté. */
+  :root {
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --bande: #0B1F3A;
+    --texte-clair: #F9FAFB;
+    --texte-doux: #3B4A63;
+    --texte-pale: #E2E8F0;
+    --paires-contraste: --texte-clair sur --bande, --texte-doux sur --bande, --texte sur --fond;
+    --police: system-ui, sans-serif;
+    --focus-anneau: 2px solid var(--texte);
+    --focus-decalage: 2px;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); }
+  .bande { background: var(--bande); padding: 32px; }
+  .garde-titre { color: var(--texte-clair); }
+  .garde-sous-titre { color: var(--texte-doux); }
+  .garde-mention { color: var(--texte-pale); }
+</style></head>
+<body>
+  <div class="bande">
+    <h1 class="garde-titre">Livret de compétences</h1>
+    <p class="garde-sous-titre">Édition de novembre</p>
+    <p class="garde-mention">Document interne</p>
+  </div>
+  <p>Corps de page sur fond clair.</p>
+</body></html>

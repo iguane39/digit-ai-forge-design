@@ -197,6 +197,28 @@ const CAS = [
     rouge: [fx('tokens-t5-pseudo-rouge.html')],
   },
   {
+    // TF-2380 (retour du 16/09/2026, RV-200) — LA CASCADE DU THÈME SOMBRE. « .passer » pose --solid-ink sur
+    // --blue, puis « :root[data-theme="dark"] .passer » REMPLACE cette pose en sombre. T5 jugeait quand même la
+    // paire de base contre les jetons sombres (2.54:1, majeur) alors que render_page.py rendait PASS sur la même
+    // page. Les deux fixtures portent la même page ; elles ne diffèrent que par la paire redéfinie en sombre :
+    // lisible (verte, PASS) ou illisible (rouge, FAIL : la cascade n'aveugle pas T5, elle déplace sa cible).
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-t5-sombre-cascade-verte.html')],
+    rouge: [fx('tokens-t5-sombre-cascade-rouge.html')],
+  },
+  {
+    // TF-2381 (retour du 24/09/2026, RV-201) — LA DÉCLARATION LÈVE LA PRÉSOMPTION. Le message d'une paire
+    // PRÉSUMÉE prescrit « déclarer la paire réelle par --paires-contraste » ; la déclaration jugeait la paire
+    // réelle mais laissait les paires présumées du même texte (4 avertissements avant et après, page de garde du
+    // livret du 24/09). La verte est le remède joué : texte clair déclaré sur --bande, plus aucun avertissement.
+    // La rouge borne la porte : la paire déclarée reste jugée (majeur) et un texte NON déclaré garde sa présomption.
+    oracle: 'oracle-tokens.mjs',
+    regles: ['T5'],
+    verte: [fx('tokens-t5-declaree-verte.html')],
+    rouge: [fx('tokens-t5-declaree-rouge.html')],
+  },
+  {
     // TF-1106 (14/09/2026) — oracle-tokens ne résolvait pas les alias var() avant de parser
     // une couleur : --focus-anneau: var(--blue), la forme que le contrat de tokens.css de
     // cette forge prescrit et que scripts/generer-tokens-css.mjs émet, publiait « semi-
@@ -3310,6 +3332,60 @@ for (const cas of CAS) {
   const agregat = fs.readFileSync(path.join(ici, 'run-oracles-design.mjs'), 'utf8');
   ligne(!citePlage(agregat), 'sens vert · run-oracles-design.mjs ne cite plus de plage « X0–Xn » (TF-2183)');
   ligne(citePlage('l\'exploitabilité au volume réel (X0–X6) n\'a pas été jouée'), 'sens rouge · l\'ancien message « (X0–X6) n\'a pas été jouée » est refusé (TF-2183)');
+}
+
+// TF-2380 et TF-2381 (campagne du 10/11/2026) — T5 AU DÉTAIL, aux deux sens. Les deux CAS ci-dessus disent
+// « PASS » et « FAIL » ; ce bloc dit POURQUOI, sinon une rouge qui échouerait pour une autre raison passerait.
+{
+  console.log(String.fromCharCode(10) + 'oracle-tokens T5 (TF-2380, TF-2381) — cascade du thème sombre et paire déclarée, aux deux sens');
+  const dossierT5 = fs.mkdtempSync(path.join(os.tmpdir(), 'tokens-t5-'));
+  try {
+    const jouerT5 = (nom, contenu) => {
+      const chemin = path.join(dossierT5, nom);
+      fs.writeFileSync(chemin, contenu, 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-tokens.mjs'), chemin, '--json-only'], { encoding: 'utf8' });
+      return JSON.parse(r.stdout.trim());
+    };
+    const t5 = j => j.findings.filter(f => f.regle === 'T5' && f.sev !== 'info');
+    const texteDe = f => fs.readFileSync(fx(f), 'utf8');
+
+    // TF-2380
+    const cascadeVerte = jouerT5('cascade-verte.html', texteDe('tokens-t5-sombre-cascade-verte.html'));
+    ligne(cascadeVerte.verdict === 'PASS' && t5(cascadeVerte).length === 0,
+      'TF-2380 sens vert · la pose de base remplacée en sombre n\'est plus jugée contre les jetons sombres (aucun constat T5)');
+    const cascadeRouge = jouerT5('cascade-rouge.html', texteDe('tokens-t5-sombre-cascade-rouge.html'));
+    ligne(t5(cascadeRouge).length === 1 && /--passer-encre.*sur --passer-fond.*thème sombre/.test(t5(cascadeRouge)[0].msg),
+      'TF-2380 sens rouge · la paire réellement posée par la règle sombre reste jugée, et elle seule (un constat, thème sombre)');
+    // La cascade ne vaut QUE pour le thème sombre : un défaut de la base claire reste refusé.
+    const baseClaireFautive = texteDe('tokens-t5-sombre-cascade-verte.html').replace('--blue: #1D4ED8;', '--blue: #93C5FD;');
+    const claireRouge = jouerT5('cascade-claire-rouge.html', baseClaireFautive);
+    ligne(claireRouge.verdict === 'FAIL' && t5(claireRouge).some(f => /--solid-ink.*sur --blue.*thème clair/.test(f.msg)) && !t5(claireRouge).some(f => /thème sombre/.test(f.msg)),
+      'TF-2380 sens rouge · la base claire fautive reste refusée en thème clair, la règle sombre ne la couvre pas');
+    // Sans règle sombre pour la remplacer, la paire de base reste jugée contre le thème sombre.
+    const sansRemplacement = texteDe('tokens-t5-sombre-cascade-verte.html').replace(/\n\s*:root\[data-theme="dark"\] \.passer \{[^}]*\}/, '');
+    const nue = jouerT5('cascade-sans-remplacement.html', sansRemplacement);
+    ligne(sansRemplacement !== texteDe('tokens-t5-sombre-cascade-verte.html') && nue.verdict === 'FAIL' && t5(nue).some(f => /--solid-ink.*sur --blue.*thème sombre/.test(f.msg)),
+      'TF-2380 sens rouge · sans règle sombre qui la remplace, la paire de base reste jugée en thème sombre (la correction resserre, elle n\'aveugle pas)');
+
+    // TF-2381
+    const declareeVerte = jouerT5('declaree-verte.html', texteDe('tokens-t5-declaree-verte.html'));
+    ligne(t5(declareeVerte).length === 0 && declareeVerte.non_juge.some(n => /PRÉSUMÉE\(S\) retirée\(s\)/.test(n) && /--texte-clair/.test(n)),
+      'TF-2381 sens vert · la paire déclarée lève les paires présumées de son texte, et le non_juge dit lesquelles');
+    const sansDeclaration = jouerT5('declaree-absente.html', texteDe('tokens-t5-declaree-verte.html')
+      .replace(/\n\s*--paires-contraste:[^\n]*/, ''));
+    ligne(t5(sansDeclaration).filter(f => f.sev === 'avertissement' && /PRÉSUMÉE/.test(f.msg)).length >= 2,
+      'TF-2381 sens rouge · la même page SANS déclaration garde ses avertissements présumés (c\'est la déclaration qui les lève)');
+    const declareeRouge = jouerT5('declaree-rouge.html', texteDe('tokens-t5-declaree-rouge.html'));
+    ligne(t5(declareeRouge).some(f => f.sev === 'majeur' && /--texte-doux.*sur --bande.*déclarée par --paires-contraste/.test(f.msg)),
+      'TF-2381 sens rouge · la paire DÉCLARÉE reste jugée en majeur quand elle est illisible');
+    ligne(t5(declareeRouge).some(f => f.sev === 'avertissement' && /--texte-pale.*sur --fond.*PRÉSUMÉE/.test(f.msg)),
+      'TF-2381 sens rouge · un texte que la déclaration ne couvre pas garde sa paire présumée en avertissement');
+    // Une paire déclarée identique à une paire présumée devient la paire déclarée : jugée en majeur.
+    const memePaire = jouerT5('declaree-meme-paire.html', texteDe('tokens-t5-declaree-verte.html')
+      .replace('--texte-clair sur --bande,', '--texte-clair sur --bande, --texte-clair sur --fond,'));
+    ligne(t5(memePaire).some(f => f.sev === 'majeur' && /--texte-clair.*sur --fond.*déclarée par --paires-contraste/.test(f.msg)),
+      'TF-2381 sens rouge · la paire déclarée qui coïncide avec une présumée est jugée comme déclarée (majeur), pas comme présumée');
+  } finally { fs.rmSync(dossierT5, { recursive: true, force: true }); }
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

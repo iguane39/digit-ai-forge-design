@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8"><title>T5 — composant redéfini en thème sombre (TF-2380)</title>
+<style>
+  /* Fixture VERTE de T5 (TF-2380) : « .passer » pose --solid-ink sur --blue, et le thème sombre
+     REMPLACE cette pose par la sienne (:root[data-theme="dark"] .passer). En sombre, --blue vaut
+     #60A5FA : le blanc de --solid-ink n'y tient que 2.54:1, mais la paire de base n'existe plus à
+     l'écran, la règle sombre l'a remplacée. Avant : T5 jugeait quand même la paire de base contre
+     les jetons sombres, un majeur sur une paire que personne ne voit. Après : seule la paire
+     réellement posée en sombre (--passer-encre sur --passer-fond, 14.05:1) est jugée. */
+  :root {
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --blue: #1D4ED8;
+    --solid-ink: #FFFFFF;
+    --passer-fond: #E5E7EB;
+    --passer-encre: #111827;
+    --police: system-ui, sans-serif;
+    --focus-anneau: 2px solid var(--texte);
+    --focus-decalage: 2px;
+  }
+  :root[data-theme="dark"] {
+    --fond: #0B1220;
+    --texte: #E5E7EB;
+    --blue: #60A5FA;
+    --solid-ink: #FFFFFF;
+    --passer-fond: #1F2937;
+    --passer-encre: #F9FAFB;
+    --focus-anneau: 2px solid var(--texte);
+    --focus-decalage: 2px;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); }
+  .bouton:focus-visible { outline: var(--focus-anneau); outline-offset: var(--focus-decalage); }
+  .passer { background: var(--blue); color: var(--solid-ink); padding: 8px 16px; }
+  :root[data-theme="dark"] .passer { background: var(--passer-fond); color: var(--passer-encre); }
+</style></head>
+<body>
+  <h1>Étape suivante</h1>
+  <button class="passer bouton">Passer</button>
+</body></html>
