@@ -12,6 +12,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { detecterOutillageRendu } from './lib/rendu.mjs';
+import { trouverFfprobe } from './lib/ffprobe.mjs';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
 const fx = f => path.join(ici, 'fixtures', f);
@@ -1002,6 +1003,20 @@ const CAS = [
     verte: [fx('document-imprime/colonnes-verte.pdf')],
     rouge: [fx('document-imprime/colonnes-rouge.pdf')],
   },
+  {
+    // TF-2405 (D-203 (a), 10/11/2026) — LE CLIP DE PRÉSENTATION, JUGÉ COMME UN LIVRABLE. Le pipeline versé dans le skill
+    // clip-de-presentation a rendu 28 clips avec, pour seuls contrôles, ffprobe lancé à la main et la lecture des planches ;
+    // ses 6 défauts connus et ses étiquettes de 17 à 19 px ont été trouvés par les agents, pas par un oracle. La verte est un
+    // clip court tiré du gabarit, avec la bibliothèque du SKILL : si le défaut de M.puce redescendait sous 24 px, elle
+    // rougirait. La rouge porte un défaut par règle, du MP4 hors format au hasard dans le rendu. Les MP4 et les planches
+    // sont synthétiques, fabriqués par fixtures/clip/generer.py. CL1 lit le MP4 par ffprobe : sans lui, le cas saute en le
+    // disant, et le bloc « oracle-clip au détail » prouve plus bas que le verdict n'est alors jamais PASS.
+    video: true,
+    oracle: 'oracle-clip.mjs',
+    regles: ['CL1', 'CL2', 'CL3', 'CL4', 'CL5', 'CL6', 'CL7'],
+    verte: [fx('clip/verte')],
+    rouge: [fx('clip/rouge')],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
@@ -1014,6 +1029,9 @@ const OUTILLAGE_DOCUMENT = (() => {
   }
   return { ok: false, manque: 'aucun interpréteur Python (python / python3) n\'importe pymupdf et pptx' };
 })();
+// TF-2405 : oracle-clip lit le MP4 par ffprobe, trouvé par la même résolution que l'oracle (lib/ffprobe.mjs : PATH, puis
+// python et static_ffmpeg). Sans lui, la règle CL1 rend SKIP motivé et la recette saute le cas qui en dépend, en le disant.
+const OUTILLAGE_VIDEO = trouverFfprobe();
 
 function lancer(cas, argv) {
   const bin = cas.python ? PYTHON : process.execPath;
@@ -1042,6 +1060,12 @@ for (const cas of CAS) {
 
   if (cas.document && !OUTILLAGE_DOCUMENT.ok) {
     console.log(`  SKIP  outillage de lecture des documents indisponible : ${OUTILLAGE_DOCUMENT.manque}`);
+    sautes.push(cas.oracle);
+    continue;
+  }
+
+  if (cas.video && !OUTILLAGE_VIDEO.ok) {
+    console.log(`  SKIP  ${OUTILLAGE_VIDEO.manque}`);
     sautes.push(cas.oracle);
     continue;
   }
@@ -3697,7 +3721,162 @@ if (!OUTILLAGE_DOCUMENT.ok) {
   }
 }
 
-const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok));
+// TF-2405 (campagne du 10/11/2026) — oracle-clip AU DÉTAIL : chaque règle pour la bonne raison, les portes, le SKIP de CL1
+// sans ffprobe (jamais un PASS), et les remèdes que ses messages prescrivent, joués. Les cas partent d'une copie de la
+// verte SANS son MP4, posée dans un dossier temporaire à côté d'une copie de la marque : ils ne dépendent d'aucun outil,
+// sauf les deux cas de durée, qui sautent en le disant quand ffprobe manque.
+{
+  console.log(String.fromCharCode(10) + 'oracle-clip (TF-2405) — chaque règle pour la bonne raison, portes, SKIP sans ffprobe, remèdes joués');
+  const RACINE_CLIP = fx('clip');
+  const MOTION_SKILL = path.join(ici, '..', 'skills', 'clip-de-presentation', 'scripts', 'motion.js').replace(/\\/g, '/');
+  const atelier = fs.mkdtempSync(path.join(os.tmpdir(), 'oracle-clip-'));
+  try {
+    fs.cpSync(path.join(RACINE_CLIP, 'marque'), path.join(atelier, 'marque'), { recursive: true });
+    let rang = 0;
+    const remplacer = (s, a, b) => { if (!s.includes(a)) throw new Error(`texte de départ introuvable : ${a.slice(0, 60)}`); return s.replace(a, b); };
+    const copie = ({ html = s => s, storyboard = s => s, sans = [], garderMp4 = false, motion = MOTION_SKILL } = {}) => {
+      const d = path.join(atelier, `cas-${++rang}`);
+      fs.cpSync(path.join(RACINE_CLIP, 'verte'), d, { recursive: true });
+      for (const f of [...(garderMp4 ? [] : ['clip.mp4']), ...sans]) fs.rmSync(path.join(d, f), { force: true });
+      const h = fs.readFileSync(path.join(d, 'clip.html'), 'utf8').replace(/\r\n/g, '\n');
+      fs.writeFileSync(path.join(d, 'clip.html'), html(remplacer(h, '../../../../skills/clip-de-presentation/scripts/motion.js', motion)), 'utf8');
+      const sb = path.join(d, 'STORYBOARD.md');
+      if (fs.existsSync(sb)) fs.writeFileSync(sb, storyboard(fs.readFileSync(sb, 'utf8').replace(/\r\n/g, '\n')), 'utf8');
+      return d;
+    };
+    const jouerClip = (d, ...plus) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-clip.mjs'), d, ...plus, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : les lignes le diront */ }
+      const f = j?.findings || [];
+      return { code: r.status, verdict: j?.verdict, f, durs: f.filter(x => x.sev === 'majeur' || x.sev === 'bloquant'), non_juge: j?.non_juge || [], mesures: j?.mesures || {} };
+    };
+    const pourSeule = (r, regle) => r.code === 1 && r.durs.length > 0 && r.durs.every(x => x.regle === regle);
+    const cas = (titre, f) => { try { f(); } catch (e) { ligne(false, `${titre} — ${e.message}`); } };
+    const ABSENT = path.join(atelier, 'nulle-part', 'ffprobe.exe');
+
+    // Portes
+    const sansDossier = jouerClip(path.join(atelier, 'inexistant'));
+    ligne(sansDossier.code === 2 && sansDossier.verdict === 'SKIP', `porte · un dossier introuvable rend SKIP exit 2 (obtenu ${sansDossier.verdict}, exit ${sansDossier.code})`);
+    fs.mkdirSync(path.join(atelier, 'vide'));
+    const vide = jouerClip(path.join(atelier, 'vide'));
+    ligne(vide.code === 2 && vide.verdict === 'SKIP', `porte · un dossier sans clip.html rend SKIP exit 2, rien n'est jugé (obtenu ${vide.verdict}, exit ${vide.code})`);
+
+    // CL1 : SKIP motivé sans ffprobe, jamais un PASS ; non jouée sans MP4
+    const sansOutil = jouerClip(fx('clip/verte'), '--ffprobe', ABSENT);
+    ligne(sansOutil.code === 2 && sansOutil.verdict === 'SKIP' && sansOutil.f.some(x => x.regle === 'CL1' && x.sev === 'info' && /^SKIP/.test(x.msg)),
+      `CL1 · sans ffprobe, la verte rend SKIP exit 2 avec la règle CL1 dite SKIP, jamais PASS (obtenu ${sansOutil.verdict}, exit ${sansOutil.code})`);
+    const rougeSansOutil = jouerClip(fx('clip/rouge'), '--ffprobe', ABSENT);
+    ligne(rougeSansOutil.code === 1 && ['CL2', 'CL3', 'CL4', 'CL5', 'CL6', 'CL7'].every(r => rougeSansOutil.durs.some(x => x.regle === r)),
+      `CL1 · sans ffprobe, la rouge reste FAIL exit 1 sur CL2 à CL7 : l'outil manquant ne suspend que CL1 (obtenu ${rougeSansOutil.verdict}, exit ${rougeSansOutil.code})`);
+    const sansMp4 = jouerClip(copie());
+    const lignePass = sansMp4.f.find(x => x.regle === '—');
+    ligne(sansMp4.code === 0 && sansMp4.verdict === 'PASS' && sansMp4.non_juge.some(n => /^CL1 non jouée/.test(n)) && lignePass && /CL2–CL7 sans écart ; CL1 non jouée/.test(lignePass.msg),
+      `CL1 · sans MP4, PASS exit 0 sur CL2 à CL7, et la ligne rendue le dit : « ${lignePass ? lignePass.msg : '?'} »`);
+
+    // CL2 : storyboard et planches
+    cas('CL2', () => {
+      ligne(pourSeule(jouerClip(copie({ sans: ['planche-1.jpg', 'planche-2.jpg', 'planche-3.jpg'] })), 'CL2'), 'CL2 sens rouge · sans aucune planche : FAIL pour CL2 seule');
+      const une = jouerClip(copie({ sans: ['planche-2.jpg', 'planche-3.jpg'] }));
+      ligne(une.code === 0 && une.f.some(x => x.regle === 'CL2' && x.sev === 'avertissement'), 'CL2 · une seule planche : avertissement, pas de refus (3 au moins sont dues)');
+      ligne(pourSeule(jouerClip(copie({ sans: ['STORYBOARD.md'] })), 'CL2'), 'CL2 sens rouge · sans STORYBOARD.md : FAIL pour CL2 seule');
+      const d = copie(); fs.writeFileSync(path.join(d, 'planche-1.jpg'), 'pas une image', 'utf8');
+      const fausse = jouerClip(d);
+      ligne(fausse.code === 1 && fausse.durs.every(x => x.regle === 'CL2') && fausse.durs.some(x => /illisible/.test(x.msg)), 'CL2 sens rouge · une planche qui n\'est ni JPEG ni PNG est refusée');
+    });
+
+    // CL3 : budgets, bornes comprises
+    cas('CL3', () => {
+      const legende = 'Votre équipe reçoit une demande floue.';
+      const de = (n) => `${legende} ${'x'.repeat(n - legende.length - 1)}`;
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, `'${legende}'`, `'${de(62)}'`) })), 'CL3'), 'CL3 sens rouge · une légende de 62 caractères : FAIL pour CL3 seule');
+      ligne(jouerClip(copie({ html: s => remplacer(s, `'${legende}'`, `'${de(61)}'`) })).code === 0, 'CL3 sens vert · une légende de 61 caractères, le budget exact, passe');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, "'Relecture', 'Envoi']", "'Relecture', 'Envoi', 'Archivage', 'Relance', 'Bilan']") })), 'CL3'),
+        'CL3 sens rouge · 7 étapes d\'introduction : FAIL pour CL3 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, "'relus par vos équipes.']", "'relus par vos équipes.', 'et une troisième ligne.']") })), 'CL3'),
+        'CL3 sens rouge · un titre de fin sur 3 lignes : FAIL pour CL3 seule');
+      // Les formats de la série d'origine : tableau [a, b, texte, [accent]], intro par Object.assign, constante TITRE_FIN
+      const serie = jouerClip(copie({ html: s => remplacer(remplacer(s, "M.introduire({ ctx, rendre: window.rendre, duree: window.DUREE,\n    intro: { duree: 6, titre: 'Vos devis, prêts en une heure',",
+        "const LEGENDES_SERIE = [\n    [0.5, 5.7, 'Une légende de la série, au format des données, bien trop longue pour son budget.', [1]]\n  ];\n"
+        + "  const TITRE_FIN_SERIE = ['Une ligne de titre de fin bien trop longue pour sa place', 'seconde ligne.'], SOUS_FIN = 'Sous-titre.';\n"
+        + "  M.introduire({ ctx, rendre: window.rendre, duree: window.DUREE,\n    intro: Object.assign({ duree: 6 }, { \"titre\": \"Un titre de la série bien trop long\" }), autre: { titre: 'Vos devis, prêts en une heure',"),
+        "graine: 11 } });", "graine: 11 } });") }));
+      const vus = serie.durs.filter(x => x.regle === 'CL3').map(x => x.msg);
+      ligne(serie.code === 1 && vus.length === 3 && vus.some(m => /^légende de \d+ caractères.*au format des données/.test(m))
+        && vus.some(m => /^ligne du titre de fin de \d+ caractères.*bien trop longue pour sa place/.test(m)) && vus.some(m => /^titre de l'introduction de \d+ caractères.*Un titre de la série/.test(m)),
+        `CL3 · les formats de la série d'origine sont lus : légende en [a, b, texte], TITRE_FIN_…, intro par Object.assign (obtenu ${vus.length} refus)`);
+    });
+
+    // CL4 : étiquettes, et le défaut de la bibliothèque chargée
+    cas('CL4', () => {
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, '{ taille: 28 }', '{ taille: 23 }') })), 'CL4'), 'CL4 sens rouge · une étiquette M.puce de 23 px : FAIL pour CL4 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, 'F.mono(26)', 'F.mono(22)') })), 'CL4'), 'CL4 sens rouge · F.mono(22) : FAIL pour CL4 seule');
+      const motion20 = path.join(atelier, 'motion-20.js');
+      fs.writeFileSync(motion20, remplacer(fs.readFileSync(MOTION_SKILL, 'utf8').replace(/\r\n/g, '\n'), 'const taille = o.taille ?? M.PLANCHER_ETIQUETTE;', 'const taille = o.taille || 20;'), 'utf8');
+      const ancienne = jouerClip(copie({ motion: motion20.replace(/\\/g, '/') }));
+      ligne(pourSeule(ancienne, 'CL4') && ancienne.durs.length === 2 && ancienne.durs.every(x => /la dessine à 20 px/.test(x.msg)) && ancienne.mesures.defaut_puce_px === 20,
+        `CL4 sens rouge · une bibliothèque qui dessine M.puce à 20 px par défaut : les 2 appels sans taille sont refusés, la bibliothèque citée (obtenu ×${ancienne.durs.length})`);
+      const petit = jouerClip(copie({ html: s => remplacer(s, "{ taille: 72, lueur: 18 }", "{ taille: 20, lueur: 18 }") }));
+      ligne(petit.code === 0 && petit.f.some(x => x.regle === 'CL4' && x.sev === 'avertissement'), 'CL4 · un texte de 20 px d\'une autre police : avertissement, pas de refus');
+    });
+
+    // CL5 : le chiffre de décor, et les deux remèdes que le message prescrit
+    cas('CL5', () => {
+      const sansEtiquette = (s) => remplacer(s, "M.puce(ctx, 'exemple', 960, 740, { couleur: C.faible });", '');
+      const nu = jouerClip(copie({ html: sansEtiquette }));
+      ligne(pourSeule(nu, 'CL5') && /42 devis/.test(nu.durs[0]?.msg || ''), 'CL5 sens rouge · « 42 devis » sans l\'étiquette « exemple » : FAIL pour CL5 seule');
+      const atteste = jouerClip(copie({ html: sansEtiquette, storyboard: s => s + '\n| P-02 | 42 devis relus en octobre | `crm/export.csv:1` | attestée | `wc -l crm/export.csv`, 10/11/2026 |\n' }));
+      ligne(atteste.code === 1 && pourSeule(atteste, 'CL5') === true, 'CL5 · une ligne de preuves ajoutée APRÈS la table ne l\'atteste pas (la table s\'arrête à la ligne vide)');
+      const dansTable = jouerClip(copie({ html: sansEtiquette, storyboard: s => remplacer(s, '| P-01 | un devis rédigé par un agent est relu avant l\'envoi | `exemple/devis.md:12` | attestée | — |',
+        '| P-01 | un devis rédigé par un agent est relu avant l\'envoi | `exemple/devis.md:12` | attestée | — |\n| P-02 | 42 devis relus en octobre | `crm/export.csv:1` | attestée | `wc -l crm/export.csv`, 10/11/2026 |') }));
+      ligne(dansTable.code === 0, 'CL5 sens vert · remède joué : le même chiffre, mesuré et attesté par une ligne datée de la table de preuves, passe sans étiquette');
+      const nonDatee = jouerClip(copie({ html: sansEtiquette, storyboard: s => remplacer(s, '| attestée | — |', '| attestée | — |\n| P-02 | 42 devis relus | `crm/export.csv:1` | attestée | — |') }));
+      ligne(pourSeule(nonDatee, 'CL5'), 'CL5 sens rouge · une ligne de preuves SANS date n\'atteste rien');
+      const absente = jouerClip(copie({ html: sansEtiquette, storyboard: s => remplacer(s, '| attestée | — |', '| attestée | — |\n| P-02 | 42 devis relus | `crm/export.csv:1` | absente | 10/11/2026 |') }));
+      ligne(pourSeule(absente, 'CL5'), 'CL5 sens rouge · une capacité « absente », même datée, n\'atteste rien');
+      const ordinaux = jouerClip(copie({ html: s => remplacer(sansEtiquette(s), "'42 devis'", "'Étape 2 sur la date du 10/11/2026'") }));
+      ligne(ordinaux.code === 0, 'CL5 sens vert · un numéro d\'ordre (« Étape 2 ») et une date ne sont pas des chiffres de décor');
+    });
+
+    // CL6 : la marque en paramètre
+    cas('CL6', () => {
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, 'const LEGENDES = [', "const LOGO = new Image(); LOGO.src = '../marque/logo-sombre.svg';\n  const LEGENDES = [") })), 'CL6'),
+        'CL6 sens rouge · le logo déclaré, rechargé en dur dans le script : FAIL pour CL6 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, "'relu', 1540", "'atelier-ferrand.example', 1540") })), 'CL6'), 'CL6 sens rouge · le lien écrit en dur dans une étiquette : FAIL pour CL6 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, "'relu', 1540", "'Atelier Ferrand', 1540") })), 'CL6'), 'CL6 sens rouge · le nom de la marque déclarée écrit en dur : FAIL pour CL6 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, '"lien": "atelier-ferrand.example" }', '"lien": "atelier-ferrand.example", }') })), 'CL6'), 'CL6 sens rouge · une déclaration de marque illisible : FAIL pour CL6 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, '"logo": "../marque/logo-sombre.svg"', '"logo": "../marque/logo-absent.svg"') })), 'CL6'), 'CL6 sens rouge · un logo déclaré introuvable : FAIL pour CL6 seule');
+      const sansDecl = jouerClip(copie({ html: s => s.replace(/<script type="application\/json" id="marque">[\s\S]*?<\/script>\n/, '') }));
+      ligne(sansDecl.code === 0 && sansDecl.f.some(x => x.regle === 'CL6' && x.sev === 'avertissement'), 'CL6 · sans déclaration de marque : avertissement, pas de refus');
+      const commentaires = jouerClip(copie({ html: s => remplacer(s, 'const LEGENDES = [', "// ancien : LOGO.src = 'logo-sombre.png' ; lien 'atelier-ferrand.example'\n  const motifLogo = /logo-sombre\\.png/;\n  const LEGENDES = [") }));
+      ligne(commentaires.code === 0, 'CL6 sens vert · un logo cité en commentaire ou dans une expression régulière n\'est pas un logo codé en dur');
+    });
+
+    // CL7 : l'horloge et le hasard
+    cas('CL7', () => {
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, 'const FIN = window.DUREE - 4.5;', 'const FIN = window.DUREE - 4.5, debut = Date.now();') })), 'CL7'), 'CL7 sens rouge · Date.now dans le script : FAIL pour CL7 seule');
+      ligne(pourSeule(jouerClip(copie({ html: s => remplacer(s, 'M.fond(ctx, t);', 'M.fond(ctx, t + performance.now() / 1000);') })), 'CL7'), 'CL7 sens rouge · performance.now dans le rendu : FAIL pour CL7 seule');
+      ligne(jouerClip(copie({ html: s => remplacer(s, 'const FIN', "// Math.random() est interdit ici ; l'aléa passe par M.alea\n  const note = 'pas de Math.random';\n  const FIN") })).code === 0,
+        'CL7 sens vert · Math.random cité en commentaire ou dans une chaîne n\'est pas un appel');
+    });
+
+    // CL1 : la durée, qui suit window.DUREE et l'introduction déclarée (ffprobe requis)
+    if (!OUTILLAGE_VIDEO.ok) {
+      console.log(`  SKIP  CL1 durée attendue : ${OUTILLAGE_VIDEO.manque}`);
+      sautes.push('oracle-clip CL1 (durée)');
+    } else {
+      cas('CL1', () => {
+        const long = jouerClip(copie({ garderMp4: true, html: s => remplacer(s, 'window.DUREE = 6;', 'window.DUREE = 7;') }));
+        ligne(pourSeule(long, 'CL1') && /12\.00 s pour 13 s annoncées/.test(long.durs[0]?.msg || ''), `CL1 sens rouge · window.DUREE porté à 7 : le MP4 de 12 s ne fait plus les 13 s annoncées (obtenu « ${long.durs[0]?.msg || long.verdict} »)`);
+        const intro = jouerClip(copie({ garderMp4: true, html: s => remplacer(s, 'window.DUREE = 6;', 'window.DUREE = 7;').replace('intro: { duree: 6,', 'intro: { duree: 5,') }));
+        ligne(intro.code === 0, 'CL1 sens vert · window.DUREE 7 et une introduction déclarée de 5 s : les 12 s du MP4 sont celles annoncées');
+      });
+    }
+  } finally {
+    fs.rmSync(atelier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok) && !(c.video && !OUTILLAGE_VIDEO.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
     + (sautes.length ? ` ${sautes.length} saut(s) motivé(s) : ${sautes.join(', ')}.` : '')

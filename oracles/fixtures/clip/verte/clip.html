@@ -1,0 +1,57 @@
+<!doctype html>
+<!-- Fixture VERTE d'oracle-clip (TF-2405) : un clip court tiré du gabarit du skill, qui tient les sept règles.
+     La bibliothèque est celle du skill : si son défaut de M.puce redescendait sous 24 px, cette fixture rougirait (CL4). -->
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Clip — Vos devis, prêts en une heure</title>
+<link rel="stylesheet" href="../marque/tokens.css">
+<script type="application/json" id="marque">
+{ "nom": "Atelier Ferrand", "logo": "../marque/logo-sombre.svg", "lien": "atelier-ferrand.example" }
+</script>
+<style>
+  html, body { margin: 0; background: var(--fond); overflow: hidden; }
+  canvas { display: block; width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../../skills/clip-de-presentation/scripts/motion.js"></script>
+<script>
+(function () {
+  const ctx = document.getElementById('c').getContext('2d');
+  const C = M.C, F = M.F, H = M.H;
+  const pr = M.prog, so = M.sortie;
+  window.DUREE = 6;
+  const FIN = window.DUREE - 4.5;
+
+  const LEGENDES = [
+    ['Votre équipe reçoit une demande floue.', 0.2, FIN - 0.3, { accent: [5], couleurAccent: C.alerte }]
+  ];
+  const NOEUDS = [[380, 540, 'Demande'], [960, 400, 'Chiffrage'], [1540, 540, 'Envoi']];
+
+  window.rendre = function (t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = 'none'; ctx.setLineDash([]);
+    M.fond(ctx, t);
+    const pts = NOEUDS.map(n => [n[0], n[1]]);
+    M.chemin(ctx, pts, pr(t, 0.1, 1.2));
+    NOEUDS.forEach(([x, y, nom], i) => M.puce(ctx, nom, x, y - 74, { couleur: i === 2 ? C.accent2 : C.accent, alpha: so(pr(t, 0.1 + i * 0.3, 0.5 + i * 0.3)) }));
+    M.texte(ctx, '42 devis', 960, 660, { taille: 72, lueur: 18 });
+    M.puce(ctx, 'exemple', 960, 740, { couleur: C.faible });
+    M.texte(ctx, 'Chiffrage', 960, 820, { police: F.mono(26), couleur: C.faible });
+    M.puce(ctx, 'relu', 1540, 620, { taille: 28 });
+    for (const [txt, a, b, o] of LEGENDES) M.legende(ctx, t, txt, a, b, Object.assign({ taille: 60, y: H - 140 }, o));
+    if (t >= FIN) M.carteFin(ctx, t, FIN, { titre: ['Des devis plus rapides,', 'relus par vos équipes.'], sousTitre: 'L’agent rédige, votre équipe décide.' });
+  };
+
+  M.introduire({ ctx, rendre: window.rendre, duree: window.DUREE,
+    intro: { duree: 6, titre: 'Vos devis, prêts en une heure', phrase: 'Un agent rédige le devis, votre équipe le relit et décide de l’envoi.',
+             etapes: ['Demande', 'Chiffrage', 'Relecture', 'Envoi'], graine: 11 } });
+  window.PRET = () => M.pret();
+
+  if (location.search.includes('rendu')) window.rendre(0);
+  else window.PRET().then(() => M.apercu(window.rendre, window.DUREE, 'musique.wav'));
+})();
+</script>
+</body>
+</html>

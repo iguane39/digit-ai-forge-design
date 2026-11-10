@@ -1,0 +1,55 @@
+<!doctype html>
+<!-- Fixture ROUGE d'oracle-clip (TF-2405) : les défauts que la série d'origine a payés, un par règle.
+     CL1 MP4 hors format · CL2 aucune planche, storyboard sans table de preuves · CL3 textes hors budget ·
+     CL4 étiquettes sous 24 px · CL5 chiffre de décor sans « exemple » · CL6 logo et adresse codés en dur,
+     aucune déclaration de marque · CL7 hasard dans le rendu. -->
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Clip — défauts</title>
+<link rel="stylesheet" href="../marque/tokens.css">
+<style>
+  html, body { margin: 0; background: var(--fond); overflow: hidden; }
+  canvas { display: block; width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../../../../skills/clip-de-presentation/scripts/motion.js"></script>
+<script>
+(function () {
+  const ctx = document.getElementById('c').getContext('2d');
+  const C = M.C, F = M.F, H = M.H;
+  window.DUREE = 6;
+  const FIN = window.DUREE - 4.5;
+  const LOGO = new Image(); LOGO.src = '../marque/logo-sombre.png';
+
+  const LEGENDES = [
+    ['Une légende bien trop longue, qui dépasse de loin le budget de soixante et un caractères.', 0.2, FIN - 0.3, { accent: [1] }]
+  ];
+  const EXIG = [['EX-01', 'Exporter les commandes', 'critère : 10 000 lignes < 5 s']];
+
+  window.rendre = function (t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1;
+    M.fond(ctx, t);
+    ctx.font = F.mono(16); ctx.fillStyle = C.faible; ctx.fillText(EXIG[0][2], 400, 500);
+    M.puce(ctx, 'healthcheck', 960, 400, { taille: 18 });
+    M.puce(ctx, 'atelier-ferrand.example', 960, 800, { taille: 36 });
+    const scintille = Math.random();
+    ctx.globalAlpha = 0.5 + 0.5 * scintille;
+    if (LOGO.complete) ctx.drawImage(LOGO, 810, 160, 300, 80);
+    ctx.globalAlpha = 1;
+    for (const [txt, a, b, o] of LEGENDES) M.legende(ctx, t, txt, a, b, Object.assign({ y: H - 140 }, o));
+    if (t >= FIN) M.carteFin(ctx, t, FIN, { titre: ['Un titre de fin', 'posé sur trois lignes', 'qui heurte le filet.'], sousTitre: 'Un sous-titre.' });
+  };
+
+  M.introduire({ ctx, rendre: window.rendre, duree: window.DUREE,
+    intro: { duree: 6, titre: 'Un titre bien trop long pour la place qu’il a', phrase: 'Une phrase.',
+             etapes: ['Un', 'Deux', 'Trois', 'Quatre', 'Cinq', 'Six', 'Sept'], graine: 3 } });
+  window.PRET = () => M.pret();
+  if (location.search.includes('rendu')) window.rendre(0);
+  else window.PRET().then(() => M.apercu(window.rendre, window.DUREE));
+})();
+</script>
+</body>
+</html>

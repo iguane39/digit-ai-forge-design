@@ -1134,3 +1134,69 @@ posé entre les deux mesures du retour.
   au millimètre, fournir le PDF imprimé depuis le navigateur.
 - La **lisibilité sémantique** : ordre de lecture, balisage PDF/UA, texte alternatif, langue.
 - Les **tableaux PPTX**, dont les cellules ne sont pas lues, et les couleurs de thème à luminosité modifiée, approchées.
+
+## Entrée du 10/11/2026 — oracle-clip, le clip de présentation (TF-2405)
+
+**Statut d'usage de la forge : `candidat`.** Écrit et verrouillé au banc local (`self-test.mjs` : un CAS de fixtures verte et
+rouge, et un bloc de 36 vérifications d'isolation des règles, de portes, de SKIP sans ffprobe et de remèdes joués ;
+`self-test-regles-jouees.mjs` : sa ligne « sans écart » dérivée de sa liste). Son inscription au registre de `quality-oracles`
+relève de la part forge-agents : ce fichier ne dit pas qu'elle est faite.
+
+Le domaine que rien ne couvrait : **un clip de présentation tient-il son format, ses preuves et sa marque ?** `oracle-motion`
+juge les transitions d'une interface, pas une vidéo. Les 28 clips de motion design rendus chez un produit les 09 et 10/11/2026
+n'avaient pour contrôles que `ffprobe` lancé à la main, la lecture des planches et `run-oracles-design` sur la page, qui ne lit
+ni le canvas ni le MP4 ; leurs étiquettes de 17 à 19 px et les 6 défauts de la bibliothèque ont été trouvés par les agents de
+la série. L'oracle juge le dossier d'un clip du skill `clip-de-presentation` : la source `clip.html` par un tokeniseur
+JavaScript (chaînes, gabarits, commentaires et expressions régulières séparés), `STORYBOARD.md`, les planches, et le MP4 par
+`ffprobe` (`lib/ffprobe.mjs` : `--ffprobe`, variable `FFPROBE`, PATH, puis `python -c "import static_ffmpeg"`).
+
+| Règle | Critère mesurable | Sévérité |
+|---|---|---|
+| CL1 | MP4 lu par ffprobe : durée égale à `window.DUREE` plus l'introduction déclarée (6 s par défaut) à 0,25 s près ; 1920 × 1080 ; 30 i/s ; H.264 `yuv420p` ; une piste AAC. Sans ffprobe : SKIP motivé de la règle, verdict jamais PASS | majeur |
+| CL2 | `STORYBOARD.md` présent ; planches `planche*.jpg` ou `.png` lisibles ; table de preuves à colonne « statut » ; 3 planches au moins | majeur ; avertissement pour la table et pour moins de 3 planches |
+| CL3 | budgets de caractères : titre de l'introduction 30, phrase 90, étape 16 et 6 étapes au plus, légende 61, ligne du titre de fin 40 et 2 lignes au plus | majeur |
+| CL4 | étiquette à chasse fixe sous 24 px : taille écrite d'un `M.puce`, défaut de `M.puce` dans la bibliothèque chargée, `F.mono(n)`, police littérale à chasse fixe ; un texte d'une autre police sous 24 px | majeur ; avertissement pour l'autre police |
+| CL5 | nombre écrit dans un texte du script, qu'aucune ligne datée de la table de preuves (statut « attestée » ou « partielle ») n'atteste, sans l'étiquette « exemple » dans la source | majeur |
+| CL6 | littéral d'image de logo, adresse ou nom de la marque déclarée, dans le script du clip ou dans sa bibliothèque ; déclaration de marque illisible ; logo déclaré introuvable ; aucune déclaration | majeur ; avertissement sans déclaration |
+| CL7 | `Math.random`, `Date.now`, `performance.now` ou `new Date` dans le script du clip | majeur |
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Clip de présentation : format, preuves et marque | `node c:/dev/digit-ai-forge-design/oracles/oracle-clip.mjs <dossier du clip> [--mp4 <clip.mp4>] [--ffprobe <chemin>]` — CL1 MP4 par ffprobe, CL2 pièces de contrôle, CL3 budgets des textes, CL4 étiquettes de 24 px, CL5 chiffres de décor, CL6 marque en paramètre, CL7 rendu déterministe | cli | candidat |
+
+```json
+[
+  {
+    "domaine": "Clip de présentation : format, preuves et marque",
+    "oracle": "oracles/oracle-clip.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".html", ".mp4"],
+    "fixtures": {
+      "verte": "oracles/fixtures/clip/verte",
+      "rouge": "oracles/fixtures/clip/rouge"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-11-10", "mandat": "TF-2405", "amont": "étude 20261110c, verdict O1 ; décision D-203 (a) du 10/11/2026" },
+    "regles": 7
+  }
+]
+```
+
+Mesure sur le clip « ingénierie logicielle en récit client » du produit qui a commandé la série, joué en lecture seule le
+10/11/2026 avec son MP4 : FAIL, 29 constats. CL4 : 21 majeurs (11 étiquettes `M.puce` de 17 à 20 px, 10 textes `F.mono` de
+14 à 19 px) et 1 avertissement ; CL5 : 3 chiffres de décor sans « exemple » (« 10 000 lignes < 5 s », « réponse < 1 s »,
+« 360 px, 0 débordement ») ; CL6 : le logo codé en dur dans le clip et l'adresse codée en dur dans l'ancienne bibliothèque,
+plus l'absence de déclaration ; CL2 : storyboard sans table de preuves. CL1, CL3 et CL7 sans écart : 66,000 s pour 60 + 6
+annoncées, 1920 × 1080, 30 i/s, H.264 `yuv420p`, AAC.
+
+### Ce que cet oracle ne juge PAS
+
+- La **qualité de l'image** : mouvement, rythme, lisibilité, chevauchements, contraste et métaphore de chaque plan. Elle se lit
+  sur les planches, par un humain ou par `critique-le-design`.
+- La **taille rendue** d'une étiquette : CL4 lit la taille écrite, et une étiquette de 24 px sous un zoom de caméra de 0,4 n'en
+  fait plus que 10 ; une taille calculée n'est pas résolue.
+- Un **nombre calculé** à l'exécution, un littéral fait de chiffres seuls, une date, un numéro d'ordre ; ni la co-présence à
+  l'écran du chiffre et de son étiquette « exemple », ni la vérité d'une preuve attestée.
+- Un **texte construit** à l'exécution, ou écrit dans un format autre que ceux du skill et de la série d'origine.
+- Le **contenu du MP4** : images, synchronisation avec les impacts de la musique, niveau sonore.
+- La **fraîcheur** des planches par rapport au clip, et leur lecture.

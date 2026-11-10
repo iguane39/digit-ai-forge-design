@@ -82,6 +82,8 @@ const VERTES = [
   ['bascule', 'bascule-verte.html'], ['perceptibilite', 'perceptibilite-verte.html'], ['restitution', 'restitution-verte.html'],
   ['taste', 'taste-verte.html'], ['erreurs-formulaire', 'erreurs-formulaire-verte.html'],
   ['textes-application', 'textes-application-verte.json'], ['liste-demande', 'liste-demande-verte.md'],
+  // TF-2405 : un dossier de clip ; sa ligne « sans écart » se rend quand ffprobe lit son MP4, sinon CL1 rend SKIP et le jeu est compté à part.
+  ['clip', 'clip/verte'],
   ...['declencheurs', 'images', 'motion', 'panneau-tache', 'saisie', 'surcouche', 'slop'].map(n => [n, MINIMALE]),
 ];
 let atteints = 0;

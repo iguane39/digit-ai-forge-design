@@ -1,0 +1,25 @@
+/* Marque fictive des fixtures d'oracle-clip (TF-2405), au contrat de systeme-de-marque (references/tokens.md). */
+:root {
+  color-scheme: light;
+  --fond: oklch(0.97 0.008 45);
+  --surface: oklch(0.94 0.012 45);
+  --trait: oklch(0.86 0.015 45);
+  --texte: oklch(0.22 0.020 45);
+  --texte-faible: oklch(0.45 0.020 45);
+  --accent: oklch(0.52 0.140 45);
+  --accent-contraste: oklch(0.98 0.004 45);
+  --police-titre: "Segoe UI", system-ui, sans-serif;
+  --police-corps: "Segoe UI", system-ui, sans-serif;
+  --police-mono: Consolas, ui-monospace, monospace;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --fond: oklch(0.17 0.012 45);
+  --surface: oklch(0.22 0.016 45);
+  --trait: oklch(0.33 0.018 45);
+  --texte: oklch(0.95 0.006 45);
+  --texte-faible: oklch(0.76 0.014 45);
+  --accent: oklch(0.74 0.120 50);
+  --accent-2: oklch(0.82 0.090 195);
+  --accent-contraste: oklch(0.17 0.012 45);
+}
