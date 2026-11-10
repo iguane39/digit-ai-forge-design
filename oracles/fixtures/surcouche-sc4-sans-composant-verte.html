@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — SC4 sans composant en sur-couche (TF-2384)</title>
+<!--
+  TF-2384. Même page que surcouche-sc4-sans-composant-rouge.html, avec le remède que le message de SC4
+  prescrit : `color-scheme: dark` au bloc sombre. Aucun composant en sur-couche : SC1–SC3 et SC5 sont sans
+  objet et le disent au non_juge ; SC4 est évaluée seule et passe.
+
+  Attendu : PASS, exit 0, « SC4 sans écart » (jamais « SC1–SC5 sans écart »).
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --trait: #D1D5DB;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #0B1220;
+    --texte: #E5E7EB;
+    --trait: #374151;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: system-ui, sans-serif; }
+  main { border: 1px solid var(--trait); padding: 16px; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Dossier de compétences</h1>
+    <p>Une page de consultation, sans fenêtre ni info-bulle, avec un thème sombre déclaré jusqu'au navigateur.</p>
+  </main>
+</body>
+</html>

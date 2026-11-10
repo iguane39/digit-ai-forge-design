@@ -35,3 +35,25 @@ export function pageAUneSurcouche(html) {
   const feuilles = css(html, racine).replace(/\/\*[\s\S]*?\*\//g, ' ');
   return cssRulesDeep(feuilles).some(r => /::backdrop/i.test(r.selector));
 }
+
+// ── Le thème sombre : SC4 vaut pour toute page qui en déclare un, sur-couche ou non (TF-2384) ──
+// SC4 (`color-scheme` déclaré par thème) ne concerne pas que le composant en sur-couche : le navigateur peint
+// pour son propre compte les barres de défilement, les contrôles natifs et le fond de la page elle-même. Une page
+// dotée d'un thème sombre qui n'a ni <dialog> ni [popover] a donc la même barre de défilement blanche en sombre :
+// le format des dossiers consultant l'a eue du 16 au 28/09/2026, parce que l'oracle sortait en SKIP avant SC4.
+// Les deux définitions vivent ici, lues par l'oracle ET par le lanceur : une portée, deux juges (TF-2092).
+/** R-30 : un bloc @media (prefers-color-scheme: dark) n'est PAS le thème sombre de la forge. */
+export const estAutoSombre = r => r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a));
+export const estSombre = r => !estAutoSombre(r) && /dark/i.test(r.selector);
+
+/** Ces règles CSS déclarent-elles un thème sombre : un bloc [data-theme="dark"] portant des jetons, ou une règle prefers-color-scheme: dark ? */
+export function reglesDeclarentUnThemeSombre(regles) {
+  return regles.some(r => estAutoSombre(r) || (estSombre(r) && /--[\w-]+\s*:/.test(r.body)));
+}
+
+/** La page (texte HTML), avec le CSS d'un éventuel fichier de jetons, déclare-t-elle un thème sombre ? */
+export function pageAUnThemeSombre(html, cssJetons = '') {
+  const racine = parse(html);
+  const feuilles = (cssJetons + '\n' + css(html, racine)).replace(/\/\*[\s\S]*?\*\//g, ' ');
+  return reglesDeclarentUnThemeSombre(cssRulesDeep(feuilles).filter(r => !r.atRules.some(a => /\bprint\b/i.test(a))));
+}

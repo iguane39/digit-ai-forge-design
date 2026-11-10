@@ -20,7 +20,10 @@
 //        c'est le voile par défaut du navigateur, qui ignore le thème de la page.
 //   SC4  `color-scheme` est déclaré PAR THÈME : `light` au bloc de base, `dark` au bloc
 //        sombre dès qu'un thème sombre existe. Sans lui, la page obéit à data-theme et le
-//        navigateur au réglage du système : deux autorités sur un même écran.
+//        navigateur au réglage du système : deux autorités sur un même écran. SC4 juge le
+//        THÈME de la page : elle est évaluée dès qu'un bloc [data-theme="dark"] ou une règle
+//        prefers-color-scheme existe, avec ou sans composant en sur-couche (TF-2384) ; SC1–SC3
+//        et SC5, qui jugent un composant, sont alors sans objet et le non_juge le dit.
 //
 // Une règle d'AVERTISSEMENT, extraite de textes tiers (TF-1911, voie taste-skill ;
 // attribution : `regles-importees-vercel-emil.md`) :
@@ -45,12 +48,12 @@
 import fs from 'node:fs';
 import { parse as parseHtml, elements, arbres, css, cssRulesDeep } from './lib/html.mjs';
 import { declarationsPour as declarationsDe } from './lib/selecteurs.mjs';
-import { estSurcouche } from './lib/surcouche.mjs';
+import { estSurcouche, estAutoSombre, estSombre, reglesDeclarentUnThemeSombre } from './lib/surcouche.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
 // TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
 const REGLES_JOUEES = ['SC1', 'SC2', 'SC3', 'SC4', 'SC5'];
-const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
+let plageJouee = plageDeRegles(REGLES_JOUEES); // SC4 seule quand aucun composant en sur-couche n'existe (TF-2384)
 
 const DOM = 'Composant dynamique et sur-couche : habillage explicite depuis les jetons';
 const args = process.argv.slice(2);
@@ -75,7 +78,7 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-surcouche', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
+    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${plageJouee} sans écart`, where: file }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -127,9 +130,20 @@ for (const [i, a] of ARBRES.entries()) {
   }
 }
 
-if (composants.length === 0) {
-  NJ.push('aucun composant en sur-couche dans ce document (ni <dialog>, ni [popover], ni role="dialog"/"alertdialog") : SC1–SC3 sans objet');
+// TF-2384 (retour du 28/09/2026, RV-204) — SC4 NE DÉPEND PAS DE LA SUR-COUCHE. L'oracle sortait en SKIP dès qu'une
+// page n'avait ni <dialog> ni [popover], avant d'évaluer SC4, et affichait pourtant « SC1–SC4 sans écart » : une
+// page dotée d'un thème sombre mais sans color-scheme: dark gardait ses barres de défilement blanches en sombre
+// (12 jours de défaut non vu, du 16 au 28/09/2026). SC1–SC3 et SC5 jugent un composant : sans composant, ils sont
+// sans objet. SC4 juge le thème : dès qu'un bloc [data-theme="dark"] ou une règle prefers-color-scheme existe, elle
+// est évaluée, avec ou sans sur-couche. Sans composant ni thème sombre, l'oracle reste SKIP : rien à juger.
+const sc4Seule = composants.length === 0 && reglesDeclarentUnThemeSombre(regles);
+if (composants.length === 0 && !sc4Seule) {
+  NJ.push('aucun composant en sur-couche dans ce document (ni <dialog>, ni [popover], ni role="dialog"/"alertdialog") et aucun thème sombre déclaré (ni bloc [data-theme="dark"] portant des jetons, ni règle prefers-color-scheme) : SC1–SC5 sans objet, SC4 non évaluée');
   sortir('SKIP', 2);
+}
+if (sc4Seule) {
+  plageJouee = 'SC4';
+  NJ.push('aucun composant en sur-couche dans ce document : SC1–SC3 et SC5 sans objet ; SC4 évaluée seule parce que le document déclare un thème sombre (TF-2384) — elle juge le thème de la page, pas un composant');
 }
 
 // ── Appariement élément → règles CSS ───────────────────────────────────────
@@ -266,8 +280,7 @@ for (const c of composants) {
 // est bien ARRIVÉE jusqu'à la page — par son CSS ou par le fichier --tokens.
 {
   // R-30 : un bloc @media (prefers-color-scheme: dark) n'est pas le thème sombre (check_html G1).
-  const estAutoSombre = r => r.atRules.some(a => /prefers-color-scheme\s*:\s*dark/i.test(a));
-  const estSombre = r => !estAutoSombre(r) && /dark/i.test(r.selector);
+  // estAutoSombre et estSombre vivent dans lib/surcouche.mjs, lues aussi par le lanceur (TF-2384).
   if (regles.some(estAutoSombre)) {
     add('avertissement', 'SC4', 'bloc @media (prefers-color-scheme: dark) : auto-sombre hérité de l’OS, retiré par R-30 et refusé par check_html G1 — il ne compte pas comme thème sombre ; déclarer le sombre (et son color-scheme: dark) sous :root[data-theme="dark"]', 'bloc @media prefers-color-scheme');
   }
@@ -308,8 +321,8 @@ F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] 
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
 if (!jsonOnly) {
   process.stderr.write(durs.length
-    ? `FAIL — ${durs.length} écart(s) dur(s) sur ${composants.length} composant(s) en sur-couche\n`
-    : `PASS — ${composants.length} composant(s) en sur-couche, ${PLAGE_JOUEE} sans écart\n`);
+    ? `FAIL — ${durs.length} écart(s) dur(s) sur ${sc4Seule ? 'le thème de la page (SC4 seule, aucun composant en sur-couche)' : composants.length + ' composant(s) en sur-couche'}\n`
+    : `PASS — ${sc4Seule ? 'aucun composant en sur-couche, thème sombre déclaré' : composants.length + ' composant(s) en sur-couche'}, ${plageJouee} sans écart\n`);
 }
 if (durs.length) sortir('FAIL', 1);
 sortir('PASS', 0);

@@ -76,7 +76,7 @@ import { detecterOutillageRendu, injecterThemeSombre, neutraliserVisite } from '
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
-import { pageAUneSurcouche } from './lib/surcouche.mjs';
+import { pageAUneSurcouche, pageAUnThemeSombre } from './lib/surcouche.mjs';
 import { trouverDeclaration, NOM_DECLARATION } from './lib/declaration-valeurs.mjs';
 import { typerPage } from './lib/type-page.mjs';
 import { rendreAutonome } from './lib/rendre-autonome.mjs';
@@ -457,6 +457,11 @@ const aUnDeclencheur = /<button[\s>]|<a[\s>]|<summary[\s>]|data-action|onclick|r
 // agrégat SKIP exit 2. La détection ne lit plus de texte : elle lit l'ARBRE, par la même règle que l'oracle
 // (lib/surcouche.mjs — éléments du DOM et des gabarits de script, règles ::backdrop des feuilles de style).
 const aUneSurcouche = pageAUneSurcouche(html);
+// TF-2384 (28/09/2026) : SC4 (`color-scheme` par thème) juge le THÈME de la page, pas un composant. Une page sans
+// sur-couche mais dotée d'un thème sombre (bloc [data-theme="dark"], règle prefers-color-scheme), dans son CSS ou dans
+// le fichier --tokens, lance donc oracle-surcouche, qui n'y évalue que SC4. Même définition que l'oracle (lib/surcouche.mjs).
+const jetonsCss = opt('--tokens') && fs.existsSync(opt('--tokens')) ? fs.readFileSync(opt('--tokens'), 'utf8') : '';
+const aUnThemeSombre = pageAUnThemeSombre(html, jetonsCss);
 // TF-1219 : une action nommée par une exigence (data-exigence="<id>", convention posée au
 // 10e oracle) — une page sans aucune action nommée n'a rien à juger en perceptibilité.
 const aUneActionNommee = /data-exigence\s*=/i.test(html);
@@ -507,9 +512,9 @@ function passeFichier(fichier, { muet = false } = {}) {
     out.push(lancer('oracle-declencheurs.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
   } else if (!muet) sansObjet.push('oracle-declencheurs : SANS OBJET — aucun déclencheur (bouton, lien, élément porteur de data-action/onclick) dans le document');
 
-  if (aUneSurcouche) {
+  if (aUneSurcouche || aUnThemeSombre) {
     out.push(lancer('oracle-surcouche.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
-  } else if (!muet) sansObjet.push('oracle-surcouche : SANS OBJET — aucun composant en sur-couche (<dialog>, [popover], role="dialog") dans le document');
+  } else if (!muet) sansObjet.push('oracle-surcouche : SANS OBJET — aucun composant en sur-couche (<dialog>, [popover], role="dialog") ni thème sombre déclaré dans le document');
 
   if (aUneActionNommee) {
     out.push(lancer('oracle-perceptibilite.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));

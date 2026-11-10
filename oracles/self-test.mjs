@@ -685,6 +685,17 @@ const CAS = [
     rouge: [fx('surcouche-rouge.html')],
   },
   {
+    // TF-2384 (retour du 28/09/2026, RV-204) — SC4 NE DÉPEND PAS DE LA SUR-COUCHE. Une page de consultation sans
+    // <dialog> ni [popover] mais dotée d'un thème sombre sans `color-scheme: dark` gardait ses barres de
+    // défilement blanches en sombre (16 au 28/09/2026, 12 jours sans que personne le voie) : l'oracle sortait en
+    // SKIP avant SC4 en affichant « SC1–SC5 sans écart », et le lanceur ne l'appelait pas. Les deux fixtures sont
+    // la même page ; la verte porte le `color-scheme: dark` que le message de SC4 prescrit.
+    oracle: 'oracle-surcouche.mjs',
+    regles: ['SC4'],
+    verte: [fx('surcouche-sc4-sans-composant-verte.html')],
+    rouge: [fx('surcouche-sc4-sans-composant-rouge.html')],
+  },
+  {
     // TF-1219 — loi n°1 du pilot (« toute affordance est câblée ou n'existe pas ») sans aucun
     // contrôle de PERCEPTIBILITÉ : un bouton « Panier » câblé (une ancre fonctionnelle), sans
     // contraste ni taille ni position suffisants, a été déclaré « inactif » par un humain. Les
@@ -3430,6 +3441,59 @@ for (const cas of CAS) {
     'sens rouge · la variante vide cachée derrière la répétition reste refusée : UN bloquant, sur la paire réelle « logo-white » / « logo »');
   ligne(!rouge.findings.some(f => /« (\S+) » et « \1 »/.test(f.msg || '')),
     'sens rouge · aucune paire d\'un actif avec lui-même n\'est plus fabriquée');
+}
+
+// TF-2384 (campagne du 10/11/2026) — SC4 AU DÉTAIL : évaluée sans composant dès qu'un thème sombre existe, et seulement alors.
+{
+  console.log(String.fromCharCode(10) + 'oracle-surcouche SC4 (TF-2384) — évaluée avec ou sans sur-couche dès qu\'un thème sombre existe, aux deux sens');
+  const dossierSC = fs.mkdtempSync(path.join(os.tmpdir(), 'surcouche-sc4-'));
+  try {
+    const ecrire = (nom, contenu) => { const c = path.join(dossierSC, nom); fs.writeFileSync(c, contenu, 'utf8'); return c; };
+    const jouerSC = (cible, ...plus) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-surcouche.mjs'), cible, ...plus, '--json-only'], { encoding: 'utf8' });
+      return { code: r.status, json: JSON.parse(r.stdout.trim()) };
+    };
+    const durs = j => j.findings.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
+    const texteDe = f => fs.readFileSync(fx(f), 'utf8');
+
+    const verte = jouerSC(fx('surcouche-sc4-sans-composant-verte.html'));
+    ligne(verte.code === 0 && verte.json.verdict === 'PASS' && verte.json.findings.every(f => f.msg === 'SC4 sans écart' || f.sev !== 'info'),
+      'sens vert · sans composant, thème sombre déclaré jusqu\'au navigateur : PASS, et la ligne dit « SC4 sans écart », pas « SC1–SC5 »');
+    ligne(verte.json.non_juge.some(n => /SC1–SC3 et SC5 sans objet/.test(n) && /SC4 évaluée seule/.test(n)),
+      'sens vert · le non_juge dit que SC1–SC3 et SC5 sont sans objet et que SC4 est évaluée seule');
+    const rouge = jouerSC(fx('surcouche-sc4-sans-composant-rouge.html'));
+    ligne(rouge.code === 1 && rouge.json.verdict === 'FAIL' && durs(rouge.json).length === 1 && durs(rouge.json)[0].regle === 'SC4' && /color-scheme: dark/.test(durs(rouge.json)[0].msg),
+      'sens rouge · sans composant, thème sombre sans color-scheme: dark : UN bloquant SC4, FAIL exit 1 (le défaut du format des dossiers)');
+    // Le remède que le message prescrit se joue : ajouter color-scheme: dark au bloc sombre doit PASSER.
+    const remede = ecrire('remede.html', texteDe('surcouche-sc4-sans-composant-rouge.html').replace(':root[data-theme="dark"] {', ':root[data-theme="dark"] {\n    color-scheme: dark;'));
+    ligne(jouerSC(remede).code === 0, 'sens vert · le remède prescrit par le message (color-scheme: dark au bloc sombre) fait passer la même page');
+    // Sans thème sombre ni composant, il n'y a rien à juger : la porte reste fermée, et le motif le dit.
+    const sansTheme = ecrire('sans-theme.html', texteDe('surcouche-sc4-sans-composant-rouge.html').replace(/:root\[data-theme="dark"\] \{[^}]*\}/, ''));
+    const clair = jouerSC(sansTheme);
+    ligne(sansTheme !== texteDe('surcouche-sc4-sans-composant-rouge.html') && clair.code === 2 && clair.json.verdict === 'SKIP' && clair.json.non_juge.some(n => /aucun thème sombre déclaré/.test(n)),
+      'sens rouge · ni composant ni thème sombre : SKIP exit 2, le motif nomme les deux absences (la correction n\'invente pas un jugement)');
+    // Une règle prefers-color-scheme suffit à évaluer SC4 (avertissement R-30, sans composant non plus).
+    const auto = ecrire('auto-sombre.html', texteDe('surcouche-sc4-sans-composant-rouge.html').replace(/:root\[data-theme="dark"\] \{[^}]*\}/,
+      '@media (prefers-color-scheme: dark) { :root { --fond: #0B1220; --texte: #E5E7EB; } }'));
+    const a = jouerSC(auto);
+    ligne(a.json.verdict !== 'SKIP' && a.json.findings.some(f => f.regle === 'SC4' && /prefers-color-scheme/.test(f.msg)),
+      'sens rouge · une règle prefers-color-scheme: dark seule déclenche l\'évaluation de SC4 (avertissement R-30), plus un SKIP muet');
+    // Le thème sombre porté par le fichier --tokens compte comme celui du document.
+    const pageSansCss = ecrire('page-sans-css.html', '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Page</title></head><body><main><h1>Titre</h1></main></body></html>');
+    const jetons = ecrire('jetons.css', ':root { color-scheme: light; --fond: #FFF; }\n:root[data-theme="dark"] { --fond: #0B1220; }\n');
+    const t = jouerSC(pageSansCss, '--tokens', jetons);
+    ligne(t.code === 1 && durs(t.json).length === 1 && durs(t.json)[0].regle === 'SC4',
+      'sens rouge · le thème sombre déclaré dans le fichier --tokens est jugé comme celui du document');
+
+    // Le lanceur appelle l'oracle dès qu'un thème sombre existe, et dit SANS OBJET sinon.
+    const lancer = cible => JSON.parse(spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, '--json-only'], { encoding: 'utf8' }).stdout.trim());
+    const surLanceur = lancer(fx('surcouche-sc4-sans-composant-rouge.html'));
+    ligne((surLanceur.oracles || []).some(o => o.oracle === 'oracle-surcouche' && o.verdict === 'FAIL'),
+      'lanceur · sens rouge · une page à thème sombre sans composant lance oracle-surcouche, qui y rend le FAIL de SC4');
+    const surClair = lancer(sansTheme);
+    ligne(!(surClair.oracles || []).some(o => o.oracle === 'oracle-surcouche') && (surClair.non_juge || []).some(n => /oracle-surcouche : SANS OBJET/.test(n) && /ni thème sombre/.test(n)),
+      'lanceur · sens vert · sans composant ni thème sombre : SANS OBJET dit, oracle-surcouche non lancé');
+  } finally { fs.rmSync(dossierSC, { recursive: true, force: true }); }
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

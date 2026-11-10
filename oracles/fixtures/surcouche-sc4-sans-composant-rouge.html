@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — SC4 sans composant en sur-couche (TF-2384)</title>
+<!--
+  TF-2384 (retour du 28/09/2026, RV-204). Une page de consultation SANS <dialog> ni [popover], mais dotée d'un
+  thème sombre : `color-scheme: light` au bloc de base, AUCUN `color-scheme: dark` au bloc sombre. En thème sombre,
+  la page est sombre et ses barres de défilement et ses contrôles natifs restent clairs : le défaut du format des
+  dossiers consultant du 16 au 28/09/2026.
+
+  Avant : oracle-surcouche sortait en SKIP (exit 2) dès qu'aucun composant en sur-couche n'existait, avant
+  d'évaluer SC4, et le lanceur ne l'appelait pas. Le défaut restait invisible 12 jours.
+  Après : SC4 est évaluée seule, dès qu'un thème sombre existe : 1 bloquant, FAIL exit 1.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #FFFFFF;
+    --texte: #1F2937;
+    --trait: #D1D5DB;
+  }
+  :root[data-theme="dark"] {
+    --fond: #0B1220;
+    --texte: #E5E7EB;
+    --trait: #374151;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: system-ui, sans-serif; }
+  main { border: 1px solid var(--trait); padding: 16px; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Dossier de compétences</h1>
+    <p>Une page de consultation, sans fenêtre ni info-bulle, avec un thème sombre.</p>
+  </main>
+</body>
+</html>

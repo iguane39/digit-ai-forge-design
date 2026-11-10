@@ -101,7 +101,7 @@ node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # 
 
 node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA7 : typé, proposé, borné, atteignable, compilable
 node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
-node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme
+node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme ; SC4 seule dès qu'un thème sombre existe, avec ou sans sur-couche (TF-2384)
 node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
 node oracles/oracle-exploitabilite.mjs <page.html|url>… \
   [--etat-connexion etat.json] [--theme dark] [--largeur N] \
