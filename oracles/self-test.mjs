@@ -475,6 +475,19 @@ const CAS = [
     rouge: [fx('bascule-declaration-multiple-rouge.html')],
   },
   {
+    // TF-2383 (retour du 24/09/2026, RV-203) — LA FORME LITTÉRALE DU RETOUR. « var racine =
+    // document.documentElement, bouton = document.querySelector('.bascule'); » puis
+    // bouton.addEventListener('click', …) : B-T2 déclarait « bascule morte » parce que l'alias n'était reconnu
+    // qu'immédiatement après var/let/const. Le défaut est corrigé depuis le 21/10 (TF-1906, ed747c1) : le retour
+    // lui est antérieur, et la fixture de TF-1906 ne jouait que le sélecteur par identifiant. Celle-ci joue la
+    // forme du retour — sélecteur de CLASSE, second déclarateur, const multi-lignes ; la rouge ne diffère que
+    // par l'alias câblé, qui vise un autre élément.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T2'],
+    verte: [fx('bascule-declaration-groupee-classe-verte.html')],
+    rouge: [fx('bascule-declaration-groupee-classe-rouge.html')],
+  },
+  {
     // TF-1661 (retour du 13/10/2026) : LE RENDU FIGÉ. Une page claire seule, sans bouton ni
     // palette sombre ni script de thème, sortait B-T1, B-T3 et B-T4 en bloquant alors que
     // oracle-tokens T4 la déclare conforme et que check_html.py G1 n'en fait qu'un avertissement.
