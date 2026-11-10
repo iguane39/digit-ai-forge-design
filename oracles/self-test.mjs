@@ -3547,6 +3547,32 @@ for (const cas of CAS) {
   } finally { fs.rmSync(dossierSC, { recursive: true, force: true }); }
 }
 
+// TF-2336 (campagne du 10/11/2026) — LA CRITIQUE D'IMPLÉMENTATION DÉCLARE LES FORMATS QU'ELLE NE COUVRE PAS. Sur un deck PPTX,
+// le relecteur a appliqué la grille à la main et l'a déclaré (02/10/2026) ; le skill, lui, ne disait nulle part que ses oracles ne
+// lisent que du HTML. Le texte de la section « Formats couverts » de SKILL.md est joué aux deux sens : il nomme PPTX et PDF, la
+// phrase « entrée HTML seulement » que rendent les oracles, et le non_juge ; amputé d'un de ces points, il est refusé.
+{
+  console.log(String.fromCharCode(10) + 'skills/critique-le-design (TF-2336) — les formats non couverts sont déclarés, aux deux sens');
+  const skillMd = fs.readFileSync(path.join(ici, '..', 'skills', 'critique-le-design', 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
+  const ci = fs.readFileSync(path.join(ici, '..', 'skills', 'critique-le-design', 'references', 'critique-implementation.md'), 'utf8').replace(/\r\n/g, '\n');
+  const section = t => { const i = t.indexOf('## Formats couverts'); return i < 0 ? '' : t.slice(i, t.indexOf('\n## ', i + 5) < 0 ? undefined : t.indexOf('\n## ', i + 5)).replace(/\s+/g, ' '); };
+  const POINTS = {
+    pptx: /deck PPTX/, pdf: /\bPDF\b/, phrase: /non exécuté, entrée HTML seulement/, nonJuge: /`non_juge`/, main: /appliqu\w+ encore une partie de la grille à la main|applique la grille à la main|grille appliquée à la main/,
+  };
+  const AMPUTE = {
+    pptx: t => t.replace(/deck PPTX/g, 'deck'), pdf: t => t.replace(/\bPDF\b/g, 'fichier'), phrase: t => t.replace(/entrée HTML\s+seulement/g, 'entrée'),
+    nonJuge: t => t.replace(/`non_juge`/g, 'signalés'), main: t => t.replace(/appliqu\w+ (encore une partie de )?la grille à la main|grille appliquée à la main/g, 'revue'),
+  };
+  const s = section(skillMd);
+  ligne(s.length > 100, 'sens vert · SKILL.md porte la section « Formats couverts, et formats qui ne le sont pas »');
+  for (const [nom, motif] of Object.entries(POINTS)) {
+    ligne(motif.test(s), `sens vert · la section écrit le point « ${nom} »`);
+    ligne(!motif.test(AMPUTE[nom](s)), `sens rouge · la section amputée du point « ${nom} » est refusée`);
+  }
+  ligne(/Les supports sans CSS, \*\*deck PPTX et PDF\*\*/.test(ci), 'sens vert · critique-implementation.md déclare les supports sans CSS dans « Ce que ce mode ne juge pas »');
+  ligne(!/Les supports sans CSS, \*\*deck PPTX et PDF\*\*/.test(ci.replace(/deck PPTX et PDF/g, 'supports')), 'sens rouge · la déclaration amputée de ses formats est refusée');
+}
+
 // TF-2386 et TF-2385 (campagne du 10/11/2026) — oracle-document-imprime AU DÉTAIL : chaque règle pour la bonne raison.
 if (!OUTILLAGE_DOCUMENT.ok) {
   console.log(String.fromCharCode(10) + 'oracle-document-imprime (TF-2386, TF-2385)');

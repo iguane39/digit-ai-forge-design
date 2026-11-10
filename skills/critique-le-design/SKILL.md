@@ -1,7 +1,7 @@
 ---
 name: critique-le-design
 description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en huit dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
-version: 1.4.0
+version: 1.5.0
 ---
 
 # Critique le design
@@ -13,7 +13,7 @@ corrections priorisées, le commanditaire décide.
 
 Loi de qualité et registre → `quality-oracles`.
 Règles de design → `impeccable`.
-Détection déterministe → `oracle-slop`, `oracle-tokens`, `oracle-mobile`, `oracle-images`, `oracle-restitution`, `oracle-saisie`, `oracle-panneau-tache`.
+Détection déterministe → `oracle-slop`, `oracle-tokens`, `oracle-mobile`, `oracle-images`, `oracle-restitution`, `oracle-saisie`, `oracle-panneau-tache`, et `oracle-document-imprime` pour un PPTX ou un PDF.
 Rendu réel → `render_page.py` (`digit-ai-page-html`).
 
 Reste en propre : la grille en huit dimensions, la règle de verdict, et la grammaire
@@ -76,6 +76,23 @@ une serait pire.
 
 Le mode `express` lance **les mêmes oracles**. Il raccourcit la restitution, jamais
 le contrôle.
+
+## Formats couverts, et formats qui ne le sont pas (TF-2336, TF-2386)
+
+Les oracles de ce skill lisent du HTML : une page, une maquette, une instance servie.
+Sur un **deck PPTX** ou un **PDF**, `oracle-slop`, `oracle-tokens`, `oracle-taste`,
+`oracle-images`, `oracle-a11y` et `render_page.py` rendent « non exécuté, entrée HTML
+seulement » : la revue les **déclare** `non_juge` en tête de rapport. Ces supports ont leur
+variante : `node oracles\oracle-document-imprime.mjs <fichier.pptx|.pdf>` joue DP1 (forme
+étroite accolée à un bloc, le motif S1), DP2 (contraste), DP3 (débordement) et, sur un PDF,
+DP4 (équilibre des colonnes) et DP5 (vide sous le contenu). Une page HTML dont la mise en
+page imprimée compte s'y joue aussi : l'oracle l'imprime en PDF d'abord (TF-2385). Ce que la
+variante ne juge pas reste au `non_juge` de sa sortie : le rendu réel d'un PPTX (exporter en
+PDF, puis rejouer), le texte sur une image, la lisibilité sémantique du PDF. Si le relecteur
+applique encore une partie de la grille à la main, il **le dit** : une grille appliquée à la
+main sans le dire se lit comme une revue outillée. *Le fait* : le 29/09/2026, le relecteur du
+deck d'une propale a mesuré à la main le motif S1 sur la géométrie du PPTX et écrit ses
+propres scripts de contraste et de débordement (ledger du produit, seq 441).
 
 ## Les sept dimensions
 

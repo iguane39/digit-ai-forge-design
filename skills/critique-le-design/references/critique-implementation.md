@@ -65,7 +65,10 @@ déclare — jamais de conformité jugée sans référentiel.
 7. **Livré à l'écran** (TF-0796) : tout composant chargé dynamiquement ou rendu en sur-couche
    porte son habillage complet depuis les jetons — voir le volet ci-dessous. Oracle :
    `oracle-surcouche` (SC1–SC4), lancé d'office par `run-oracles-design.mjs` dès qu'un
-   `<dialog>`, un `[popover]` ou un `role="dialog"` est détecté dans la page ou ses gabarits.
+   `<dialog>`, un `[popover]` ou un `role="dialog"` est détecté dans la page ou ses gabarits,
+   **ou dès que la page déclare un thème sombre** (bloc `[data-theme="dark"]`, règle
+   `prefers-color-scheme`, y compris dans le fichier `--tokens`) : SC4 juge le thème, pas un
+   composant, et s'évalue seule quand aucun composant n'existe (TF-2384).
 8. **Exploitabilité au volume réel** (TF-1654, TF-1687) : chaque écran clé se rejoue sur une
    instance **alimentée au volume réel**, jamais sur le seul jeu de démonstration —
    `run-oracles-design.mjs <page> --instance <url|page rendue> [--etat-connexion etat.json]`,
@@ -176,6 +179,33 @@ Trois conséquences pour la revue :
    supporte ; il ne suit pas la bascule. SC4 le dit dans son message plutôt que de laisser
    l'auteur croire qu'il a fait le nécessaire.
 
+## Variante pour les supports sans CSS — deck PPTX et PDF imprimé (TF-2386, TF-2385)
+
+Le produit livré n'est pas toujours une page : une propale, un livret, un dossier se rendent en
+deck PPTX ou en PDF. Les huit contrôles ci-dessus lisent du HTML ; sur ces supports, la critique
+joue `node oracles\oracle-document-imprime.mjs <fichier.pptx|.pdf> [--seuil-mm 10] [--pages-libres 1,4]`,
+qui lit la géométrie du rendu (PyMuPDF, python-pptx) et rend le contrat commun des oracles :
+
+| Contrôle de la critique | Règle de la variante |
+|---|---|
+| forme étroite accolée à un bloc (le motif S1 d'`oracle-slop`) | DP1, une forme pleine de moins de 0,1 po de large contre le bord d'un bloc |
+| contraste (V2 de `render_page.py`) | DP2, un texte contre l'aplat qui le porte (4.5:1, 3:1 en grand texte) |
+| débordement (V1) | DP3, un texte ou une image hors de la page, un texte hors de son bloc |
+| équilibre des colonnes, vide sous le contenu | DP4 et DP5, **sur le PDF imprimé** |
+
+*Une sonde d'impression lit le PDF* (TF-2385). Le 28/09/2026, la page 1 d'un dossier de compétences
+laissait 19,8 mm de vide sous les cartes (5,3 mm sur la version du 25/09), vu par la seule sonde de la
+critique ; l'émulation d'impression de Playwright place les cartes 2,2 mm plus haut que l'impression
+Chrome. Une page HTML dont la mise en page imprimée compte se passe donc à l'oracle, qui l'imprime en
+PDF par Chromium d'abord ; pour un pied de page au millimètre, on fournit le PDF imprimé depuis le
+navigateur. Le seuil de 10 mm de DP4 et DP5 est un réglage de la forge, posé entre 19,8 mm (refusé) et
+5,3 mm (accepté). Une page dont le vide est voulu (un saut de page par section) se déclare par
+`--pages-libres` : c'est la déclaration qui exempte, jamais la forme de la page.
+
+Un PPTX n'est pas paginé par le moteur d'impression : DP4 et DP5 y sont dites non jouées, et l'export
+PDF du deck se rejoue. L'oracle sans outillage (Python avec pymupdf et python-pptx) rend SKIP exit 2 avec
+son motif : la revue le déclare, jamais un PASS.
+
 ## Restitution — des retours, pas une revue
 
 Sortie : `revue-implementation.md` — même squelette que `restitution.md` (verdict
@@ -206,6 +236,10 @@ Après les gates de development, **en parallèle de l'étape tests** — regards
 ## Ce que ce mode ne juge pas (déclaré)
 
 - Le câblage fonctionnel des affordances (→ forge-tests, pan `interface`).
+- Les supports sans CSS, **deck PPTX et PDF** : les huit contrôles ci-dessus lisent du HTML (page,
+  maquette, instance servie). Leur variante est `oracle-document-imprime` (section précédente) ; ce
+  qu'elle ne juge pas (rendu réel d'un PPTX, texte posé sur une image, lisibilité sémantique d'un PDF)
+  reste au `non_juge` de sa sortie, et la revue dit si le reste de la grille a été appliqué à la main.
 - La pertinence produit des écrans (→ conception).
 - Les écarts *voulus* entre maquette et produit : un écart assumé se consigne en hypothèse du
   run avec sa raison — le mode le lit et le classe « écart accepté », pas défaut.
