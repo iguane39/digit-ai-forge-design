@@ -2040,7 +2040,9 @@ for (const cas of CAS) {
   console.log(String.fromCharCode(10) + 'run-oracles-design.mjs (TF-1772) — la détection de sur-couche ignore les commentaires');
   const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'surcouche-commentaire-'));
   try {
-    const base = fs.readFileSync(fx('tokens-verte.html'), 'utf8');
+    // TF-2384 : une page à thème sombre lance désormais oracle-surcouche pour SC4, sans composant. Cette recette éprouve la
+    // détection d'un COMPOSANT (un commentaire n'en est pas un) : la page de base est donc claire seule, sans thème sombre.
+    const base = fs.readFileSync(fx('tokens-verte.html'), 'utf8').replace(/\n\s*(?::root)?\[data-theme="dark"\]\s*\{[^}]*\}/g, '');
     const commente = path.join(dossier, 'commente.html');
     const reel = path.join(dossier, 'reel.html');
     fs.writeFileSync(commente, base.replace('</style>', '  /* le voile ::backdrop des dialogues hérite de --fond ; <dialog> à venir */\n</style>'), 'utf8');
@@ -2070,7 +2072,9 @@ for (const cas of CAS) {
   console.log(String.fromCharCode(10) + 'run-oracles-design.mjs (TF-2092) — la sur-couche se décide sur l\'arbre DOM, pas sur le texte d\'un script');
   const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'surcouche-script-'));
   try {
-    const base = fs.readFileSync(fx('tokens-verte.html'), 'utf8');
+    // TF-2384 : base claire seule (voir TF-1772 plus haut) — un thème sombre lance oracle-surcouche pour SC4, ce que cette
+    // recette, qui éprouve la détection d'un COMPOSANT, ne cherche pas à mesurer.
+    const base = fs.readFileSync(fx('tokens-verte.html'), 'utf8').replace(/\n\s*(?::root)?\[data-theme="dark"\]\s*\{[^}]*\}/g, '');
     const avecScript = js => base.replace('</body>', `<script>${js}</script></body>`);
     const avecCorps = (corps, js = '') => base.replace('</body>', `${corps}${js ? `<script>${js}</script>` : ''}</body>`);
     const jouer = (nom, contenu) => {
@@ -2107,7 +2111,10 @@ for (const cas of CAS) {
     }
     // La mire de connexion du retour : page sans sur-couche, script qui cite le mot, aucun autre échec.
     // Base : une page dont tous les autres juges passent, pour que l'agrégat ne puisse tomber QUE sur ce SKIP.
-    const propre = fs.readFileSync(fx('declencheurs-verte.html'), 'utf8');
+    // TF-2384 : la base devient tokens-verte en thème clair seul. declencheurs-verte porte un thème sombre et sa bascule : un
+    // thème sombre lance désormais oracle-surcouche pour SC4 (sans composant), et sans lui la bascule tombe en B-T4 — la page
+    // ne serait plus « propre » pour les AUTRES juges. Ce que le cas protège est inchangé : aucun SKIP sur une page sans composant.
+    const propre = fs.readFileSync(fx('tokens-verte.html'), 'utf8').replace(/\n\s*(?::root)?\[data-theme="dark"\]\s*\{[^}]*\}/g, '');
     const mire = jouer('mire', propre.replace('</body>', '<script>if (typeof HTMLDialogElement === "undefined") { document.body.dataset.dialog = "absent"; }\n'
       + 'const roleDialog = \'role="dialog"\'; window.fermer = d => d.showModal();</script></body>'));
     ligne(mire.verdict === 'PASS' && mire.code === 0 && !mire.lances.includes('oracle-surcouche'),
