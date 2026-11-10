@@ -332,6 +332,17 @@ const CAS = [
     rouge: [fx('images-variantes-rouge.html')],
   },
   {
+    // TF-2382 (retours des 25 et 28/09/2026, RV-202) — UNE RÉPÉTITION N'EST PAS UNE PAIRE DE VARIANTES. Un logo
+    // posé en tête de chaque feuille donnait autant d'occurrences d'un même actif, appariées entre elles par la
+    // convention de nommage : 2 bloquants « l'une des deux variantes n'a jamais été produite » sur tout document
+    // à plusieurs feuilles. La verte répète trois variantes distinctes sur trois feuilles (PASS) ; la rouge répète
+    // le même en-tête mais « logo-white » est la copie de « logo » : le défaut réel survit à la répétition.
+    oracle: 'oracle-images.mjs',
+    regles: ['I7'],
+    verte: [fx('images-repetition-verte.html')],
+    rouge: [fx('images-repetition-rouge.html')],
+  },
+  {
     oracle: 'oracle-corpus.mjs',
     regles: ['C1', 'C2', 'C3', 'C4', 'C5', 'C6', 'C7'],
     verte: [fx('corpus-verte')],
@@ -3386,6 +3397,26 @@ for (const cas of CAS) {
     ligne(t5(memePaire).some(f => f.sev === 'majeur' && /--texte-clair.*sur --fond.*déclarée par --paires-contraste/.test(f.msg)),
       'TF-2381 sens rouge · la paire déclarée qui coïncide avec une présumée est jugée comme déclarée (majeur), pas comme présumée');
   } finally { fs.rmSync(dossierT5, { recursive: true, force: true }); }
+}
+
+// TF-2382 (campagne du 10/11/2026) — I7 AU DÉTAIL : la répétition retire les paires fabriquées, pas la paire réelle.
+{
+  console.log(String.fromCharCode(10) + 'oracle-images I7 (TF-2382) — une répétition n\'est pas une paire de variantes, aux deux sens');
+  const lireI7 = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-images.mjs'), fx(f), '--json-only', '--env', path.join(os.tmpdir(), 'env-inexistant')], { encoding: 'utf8' });
+    return JSON.parse(r.stdout.trim());
+  };
+  const verte = lireI7('images-repetition-verte.html');
+  ligne(verte.verdict === 'PASS' && !verte.findings.some(f => f.regle === 'I7' && f.sev !== 'info'),
+    'sens vert · neuf occurrences de trois variantes distinctes, répétées sur trois feuilles — aucun bloquant I7');
+  ligne(verte.non_juge.some(n => /6 occurrence\(s\) répétée\(s\)/.test(n)),
+    'sens vert · le non_juge dit combien d\'occurrences répétées ont été comptées une fois (6 sur 9), jamais un silence');
+  const rouge = lireI7('images-repetition-rouge.html');
+  const i7 = rouge.findings.filter(f => f.regle === 'I7' && f.sev === 'bloquant');
+  ligne(i7.length === 1 && /« logo-white » et « logo »/.test(i7[0].msg) && /octet pour octet/.test(i7[0].msg),
+    'sens rouge · la variante vide cachée derrière la répétition reste refusée : UN bloquant, sur la paire réelle « logo-white » / « logo »');
+  ligne(!rouge.findings.some(f => /« (\S+) » et « \1 »/.test(f.msg || '')),
+    'sens rouge · aucune paire d\'un actif avec lui-même n\'est plus fabriquée');
 }
 
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));

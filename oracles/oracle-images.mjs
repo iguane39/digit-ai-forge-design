@@ -250,8 +250,25 @@ if (embarquees === 0 && sources.length === 0) {
     return jeu.size ? [...jeu].sort().join(' ') : null;
   }
 
+  // TF-2382 (retours des 25 et 28/09/2026, RV-202) — UNE RÉPÉTITION N'EST PAS UNE PAIRE DE VARIANTES. Un logo posé
+  // en tête de chaque feuille (même data-image-id, même charge utile) donne autant d'occurrences d'UN actif ; la
+  // convention de nommage les appariait entre elles (« logo-white » avec « logo-white ») et I7 rendait « l'une des
+  // deux variantes n'a jamais été produite » : un document à plusieurs feuilles ne pouvait pas obtenir PASS (4
+  // occurrences en 4 jours, un livret de 16 feuilles et 34 images pour 2 bloquants). Les actifs sont donc
+  // dédoublonnés par NOM ET EMPREINTE avant de former les paires : deux noms différents à charge identique restent
+  // une paire (le défaut du 25/08 reste refusé), un même nom à charges différentes reste deux actifs.
+  const empreinte = a => crypto.createHash('sha256').update(a.charge).digest('hex');
+  const vus = new Set();
+  const uniques = actifs.filter(a => {
+    const cle = JSON.stringify([a.nom, empreinte(a)]);
+    if (vus.has(cle)) return false;
+    vus.add(cle);
+    return true;
+  });
+  const repetes = actifs.length - uniques.length;
+
   const parNom = new Map();
-  for (const a of actifs) if (!parNom.has(a.nom)) parNom.set(a.nom, a);
+  for (const a of uniques) if (!parNom.has(a.nom)) parNom.set(a.nom, a);
   const paires = new Map();
   const appairer = (x, y, motif) => {
     if (!x || !y || x === y) return;
@@ -262,7 +279,7 @@ if (embarquees === 0 && sources.length === 0) {
   // Convention de nommage : « logo-white » est une variante de « logo », et deux
   // variantes d'un même radical (« logo-light » et « logo-dark ») le sont entre elles.
   const parRadical = new Map();
-  for (const a of actifs) {
+  for (const a of uniques) {
     const m = RE_SUFFIXE.exec(a.nom);
     if (!m) continue;
     if (!parRadical.has(m[1])) parRadical.set(m[1], []);
@@ -285,7 +302,6 @@ if (embarquees === 0 && sources.length === 0) {
     appairer(parNom.get(id), source, `déclaration « variante_de » au manifeste`);
   }
 
-  const empreinte = a => crypto.createHash('sha256').update(a.charge).digest('hex');
   let matricielles = 0;
   for (const { x, y, motif } of paires.values()) {
     const ex = empreinte(x), ey = empreinte(y);
@@ -304,6 +320,9 @@ if (embarquees === 0 && sources.length === 0) {
     }
   }
 
+  if (repetes > 0) {
+    NJ.push(`I7 : ${repetes} occurrence(s) répétée(s) d'un même actif (même identifiant, même charge utile) comptée(s) une fois — une répétition n'est pas une paire de variantes (TF-2382)`);
+  }
   if (paires.size === 0) {
     NJ.push('I7 : aucune paire d\'actifs déclarés variantes (suffixe -white/-blanc/-dark/-sombre/-light/-clair/-inverse/-negatif/-mono, ou « variante_de » au manifeste) — sans objet sur cette page');
   }

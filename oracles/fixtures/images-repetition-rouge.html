@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Fixture rouge — oracle-images I7, variante vide cachée derrière un en-tête répété</title>
+<!--
+  TF-2382, pendant rouge de la verte. Meme document (trois feuilles, meme en-tete repete), mais
+  « logo-white » a recu le contenu de « logo » octet pour octet : le defaut du 25/08 (TF-1074), cache
+  derriere la repetition. Le dedoublonnage ne doit PAS aveugler I7 : il retire les paires fabriquees par la
+  repetition, pas la paire de variantes reelle.
+
+  Attendu : FAIL, exit 1, UN seul bloquant I7, sur la paire « logo-white » / « logo ».
+-->
+<script type="application/json" id="manifeste-images">
+[
+  {"id": "logo", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron", "date": "2026-09-25", "genere": true},
+  {"id": "logo-white", "modele": "gemini-3.1-flash-image", "prompt": "monogramme chevron", "date": "2026-09-25", "genere": true}
+]
+</script>
+</head>
+<body>
+  <img data-image-id="logo" width="64" height="64" alt="Marque, en-tête de la feuille 1" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxRDRFRDgiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE2IDQwIEwzMiAyMCBMNDggNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2Ii8+PC9zdmc+">
+  <img data-image-id="logo" width="64" height="64" alt="Marque, en-tête de la feuille 2" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxRDRFRDgiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE2IDQwIEwzMiAyMCBMNDggNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2Ii8+PC9zdmc+">
+  <img data-image-id="logo" width="64" height="64" alt="Marque, en-tête de la feuille 3" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxRDRFRDgiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE2IDQwIEwzMiAyMCBMNDggNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2Ii8+PC9zdmc+">
+  <img data-image-id="logo-white" width="64" height="64" alt="Marque, version blanche, en-tête de la feuille 1" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxRDRFRDgiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE2IDQwIEwzMiAyMCBMNDggNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2Ii8+PC9zdmc+">
+  <img data-image-id="logo-white" width="64" height="64" alt="Marque, version blanche, en-tête de la feuille 2" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxRDRFRDgiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE2IDQwIEwzMiAyMCBMNDggNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2Ii8+PC9zdmc+">
+  <img data-image-id="logo-white" width="64" height="64" alt="Marque, version blanche, en-tête de la feuille 3" src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIj48dGl0bGU+TWFycXVlPC90aXRsZT48cmVjdCBpZD0iZm9uZCIgeD0iMCIgeT0iMCIgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiMxRDRFRDgiLz48cGF0aCBpZD0iY2hldnJvbiIgZD0iTTE2IDQwIEwzMiAyMCBMNDggNDAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iI0ZGRkZGRiIgc3Ryb2tlLXdpZHRoPSI2Ii8+PC9zdmc+">
+  <p>Trois feuilles, le même en-tête.</p>
+</body>
+</html>
