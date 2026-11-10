@@ -115,6 +115,9 @@ node oracles/self-test-baseline.mjs                           # verrou dédié (
 node oracles/oracle-logo-petit.mjs <logo.svg>… [--fond '#FFFFFF']… [--sortie <dossier>]   # LP1–LP5 : le logo tient-il à 16 et 32 px ? (TF-2074)
 node oracles/oracle-erreurs-formulaire.mjs <page.html|url>… [--etat-connexion etat.json] [--proximite px] [--accepter-certificat-local]   # EF0–EF5 : une saisie refusée se dit sous son champ (TF-2172)
 
+node oracles/oracle-document-imprime.mjs <fichier.pptx|.pdf|.html> [--seuil-mm 10] [--pages-libres 1,4]   # DP1–DP5 : les supports sans CSS, deck PPTX et PDF imprimé (TF-2386) ; une page HTML est imprimée en PDF par Chromium d'abord ;
+# DP4 équilibre des colonnes et DP5 vide sous le contenu se lisent sur le PDF imprimé (TF-2385) ; Python avec pymupdf et python-pptx requis, sinon SKIP motivé
+
 node scripts/generer-images.mjs <page.html> [--env <fichier>] [--modele <m>] [--referentiel <fichier>]   # producteur d'images (API payante, sur GO)
 node scripts/generer-images.mjs --lister-modeles [--modele <m>]    # la liste des modèles retenue, sans clé ni appel (TF-2111)
 

@@ -12,3 +12,9 @@ oracles/vendor/*.js -text
 # recette passaient au rouge sur 55 (TF-1861, constaté le 19/10/2026). Il se livre en LF partout ;
 # la recette normalise en plus sa lecture.
 skills/systeme-de-marque/references/voix.md text eol=lf
+
+# Les PDF et PPTX de fixtures de oracle-document-imprime (TF-2386) sont des binaires jugés à l'octet près : un PDF écrit
+# par reportlab ne contient que des fins de ligne LF, git le prendrait pour du texte et core.autocrlf le livrerait en CRLF
+# sur un poste Windows, ce qui décale sa table xref. Ils se livrent tels qu'ils ont été fabriqués (generer.py).
+oracles/fixtures/document-imprime/*.pdf -text
+oracles/fixtures/document-imprime/*.pptx -text

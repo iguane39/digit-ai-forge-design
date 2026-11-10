@@ -16,6 +16,7 @@
 // Contrat : JSON sur stdout, exit 0 = PASS, 1 = FAIL, 2 = indéterminé.
 // Usage :
 //   node run-oracles-design.mjs <fichier.html> [--mobile] [--tokens t.css] [--json-only] [--rendu]
+//   node run-oracles-design.mjs <deck.pptx|livret.pdf> [--seuil-mm 10] [--pages-libres 1,4]   (TF-2386 : oracle-document-imprime seul)
 //   node run-oracles-design.mjs --corpus <dossier-corpus>
 //   node run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>
 //
@@ -96,7 +97,8 @@ const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !=
   && args[args.indexOf(a) - 1] !== '--tokens' && args[args.indexOf(a) - 1] !== '--corpus'
   && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
   && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
-  && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine');
+  && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine'
+  && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
@@ -396,6 +398,19 @@ if (opt('--dtcg')) {
 // ── Mode livrable ──────────────────────────────────────────────────────────
 if (!cible || !fs.existsSync(cible)) {
   sortir('SKIP', [], ['cible absente : passer un fichier .html ou --corpus <dossier>'], 2);
+}
+
+// TF-2386 — un deck PPTX ou un PDF n'a ni CSS ni DOM : lui lancer les oracles HTML lisait un binaire et rendait PASS (slop, tokens…)
+// sur du bruit. Il part à sa variante, oracle-document-imprime (DP1–DP5), et les juges HTML sont dits SANS OBJET, à voix haute.
+if (/\.(pptx|pdf)$/i.test(cible)) {
+  const reglages = [...(opt('--seuil-mm') ? ['--seuil-mm', opt('--seuil-mm')] : []), ...(opt('--pages-libres') ? ['--pages-libres', opt('--pages-libres')] : [])];
+  const r = lancer('oracle-document-imprime.mjs', [cible, ...reglages]);
+  const code = r.verdict === 'PASS' ? 0 : r.verdict === 'FAIL' ? 1 : 2;
+  if (!jsonOnly) process.stderr.write(`${r.verdict} — ${path.basename(cible)} (support sans CSS)\n`);
+  sortir(r.verdict, [r], [
+    ...(r.non_juge || []),
+    'oracle-slop, oracle-tokens, oracle-taste, oracle-images, oracle-mobile, oracle-surcouche, render_page.py et oracle-a11y : SANS OBJET — entrée HTML seulement ; sur un deck PPTX ou un PDF, la grille se joue par oracle-document-imprime, le reste est déclaré non_juge',
+  ], code);
 }
 
 let html = fs.readFileSync(cible, 'utf8');

@@ -966,9 +966,54 @@ const CAS = [
     verte: [fx('logo-petit-verte.svg'), '--fond', '#FFFFFF'],
     rouge: [fx('logo-petit-rouge-contraste.svg'), '--fond', '#FFFFFF'],
   },
+  {
+    // TF-2386 (retour du 29/09/2026, RV-206) — LES SUPPORTS SANS CSS. oracle-slop, oracle-tokens, oracle-images et
+    // render_page.py ne lisent que du HTML : sur le deck d'une propale, 8 oracles « non exécutés, entrée HTML
+    // seulement », et le relecteur a mesuré à la main le motif S1 (une forme --blue de moins de 0,1 po accolée à un
+    // bloc) et écrit ses scripts de contraste et de débordement. Les deux fixtures sont le même deck (fabriqué par
+    // fixtures/document-imprime/generer.py) : la verte sépare la barre de 0,15 po du bloc, pose un texte clair sur le
+    // bandeau sombre et garde l'annexe dans la diapositive ; la rouge accole la barre (0,06 po de large), pose
+    // #3B4A63 sur #0B1F3A (1.85:1) et sort l'annexe de 160 pt par la droite.
+    document: true,
+    oracle: 'oracle-document-imprime.mjs',
+    regles: ['DP1', 'DP2', 'DP3'],
+    verte: [fx('document-imprime/deck-verte.pptx')],
+    rouge: [fx('document-imprime/deck-rouge.pptx')],
+  },
+  {
+    // TF-2386 — la même page, imprimée en PDF : les trois règles se jouent sur la géométrie d'un PDF (PyMuPDF), pas
+    // seulement sur celle d'un PPTX. La rouge ajoute la ligne qui sort de la page et le texte qui déborde de son bloc.
+    document: true,
+    oracle: 'oracle-document-imprime.mjs',
+    regles: ['DP1', 'DP2', 'DP3'],
+    verte: [fx('document-imprime/livret-verte.pdf')],
+    rouge: [fx('document-imprime/livret-rouge.pdf')],
+  },
+  {
+    // TF-2385 (retour du 28/09/2026, RV-205) — L'ÉQUILIBRE DES COLONNES SE LIT SUR LE PDF IMPRIMÉ. La page 1 d'un
+    // dossier de compétences laissait 19,8 mm de vide sous les cartes (5,3 mm sur la version du 25/09), vu par la seule
+    // sonde de la critique d'implémentation ; l'émulation d'impression de Playwright place les cartes 2,2 mm plus haut
+    // que l'impression Chrome. Les deux fixtures sont un dossier de 3 pages en deux colonnes de cartes. La verte tient
+    // des pieds égaux et 4,9 mm sous la page la plus pleine ; la rouge porte les deux défauts : DP4 (page 1, colonne de
+    // droite 70,6 mm plus courte) et DP5 (page 2, 19,8 mm de vide, la mesure du retour).
+    document: true,
+    oracle: 'oracle-document-imprime.mjs',
+    regles: ['DP4', 'DP5'],
+    verte: [fx('document-imprime/colonnes-verte.pdf')],
+    rouge: [fx('document-imprime/colonnes-rouge.pdf')],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
+// TF-2386 : oracle-document-imprime lit les PPTX et les PDF par PyMuPDF et python-pptx. Sans eux il rend SKIP motivé
+// (exit 2) ; la recette fait de même — un poste qui ne peut pas jouer ces cas ne casse pas ce que rien de son ressort n'a cassé.
+const OUTILLAGE_DOCUMENT = (() => {
+  for (const candidat of ['python', 'python3']) {
+    const r = spawnSync(candidat, ['-c', 'import pymupdf, pptx'], { encoding: 'utf8' });
+    if (!r.error && r.status === 0) return { ok: true, python: candidat };
+  }
+  return { ok: false, manque: 'aucun interpréteur Python (python / python3) n\'importe pymupdf et pptx' };
+})();
 
 function lancer(cas, argv) {
   const bin = cas.python ? PYTHON : process.execPath;
@@ -991,6 +1036,12 @@ for (const cas of CAS) {
 
   if (cas.rendu && !OUTILLAGE_RENDU.ok) {
     console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+    sautes.push(cas.oracle);
+    continue;
+  }
+
+  if (cas.document && !OUTILLAGE_DOCUMENT.ok) {
+    console.log(`  SKIP  outillage de lecture des documents indisponible : ${OUTILLAGE_DOCUMENT.manque}`);
     sautes.push(cas.oracle);
     continue;
   }
@@ -3496,7 +3547,112 @@ for (const cas of CAS) {
   } finally { fs.rmSync(dossierSC, { recursive: true, force: true }); }
 }
 
-const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok));
+// TF-2386 et TF-2385 (campagne du 10/11/2026) — oracle-document-imprime AU DÉTAIL : chaque règle pour la bonne raison.
+if (!OUTILLAGE_DOCUMENT.ok) {
+  console.log(String.fromCharCode(10) + 'oracle-document-imprime (TF-2386, TF-2385)');
+  console.log(`  SKIP  outillage de lecture des documents indisponible : ${OUTILLAGE_DOCUMENT.manque}`);
+  sautes.push('oracle-document-imprime (détail)');
+} else {
+  console.log(String.fromCharCode(10) + 'oracle-document-imprime (TF-2386, TF-2385) — chaque règle pour la bonne raison, aux deux sens');
+  const dossierDP = fs.mkdtempSync(path.join(os.tmpdir(), 'document-imprime-'));
+  try {
+    const jouerDP = (f, ...plus) => {
+      const cible = path.isAbsolute(f) ? f : fx(f);
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-document-imprime.mjs'), cible, ...plus, '--json-only'], { encoding: 'utf8' });
+      return { code: r.status, json: JSON.parse(r.stdout.trim()) };
+    };
+    const de = (j, regle) => j.findings.filter(f => f.regle === regle && f.sev !== 'info');
+
+    // DP1 — la barre accolée, pas la barre séparée
+    const deck = jouerDP('document-imprime/deck-rouge.pptx');
+    ligne(de(deck.json, 'DP1').length === 1 && /accolée au bord gauche/.test(de(deck.json, 'DP1')[0].msg) && /S1/.test(de(deck.json, 'DP1')[0].msg),
+      'DP1 sens rouge · PPTX : la forme de 0,06 po accolée au bord gauche du bloc est refusée, une fois, avec le motif S1 nommé');
+    const deckV = jouerDP('document-imprime/deck-verte.pptx');
+    ligne(deckV.code === 0 && de(deckV.json, 'DP1').length === 0,
+      'DP1 sens vert · PPTX : la même forme séparée de 0,15 po du bloc passe (le remède prescrit par le message)');
+    const livret = jouerDP('document-imprime/livret-rouge.pdf');
+    ligne(de(livret.json, 'DP1').length === 1 && de(livret.json, 'DP1')[0].sev === 'bloquant',
+      'DP1 sens rouge · PDF : la barre de 4 pt accolée au bloc est refusée en bloquant, comme S1 en HTML');
+    ligne(de(jouerDP('document-imprime/filet-verte.pdf').json, 'DP1').length === 0,
+      'DP1 sens vert · un filet de 1 pt accolé à un bloc n\'est pas un bandeau (le seuil est 2 px, la largeur de la règle S1)');
+    // DP2 — le contraste, au seuil du grand texte pour le deck (20 pt) et du texte courant pour le PDF (14 pt)
+    ligne(de(deck.json, 'DP2').length === 1 && /1\.85:1 < 3:1/.test(de(deck.json, 'DP2')[0].msg) && /grand texte/.test(de(deck.json, 'DP2')[0].msg),
+      'DP2 sens rouge · PPTX : 1.85:1 contre le seuil du GRAND texte (3:1, texte de 20 pt), dit comme tel');
+    ligne(de(livret.json, 'DP2').length === 1 && /1\.85:1 < 4\.5:1/.test(de(livret.json, 'DP2')[0].msg),
+      'DP2 sens rouge · PDF : le même couple en 14 pt est jugé contre 4.5:1');
+    ligne(de(jouerDP('document-imprime/livret-verte.pdf').json, 'DP2').length === 0, 'DP2 sens vert · le texte clair sur le bandeau sombre passe');
+    // DP3 — la sortie de page
+    ligne(de(deck.json, 'DP3').length === 1 && /160 pt à droite/.test(de(deck.json, 'DP3')[0].msg),
+      'DP3 sens rouge · PPTX : le texte de 820 pt de départ et 300 pt de large sort de 160 pt à droite d\'une diapositive de 960 pt');
+    ligne(de(livret.json, 'DP3').length === 1 && /sort de la page/.test(de(livret.json, 'DP3')[0].msg),
+      'DP3 sens rouge · PDF : la ligne qui sort de la page par la droite est lue (même quand MuPDF écarte ses derniers glyphes) et refusée');
+    ligne(de(deckV.json, 'DP3').length === 0, 'DP3 sens vert · le même texte placé dans la diapositive passe');
+
+    // DP4 et DP5 — les mesures du retour : 19,8 mm refusés, 4,9 mm acceptés, au seuil de 10 mm
+    const col = jouerDP('document-imprime/colonnes-rouge.pdf');
+    const dp5 = de(col.json, 'DP5'), dp4 = de(col.json, 'DP4');
+    ligne(dp5.length === 1 && /^19\.8 mm de vide/.test(dp5[0].msg) && dp5[0].where === 'page 2',
+      'DP5 sens rouge · la page 2 laisse 19,8 mm sous le contenu (la mesure du retour), et elle seule : ni la page la plus pleine, ni la dernière page');
+    ligne(dp4.length === 1 && dp4[0].where === 'page 1' && /70\.6 mm d'écart/.test(dp4[0].msg),
+      'DP4 sens rouge · les deux colonnes de la page 1 finissent à 70,6 mm l\'une de l\'autre, et cette page seule est refusée');
+    const colV = jouerDP('document-imprime/colonnes-verte.pdf');
+    ligne(colV.code === 0 && de(colV.json, 'DP4').length === 0 && de(colV.json, 'DP5').length === 0,
+      'DP4 / DP5 sens vert · pieds égaux, 4,9 mm sous la page la plus pleine (la mesure acceptée du retour) : PASS');
+    ligne(de(jouerDP('document-imprime/colonnes-verte.pdf', '--seuil-mm', '4').json, 'DP5').length === 1,
+      'DP5 · le seuil est celui de --seuil-mm : à 4 mm, les 4,9 mm de la verte sont refusés');
+    ligne(de(jouerDP('document-imprime/colonnes-rouge.pdf', '--seuil-mm', '25').json, 'DP5').length === 0 && de(jouerDP('document-imprime/colonnes-rouge.pdf', '--seuil-mm', '25').json, 'DP4').length === 1,
+      'DP5 · à 25 mm, les 19,8 mm passent mais les 70,6 mm de DP4 restent refusés');
+    // L'exemption est la déclaration, jamais la forme de la page
+    const libre2 = jouerDP('document-imprime/colonnes-rouge.pdf', '--pages-libres', '2');
+    ligne(de(libre2.json, 'DP5').length === 0 && de(libre2.json, 'DP4').length === 1,
+      'DP5 · --pages-libres 2 exempte la page 2 déclarée, et elle seule : DP4 de la page 1 reste refusé');
+    ligne(jouerDP('document-imprime/colonnes-rouge.pdf', '--pages-libres', '1,2').code === 0,
+      'DP4 / DP5 · --pages-libres 1,2 : les deux pages déclarées exemptées, PASS');
+    // Un PPTX n'est pas paginé par le moteur d'impression : dit, jamais vert muet
+    ligne(deckV.json.non_juge.some(n => /DP4 et DP5 non jouées/.test(n) && /PDF IMPRIMÉ/.test(n)),
+      'DP4 / DP5 · sur un PPTX, le non_juge dit que l\'équilibre des colonnes se lit sur le PDF imprimé');
+    ligne(colV.json.non_juge.some(n => /seuil unique de 10 mm/.test(n)) && colV.json.non_juge.some(n => /ordre de peinture/.test(n)),
+      'non_juge · le seuil de 10 mm et l\'ordre de peinture texte/aplat d\'un PDF sont déclarés à chaque sortie');
+
+    // Le point d'entrée unique route un PPTX ou un PDF vers sa variante, et dit les juges HTML SANS OBJET (il rendait PASS sur du bruit)
+    const lancerUnique = (cible, ...plus) => JSON.parse(spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, ...plus, '--json-only'], { encoding: 'utf8' }).stdout.trim());
+    const viaLanceur = lancerUnique(fx('document-imprime/deck-rouge.pptx'));
+    ligne(viaLanceur.verdict === 'FAIL' && viaLanceur.oracles.length === 1 && viaLanceur.oracles[0].oracle === 'oracle-document-imprime'
+      && viaLanceur.non_juge.some(n => /oracle-slop, oracle-tokens.*SANS OBJET — entrée HTML seulement/.test(n)),
+      'lanceur · un PPTX part à oracle-document-imprime seul, et les juges HTML sont dits SANS OBJET à voix haute');
+    const viaLanceurPdf = lancerUnique(fx('document-imprime/colonnes-rouge.pdf'), '--seuil-mm', '25', '--pages-libres', '2');
+    ligne(viaLanceurPdf.oracles[0].findings.filter(f => f.sev !== 'info').map(f => f.regle).join() === 'DP4',
+      'lanceur · --seuil-mm et --pages-libres traversent le point d\'entrée (25 mm et page 2 libre : DP4 seul reste)');
+
+    // Portes : fichier illisible, format inconnu, seuil absurde
+    const faux = path.join(dossierDP, 'faux.pdf');
+    fs.writeFileSync(faux, 'ceci n\'est pas un PDF', 'utf8');
+    const f = jouerDP(faux);
+    ligne(f.code === 2 && f.json.verdict === 'SKIP' && f.json.non_juge.some(n => /fichier illisible/.test(n)),
+      'porte · un fichier .pdf illisible rend SKIP exit 2 avec son motif, jamais PASS');
+    const txt = path.join(dossierDP, 'note.txt');
+    fs.writeFileSync(txt, 'x', 'utf8');
+    ligne(jouerDP(txt).code === 2, 'porte · un format non pris en charge rend SKIP exit 2');
+    ligne(jouerDP('document-imprime/colonnes-verte.pdf', '--seuil-mm', '-3').code === 2, 'porte · un seuil négatif rend SKIP exit 2, il ne désactive pas la règle');
+
+    // Une page HTML est imprimée en PDF par Chromium puis jugée (TF-2385) — si l'impression est possible sur ce poste
+    const pageHtml = path.join(dossierDP, 'colonnes.html');
+    const cartes = (p, n) => Array.from({ length: n }, (_, i) => `<div class="carte">${p}${i + 1}</div>`).join('');
+    fs.writeFileSync(pageHtml, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Colonnes</title><style>'
+      + '@page{size:A4;margin:12mm}body{font-family:sans-serif;margin:0}.g{display:flex;gap:8mm}.c{flex:1}'
+      + '.carte{background:#F1F5F9;color:#111827;padding:4mm;margin-bottom:4mm;height:20mm}</style></head><body>'
+      + `<h1>Dossier</h1><div class="g"><div class="c">${cartes('A', 6)}</div><div class="c">${cartes('B', 2)}</div></div></body></html>`, 'utf8');
+    const h = jouerDP(pageHtml);
+    if (h.code === 2) {
+      console.log(`  SKIP  impression HTML → PDF indisponible sur ce poste : ${(h.json.non_juge.find(n => /impression|outillage/.test(n)) || '').slice(0, 140)}`);
+    } else {
+      ligne(h.code === 1 && de(h.json, 'DP4').length === 1 && h.json.non_juge.some(n => /2,2 mm/.test(n)),
+        'HTML · une page imprimée en PDF par Chromium est jugée sur ce PDF : colonnes inégales refusées, et l\'écart d\'impression de 2,2 mm déclaré au non_juge');
+    }
+  } finally { fs.rmSync(dossierDP, { recursive: true, force: true }); }
+}
+
+const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
     + (sautes.length ? ` ${sautes.length} saut(s) motivé(s) : ${sautes.join(', ')}.` : '')

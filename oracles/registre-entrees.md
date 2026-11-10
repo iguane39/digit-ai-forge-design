@@ -1066,3 +1066,71 @@ Voie taste-skill, sans rien installer. Essai court choisi par le porteur le 09/1
 | S12 | `oracle-slop` | forme floue : `filter: blur()` de 20px au moins, ou classes `blur-xl` à `blur-3xl` |
 
 Bruit mesuré le 09/11/2026 sur 2 799 pages uniques de `C:dev`, avant l’inscription : S11 0 constat, S12 13 constats, tous vrais à la lecture. Aucun verdict ne change : les deux règles avertissent. Preuves : 2 paires de fixtures, verrouillées par le bloc « oracle-slop S11 et S12 (essai unslop du 09/11/2026) » de `self-test.mjs`.
+
+## Entrée du 10/11/2026 — oracle-document-imprime, les supports sans CSS : PPTX et PDF (TF-2386, TF-2385)
+
+**Statut d'usage de la forge : `candidat`.** Écrit et verrouillé au banc local (`self-test.mjs` : trois CAS de fixtures
+vertes et rouges, un bloc de 25 vérifications d'isolation des règles, de seuils, d'exemptions et de portes). Son inscription
+au registre de `quality-oracles` relève de la part forge-agents : ce fichier ne dit pas qu'elle est faite.
+
+Le domaine que rien ne couvrait : **un deck PPTX ou un PDF imprimé tient-il les contrôles de la critique d'implémentation ?**
+Le 29/09/2026, le relecteur du deck d'une propale a mesuré à la main sur la géométrie du PPTX le motif S1 d'`oracle-slop`
+(une forme de moins de 0,1 po accolée à un bloc) et écrit ses propres scripts de contraste et de débordement : tous les
+oracles de la forge lisent du HTML (TF-2386). Le 28/09/2026, la page 1 d'un dossier de compétences imprimé laissait 19,8 mm
+de vide sous les cartes (5,3 mm sur la version du 25/09), vu par la seule sonde de la critique, qui note aussi que
+l'émulation d'impression de Playwright place les cartes 2,2 mm plus haut que l'impression Chrome (TF-2385).
+
+L'oracle lit la géométrie du rendu en points (`lib/lire_document_imprime.py` : PyMuPDF pour un PDF, python-pptx pour un
+PPTX) et juge cinq règles. Une page HTML est d'abord imprimée en PDF par Chromium (`lib/imprimer_page.py`). Les seuils de
+DP1 à DP3 sont ceux de la norme ou de la règle S1 ; celui de DP4 et DP5 est un réglage de la forge (10 mm, `--seuil-mm`),
+posé entre les deux mesures du retour.
+
+| Règle | Critère mesurable | Sévérité |
+|---|---|---|
+| DP1 | forme pleine de 1,5 pt (2 px) à moins de 0,1 po de large, plus haute que large, dont un bord touche (à 3 pt) le bord gauche ou droit d'un bloc sur 60 % de sa hauteur : le bandeau latéral du motif S1 | bloquant |
+| DP2 | contraste d'un texte contre l'aplat qui le porte sous 4.5:1, ou 3:1 pour un grand texte (18 pt, ou 14 pt gras) | majeur |
+| DP3 | texte ou image qui sort de la page ; texte PDF qui dépasse du bloc qui le porte ; texte PPTX dont la hauteur estimée dépasse sa boîte | majeur ; avertissement pour l'estimation |
+| DP4 | PDF : les pieds de deux colonnes côte à côte diffèrent de plus du seuil | majeur |
+| DP5 | PDF : une page suivie d'une autre s'arrête plus haut que la page la plus pleine, de plus du seuil | majeur |
+
+| Domaine | Oracle (invocation) | Type | Statut |
+|---|---|---|---|
+| Support imprimé ou projeté : PPTX et PDF | `node c:/dev/digit-ai-forge-design/oracles/oracle-document-imprime.mjs <fichier.pptx\|.pdf\|.html> [--seuil-mm 10] [--pages-libres 1,4]` — DP1 forme accolée à un bloc, DP2 contraste, DP3 débordement, DP4 équilibre des colonnes, DP5 vide sous le contenu | cli | candidat |
+
+```json
+[
+  {
+    "domaine": "Support imprimé ou projeté : PPTX et PDF",
+    "oracle": "oracles/oracle-document-imprime.mjs",
+    "type": "cli",
+    "statut": "candidat",
+    "extensions": [".pptx", ".pdf"],
+    "fixtures": {
+      "verte": "oracles/fixtures/document-imprime/deck-verte.pptx",
+      "rouge": "oracles/fixtures/document-imprime/deck-rouge.pptx",
+      "verte_pdf": "oracles/fixtures/document-imprime/livret-verte.pdf",
+      "rouge_pdf": "oracles/fixtures/document-imprime/livret-rouge.pdf",
+      "verte_filet": "oracles/fixtures/document-imprime/filet-verte.pdf",
+      "verte_colonnes": "oracles/fixtures/document-imprime/colonnes-verte.pdf",
+      "rouge_colonnes": "oracles/fixtures/document-imprime/colonnes-rouge.pdf"
+    },
+    "provenance": { "chantier": "forge-design", "date": "2026-11-10", "mandat": "TF-2386, TF-2385", "amont": "retours du 28 et 29/09/2026 (RV-205, RV-206), campagne du 10/11/2026" },
+    "regles": 5
+  }
+]
+```
+
+### Ce que cet oracle ne juge PAS
+
+- Le **rendu réel d'un PPTX** : polices de remplacement, retours à la ligne, ordre de superposition exact. La hauteur d'un
+  texte PPTX est ESTIMÉE (largeur moyenne des signes) et dite telle ; l'export PDF depuis le logiciel de présentation, rejoué
+  ici, est la mesure.
+- Un PDF dont l'**ordre de peinture** entre texte et aplat n'est pas lu : le texte est supposé au-dessus des aplats qui le
+  contiennent ; un texte sur une image, un dégradé ou un aplat translucide n'a pas de fond mesurable et est compté à part.
+- Un **vide voulu** : un saut de page par section produit le vide de DP5. Seule la déclaration `--pages-libres` l'exempte,
+  jamais la forme de la page. Le seuil de 10 mm est un réglage de la forge, à réviser sur les retours des produits.
+- L'**impression du navigateur du lecteur** : le PDF produit pour une page HTML est celui de Chromium, qui n'est pas l'impression
+  Chrome (2,2 mm d'écart mesurés le 28/09/2026 entre l'émulation d'impression de Playwright et elle). Pour un pied de page
+  au millimètre, fournir le PDF imprimé depuis le navigateur.
+- La **lisibilité sémantique** : ordre de lecture, balisage PDF/UA, texte alternatif, langue.
+- Les **tableaux PPTX**, dont les cellules ne sont pas lues, et les couleurs de thème à luminosité modifiée, approchées.
