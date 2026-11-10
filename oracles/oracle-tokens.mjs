@@ -412,6 +412,7 @@ if (pairesComposees > 0) {
     NJ.push(`T5 : ${jamais.length} paire(s) texte/fond nommée(s) selon la convention mais jamais posée(s) l'une sur l'autre — non jugée(s) : ${jamais.slice(0, 8).join(', ')}${jamais.length > 8 ? ', …' : ''}. Les déclarer par --paires-contraste si elles se rencontrent au rendu.`);
   }
 }
+NJ.push('T5 : la cascade du thème sombre est approchée par l\'ÉGALITÉ du sélecteur débarrassé de sa portée ([data-theme="dark"] .passer remplace .passer) — une règle sombre dont le sélecteur diffère mais vise le même élément (spécificité, ordre des règles, sélecteur plus long) n\'est pas rapprochée de sa règle de base ; le rendu réel des deux thèmes reste la mesure (render_page.py V2) (TF-2380)');
 NJ.push('T5 : l\'héritage est approché par le préfixe de sélecteur puis par l\'ambiance (:root, html, body, *) — un texte dont le conteneur réel n\'est pas un ancêtre de sélecteur (composition à l\'exécution, portail, classe posée en JS) est jugé contre le fond ambiant, pas contre le sien');
 NJ.push('contraste des couleurs composées (color-mix, superpositions) — déléguer à render_page.py V2 sur les deux thèmes');
 NJ.push('adéquation de la palette et de la voix à la marque — arbitrage commanditaire');

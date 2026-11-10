@@ -3652,6 +3652,18 @@ if (!OUTILLAGE_DOCUMENT.ok) {
   } finally { fs.rmSync(dossierDP, { recursive: true, force: true }); }
 }
 
+// TF-2380, suite (campagne du 10/11/2026) — l'approximation de la cascade est DITE : T5 rapproche une règle sombre de sa règle de
+// base par l'égalité du sélecteur, pas par la cascade CSS complète (spécificité, ordre) ; le non_juge de CHAQUE sortie le déclare.
+{
+  console.log(String.fromCharCode(10) + 'oracle-tokens T5 (TF-2380) — l\'approximation de la cascade est déclarée au non_juge');
+  for (const f of ['tokens-t5-sombre-cascade-verte.html', 'tokens-t5-sombre-cascade-rouge.html', 'tokens-verte.html']) {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-tokens.mjs'), fx(f), '--json-only'], { encoding: 'utf8' });
+    const j = JSON.parse(r.stdout.trim());
+    ligne(j.non_juge.some(n => /cascade du thème sombre est approchée par l'ÉGALITÉ du sélecteur/.test(n)),
+      `${f} · le non_juge dit que la cascade du thème sombre est approchée par l'égalité du sélecteur`);
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`
