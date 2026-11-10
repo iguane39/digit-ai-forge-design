@@ -1,7 +1,7 @@
 # Forge Design
 
 Forge spécialisée dans le design d'applications web, de sites web et d'applications
-mobiles. Un corpus, quatre verbes, cinq oracles exécutés.
+mobiles. Un corpus, cinq verbes, cinq oracles exécutés.
 
 Elle s'arrête au design : ni spécification fonctionnelle, ni backlog, ni planning,
 ni passation développeur. Conception complète : [conception-forge-design.md](conception-forge-design.md).
@@ -48,7 +48,7 @@ corpus/            matière indexée, recherche BM25 hors ligne ; grille-viewpor
 corpus/composants/ composants de page à poser au socle : saisie-erreurs.js et .css, l'erreur d'une saisie sous son champ (TF-2172)
 oracles/           les juges exécutés + leurs fixtures + le self-test
 baseline/          captures approuvées de régression visuelle, versionnées (TF-0102)
-skills/            les quatre verbes
+skills/            les cinq verbes
 dist/              les skills empaquetés, installables
 demo/              run de validation : template, build, maquette, restitution
 .env               clé Gemini pour la génération d'images au build
@@ -65,9 +65,9 @@ Les livrables (`tokens.css`, maquette HTML, `revue.md`, `MARQUE.md`, `DIRECTION.
 vont dans le dossier de travail de l'appelant, **jamais** dans ce dépôt. Ce dépôt
 ne contient que la forge elle-même (skills, oracles, corpus) — pas ses productions.
 
-## Les quatre verbes
+## Les cinq verbes
 
-Voici les quatre points d'entrée de la forge, ce qu'il faut leur donner et ce qu'ils
+Voici les cinq points d'entrée de la forge, ce qu'il faut leur donner et ce qu'ils
 rendent. Le tableau se lit ligne à ligne : la colonne « Entrée » dit la matière
 minimale à fournir, la colonne « Sortie » le fichier produit — rien d'autre n'est
 promis, et ce qui n'y figure pas n'est pas du ressort de la forge.
@@ -78,6 +78,7 @@ promis, et ce qui n'y figure pas n'est pas du ressort de la forge.
 | [studio-de-direction](skills/studio-de-direction/) | brief + marque | `DIRECTION.md` : 1 retenue, 2 écartées avec leur raison |
 | [ameliore-le-design](skills/ameliore-le-design/) | idée, design, spécification, produit existant | maquette navigable, un fichier HTML |
 | [critique-le-design](skills/critique-le-design/) | page, maquette, capture, URL | `revue.md` : verdict + top 5 corrections |
+| [clip-de-presentation](skills/clip-de-presentation/) | sujet, sources, dossier de marque du produit | `clip.html` + `STORYBOARD.md` + planches + MP4, chez le produit |
 
 Ils sont **indépendants**. On peut critiquer sans marque, maquetter sans studio.
 Aucune séquence n'est imposée : c'est ce qui distingue une forge d'un pipeline.

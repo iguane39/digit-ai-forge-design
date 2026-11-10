@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- Gabarit de clip de présentation (skill clip-de-presentation de forge-design).
+     Copier en <série>/<clip>/clip.html, avec scripts/motion.js copié en <série>/outils/motion.js, puis
+     remplacer chaque « À REMPLACER ». Le plan d'exemple se remplace par ceux du storyboard.
+     Contrat du rendu : window.DUREE (corps du clip, en secondes) et window.rendre(t), déterministe ;
+     M.introduire ajoute l'introduction de 6 s ; window.PRET charge polices et logo avant la première image. -->
+<html lang="fr" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<title>Clip — À REMPLACER : sujet</title>
+<!-- Polices de la marque, celles de --police-titre, --police-corps et --police-mono, en display=block.
+     Par exemple : <link href="https://fonts.googleapis.com/css2?family=…&display=block" rel="stylesheet"> -->
+<!-- Le dossier de marque produit par systeme-de-marque : ses jetons, puis la déclaration du nom, du logo
+     pour fond sombre et du lien public. Rien de la marque ne s'écrit ailleurs dans cette page. -->
+<link rel="stylesheet" href="../marque/tokens.css">
+<script type="application/json" id="marque">
+{ "nom": "À REMPLACER : nom du produit", "logo": "../marque/logo-sombre.svg", "lien": "a-remplacer.example" }
+</script>
+<style>
+  html, body { margin: 0; background: var(--fond); overflow: hidden; }
+  canvas { display: block; width: 100%; height: auto; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script src="../outils/motion.js"></script>
+<script>
+(function () {
+  const ctx = document.getElementById('c').getContext('2d');
+  const C = M.C, L = M.L, H = M.H;
+  const pr = M.prog, so = M.sortie, dc = M.douce;
+  window.DUREE = 60;                   // corps du clip ; l'introduction de 6 s s'ajoute : le MP4 dure 66 s
+  const FIN = window.DUREE - 4.5;      // début de la carte de fin, en temps du clip
+
+  // Légendes : [texte de 61 caractères au plus, début, fin, options de M.legende (accent : rang des mots colorés)]
+  const LEGENDES = [
+    ['À REMPLACER : la situation de départ.', 0.5, 0.48 * FIN, { accent: [4], couleurAccent: C.alerte }],
+    ['À REMPLACER : ce que le produit change.', 0.52 * FIN, FIN - 0.3, { accent: [6] }]
+  ];
+
+  // Plan d'exemple, À REMPLACER par les plans du storyboard : un chemin lumineux relie trois étapes.
+  const NOEUDS = [[380, 540, 'Étape 1'], [960, 400, 'Étape 2'], [1540, 540, 'Étape 3']];
+  function plan(t) {
+    // le plan s'efface sous l'arrivée de la carte de fin : son décor ne transparaît pas sous le logo
+    const reste = 1 - dc(pr(t, FIN - 0.3, FIN + 0.9));
+    if (reste <= 0) return;
+    const pts = NOEUDS.map(n => [n[0], n[1]]);
+    ctx.save(); ctx.globalAlpha *= reste;
+    M.camera(ctx, { zoom: 1 + 0.03 * t / window.DUREE }, () => {   // léger zoom avant permanent
+      M.chemin(ctx, pts, pr(t, 0.08 * FIN, 0.5 * FIN));
+      if (t > 0.5 * FIN) M.particules(ctx, pts, t, { n: 10, vitesse: 0.2 });
+      NOEUDS.forEach(([x, y, nom], i) => {
+        const debut = 0.08 * FIN + i * 0.18 * FIN, p = M.rebond(pr(t, debut, debut + 0.6));
+        if (p <= 0) return;
+        ctx.save(); ctx.globalAlpha *= M.clamp(p);
+        ctx.fillStyle = M.rgba(C.accent, 0.3); ctx.beginPath(); ctx.arc(x, y, 14 + 8 * p, 0, 7); ctx.fill();
+        ctx.restore();
+        M.puce(ctx, nom, x, y - 74, { couleur: i === 2 ? C.accent2 : C.accent, alpha: M.clamp(p) });
+      });
+      // Un chiffre de décor porte l'étiquette « exemple » à l'écran (bible, « Texte et vérité »)
+      const pc = so(pr(t, 0.55 * FIN, 0.55 * FIN + 0.6)) * (1 - dc(pr(t, FIN - 0.6, FIN)));
+      if (pc > 0) {
+        M.texte(ctx, '42 tâches', 960, 660, { taille: 72, alpha: pc, lueur: 18 });
+        M.puce(ctx, 'exemple', 960, 740, { couleur: C.faible, alpha: pc });
+      }
+    });
+    ctx.restore();
+  }
+
+  window.rendre = function (t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.filter = 'none'; ctx.setLineDash([]);
+    M.fond(ctx, t);
+    plan(t);
+    // bande sombre sous les légendes, pour leur lisibilité
+    const bande = ctx.createLinearGradient(0, 780, 0, H);
+    bande.addColorStop(0, M.rgba(C.fond, 0)); bande.addColorStop(1, M.rgba(C.fond, 0.8));
+    ctx.fillStyle = bande; ctx.fillRect(0, 780, L, H - 780);
+    for (const [txt, a, b, o] of LEGENDES) M.legende(ctx, t, txt, a, b, Object.assign({ taille: 60, y: H - 140 }, o));
+    if (t >= FIN) M.carteFin(ctx, t, FIN, { titre: ['À REMPLACER : titre de fin,', 'sur deux lignes au plus.'], sousTitre: 'À REMPLACER : ce que vos équipes décident.' });
+  };
+
+  M.introduire({ ctx, rendre: window.rendre, duree: window.DUREE,
+    intro: { duree: 6, titre: 'À REMPLACER : le sujet', phrase: 'À REMPLACER : une phrase vraie, de 90 caractères au plus.',
+             etapes: ['Étape 1', 'Étape 2', 'Étape 3', 'Étape 4'], graine: 11 } });
+  window.PRET = () => M.pret();
+
+  if (location.search.includes('rendu')) window.rendre(0);
+  else window.PRET().then(() => M.apercu(window.rendre, window.DUREE, 'musique.wav'));
+})();
+</script>
+</body>
+</html>
