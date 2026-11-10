@@ -62,7 +62,7 @@ inventée pour combler un trou : ce qui n'existe pas est déclaré.
 
 ## 4. Architecture
 
-Modèle `impeccable` : **un corpus, quatre verbes, des oracles.** Pas un pipeline.
+Modèle `impeccable` : **un corpus, cinq verbes, des oracles.** Pas un pipeline.
 
 ```
 corpus-design/                    matière, pas skill
@@ -76,9 +76,11 @@ ameliore-le-design     →  maquette.html                 [check_maquette, rende
    (existant, étendu)                                    oracle-slop, oracle-tokens,
                                                          oracle-mobile, oracle-a11y]
 critique-le-design     →  revue.md (verdict + top 5)    [tous les oracles, exécutés]
+clip-de-presentation   →  clip.html + MP4 de ~60 s      [oracle-clip]
+   (TF-2405, 10/11/2026)  la vidéo reste chez le produit
 ```
 
-Les quatre verbes sont **indépendants**. On peut critiquer sans avoir de marque, faire une
+Les cinq verbes sont **indépendants**. On peut critiquer sans avoir de marque, faire une
 maquette sans studio. Rien n'impose de séquence — c'est ce qui distingue une forge d'un
 pipeline projet.
 
