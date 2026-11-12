@@ -34,7 +34,7 @@
 // VA4 (bloquant) : déclaration illisible, ou entrée incomplète ou contradictoire.
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0 PASS / 1 FAIL / 2 SKIP.
-// Usage : node oracles/oracle-valeur-affichee.mjs <page.html|http(s)://…> [--declaration valeurs-derivees.json] [--accepter-certificat-local] [--json-only]
+// Usage : node oracles/oracle-valeur-affichee.mjs <page.html|http(s)://…> [--declaration valeurs-derivees.json] [--accepter-certificat-local] [--statut-attendu <code>] [--json-only]
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -43,15 +43,18 @@ import { parse, elements } from './lib/html.mjs';
 import { correspond, decouper } from './lib/selecteurs.mjs';
 import { trouverDeclaration } from './lib/declaration-valeurs.mjs';
 import { lirePageServie } from './lib/lire-page-servie.mjs';
+import { lireStatutAttendu } from './lib/statut-attendu.mjs';
 
 const DOM = 'Valeur affichée ↔ source (version, environnement, date)';
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
 // TF-2122 : certificat auto-signé accepté pour une instance de la boucle locale seulement (lib/lire-page-servie.mjs).
 const certificatLocal = args.includes('--accepter-certificat-local');
+// TF-2432 : un écran d'état voulu (404, 410…) servi avec le code ANNONCÉ est lu comme une page ; tout autre code reste « non servi ».
+const STATUT = lireStatutAttendu(args);
 const iDecl = args.indexOf('--declaration');
 const declarationArg = iDecl >= 0 ? args[iDecl + 1] : null;
-const page = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--declaration');
+const page = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--declaration' && args[i - 1] !== '--statut-attendu');
 const DELAI_COMMANDE_MS = 30000;
 
 const NON_JUGE = [
@@ -82,6 +85,8 @@ function sauter(motif, extra = {}) {
 
 if (!page) sauter('aucune page fournie (fichier .html ou URL http/https)');
 
+if (STATUT.erreur) sauter(STATUT.erreur);
+
 // ── La déclaration ─────────────────────────────────────────────────────────
 const cheminDecl = declarationArg ? path.resolve(declarationArg) : trouverDeclaration(page);
 if (!cheminDecl) {
@@ -108,7 +113,7 @@ let html;
 if (/^https?:\/\//i.test(page)) {
   try {
     const rep = await lirePageServie(page, { certificatLocal });
-    if (!rep.ok) sauter(`page non servie : ${page} répond ${rep.status}`, { declaration: cheminDecl });
+    if (STATUT.code === null ? !rep.ok : rep.status !== STATUT.code) sauter(`page non servie : ${page} répond ${rep.status}${STATUT.code === null ? '' : ` au lieu du ${STATUT.code} annoncé (--statut-attendu)`}`, { declaration: cheminDecl });
     html = await rep.text();
   } catch (e) {
     sauter(`page injoignable : ${page} (${String(e.cause?.code || e.message).slice(0, 80)})`, { declaration: cheminDecl });

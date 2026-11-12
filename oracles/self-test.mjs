@@ -1729,6 +1729,73 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2432 (lot Produit-82 du 10/11/2026) — UN ÉCRAN D'ÉTAT VOULU SE JUGE QUAND SON CODE EST CELUI QU'ON ANNONCE. L'écran « Page
+// introuvable » d'une application, servi avec son 404, rendait SKIP exit 2 (X0 : réponse HTTP 404, écran non jugé) : aucune
+// critique d'implémentation ne jugeait les écrans d'état. `--statut-attendu <code>` dit au point d'entrée que l'instance est un
+// écran d'état : servie avec CE code, elle est jugée comme un écran, par les quatre juges qui la lisent (exploitabilité, erreurs
+// de formulaire, faits commerciaux, valeur affichée) ; servie avec un autre code, y compris 200, elle reste refusée. Sans l'option,
+// toute réponse en 400 ou plus reste refusée comme avant. Une valeur qui n'est pas un code HTTP est refusée, jamais ignorée.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design --statut-attendu (TF-2432) — un écran d\'état voulu est jugé, un autre code reste refusé');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const page = (corps) => '<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="forge-type-page" content="editoriale">'
+      + `<title>Page introuvable</title></head><body><main><h1>Page introuvable</h1>${corps}<a href="/">Retour à l\'accueil</a></main></body></html>`;
+    const routes = {
+      '/ok': [200, page('<p>Cette page existe.</p>')],
+      '/introuvable': [404, page('<p>La page demandée n\'existe pas ou a été déplacée.</p>')],
+      // Un écran d'état qui porte un vrai défaut (une valeur machine affichée brute, X3) : annoncé, il doit être jugé et échouer.
+      '/introuvable-defaut': [404, page('<p>Erreur : <span>etat_inconnu_du_job</span></p>')],
+    };
+    const code = `const http=require('http');const r=${JSON.stringify(routes)};`
+      + `const s=http.createServer((q,p)=>{const e=r[q.url.split('?')[0]];if(!e){p.writeHead(500);return p.end();}`
+      + `p.writeHead(e[0],{'Content-Type':'text/html; charset=utf-8'});p.end(e[1]);});`
+      + `s.listen(0,'127.0.0.1',()=>console.log(s.address().port));`;
+    const serveur = spawn(process.execPath, ['-e', code], { stdio: ['ignore', 'pipe', 'ignore'] });
+    try {
+      const port = await new Promise((ok, ko) => {
+        serveur.stdout.once('data', d => ok(Number(String(d).trim())));
+        serveur.once('exit', () => ko(new Error('serveur d\'essai arrêté')));
+      });
+      const url = c => `http://127.0.0.1:${port}${c}`;
+      const jouer = (...a) => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), ...a, '--json-only'],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+        let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        const explo = (json?.oracles || []).find(o => o.oracle === 'oracle-exploitabilite');
+        return { code: r.status, json, explo, skips: (json?.oracles || []).filter(o => o.verdict === 'SKIP').map(o => o.oracle) };
+      };
+      const x0 = (res, motif) => (res.explo?.findings || []).some(f => f.regle === 'X0' && motif.test(f.msg));
+      const sans = jouer('--instance', url('/introuvable'));
+      ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && x0(sans, /réponse HTTP 404 : écran non jugé/),
+        `témoin · l'écran 404 sans l'option : X0, écran non jugé, SKIP exit 2 — l'état d'avant (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+      const annonce = jouer('--instance', url('/introuvable'), '--statut-attendu', '404');
+      ligne(annonce.code === 0 && annonce.json?.verdict === 'PASS' && annonce.explo?.verdict === 'PASS' && !x0(annonce, /./) && annonce.skips.length === 0,
+        `sens vert · le même écran avec --statut-attendu 404 : jugé comme un écran, PASS exit 0, aucun juge de l'instance en SKIP (obtenu ${annonce.json?.verdict}, exit ${annonce.code}, SKIP ${annonce.skips.join(',') || 'aucun'})`);
+      ligne((annonce.json?.non_juge || []).some(n => /HTTP 404 annoncée/.test(n)),
+        'sens vert · le non_juge dit que l\'écran a été jugé avec la réponse annoncée, pas comme une page ordinaire');
+      const defaut = jouer('--instance', url('/introuvable-defaut'), '--statut-attendu', '404');
+      ligne(defaut.code === 1 && defaut.json?.verdict === 'FAIL' && (defaut.explo?.findings || []).some(f => f.regle === 'X3'),
+        `sens rouge · un écran 404 annoncé qui porte une valeur machine brute : jugé, X3, FAIL exit 1 (obtenu ${defaut.json?.verdict}, exit ${defaut.code})`);
+      const autreCode = jouer('--instance', url('/ok'), '--statut-attendu', '404');
+      ligne(autreCode.code === 2 && autreCode.json?.verdict === 'SKIP' && x0(autreCode, /réponse HTTP 200 au lieu du 404 annoncé/),
+        `sens rouge · l'écran servi en 200 alors qu'on annonce 404 : refusé (X0), SKIP exit 2 (obtenu ${autreCode.json?.verdict}, exit ${autreCode.code})`);
+      const autreErreur = jouer('--instance', url('/introuvable'), '--statut-attendu', '410');
+      ligne(autreErreur.code === 2 && autreErreur.json?.verdict === 'SKIP' && x0(autreErreur, /réponse HTTP 404 au lieu du 410 annoncé/),
+        `sens rouge · l'écran servi en 404 alors qu'on annonce 410 : refusé (X0), SKIP exit 2 (obtenu ${autreErreur.json?.verdict}, exit ${autreErreur.code})`);
+      const illisible = jouer('--instance', url('/introuvable'), '--statut-attendu', '4o4');
+      ligne(illisible.code === 2 && illisible.json?.verdict === 'SKIP' && (illisible.json?.non_juge || []).some(n => /--statut-attendu « 4o4 » illisible/.test(n)),
+        `sens rouge · une valeur qui n'est pas un code HTTP : refusée à voix haute, SKIP exit 2, rien n'est jugé (obtenu ${illisible.json?.verdict}, exit ${illisible.code})`);
+      const sansInstance = jouer('--statut-attendu', '404');
+      ligne(sansInstance.code === 0 && (sansInstance.json?.non_juge || []).some(n => /--statut-attendu 404 sans effet : aucune --instance/.test(n)),
+        `sens vert · l'option sans --instance n'est pas muette : le non_juge dit qu'elle est sans effet (obtenu exit ${sansInstance.code})`);
+    } finally {
+      serveur.kill();
+    }
+  }
+}
+
 // TF-2121 (lot Produit-86 du 03/11/2026) — UNE PAGE D'APPLICATION SANS INSTANCE SERVIE N'EST PAS UN PASS. Dix pages
 // d'application avaient passé la critique : le point d'entrée disait « SANS OBJET » au non_juge et rendait PASS,
 // pendant que l'instance, jouée ensuite, donnait deux défauts. La page de base (motion-verte.html) est verte pour

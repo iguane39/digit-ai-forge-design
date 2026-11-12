@@ -43,7 +43,8 @@
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[],champs_eprouves,mesures[]} · exit 0/1/2.
 // Usage : node oracle-erreurs-formulaire.mjs <fichier.html|url> [<autre cible>…] [--largeur N] [--hauteur-ecran N]
-//           [--etat-connexion etat.json] [--proximite px] [--attente ms] [--accepter-certificat-local] [--json-only]
+//           [--etat-connexion etat.json] [--proximite px] [--attente ms] [--accepter-certificat-local]
+//           [--statut-attendu <code>] [--json-only]      (TF-2432 : un écran d'état servi avec ce code est jugé, tout autre code est refusé)
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -52,6 +53,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { detecterOutillageRendu } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
+import { lireStatutAttendu, ecranRefuse, motifDuRefus } from './lib/statut-attendu.mjs';
 // TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
 const REGLES_JOUEES = ['EF0', 'EF1', 'EF2', 'EF3', 'EF4', 'EF5'];
@@ -61,7 +63,7 @@ const DOM = 'Formulaire : une saisie refusée se dit sous son champ';
 const ici = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
-const AVEC_VALEUR = ['--largeur', '--hauteur-ecran', '--etat-connexion', '--proximite', '--attente'];
+const AVEC_VALEUR = ['--largeur', '--hauteur-ecran', '--etat-connexion', '--proximite', '--attente', '--statut-attendu'];
 const opt = n => { const i = args.indexOf(n); return i === -1 ? null : args[i + 1]; };
 const cibles = args.filter((a, i) => !a.startsWith('--') && !AVEC_VALEUR.includes(args[i - 1]));
 
@@ -69,6 +71,7 @@ const LARGEUR = Number(opt('--largeur')) || lireGrille().largeurConception;
 const HAUTEUR = Number(opt('--hauteur-ecran')) || 1080;
 const ETAT = opt('--etat-connexion');
 const CERT_LOCAL = args.includes('--accepter-certificat-local');
+const STATUT = lireStatutAttendu(args);   // TF-2432 : le code HTTP d'un écran d'état voulu
 const HOTES_LOCAUX = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
 const ATTENTE = Number(opt('--attente')) || 600;
 const PROXIMITE = Number(opt('--proximite')) || 120;
@@ -98,6 +101,7 @@ function sortir(verdict, code) {
 
 if (!cibles.length) { NJ.push('aucune cible fournie (fichier HTML ou URL http(s))'); sortir('SKIP', 2); }
 if (ETAT && !fs.existsSync(ETAT)) { NJ.push(`état de connexion introuvable : ${ETAT}`); sortir('SKIP', 2); }
+if (STATUT.erreur) { NJ.push(STATUT.erreur); sortir('SKIP', 2); }
 
 const urls = [];
 for (const c of cibles) {
@@ -223,7 +227,7 @@ const ETAT_CHAMP = String.raw`(arg) => {
 
 const r = spawnSync(outillage.python, [path.join(ici, 'lib', 'jouer_erreurs_formulaire.py')], {
   input: JSON.stringify({ cibles: urls, largeur: LARGEUR, hauteur: HAUTEUR, etat: ETAT ? path.resolve(ETAT) : null,
-    certificat_local: CERT_LOCAL, attente: ATTENTE, plan: PLAN, etat_champ: ETAT_CHAMP, max_champs: MAX_CHAMPS }),
+    certificat_local: CERT_LOCAL, statut_attendu: STATUT.code, attente: ATTENTE, plan: PLAN, etat_champ: ETAT_CHAMP, max_champs: MAX_CHAMPS }),
   encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' }, maxBuffer: 16 * 1024 * 1024, timeout: 600000,
 });
 let sortie = null;
@@ -251,7 +255,7 @@ for (const res of sortie.resultats) {
     NJ.push(`${ou} : non jugé, chargement en échec (${res.erreur})${indice}`);
     continue;
   }
-  if (res.statut && res.statut >= 400) { add('avertissement', 'EF0', `réponse HTTP ${res.statut} : écran non jugé`, ou); continue; }
+  if (ecranRefuse(res.statut, STATUT.code)) { add('avertissement', 'EF0', motifDuRefus(res.statut, STATUT.code), ou); continue; }
   if (sansSlashFinal(res.url_finale) !== sansSlashFinal(res.cible)) {
     add('avertissement', 'EF0', `redirigé vers ${res.url_finale} : écran non jugé, la page d'arrivée n'est pas celle demandée (connexion ?) — fournir --etat-connexion`, ou);
     continue;

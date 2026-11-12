@@ -41,6 +41,12 @@
 // oracle-exploitabilite, oracle-faits-commerciaux et oracle-valeur-affichee (qui lisent l'instance), et n'est accepté que pour un hôte de
 // boucle locale (localhost, 127.0.0.1, ::1) ; tout autre hôte avec l'option est refusé (SKIP).
 //
+// --statut-attendu <code> (TF-2432) : l'instance est un ÉCRAN D'ÉTAT voulu (« Page introuvable » servie en 404, par exemple). Servie avec CE code,
+// elle est jugée comme un écran par les quatre juges qui lisent l'instance (exploitabilité, erreurs de formulaire, faits commerciaux, valeur
+// affichée) ; servie avec un autre code, y compris 200, elle reste refusée (X0, EF0, SKIP exit 2). Sans l'option, toute réponse en 400 ou plus est
+// refusée comme avant. Une valeur qui n'est pas un code HTTP de trois chiffres est refusée (SKIP exit 2) ; sans --instance, l'option est dite sans effet.
+// Une seule valeur par appel : des écrans de codes différents se jouent en appels séparés.
+//
 // TF-2121 — une page d'APPLICATION sans --instance ne rend plus « SANS OBJET » : elle rend FAIL (X7, oracle-exploitabilite),
 // car un contrôle jamais joué ne se lit pas « vert » (lot Produit-86 : dix pages PASS, deux défauts à l'instance). La
 // nature de la page vient de l'appel (--type-page application|editoriale), de la page (<meta name="forge-type-page">
@@ -83,6 +89,7 @@ import { trouverDeclaration, NOM_DECLARATION } from './lib/declaration-valeurs.m
 import { typerPage } from './lib/type-page.mjs';
 import { rendreAutonome } from './lib/rendre-autonome.mjs';
 import { estHoteLocal } from './lib/lire-page-servie.mjs';
+import { lireStatutAttendu } from './lib/statut-attendu.mjs';
 
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
@@ -99,12 +106,15 @@ const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !=
   && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
   && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
   && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine'
-  && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres');
+  && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres' && args[args.indexOf(a) - 1] !== '--statut-attendu');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
 // TF-2122 — certificat auto-signé accepté pour une instance locale (boucle locale seulement, dit à l'oracle).
 const certificatLocal = args.includes('--accepter-certificat-local');
+// TF-2432 — un écran d'état voulu (404, 410…) : servi avec le code ANNONCÉ, il est jugé comme un écran par les juges de l'instance ; tout autre code reste refusé.
+const statutAttendu = lireStatutAttendu(args);
+const optStatut = statutAttendu.code === null ? [] : ['--statut-attendu', String(statutAttendu.code)];
 // TF-2121 — une page d'application sans instance servie n'est pas « sans objet » ; --maquette l'exempte à voix haute.
 const maquette = args.includes('--maquette');
 
@@ -403,6 +413,8 @@ if (!cible || !fs.existsSync(cible)) {
   sortir('SKIP', [], ['cible absente : passer un fichier .html ou --corpus <dossier>'], 2);
 }
 
+if (statutAttendu.erreur) sortir('SKIP', [], [`${statutAttendu.erreur} — rien n'a été jugé`], 2);
+
 // TF-2386 — un deck PPTX ou un PDF n'a ni CSS ni DOM : lui lancer les oracles HTML lisait un binaire et rendait PASS (slop, tokens…)
 // sur du bruit. Il part à sa variante, oracle-document-imprime (DP1–DP5), et les juges HTML sont dits SANS OBJET, à voix haute.
 if (/\.(pptx|pdf)$/i.test(cible)) {
@@ -542,6 +554,10 @@ function passeFichier(fichier, { muet = false } = {}) {
 }
 
 const resultats = passeFichier(fichierJuge).map(citerLaCible);
+// TF-2432 — le code annoncé ne vaut que pour une INSTANCE servie : sans --instance, l'option n'a rien à qualifier, et le dire vaut mieux qu'un effet muet.
+if (statutAttendu.code !== null && !instances.length && !seul) {
+  sansObjet.push(`--statut-attendu ${statutAttendu.code} sans effet : aucune --instance fournie, aucun écran servi n'a été lu`);
+}
 
 // ── TF-0830 · ce que l'auteur n'a pas le droit de changer ne lui est pas imputé ──
 // Les blocs `COMPOSANT-EMBARQUE` scellés viennent du socle et sont sous parité d'asset :
@@ -608,7 +624,7 @@ if (!seul) {
   if (instances.length) {
     resultats.push(lancer('oracle-exploitabilite.mjs',
       [...instances, ...(etatConnexion ? ['--etat-connexion', etatConnexion] : []),
-        ...(certificatLocal ? ['--accepter-certificat-local'] : [])]));
+        ...(certificatLocal ? ['--accepter-certificat-local'] : []), ...optStatut]));
   } else if (typePage.type === 'application' && !maquette) {
     // TF-2121 — une page d'APPLICATION sans instance servie : le contrôle n'a pas eu lieu, et le dire
     // dans le non_juge laissait lire un PASS (lot Produit-86 : dix pages PASS, deux défauts à l'instance).
@@ -647,7 +663,7 @@ if (!seul) {
 if (!seul && instances.length) {
   const ef = lancer('oracle-erreurs-formulaire.mjs',
     [...instances, ...(etatConnexion ? ['--etat-connexion', etatConnexion] : []),
-      ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
+      ...(certificatLocal ? ['--accepter-certificat-local'] : []), ...optStatut]);
   if (ef.verdict === 'SKIP' && (ef.findings || []).some(f => f.regle === 'EF0' && f.sans_objet)) {
     sansObjet.push('oracle-erreurs-formulaire : SANS OBJET — aucun champ éprouvable sur l\'instance (aucun formulaire visible, ou aucun champ à contrainte ni à data-valeur-fausse) : '
       + 'aucune valeur fausse n\'a été saisie. Ce n\'est pas un PASS des erreurs de formulaire ; déclarer data-valeur-fausse sur un champ à règle du produit');
@@ -665,7 +681,7 @@ if (!seul || seul === 'valeur-affichee') {
   if (declaration || seul) {
     const pages = instances.length ? instances : [cible];
     for (const p of pages) {
-      const r = lancer('oracle-valeur-affichee.mjs', [p, ...(declaration ? ['--declaration', declaration] : []), ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
+      const r = lancer('oracle-valeur-affichee.mjs', [p, ...(declaration ? ['--declaration', declaration] : []), ...(certificatLocal ? ['--accepter-certificat-local'] : []), ...(instances.length ? optStatut : [])]);
       if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'VA0') || {}).msg || 'non jugé';
       resultats.push(r);
     }
@@ -680,7 +696,7 @@ if (!seul || seul === 'valeur-affichee') {
 // vrais avis, les vrais prix : elle est lue aussi. Une instance illisible rend SKIP, dit à voix haute.
 if (!seul || seul === 'faits-commerciaux') {
   for (const i of instances) {
-    const r = lancer('oracle-faits-commerciaux.mjs', [i, ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
+    const r = lancer('oracle-faits-commerciaux.mjs', [i, ...(certificatLocal ? ['--accepter-certificat-local'] : []), ...optStatut]);
     if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'FC0') || {}).msg || 'non jugé';
     resultats.push(r);
   }

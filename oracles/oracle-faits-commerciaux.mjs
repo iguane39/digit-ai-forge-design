@@ -40,22 +40,25 @@
 //     affiche un fait de ce genre, quelqu'un doit en répondre ».
 //
 // Contrat : JSON {oracle,domaine,artefact,verdict,findings[],non_juge[]} · exit 0 PASS / 1 FAIL / 2 SKIP.
-// Usage : node oracles/oracle-faits-commerciaux.mjs <page.html|http(s)://…> [--motifs table.json] [--accepter-certificat-local] [--json-only]
+// Usage : node oracles/oracle-faits-commerciaux.mjs <page.html|http(s)://…> [--motifs table.json] [--accepter-certificat-local] [--statut-attendu <code>] [--json-only]
 
 import fs from 'node:fs';
 import { parse, elements, css, cssRules, lineOf } from './lib/html.mjs';
 import { correspond, decouper, classesDe, ETAT } from './lib/selecteurs.mjs';
 import { lireMotifs, FICHIER_MOTIFS } from './lib/faits-commerciaux.mjs';
 import { lirePageServie } from './lib/lire-page-servie.mjs';
+import { lireStatutAttendu } from './lib/statut-attendu.mjs';
 
 const DOM = 'Faits commerciaux affichés (avis, prix barré, rareté, volume, santé) — à faire confirmer';
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
 // TF-2122 : certificat auto-signé accepté pour une instance de la boucle locale seulement (lib/lire-page-servie.mjs).
 const certificatLocal = args.includes('--accepter-certificat-local');
+// TF-2432 : un écran d'état voulu (404, 410…) servi avec le code ANNONCÉ est lu comme une page ; tout autre code reste « non servi ».
+const STATUT = lireStatutAttendu(args);
 const iMotifs = args.indexOf('--motifs');
 const motifsArg = iMotifs >= 0 ? args[iMotifs + 1] : null;
-const page = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--motifs');
+const page = args.find((a, i) => !a.startsWith('--') && args[i - 1] !== '--motifs' && args[i - 1] !== '--statut-attendu');
 
 const NON_JUGE = [
   'la VÉRACITÉ des faits : l\'oracle ne sait pas si la note, le prix de référence, le stock, le nombre de clients ou l\'allégation est vrai ; une forme trouvée est un fait à faire confirmer par le produit, jamais un défaut',
@@ -102,13 +105,14 @@ if (echeance && Date.parse(echeance) < Date.now()) {
 }
 
 if (!page) sauter('aucune page fournie (fichier .html ou URL http/https)');
+if (STATUT.erreur) sauter(STATUT.erreur);
 
 // ── La page servie ─────────────────────────────────────────────────────────
 let html;
 if (/^https?:\/\//i.test(page)) {
   try {
     const rep = await lirePageServie(page, { certificatLocal });
-    if (!rep.ok) sauter(`page non servie : ${page} répond ${rep.status}`);
+    if (STATUT.code === null ? !rep.ok : rep.status !== STATUT.code) sauter(`page non servie : ${page} répond ${rep.status}${STATUT.code === null ? '' : ` au lieu du ${STATUT.code} annoncé (--statut-attendu)`}`);
     html = await rep.text();
   } catch (e) {
     sauter(`page injoignable : ${page} (${String(e.cause?.code || e.message).slice(0, 80)})`);

@@ -20,6 +20,7 @@ Entrée (JSON sur stdin) :
   plan     : source JavaScript d'une fonction (maxChamps) => {champs[], non_eprouves[]} qui marque les champs
   etat_champ : source JavaScript d'une fonction ({cle, base}) => état du champ (messages reliés, aria-invalid…)
   max_champs : nombre de champs éprouvés au plus par écran
+  statut_attendu : code HTTP d'un écran d'état voulu (TF-2432), ou null ; l'écran n'est joué que servi avec ce code
 Sortie : {"ok": true, "resultats": [{cible, url_finale, statut, champs[], non_eprouves[] | erreur}]}
          ou {"ok": false, "erreur": "..."} si le navigateur ne démarre pas.
 """
@@ -217,7 +218,10 @@ def main():
                 page.wait_for_timeout(int(entree.get("attente", 600)))
                 r["statut"] = reponse.status if reponse is not None else None
                 r["url_finale"] = page.url
-                if (r["statut"] or 0) < 400 and page.url.split("#")[0].rstrip("/") == cible.split("#")[0].rstrip("/"):
+                # TF-2432 : un écran d'état voulu (--statut-attendu) est joué quand il est servi avec le code annoncé.
+                statut_attendu = entree.get("statut_attendu")
+                statut_jouable = (r["statut"] == statut_attendu) if statut_attendu is not None else (r["statut"] or 0) < 400
+                if statut_jouable and page.url.split("#")[0].rstrip("/") == cible.split("#")[0].rstrip("/"):
                     plan = page.evaluate(entree["plan"], entree["max_champs"])
                     r["non_eprouves"] = plan["non_eprouves"]
                     champs = []
