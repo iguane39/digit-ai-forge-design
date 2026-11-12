@@ -8,7 +8,8 @@
 // Résolution de la racine de forge, dans l'ordre :
 //   1. --racine <chemin>
 //   2. $FORGE_DESIGN_ROOT
-//   3. FORGE_DESIGN_ROOT dans le .env voisin
+//   3. FORGE_DESIGN_ROOT dans le .env voisin (celui de la forge, dossier parent de ce script ; jamais le .env du
+//      dossier courant : le verdict ne dépend pas du dossier de lancement, TF-2431)
 //   4. le dossier parent de ce script
 // Aucune racine résolue ⇒ exit 2 et verdict SKIP. Un contrôle qui ne trouve pas
 // ses oracles ne se tait pas : il le dit.
@@ -127,8 +128,10 @@ function racineDeForge() {
   const ici = path.dirname(fileURLToPath(import.meta.url));
   if (opt('--racine')) return opt('--racine');
   if (process.env.FORGE_DESIGN_ROOT) return process.env.FORGE_DESIGN_ROOT;
-  for (const candidat of [path.join(ici, '..', '.env'), path.join(process.cwd(), '.env')]) {
-    if (!fs.existsSync(candidat)) continue;
+  // TF-2431 : seul le `.env` de la forge elle-même (dossier parent du script, lieu fixe de l'installation) est lu. Celui du
+  // dossier COURANT ne l'est plus : le même fichier et la même commande rendaient SKIP ou PASS selon le dossier de lancement.
+  const candidat = path.join(ici, '..', '.env');
+  if (fs.existsSync(candidat)) {
     const m = /^FORGE_DESIGN_ROOT\s*=\s*(.+)$/m.exec(fs.readFileSync(candidat, 'utf8'));
     if (m && m[1].trim()) return m[1].trim();
   }

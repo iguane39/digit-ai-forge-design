@@ -178,7 +178,10 @@ Options de `run-oracles-design.mjs` :
 | `--rendu` | si l'outillage est détecté (Python du PATH avec `playwright`, à défaut l'interpréteur que `uv run python` désigne dans le dossier courant (TF-1674), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`
-du `.env` voisin → dossier parent du script.
+du `.env` voisin (celui de la forge, dossier parent du script) → dossier parent du script.
+Le `.env` du **dossier courant** n'est plus lu (TF-2431) : le verdict ne dépend pas du dossier
+d'où l'on lance. Seul le choix de l'interpréteur de `--rendu` garde un repli par le dossier
+courant (l'environnement `uv` du produit, TF-1674), dit au `non_juge`.
 **Racine non résolue ⇒ exit 2 et verdict `SKIP`** : un contrôle qui ne trouve pas
 ses oracles ne se tait jamais.
 

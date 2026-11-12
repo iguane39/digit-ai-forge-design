@@ -1602,6 +1602,47 @@ for (const cas of CAS) {
     'sens rouge · aucun Python et uv sans playwright : SKIP motivé, jamais un interpréteur deviné');
 }
 
+// TF-2431 (lot Produit-82 du 10/11/2026) — LE VERDICT DU POINT D'ENTRÉE NE DÉPEND PAS DU DOSSIER D'OÙ IL EST LANCÉ. La racine de
+// forge se cherchait aussi dans le `.env` du dossier COURANT : lancé depuis un dossier dont le `.env` nomme un autre
+// FORGE_DESIGN_ROOT, le même fichier, la même commande rendaient SKIP exit 2 au lieu de PASS exit 0. Mesuré le 12/11/2026 sur
+// motion-verte.html : exit 2 depuis un dossier portant ce `.env`, exit 0 depuis un dossier neutre. Les entrées admises sont
+// --racine, $FORGE_DESIGN_ROOT, le `.env` de la forge elle-même (celui du dossier parent du script, lieu fixe de l'installation)
+// et le dossier parent du script. Le `.env` d'essai ne porte aucune valeur secrète : une seule ligne FORGE_DESIGN_ROOT.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design · racine de forge (TF-2431) — le .env du dossier courant n\'est plus lu');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'racine-env-'));
+  try {
+    const hostile = path.join(dossier, 'hostile');
+    const neutre = path.join(dossier, 'neutre');
+    const ailleurs = path.join(dossier, 'ailleurs');
+    for (const d of [hostile, neutre, ailleurs]) fs.mkdirSync(d);
+    fs.writeFileSync(path.join(hostile, '.env'), `FORGE_DESIGN_ROOT=${ailleurs}\n`, 'utf8');
+    const forge = path.resolve(ici, '..');
+    const jouer = (cwd, args = [], env = {}) => {
+      const e = { ...process.env, ...env }; if (!('FORGE_DESIGN_ROOT' in env)) delete e.FORGE_DESIGN_ROOT;
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), ...args, '--json-only'], { cwd, encoding: 'utf8', env: e });
+      let json = null; try { json = JSON.parse((r.stdout || '').trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json };
+    };
+    const depuisNeutre = jouer(neutre);
+    const depuisHostile = jouer(hostile);
+    ligne(depuisNeutre.code === 0 && depuisNeutre.json?.verdict === 'PASS' && path.resolve(depuisNeutre.json?.racine) === forge,
+      `témoin · depuis un dossier neutre : PASS exit 0, racine = la forge (obtenu ${depuisNeutre.json?.verdict}, exit ${depuisNeutre.code})`);
+    ligne(depuisHostile.code === depuisNeutre.code && depuisHostile.json?.verdict === depuisNeutre.json?.verdict && path.resolve(depuisHostile.json?.racine) === forge,
+      `sens rouge · depuis un dossier dont le .env nomme une autre racine : le même verdict, la même racine, exit identique — le .env du dossier courant n'est pas lu (obtenu ${depuisHostile.json?.verdict}, exit ${depuisHostile.code}, racine ${depuisHostile.json?.racine})`);
+    const parOption = jouer(hostile, ['--racine', ailleurs]);
+    ligne(parOption.code === 2 && parOption.json?.verdict === 'SKIP' && (parOption.json?.non_juge || []).some(n => /racine de forge non résolue/.test(n)),
+      `sens vert · --racine nomme la racine, depuis n'importe quel dossier : SKIP exit 2 quand elle n'a pas d'oracles, jamais un PASS (obtenu ${parOption.json?.verdict}, exit ${parOption.code})`);
+    const parVariable = jouer(neutre, [], { FORGE_DESIGN_ROOT: ailleurs });
+    ligne(parVariable.code === 2 && parVariable.json?.verdict === 'SKIP' && path.resolve(parVariable.json?.racine) === ailleurs,
+      `sens vert · $FORGE_DESIGN_ROOT de l'environnement reste honorée : racine nommée, SKIP exit 2 faute d'oracles (obtenu ${parVariable.json?.verdict}, exit ${parVariable.code})`);
+    const source = fs.readFileSync(path.join(ici, 'run-oracles-design.mjs'), 'utf8');
+    ligne(!/process\.cwd\(\)/.test(source), 'verrou · run-oracles-design.mjs ne lit plus le dossier courant (aucun process.cwd())');
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-1674 + TF-1654 — UNE APPLICATION SERVIE DERRIÈRE UNE CONNEXION. Une instance d'essai est
 // servie ici : l'écran au volume réel (la fixture rouge) n'est rendu qu'à une session ouverte, toute
 // autre visite est redirigée vers une page de connexion. Sans état de connexion, l'oracle mesure la
