@@ -41,7 +41,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { detecterOutillageRendu } from './lib/rendu.mjs';
+import { detecterOutillageRendu, direInterpreteur } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { decoderPng, comparerPng } from './lib/png.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
@@ -145,6 +145,7 @@ if (!outillage.ok) {
   NJ.push(`outillage de rendu indisponible : ${outillage.manques.join(' ; ')}`);
   sortir('SKIP', 2);
 }
+NJ.push(direInterpreteur(outillage)); // TF-2461 : l'interpréteur qui a joué, dit à chaque rendu
 
 const dossierBaseline = path.join(RACINE, 'baseline', slug);
 const historique = path.join(dossierBaseline, 'historique.jsonl');

@@ -1580,26 +1580,103 @@ for (const cas of CAS) {
     'limite déclarée · B-T2 à B-T4 portées au non_juge, jamais approuvées en silence');
 }
 
-// TF-1674 (retour du 12/10/2026) — LE PYTHON D'UN ENVIRONNEMENT uv EST UN PYTHON. `--rendu`
-// rendait SKIP chez un produit dont playwright vit dans son environnement uv. La décision est
-// jouée sur sondes injectées : la preuve ne dépend pas de ce que le poste a installé.
+// TF-1674 (retour du 12/10/2026), reprise par TF-2461 (12/11/2026) — LE PYTHON D'UN ENVIRONNEMENT uv SE DÉSIGNE, IL NE SE DEVINE PAS.
+// TF-1674 ouvrait `--rendu` aux produits dont playwright vit dans un environnement uv en demandant `uv run python` au dossier
+// COURANT : le même fichier et la même commande se rendaient avec un autre interpréteur, ou en SKIP, selon le dossier de
+// lancement. L'interpréteur vient maintenant de $FORGE_DESIGN_PYTHON, du PATH ou de .venv sous la racine de la forge, et le
+// non_juge nomme celui qui a joué. La décision est jouée sur sondes injectées : la preuve ne dépend pas de ce que le poste a installé.
 {
-  console.log(String.fromCharCode(10) + 'lib/rendu.mjs choisirInterpreteur (TF-1674) — uv en second recours, deux sens');
-  const { choisirInterpreteur } = await import('./lib/rendu.mjs');
+  console.log(String.fromCharCode(10) + 'lib/rendu.mjs choisirInterpreteur (TF-2461) — variable, PATH, racine de la forge, jamais le dossier courant');
+  const { choisirInterpreteur, direInterpreteur, interpreteursSousRacine } = await import('./lib/rendu.mjs');
   const sansPlaywright = () => ({ present: true, playwright: false });
-  let sondeUv = 0;
-  const a = choisirInterpreteur({ python: () => ({ present: true, playwright: true }), uv: () => { sondeUv++; return { present: true, executable: 'X' }; } });
-  ligne(a.python === 'python' && a.via === 'PATH' && a.manques.length === 0 && sondeUv === 0,
-    `sens vert · Python du PATH avec playwright : retenu, uv jamais sondé (obtenu ${a.python} via ${a.via}, ${sondeUv} sonde uv)`);
-  const b = choisirInterpreteur({ python: sansPlaywright, uv: () => ({ present: true, executable: 'C:/produit/.venv/Scripts/python.exe' }) });
-  ligne(b.python === 'C:/produit/.venv/Scripts/python.exe' && b.via === 'uv' && b.manques.length === 0,
-    `sens vert · playwright seulement dans l'environnement uv du produit : son interpréteur est retenu (obtenu ${b.python} via ${b.via})`);
-  const c = choisirInterpreteur({ python: sansPlaywright, uv: () => ({ present: false, executable: null }) });
-  ligne(c.manques.length === 1 && /playwright non importable/.test(c.manques[0]) && /uv` absent/.test(c.manques[0]),
-    `sens rouge · ni le PATH ni uv ne portent playwright : manque motivé, uv nommé (${c.manques[0]?.slice(0, 60)}…)`);
-  const d = choisirInterpreteur({ python: () => ({ present: false, playwright: false }), uv: () => ({ present: true, executable: null }) });
-  ligne(d.python === null && /introuvable/.test(d.manques[0]) && /n'importe pas playwright/.test(d.manques[0]),
-    'sens rouge · aucun Python et uv sans playwright : SKIP motivé, jamais un interpréteur deviné');
+  const avecPlaywright = (c) => ({ present: true, playwright: true, executable: `C:/reel/${c}.exe` });
+  const racine = ['C:/forge/.venv/Scripts/python.exe'];
+  let sondes = [];
+  const espion = (f) => (c) => { sondes.push(c); return f(c); };
+  const a = choisirInterpreteur({ python: espion(avecPlaywright) }, { variable: null, racine });
+  ligne(a.python === 'python' && a.via === 'PATH' && a.executable === 'C:/reel/python.exe' && a.manques.length === 0 && sondes.join() === 'python',
+    `sens vert · Python du PATH avec playwright : retenu, l'interpréteur réel nommé, rien d'autre sondé (obtenu ${a.python} via ${a.via}, sondes ${sondes.join()})`);
+  const b = choisirInterpreteur({ python: (c) => (c === racine[0] ? avecPlaywright('forge') : { present: false, playwright: false }) }, { variable: null, racine });
+  ligne(b.python === racine[0] && b.via === 'racine' && b.manques.length === 0,
+    `sens vert · playwright seulement sous la racine de la forge (.venv) : cet interpréteur est retenu (obtenu ${b.python} via ${b.via})`);
+  sondes = [];
+  const c = choisirInterpreteur({ python: espion(avecPlaywright) }, { variable: 'C:/produit/.venv/Scripts/python.exe', racine });
+  ligne(c.python === 'C:/produit/.venv/Scripts/python.exe' && c.via === 'variable' && c.manques.length === 0 && sondes.join() === 'C:/produit/.venv/Scripts/python.exe',
+    `sens vert · le remède du message (poser $FORGE_DESIGN_PYTHON sur l'interpréteur du produit) : retenu avant le PATH, le PATH n'est pas sondé (obtenu ${c.python} via ${c.via})`);
+  const d = choisirInterpreteur({ python: (x) => (x === 'python' ? avecPlaywright('python') : sansPlaywright()) }, { variable: 'C:/produit/.venv/Scripts/python.exe', racine });
+  ligne(d.python === null && d.manques.length === 1 && /FORGE_DESIGN_PYTHON désigne C:\/produit.*n'importe pas playwright/.test(d.manques[0]) && /aucun autre interpréteur/.test(d.manques[0]),
+    'sens rouge · la variable désigne un interpréteur sans playwright alors que le PATH en a un : manque motivé, jamais un autre interpréteur à sa place');
+  const e = choisirInterpreteur({ python: () => ({ present: false, playwright: false }) }, { variable: 'C:/introuvable/python.exe', racine });
+  ligne(e.python === null && /interpréteur introuvable/.test(e.manques[0]),
+    'sens rouge · la variable désigne un chemin qui n\'existe pas : manque motivé, nommé');
+  const f = choisirInterpreteur({ python: sansPlaywright }, { variable: null, racine, racineForge: 'C:/forge' });
+  ligne(f.python === 'python' && f.manques.length === 1 && /playwright non importable/.test(f.manques[0]) && /FORGE_DESIGN_PYTHON/.test(f.manques[0]) && /plus cherché dans le dossier courant/.test(f.manques[0]),
+    `sens rouge · ni la variable, ni le PATH, ni la racine ne portent playwright : manque motivé, remède et fin du repli par le dossier courant dits (${f.manques[0]?.slice(0, 60)}…)`);
+  const g = choisirInterpreteur({ python: () => ({ present: false, playwright: false }) }, { variable: null, racine: [] });
+  ligne(g.python === null && /introuvable/.test(g.manques[0]),
+    'sens rouge · aucun Python : SKIP motivé, jamais un interpréteur deviné');
+  ligne(/^rendu joué par l'interpréteur C:\/reel\/python\.exe \(trouvé dans le PATH\)$/.test(direInterpreteur({ python: 'python', executable: 'C:/reel/python.exe', via: 'PATH' }))
+    && /\(désigné par \$FORGE_DESIGN_PYTHON\)/.test(direInterpreteur({ python: 'X', executable: 'X', via: 'variable' }))
+    && /\(trouvé sous la racine de la forge/.test(direInterpreteur({ python: 'X', executable: 'X', via: 'racine' }))
+    && direInterpreteur({ python: null }) === null,
+    'le non_juge nomme l\'interpréteur qui a joué et d\'où il vient (PATH, variable, racine) ; rien à dire quand aucun n\'a joué');
+  ligne(interpreteursSousRacine('R', 'win32')[0] === path.join('R', '.venv', 'Scripts', 'python.exe') && interpreteursSousRacine('R', 'linux')[0] === path.join('R', '.venv', 'bin', 'python'),
+    'la racine de la forge désigne .venv/Scripts/python.exe sous Windows, .venv/bin/python ailleurs');
+  const source = fs.readFileSync(path.join(ici, 'lib', 'rendu.mjs'), 'utf8').split(/\r?\n/).filter(l => !/^\s*(\/\/|\*|\/\*)/.test(l)).join('\n');
+  ligne(!/process\.cwd\(\)/.test(source) && !/spawnSync\(\s*'uv'/.test(source),
+    'verrou · lib/rendu.mjs ne lit plus le dossier courant et ne lance plus `uv` (aucun process.cwd(), aucun spawnSync(\'uv\'))');
+}
+
+// TF-2461, de bout en bout : la détection RÉELLE joue la même depuis deux dossiers, et le rapport nomme l'interpréteur qui a joué.
+// Le PATH est vidé pour que la variable soit la seule voie ; le dossier « hostile » porte un faux environnement uv qui, avant
+// TF-2461, aurait été interrogé. Sans playwright sur le poste, la recette le dit et saute ce bloc.
+{
+  console.log(String.fromCharCode(10) + 'lib/rendu.mjs detecterOutillageRendu (TF-2461) — même détection depuis deux dossiers, interpréteur nommé');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'rendu-interpreteur-'));
+    try {
+      const vide = path.join(dossier, 'vide'); const hostile = path.join(dossier, 'hostile'); const neutre = path.join(dossier, 'neutre');
+      for (const d of [vide, hostile, neutre]) fs.mkdirSync(d);
+      fs.mkdirSync(path.join(hostile, '.venv', 'Scripts'), { recursive: true });
+      fs.writeFileSync(path.join(hostile, 'pyproject.toml'), '[project]\nname = "produit-fictif"\nversion = "0"\n', 'utf8');
+      const lire = (cwd, env) => {
+        const base = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^path$/i.test(k)));
+        const r = spawnSync(process.execPath, ['--input-type=module', '-e',
+          `import { detecterOutillageRendu } from ${JSON.stringify(new URL('./lib/rendu.mjs', import.meta.url).href)};`
+          + 'const o = detecterOutillageRendu({ racine: process.argv[1] }); console.log(JSON.stringify({ ok: o.ok, python: o.python, via: o.via, executable: o.executable, manques: o.manques }));',
+          vide], { cwd, encoding: 'utf8', env: { ...base, PATH: vide, ...env } });
+        try { return JSON.parse(r.stdout.trim()); } catch { return { illisible: (r.stderr || '').slice(0, 200) }; }
+      };
+      const sansVariable = { neutre: lire(neutre, { FORGE_DESIGN_PYTHON: '' }), hostile: lire(hostile, { FORGE_DESIGN_PYTHON: '' }) };
+      ligne(sansVariable.neutre.ok === false && sansVariable.neutre.python === null && JSON.stringify(sansVariable.neutre) === JSON.stringify(sansVariable.hostile),
+        `sens rouge · sans variable, PATH vide, racine sans .venv : la même détection depuis un dossier neutre et depuis un dossier au faux environnement uv, SKIP motivé (obtenu ok=${sansVariable.neutre.ok}, python=${sansVariable.neutre.python})`);
+      const exe = OUTILLAGE_RENDU.executable;
+      const avecVariable = { neutre: lire(neutre, { FORGE_DESIGN_PYTHON: exe }), hostile: lire(hostile, { FORGE_DESIGN_PYTHON: exe }) };
+      ligne(avecVariable.neutre.ok === true && avecVariable.neutre.via === 'variable' && path.resolve(avecVariable.neutre.executable) === path.resolve(exe)
+        && JSON.stringify(avecVariable.neutre) === JSON.stringify(avecVariable.hostile),
+        `sens vert · $FORGE_DESIGN_PYTHON posée sur l'interpréteur du poste : retenue depuis les deux dossiers, interpréteur nommé (obtenu via ${avecVariable.neutre.via}, ${avecVariable.neutre.executable})`);
+      const mauvaise = lire(neutre, { FORGE_DESIGN_PYTHON: path.join(dossier, 'absent', 'python.exe') });
+      ligne(mauvaise.ok === false && /FORGE_DESIGN_PYTHON désigne/.test(mauvaise.manques?.[0] || ''),
+        'sens rouge · $FORGE_DESIGN_PYTHON posée sur un chemin absent : outillage indisponible, manque motivé');
+      const rendre = (cwd, env) => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), '--rendu', '--json-only'],
+          { cwd, encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1', ...env } });
+        try { return JSON.parse(r.stdout.trim()); } catch { return null; }
+      };
+      const nomme = rendre(neutre, { FORGE_DESIGN_PYTHON: exe });
+      const lignesNj = (nomme?.non_juge || []).filter(n => /^rendu joué par l'interpréteur /.test(n));
+      ligne(lignesNj.length === 1 && lignesNj[0].includes(exe) && /désigné par \$FORGE_DESIGN_PYTHON/.test(lignesNj[0]),
+        `--rendu · le non_juge du rapport nomme l'interpréteur qui a joué, une seule fois (obtenu ${lignesNj.length} ligne : ${lignesNj[0] || '—'})`);
+      const sauté = rendre(neutre, { FORGE_DESIGN_PYTHON: path.join(dossier, 'absent', 'python.exe') });
+      const sk = (sauté?.oracles || []).find(o => /^rendu/.test(o.oracle));
+      ligne(sk?.verdict === 'SKIP' && /FORGE_DESIGN_PYTHON désigne/.test(sk?.raison || ''),
+        `--rendu · variable posée sur un chemin absent : SKIP motivé sur cette seule entrée, jamais un autre interpréteur (obtenu ${sk?.verdict})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
 }
 
 // TF-2431 (lot Produit-82 du 10/11/2026) — LE VERDICT DU POINT D'ENTRÉE NE DÉPEND PAS DU DOSSIER D'OÙ IL EST LANCÉ. La racine de

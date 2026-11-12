@@ -176,13 +176,15 @@ Options de `run-oracles-design.mjs` :
 | `--statut-attendu <code>` | l'instance est un **écran d'état voulu** (TF-2432) : « Page introuvable » servie en 404, par exemple. Servie avec CE code, elle est jugée comme un écran par les quatre juges qui lisent l'instance (exploitabilité, erreurs de formulaire, faits commerciaux, valeur affichée) ; servie avec un autre code, y compris 200, elle reste refusée (X0, EF0, SKIP exit 2). Sans l'option, toute réponse en 400 ou plus est refusée. Un code de trois chiffres (100 à 599), une seule valeur par appel ; sans `--instance`, l'option est dite sans effet au `non_juge`. Un écran 404 jugé répond aux mêmes règles qu'un écran d'application : X8 et X9 lui sont dues sauf s'il se déclare éditorial ou pose leur écart motivé |
 | `--type-page application\|editoriale` | nature de la page (TF-2121), prioritaire sur la déclaration de la page. Sans lui : `<meta name="forge-type-page" content="application">` ou `data-type-page="application"` sur un élément, puis un marqueur de structure (`data-panneau-tache`, `data-branche`, `data-exigence`). Un tableau filtrable ou une recherche ne classent **pas** (les pages d'étude du pilot en portent). Une page qui porte un champ de saisie et un tableau sans être classée est dite « application probable » au `non_juge`, jamais échouée. Valeur inconnue : SKIP |
 | `--maquette` | la page d'application est une maquette, sans instance par nature : l'absence d'instance est dite **SANS OBJET** au `non_juge` (« ce n'est pas un PASS de l'exploitabilité ») au lieu d'échouer en X7. À ne pas passer à une critique d'implémentation |
-| `--rendu` | si l'outillage est détecté (Python du PATH avec `playwright`, à défaut l'interpréteur que `uv run python` désigne dans le dossier courant (TF-1674), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
+| `--rendu` | si l'outillage est détecté (interpréteur désigné par `$FORGE_DESIGN_PYTHON`, sinon `python` ou `python3` du PATH avec `playwright`, sinon `.venv` sous la racine de la forge (TF-2461), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Le `non_juge` nomme l'interpréteur qui a joué et d'où il vient. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 
 Racine résolue dans l'ordre `--racine` → `$FORGE_DESIGN_ROOT` (env) → `FORGE_DESIGN_ROOT`
 du `.env` voisin (celui de la forge, dossier parent du script) → dossier parent du script.
 Le `.env` du **dossier courant** n'est plus lu (TF-2431) : le verdict ne dépend pas du dossier
-d'où l'on lance. Seul le choix de l'interpréteur de `--rendu` garde un repli par le dossier
-courant (l'environnement `uv` du produit, TF-1674), dit au `non_juge`.
+d'où l'on lance. Le choix de l'interpréteur de `--rendu` non plus (TF-2461) : `$FORGE_DESIGN_PYTHON`
+(choix explicite : un interpréteur sans playwright est un manque, jamais un repli), puis le PATH, puis
+`.venv` sous la racine de la forge, jamais l'environnement `uv` du dossier courant. Un produit dont
+playwright vit dans un environnement `uv` pose la variable sur son interpréteur.
 **Racine non résolue ⇒ exit 2 et verdict `SKIP`** : un contrôle qui ne trouve pas
 ses oracles ne se tait jamais.
 

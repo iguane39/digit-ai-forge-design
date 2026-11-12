@@ -40,7 +40,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { detecterOutillageRendu } from './lib/rendu.mjs';
+import { detecterOutillageRendu, direInterpreteur } from './lib/rendu.mjs';
 import { decoderPng } from './lib/png.mjs';
 import { parse, contrast } from './lib/color.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
@@ -102,6 +102,7 @@ if (!outillage.python || outillage.manques.some(m => /playwright|python/i.test(m
   NJ.push(`outillage de rendu indisponible : ${outillage.manques.join(' ; ')}`);
   sortir('SKIP', 2);
 }
+NJ.push(direInterpreteur(outillage)); // TF-2461 : l'interpréteur qui a joué, dit à chaque rendu
 
 const r = spawnSync(outillage.python, [path.join(ici, 'lib', 'rendre_logo.py')], {
   input: JSON.stringify({ fichiers: fichiers.map(f => path.resolve(f)), tailles: [...TAILLES, REFERENCE] }),

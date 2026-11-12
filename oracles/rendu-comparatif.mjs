@@ -39,7 +39,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { detecterOutillageRendu, injecterThemeSombre } from './lib/rendu.mjs';
+import { detecterOutillageRendu, direInterpreteur, injecterThemeSombre } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { decoderPng, comparerPng } from './lib/png.mjs';
 
@@ -117,6 +117,7 @@ if (!outillage.ok) {
   NJ.push(`outillage de rendu indisponible : ${outillage.manques.join(' ; ')}`);
   sortir('SKIP', 2);
 }
+NJ.push(direInterpreteur(outillage)); // TF-2461 : l'interpréteur qui a joué, dit à chaque rendu
 
 // ── Matérialisation des deux côtés ─────────────────────────────────────────
 const FAMILLES = famillesDuSocle();

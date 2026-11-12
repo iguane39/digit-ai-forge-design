@@ -50,7 +50,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { detecterOutillageRendu } from './lib/rendu.mjs';
+import { detecterOutillageRendu, direInterpreteur } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
 import { lireStatutAttendu, ecranRefuse, motifDuRefus } from './lib/statut-attendu.mjs';
@@ -336,7 +336,7 @@ if (CERT_LOCAL) {
 const passees = MESURES.reduce((n, m) => n + (m.verifications_passees || 0), 0);
 if (passees) NJ.push(`${passees} requête(s) de vérification au champ DÉCLARÉE(S) sans effet (data-verifier, ou dernier segment /verifier) laissée(s) passer au serveur : `
   + 'l\'oracle ne prouve pas qu\'elles n\'écrivent rien, c\'est la promesse du produit ; toute autre requête d\'écriture, et l\'envoi du formulaire, sont restés interceptés');
-if (outillage.via === 'uv') NJ.push(`rendu par l'interpréteur de l'environnement uv du dossier courant (${outillage.python})`);
+NJ.push(direInterpreteur(outillage)); // TF-2461 : l'interpréteur qui a joué, dit à chaque rendu
 if (ETAT) NJ.push(`état de connexion chargé : ${ETAT} — l'oracle ne vérifie pas qu'il est encore valide au-delà du constat EF0 de redirection`);
 
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);

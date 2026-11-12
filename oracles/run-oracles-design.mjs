@@ -80,7 +80,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { detecterOutillageRendu, injecterThemeSombre, neutraliserVisite } from './lib/rendu.mjs';
+import { detecterOutillageRendu, direInterpreteur, injecterThemeSombre, neutraliserVisite } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
@@ -357,7 +357,7 @@ function lancerOracleA11y(cible, outillage) {
 }
 
 function lancerRendu(cible) {
-  const outillage = detecterOutillageRendu();
+  const outillage = detecterOutillageRendu({ racine: RACINE });
   if (!outillage.ok) {
     return [{ oracle: 'rendu(render_page+a11y)', verdict: 'SKIP',
       raison: `--rendu demandé mais outillage indisponible : ${outillage.manques.join(' ; ')}`,
@@ -387,6 +387,9 @@ function lancerRendu(cible) {
     for (const r of out) r.non_juge = [...(r.non_juge || []), note];
   }
   out.push(lancerOracleA11y(cible, outillage)); // structurel, non sensible au thème — sur l'original, lecture seule
+  // TF-2461 : l'interpréteur qui a joué le rendu est nommé au non_juge de chaque résultat (l'agrégat le dédoublonne).
+  const joue = direInterpreteur(outillage);
+  for (const r of out) r.non_juge = [...(r.non_juge || []), joue];
   return out;
 }
 
