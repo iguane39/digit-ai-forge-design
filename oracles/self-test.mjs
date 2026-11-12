@@ -3006,6 +3006,80 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2430 (lot Produit-82 du 10/11/2026) — UN COMPOSANT DU SOCLE SERVI EST IMPUTÉ AU SOCLE, COMME LE BLOC SCELLÉ. Sur une page
+// d'application servie, run-oracles-design disait « fantômes » 7 boutons que le composant table-filters.css du socle habille
+// (`.tf-actions button { background: none; border: none }` s'apparie à tout bouton, l'appariement ne remontant pas les ancêtres) ;
+// la contre-épreuve sans cette feuille rendait PASS. La même page, la feuille posée en bloc COMPOSANT-EMBARQUE scellé, passait :
+// l'imputation au socle (TF-0830) ne reconnaissait que le bloc scellé. Une feuille servie n'a pas de sceau : elle est reconnue à son
+// CONTENU, identique à la source du socle installée, et jamais à son nom (un homonyme édité reste à l'auteur). Cinq sens, sur une
+// page capturée de l'instance servie (--origine) et un socle d'essai (FORGE_SKILLS_INSTALLES) dont la feuille porte la règle fantôme.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design --origine (TF-2430) — un composant du socle servi est imputé au socle, comme le bloc scellé');
+  const racineEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'socle-servi-'));
+  let serveur = null;
+  try {
+    const dossierSocle = path.join(racineEssai, 'digit-ai-page-html', 'assets');
+    fs.mkdirSync(dossierSocle, { recursive: true });
+    const feuille = '.tf-actions button { font: inherit; background: none; border: none; cursor: pointer; }\n';
+    const script = 'document.title = document.title;\n';
+    fs.writeFileSync(path.join(dossierSocle, 'table-filters.css'), feuille, 'utf8');
+    fs.writeFileSync(path.join(dossierSocle, 'table-filters.js'), script, 'utf8');
+    // L'instance servie : la feuille et le script du socle tels quels, les mêmes ÉDITÉS (autre chemin, même nom), et une feuille
+    // de l'auteur qui porte la même règle sous un autre nom.
+    const routes = {
+      '/assets/table-filters.css': feuille, '/assets/table-filters.js': script,
+      '/edite/assets/table-filters.css': feuille + '.ajout-auteur { color: #123456; }\n', '/edite/assets/table-filters.js': script + 'var ajout = 1;\n',
+      '/auteur/assets/feuille-auteur.css': feuille,
+    };
+    const code = `const http=require('http');const r=${JSON.stringify(routes)};`
+      + `const s=http.createServer((q,p)=>{const c=r[q.url.split('?')[0]];if(c===undefined){p.writeHead(404);return p.end();}`
+      + `p.writeHead(200,{'Content-Type':q.url.endsWith('.js')?'text/javascript; charset=utf-8':'text/css; charset=utf-8'});p.end(c);});`
+      + `s.listen(0,'127.0.0.1',()=>console.log(s.address().port));`;
+    serveur = spawn(process.execPath, ['-e', code], { stdio: ['ignore', 'pipe', 'ignore'] });
+    const port = await new Promise((ok, ko) => {
+      serveur.stdout.once('data', d => ok(Number(String(d).trim())));
+      serveur.once('exit', () => ko(new Error('serveur d\'essai arrêté')));
+    });
+    const origine = `http://127.0.0.1:${port}`;
+    const hote = fs.readFileSync(fx('capture-socle/capture.html'), 'utf8');
+    const ecrire = (nom, contenu) => { const f = path.join(racineEssai, nom); fs.writeFileSync(f, contenu, 'utf8'); return f; };
+    const juste = ecrire('juste.html', hote);
+    const edite = ecrire('edite.html', hote.replace('/assets/table-filters.css', '/edite/assets/table-filters.css').replace('/assets/table-filters.js', '/edite/assets/table-filters.js'));
+    const auteur = ecrire('auteur.html', hote.replace('/assets/table-filters.css', '/auteur/assets/feuille-auteur.css').replace(/<script src="[^"]*"><\/script>\n?/, ''));
+    const faute = ecrire('faute.html', hote.replace('</head>', '<style>.mien { background: transparent; border: 0; }</style></head>').replace('<button type="button"', '<button type="button" class="mien"'));
+    const jouer = (f, racine = racineEssai) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), f, '--oracle', 'declencheurs', '--contrat-runner', '--origine', origine, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, FORGE_SKILLS_INSTALLES: racine } });
+      let json = null; try { json = JSON.parse((r.stdout || '').trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json, verifies: (json?.socle_exempte?.verifies || []).map(b => b.nom), declares: json?.socle_exempte?.declares || [] };
+    };
+    const de3 = liste => (liste || []).some(f => f.regle === 'DE3');
+    const sansSocle = jouer(juste, path.join(racineEssai, 'vide'));
+    ligne(sansSocle.code === 1 && sansSocle.json?.verdict === 'FAIL' && de3(sansSocle.json?.findings) && sansSocle.verifies.length === 0,
+      `témoin · socle introuvable sur le poste : le composant servi n'est reconnu de personne, DE3 reste à l'auteur, FAIL exit 1 — l'état d'avant (obtenu ${sansSocle.json?.verdict}, exit ${sansSocle.code}, reconnus ${sansSocle.verifies.length})`);
+    const v = jouer(juste);
+    ligne(v.code === 0 && v.json?.verdict === 'PASS' && !de3(v.json?.findings) && v.declares.length === 0,
+      `sens vert · feuille et script du socle servis tels quels : PASS exit 0, plus de fantôme à l'auteur (obtenu ${v.json?.verdict}, exit ${v.code}, DE3 à l'auteur ${de3(v.json?.findings)})`);
+    ligne(v.verifies.includes('table-filters.css') && v.verifies.includes('table-filters.js') && de3(v.json?.socle_exempte?.findings),
+      `sens vert · les deux composants sont reconnus à leur contenu et le constat est RENDU dans socle_exempte, pas effacé (reconnus ${v.verifies.join(', ')})`);
+    ligne((v.json?.non_juge || []).some(n => /reconnus à leur CONTENU/.test(n)),
+      'sens vert · le non_juge dit que la reconnaissance se fait au contenu et non au sceau');
+    const e = jouer(edite);
+    ligne(e.code === 1 && e.json?.verdict === 'FAIL' && de3(e.json?.findings) && e.verifies.length === 0
+      && e.declares.some(b => b.nom === 'table-filters.css' && /différent de la source/.test(b.raison)) && e.declares.some(b => b.nom === 'table-filters.js' && /différent de la source/.test(b.raison)),
+      `sens rouge · feuille et script du socle servis ÉDITÉS sous le même nom : rien d'exempté, FAIL exit 1, les deux déclarés « différent de la source » (obtenu ${e.json?.verdict}, exit ${e.code}, reconnus ${e.verifies.length}, déclarés ${e.declares.length})`);
+    const a = jouer(auteur);
+    ligne(a.code === 1 && a.json?.verdict === 'FAIL' && de3(a.json?.findings) && a.verifies.length === 0 && a.declares.length === 0,
+      `sens rouge · la même règle dans une feuille de l'auteur, sous un autre nom : jugée comme le CSS de l'auteur, FAIL exit 1 (obtenu ${a.json?.verdict}, exit ${a.code}, reconnus ${a.verifies.length})`);
+    const f = jouer(faute);
+    ligne(f.code === 1 && f.json?.verdict === 'FAIL' && de3(f.json?.findings) && f.verifies.includes('table-filters.css'),
+      `sens rouge · un bouton fantôme de l'AUTEUR sur une page dont le composant est reconnu : reste à l'auteur, FAIL exit 1 (obtenu ${f.json?.verdict}, exit ${f.code}, composant reconnu ${f.verifies.includes('table-filters.css')})`);
+  } finally {
+    if (serveur) serveur.kill();
+    fs.rmSync(racineEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-1904 (étude 20261019i, mesuré le 19/10/2026) — une page jetable de 9 lignes portant une
 // boucle infinie de 40 s, une animation JavaScript de 1,2 s et une révocation reduced-motion qui
 // ne couvre qu'un des deux éléments animés rendait PASS, exit 0, sans une alerte. R11, R12 et

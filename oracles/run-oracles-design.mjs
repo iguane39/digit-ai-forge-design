@@ -548,7 +548,7 @@ const resultats = passeFichier(fichierJuge).map(citerLaCible);
 // RENDU, nommé, avec le bloc qui le porte. Un bloc seulement DÉCLARÉ — socle absent,
 // empreinte fausse, copie éditée — reste jugé comme le CSS de l'auteur.
 const socle = blocsDuSocle(html);
-socleExempte = { verifies: [], declares: socle.declares.map(b => ({ nom: b.nom, socle: b.socle, raison: b.raison })), findings: [] };
+socleExempte = { verifies: [], declares: socle.declares.map(b => ({ nom: b.nom, socle: b.socle, ...(b.origine ? { origine: b.origine } : {}), raison: b.raison })), findings: [] };
 if (socle.verifies.length) {
   const tmp = path.join(os.tmpdir(), `forge-design-socle-${process.pid}-${Date.now()}.html`);
   fs.writeFileSync(tmp, neutraliser(html, socle.verifies), 'utf8');
@@ -592,7 +592,8 @@ if (socle.verifies.length) {
   } finally {
     try { fs.unlinkSync(tmp); } catch { /* best-effort */ }
   }
-  socleExempte.verifies = socle.verifies.map(b => ({ nom: b.nom, socle: b.socle, empreinte: `sha256:${b.empreinte}` }));
+  // TF-2430 : un composant servi (feuille ou script intégré à l'origine) n'a pas de sceau, il est reconnu à son contenu : `origine` et `reconnu_par` le disent.
+  socleExempte.verifies = socle.verifies.map(b => ({ nom: b.nom, socle: b.socle, empreinte: `sha256:${b.empreinte}`, ...(b.origine ? { origine: b.origine, reconnu_par: b.par } : {}) }));
 }
 
 // ── TF-1687 · l'exploitabilité au volume réel, sur l'instance alimentée seulement ──
@@ -705,12 +706,17 @@ const nonJuge = [
   'parcours de bout en bout (C13) — trace à produire à la main, voir references/criteres-sortie.md',
   ...(socleExempte && socleExempte.verifies.length ? [
     `conformité de ${socleExempte.verifies.length} composant(s) embarqué(s) du socle `
-    + `(${socleExempte.verifies.map(b => b.nom).join(', ')}) : NON JUGÉE ici — sceau vérifié contre la source, `
+    + `(${socleExempte.verifies.map(b => b.nom).join(', ')}) : NON JUGÉE ici — ${socleExempte.verifies.every(b => b.origine) ? 'contenu confronté à la source' : 'sceau vérifié contre la source'}, `
     + `${socleExempte.findings.length} constat(s) mis à leur compte et listés dans socle_exempte. `
+    + (socleExempte.verifies.some(b => b.origine)
+      ? `${socleExempte.verifies.filter(b => b.origine).length} d'entre eux, servis en feuille ou script liés (${socleExempte.verifies.filter(b => b.origine).map(b => b.origine).join(', ')}), `
+        + 'sont reconnus à leur CONTENU, identique à la source du socle installée, faute de sceau (TF-2430). '
+      : '')
     + 'Leur correction relève du socle et se propage par R-47, pas de l\'auteur de la page',
   ] : []),
-  ...(socleExempte ? socleExempte.declares.map(b =>
-    `bloc COMPOSANT-EMBARQUE « ${b.nom} » DÉCLARÉ mais non vérifié (${b.raison}) : jugé comme le CSS de l'auteur, aucune exemption`) : []),
+  ...(socleExempte ? socleExempte.declares.map(b => (b.origine
+    ? `composant du socle servi « ${b.nom} » (${b.origine}) NON reconnu (${b.raison}) : aucune exemption`
+    : `bloc COMPOSANT-EMBARQUE « ${b.nom} » DÉCLARÉ mais non vérifié (${b.raison}) : jugé comme le CSS de l'auteur, aucune exemption`)) : []),
 ];
 
 const echecs = resultats.filter(r => r.verdict === 'FAIL');
@@ -742,7 +748,7 @@ if (!jsonOnly) {
   }
   for (const s of sansObjet) process.stderr.write(`  —    ${s}\n`);
   if (socleExempte && socleExempte.verifies.length) {
-    process.stderr.write(`  socle  ${socleExempte.verifies.map(b => b.nom).join(', ')} — sceau vérifié, `
+    process.stderr.write(`  socle  ${socleExempte.verifies.map(b => b.nom).join(', ')} — ${socleExempte.verifies.every(b => b.origine) ? 'contenu identique à la source' : 'sceau vérifié'}, `
       + `${socleExempte.findings.length} constat(s) hors du verdict (correction chez le socle)\n`);
   }
   // TF-2050 : un PASS qui porte des faits à confirmer ne se lit pas comme un PASS sans reste.

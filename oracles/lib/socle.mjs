@@ -130,7 +130,56 @@ export function blocsDuSocle(html) {
     }
     verifies.push({ ...bloc, empreinte, source });
   }
+  for (const b of blocsServis(html, [...verifies, ...declares])) (b.verifie ? verifies : declares).push(b.bloc);
   return { verifies, declares };
+}
+
+// ── TF-2430 (lot Produit-82 du 10/11/2026) · UN COMPOSANT DU SOCLE SERVI N'A PAS DE SCEAU, IL A UN CONTENU ──
+//
+// LE FAIT. Sur une page capturée d'une instance servie, run-oracles-design disait « fantômes » 7 boutons pleins et bordés que le
+// composant table-filters.css du socle habille (`.tf-actions button { background: none; border: none }` s'apparie à tout bouton,
+// l'appariement ne remontant pas les ancêtres) ; la contre-épreuve sans cette feuille rendait PASS. La même feuille posée en bloc
+// COMPOSANT-EMBARQUE scellé était imputée au socle (TF-0830) : seul le bloc scellé était reconnu. Une instance servie livre le
+// composant en feuille liée (`<link href="/assets/table-filters.css">`) que `--origine` intègre en `<style data-origine="…">` (lib/
+// rendre-autonome.mjs) : plus de marqueur, plus de sceau, donc jugée comme le CSS de l'auteur.
+//
+// LE REMÈDE. Un bloc intégré à l'origine est reconnu pour la même raison qu'un bloc scellé juste : il est CONFRONTÉ à la source du
+// socle installée. Faute de sceau, la preuve est le contenu : le bloc doit être identique à la source nommée par son nom de fichier
+// (`/assets/table-filters.css` → `table-filters.css` du socle par défaut). Le nom seul n'exempte rien : un homonyme édité sur place est
+// déclaré, jugé comme le CSS de l'auteur, avec sa raison ; un fichier dont le nom n'est pas celui d'un composant du socle (la feuille
+// du produit) reste à l'auteur sans être déclaré. Seules les adresses `url(…)` sont écartées de la comparaison : l'intégration les rend
+// absolues (lib/rendre-autonome.mjs), la source les garde relatives.
+const RE_SERVI = /<(style|script)\b([^>]*?\sdata-origine\s*=\s*(?:"([^"]*)"|'([^']*)')[^>]*)>([\s\S]*?)<\/\1\s*>/gi;
+const sansAdresses = css => css.replace(/url\(\s*(["']?)[^)"']*\1\s*\)/gi, 'url()');
+const NOM_DE_COMPOSANT = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+
+function blocsServis(html, dejaLus) {
+  const trouves = [];
+  RE_SERVI.lastIndex = 0;
+  for (const m of html.matchAll(RE_SERVI)) {
+    const debut = m.index;
+    const fin = m.index + m[0].length;
+    if (dejaLus.some(b => b.fin >= 0 && debut >= b.debut && fin <= b.fin)) continue; // déjà jugé comme bloc marqué
+    const origine = (m[3] ?? m[4] ?? '').replace(/&quot;/g, '"');
+    let nom = null;
+    try { nom = decodeURIComponent(origine.split(/[?#]/)[0]).replace(/\\/g, '/').split('/').pop(); } catch { /* adresse illisible : jugée comme l'auteur */ }
+    if (!nom || !NOM_DE_COMPOSANT.test(nom)) continue;
+    let lue = null;
+    try { lue = sourceDuSocle(SOCLE_DEFAUT, nom); } catch { /* source illisible (dossier, droits) : ce n'est pas un composant du socle */ }
+    if (!lue || lue.texte === null) continue; // pas un composant du socle (feuille du produit), ou socle introuvable : rien à confronter
+    const estScript = m[1].toLowerCase() === 'script';
+    const attendu = (estScript ? echapper(lue.texte) : lue.texte).replace(/\n+$/, '');
+    // L'intégration ajoute un retour à la ligne avant et après la ressource lue ; la ressource garde le sien : les retours de fin sont écartés des deux côtés.
+    const corps = m[5].replace(/^\r?\n/, '').replace(/(\r?\n)+$/, '');
+    const norme = t => (estScript ? lignesLf(t) : sansAdresses(lignesLf(t)));
+    const bloc = { nom, socle: SOCLE_DEFAUT, debut, fin, origine };
+    if (norme(corps) !== norme(attendu)) {
+      trouves.push({ verifie: false, bloc: { ...bloc, raison: `composant servi (${origine}) différent de la source du socle installée (${sha(lue.texte).slice(0, 12)}…) : copie éditée ou version périmée, jugé comme le CSS de l'auteur` } });
+    } else {
+      trouves.push({ verifie: true, bloc: { ...bloc, empreinte: sha(lue.texte), source: lue.source, par: 'contenu' } });
+    }
+  }
+  return trouves;
 }
 
 /**

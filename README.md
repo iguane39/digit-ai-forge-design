@@ -207,6 +207,15 @@ relève du socle (propagation R-47), pas de la page. Un bloc seulement **déclar
 absent, empreinte fausse, copie éditée sur place — reste jugé comme le CSS de l'auteur, et
 la raison est écrite dans `non_juge` : deux commentaires n'exemptent de rien.
 
+Un composant du socle **servi** (TF-2430) n'a pas de bloc ni de sceau : sur une page capturée
+d'une instance, `--origine` intègre la feuille ou le script liés (`/assets/table-filters.css`) en
+`<style data-origine="…">`. Il est reconnu à son **contenu** : identique, `url(…)` mis à part, à la
+source du socle installée qui porte le même nom de fichier, il sort du verdict comme un bloc scellé
+juste (`socle_exempte.verifies[].reconnu_par = "contenu"`, constats rendus). Le nom seul n'exempte
+rien : un homonyme édité sur place, ou périmé, est **déclaré** avec sa raison et reste jugé comme le
+CSS de l'auteur, et un fichier dont le nom n'est pas celui d'un composant du socle (la feuille du
+produit) est jugé sans être déclaré.
+
 Mécanique : la passe complète reste la vérité, une seconde passe est jouée sur une copie
 temporaire dont les blocs vérifiés sont vidés (nombre de lignes conservé), et la différence
 donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
