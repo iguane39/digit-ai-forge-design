@@ -189,7 +189,11 @@ Le `.env` du **dossier courant** n'est plus lu (TF-2431) : le verdict ne dépend
 d'où l'on lance. Le choix de l'interpréteur de `--rendu` non plus (TF-2461) : `$FORGE_DESIGN_PYTHON`
 (choix explicite : un interpréteur sans playwright est un manque, jamais un repli), puis le PATH, puis
 `.venv` sous la racine de la forge, jamais l'environnement `uv` du dossier courant. Un produit dont
-playwright vit dans un environnement `uv` pose la variable sur son interpréteur.
+playwright vit dans un environnement `uv` pose la variable sur son interpréteur : sans elle, `--rendu`
+rend `SKIP` (TF-2473). Depuis le dossier du produit, `uv run python -c "import sys; print(sys.executable)"`
+donne le chemin, que `$env:FORGE_DESIGN_PYTHON = '<chemin>'` (PowerShell) ou `export FORGE_DESIGN_PYTHON=<chemin>`
+(sh) pose avant de relancer ; le `SKIP` nomme la variable et cette commande. La forge n'écrit rien chez le produit :
+la variable se pose dans la session ou dans le profil de celui qui lance la critique.
 **Racine non résolue ⇒ exit 2 et verdict `SKIP`** : un contrôle qui ne trouve pas
 ses oracles ne se tait jamais.
 

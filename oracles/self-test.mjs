@@ -1679,6 +1679,66 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2473 (relevé du 12/11/2026 après TF-2461) — UNE CONSIGNE NE CITE PAS LE REPLI uv RETIRÉ, ET LE SKIP DIT LA COMMANDE QUI LE RÉPARE.
+// Un produit dont playwright vit dans son seul environnement uv rend SKIP au rendu tant qu'il ne pose pas $FORGE_DESIGN_PYTHON : le
+// message du manque nomme la variable ET la commande qui la pose, et aucune consigne de la forge ne renvoie plus au repli de TF-1674
+// (`uv run python` interrogé dans le dossier courant). Le détecteur lit une ligne : elle cite le repli quand elle parle d'uv, de
+// l'interpréteur ou du rendu et d'un repli, sans dire qu'il est retiré (TF-2461, jamais, plus cherché) ni nommer la variable qui le
+// remplace. La preuve est à double sens : deux consignes rouges refusées, trois vertes admises, puis le verrou sur les .md de la forge.
+{
+  console.log(String.fromCharCode(10) + 'consignes de la forge (TF-2473) — le repli uv retiré n\'est cité nulle part, le SKIP nomme la variable et la commande');
+  const { choisirInterpreteur } = await import('./lib/rendu.mjs');
+  const citeLeRepliUv = (l) => /\buv\b/.test(l)
+    && /(dossier courant|repli|retombe|bascule|secours|interroge|uv run python)/i.test(l)
+    && /(interpr|--rendu|rendu|playwright)/i.test(l)
+    && !/(\bavait\b|\bretir(?:ée?s?|e)(?![\p{L}])|TF-2461|FORGE_DESIGN_PYTHON|\bjamais\b|n'est plus|plus (?:cherch|lu|lanc|devin|interrog)|ne (?:le |se )?(?:devine|cherche|lance))/iu.test(l);
+  const rouges = [
+    'Si le Python du PATH n\'a pas playwright, `--rendu` retombe sur l\'interpréteur de l\'environnement uv du dossier courant.',
+    'Pour trouver l\'interpréteur du rendu, la forge lance `uv run python` dans le dossier du produit (repli de TF-1674).',
+  ];
+  for (const r of rouges) ligne(citeLeRepliUv(r), `sens rouge · une consigne qui cite le repli uv retiré est refusée (« ${r.slice(0, 58)}… »)`);
+  const vertes = [
+    'Un produit dont playwright vit dans un environnement `uv` pose `$FORGE_DESIGN_PYTHON` sur son interpréteur.',
+    '`.venv` sous la racine de la forge, jamais l\'environnement `uv` du dossier courant : le rendu ne le cherche plus (TF-2461).',
+    'Tests du produit : `uv run python -m forge_tests <racine> --json`.',
+  ];
+  for (const v of vertes) ligne(!citeLeRepliUv(v), `sens vert · une consigne qui désigne la variable, dit le repli retiré ou ne parle pas du rendu est admise (« ${v.slice(0, 58)}… »)`);
+
+  // Le verrou : les .md de la forge (README, skills, registre des entrées, fiches), hors fixtures et livrables.
+  const racineForge = path.resolve(ici, '..');
+  const dossiersIgnores = new Set(['.git', 'node_modules', 'output', 'input', 'corpus', 'fixtures', 'dist']);
+  const mds = [];
+  const marcher = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+    if (e.isDirectory()) { if (!dossiersIgnores.has(e.name)) marcher(path.join(d, e.name)); } else if (/\.md$/i.test(e.name)) mds.push(path.join(d, e.name));
+  } };
+  marcher(racineForge);
+  const citations = [];
+  for (const f of mds) fs.readFileSync(f, 'utf8').split(/\r?\n/).forEach((l, i) => { if (citeLeRepliUv(l)) citations.push(`${path.relative(racineForge, f)}:${i + 1}`); });
+  ligne(mds.length > 10 && citations.length === 0,
+    `verrou · aucune des ${mds.length} consignes .md de la forge ne cite le repli uv retiré (obtenu ${citations.length}${citations.length ? ' : ' + citations.slice(0, 5).join(', ') : ''})`);
+
+  // Le message du manque : la variable, la commande qui donne le chemin, celles qui la posent (PowerShell et sh).
+  const sansPlaywright = () => ({ present: true, playwright: false });
+  const manque = choisirInterpreteur({ python: sansPlaywright }, { variable: null, racine: [], racineForge: 'C:/forge' }).manques[0] || '';
+  ligne(/\$FORGE_DESIGN_PYTHON/.test(manque) && /`uv run python -c "import sys; print\(sys\.executable\)"`/.test(manque)
+    && /`\$env:FORGE_DESIGN_PYTHON = '<chemin>'` \(PowerShell\)/.test(manque) && /`export FORGE_DESIGN_PYTHON=<chemin>` \(sh\)/.test(manque),
+    `sens vert · le SKIP du rendu nomme la variable, la commande qui donne l'interpréteur du produit et celles qui la posent (PowerShell, sh) (obtenu « …${manque.slice(-150)} »)`);
+  ligne(!citeLeRepliUv(manque), 'le message du SKIP ne cite pas le repli retiré : il le dit retiré et nomme la variable');
+
+  // Jouer le remède qu'on recommande : le code Python de la commande du message donne le chemin d'un interpréteur, et poser ce
+  // chemin dans la variable est retenu (sondes injectées sur le chemin réel : la preuve ne dépend pas de ce que le poste a installé).
+  const code = (manque.match(/`uv run python -c "([^"]+)"`/) || [])[1];
+  if (!code || !OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  remède non rejoué : ${!code ? 'code Python introuvable dans le message' : 'aucun interpréteur du poste à lui confier (' + OUTILLAGE_RENDU.manques.join(' ; ') + ')'}`);
+  } else {
+    const r = spawnSync(OUTILLAGE_RENDU.executable, ['-c', code], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+    const chemin = (r.stdout || '').trim();
+    const apres = choisirInterpreteur({ python: (c) => ({ present: true, playwright: c === chemin, executable: c }) }, { variable: chemin, racine: [] });
+    ligne(r.status === 0 && path.resolve(chemin) === path.resolve(OUTILLAGE_RENDU.executable) && apres.via === 'variable' && apres.python === chemin && apres.manques.length === 0,
+      `remède joué · la commande du message rend le chemin de l'interpréteur, et le poser dans $FORGE_DESIGN_PYTHON le fait retenir (obtenu via ${apres.via}, ${chemin})`);
+  }
+}
+
 // TF-2431 (lot Produit-82 du 10/11/2026) — LE VERDICT DU POINT D'ENTRÉE NE DÉPEND PAS DU DOSSIER D'OÙ IL EST LANCÉ. La racine de
 // forge se cherchait aussi dans le `.env` du dossier COURANT : lancé depuis un dossier dont le `.env` nomme un autre
 // FORGE_DESIGN_ROOT, le même fichier, la même commande rendaient SKIP exit 2 au lieu de PASS exit 0. Mesuré le 12/11/2026 sur

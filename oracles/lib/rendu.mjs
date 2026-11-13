@@ -94,7 +94,9 @@ export function choisirInterpreteur(sondes, lieux = {}) {
     if (s.present && s.playwright) return { python: candidat, executable: s.executable || candidat, via: 'racine', manques: [] };
   }
   const suite = `ni $FORGE_DESIGN_PYTHON (non posé) ni .venv sous la racine de la forge${lieux.racineForge ? ` (${lieux.racineForge})` : ''} ne portent playwright ; `
-    + 'un environnement uv du produit se désigne en posant $FORGE_DESIGN_PYTHON sur son interpréteur, il n\'est plus cherché dans le dossier courant';
+    + 'un environnement uv du produit se désigne en posant $FORGE_DESIGN_PYTHON sur son interpréteur, il n\'est plus cherché dans le dossier courant ; '
+    + 'depuis le dossier du produit, `uv run python -c "import sys; print(sys.executable)"` donne ce chemin, que `$env:FORGE_DESIGN_PYTHON = \'<chemin>\'` (PowerShell) '
+    + 'ou `export FORGE_DESIGN_PYTHON=<chemin>` (sh) pose avant de relancer';
   if (!present) {
     return { python: null, executable: null, via: null, manques: [`interpréteur python introuvable dans le PATH (python / python3) ; ${suite}`] };
   }
