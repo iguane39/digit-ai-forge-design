@@ -1873,6 +1873,73 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2466 (relevé du 12/11/2026, TF-2452) — TROIS ORACLES PUBLIÉS N'AVAIENT AUCUN APPELANT : oracle-barre-externe (étape 0 de
+// systeme-de-marque), oracle-liste-demande (la revue de critique-le-design) et oracle-textes-application (C14 de ameliore-le-design,
+// D7 de critique-le-design). Chacun était prescrit par un skill et jamais appelé par un fichier exécutable : `relever-appelants` du
+// pilot ne leur trouvait aucun appelant, et le point d'entrée jugeait un .md comme une page. Leur appelant est ce point d'entrée, et la
+// recette le rejoue aux deux sens : un document conforme PASS exit 0, le même défaut que la recette de l'oracle FAIL exit 1.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design --barre-externe, --liste-demande et textes-application (TF-2466) — les trois appelants, deux sens');
+  const jouerRun = (...a) => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), ...a, '--json-only'], { encoding: 'utf8' });
+    let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    const juge = (nom) => (json?.oracles || []).find(o => o.oracle === nom);
+    const regles = (o) => [...new Set((o?.findings || []).filter(f => f.sev !== 'info').map(f => f.regle))].sort().join(',');
+    return { code: r.status, json, juge, regles };
+  };
+  // Le document : seul l'oracle de son domaine est joué, aucun juge de page.
+  for (const [option, oracle, verte, rouge, reglesRouge] of [
+    ['--barre-externe', 'oracle-barre-externe', 'barre-externe-verte.md', 'barre-externe-rouge.md', 'B2,B3,B4'],
+    ['--liste-demande', 'oracle-liste-demande', 'liste-demande-verte.md', 'liste-demande-rouge.md', 'D1,D2,D3'],
+    ['--liste-demande', 'oracle-liste-demande', 'liste-demande-modele-verte.md', 'liste-demande-modele-rouge.md', 'D4,D5'],
+  ]) {
+    const v = jouerRun(option, fx(verte));
+    ligne(v.code === 0 && v.json?.verdict === 'PASS' && v.json?.oracles?.length === 1 && v.juge(oracle)?.verdict === 'PASS',
+      `sens vert · ${option} ${verte} : ${oracle} seul joué, PASS exit 0 (obtenu ${v.json?.verdict}, exit ${v.code}, ${(v.json?.oracles || []).length} juge(s))`);
+    const r = jouerRun(option, fx(rouge));
+    ligne(r.code === 1 && r.json?.verdict === 'FAIL' && r.regles(r.juge(oracle)) === reglesRouge,
+      `sens rouge · ${option} ${rouge} : FAIL exit 1, règles ${reglesRouge} (obtenu ${r.json?.verdict}, exit ${r.code}, ${r.regles(r.juge(oracle)) || '—'})`);
+  }
+  const mini = jouerRun('--barre-externe', fx('barre-externe-verte.md'), '--minimum', '50');
+  ligne(mini.code === 1 && mini.regles(mini.juge('oracle-barre-externe')) === 'B2',
+    `sens rouge · --minimum est transmis à l'oracle : le relevé vert, exigé à 50 références, tombe en B2 (obtenu exit ${mini.code}, ${mini.regles(mini.juge('oracle-barre-externe')) || '—'})`);
+  const sansObjet = jouerRun('--liste-demande', fx('barre-externe-verte.md'));
+  ligne(sansObjet.code === 2 && sansObjet.json?.verdict === 'SKIP' && (sansObjet.json?.non_juge || []).some(n => /rien n'a été jugé/.test(n)),
+    `sens rouge · un document sans section « Liste de contrôle de la demande » : SKIP exit 2 et le dit, jamais PASS (obtenu ${sansObjet.json?.verdict}, exit ${sansObjet.code})`);
+  const sansFichier = jouerRun('--barre-externe');
+  ligne(sansFichier.code === 2 && sansFichier.json?.verdict === 'SKIP' && (sansFichier.json?.non_juge || []).some(n => /--barre-externe sans fichier/.test(n)),
+    `sens rouge · --barre-externe sans fichier : refusé à voix haute, SKIP exit 2 (obtenu ${sansFichier.json?.verdict}, exit ${sansFichier.code})`);
+
+  // La page : T4 entre dans la passe d'une page d'APPLICATION seulement, la même fixture rouge, classée de deux façons.
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'textes-passe-'));
+  try {
+    const classee = (fixture, type) => {
+      const f = path.join(dossier, `${type}-${fixture}`);
+      fs.writeFileSync(f, fs.readFileSync(fx(fixture), 'utf8').replace('<meta charset="utf-8">', `<meta charset="utf-8"><meta name="forge-type-page" content="${type}">`), 'utf8');
+      return f;
+    };
+    const T4 = 'oracle-textes-application';
+    const appRouge = jouerRun(classee('textes-application-carte-choix-rouge.html', 'application'), '--maquette');
+    ligne(appRouge.juge(T4)?.verdict === 'FAIL' && appRouge.regles(appRouge.juge(T4)) === 'T4-2' && appRouge.code === 1,
+      `sens rouge · page d'application dont l'état vide constate sans inviter : T4-2 par le point d'entrée, FAIL exit 1 (obtenu ${appRouge.juge(T4)?.verdict} ${appRouge.regles(appRouge.juge(T4)) || '—'}, exit ${appRouge.code})`);
+    const appVerte = jouerRun(classee('textes-application-carte-choix-verte.html', 'application'), '--maquette');
+    ligne(appVerte.juge(T4)?.verdict === 'PASS' && appVerte.regles(appVerte.juge(T4)) === '',
+      `sens vert · la même page sans l'état vide fautif : T4 joué et PASS, aucun constat (obtenu ${appVerte.juge(T4)?.verdict} ${appVerte.regles(appVerte.juge(T4)) || '—'})`);
+    const editoRouge = jouerRun(classee('textes-application-carte-choix-rouge.html', 'editoriale'), '--maquette');
+    ligne(!editoRouge.juge(T4) && (editoRouge.json?.non_juge || []).some(n => /^oracle-textes-application : SANS OBJET — page non classée application \(déclarée éditoriale/.test(n)),
+      `sens vert · la même page déclarée éditoriale : T4 non joué et dit SANS OBJET au non_juge, avec le remède (obtenu ${editoRouge.juge(T4) ? 'joué' : 'non joué'})`);
+    const muette = path.join(dossier, 'muette.html');
+    fs.writeFileSync(muette, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="forge-type-page" content="application"><title>x</title></head><body><main><div id="app"></div></main></body></html>', 'utf8');
+    const appMuette = jouerRun(muette, '--maquette');
+    ligne(!appMuette.juge(T4) && !(appMuette.json?.oracles || []).some(o => o.verdict === 'SKIP') && (appMuette.json?.non_juge || []).some(n => /^oracle-textes-application : SANS OBJET — aucune chaîne extraite/.test(n)),
+      `sens vert · une page d'application sans chaîne extractible : SANS OBJET dit, aucun juge en SKIP (obtenu ${appMuette.juge(T4) ? 'joué' : 'non joué'}, SKIP ${(appMuette.json?.oracles || []).filter(o => o.verdict === 'SKIP').map(o => o.oracle).join(',') || 'aucun'})`);
+    const surAppel = jouerRun(fx('textes-application-carte-choix-rouge.html'), '--type-page', 'application', '--maquette');
+    ligne(surAppel.juge(T4)?.verdict === 'FAIL', `sens rouge · la classe vient aussi de l'appel (--type-page application) : T4 joué, FAIL (obtenu ${surAppel.juge(T4)?.verdict})`);
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
 // TF-2121 (lot Produit-86 du 03/11/2026) — UNE PAGE D'APPLICATION SANS INSTANCE SERVIE N'EST PAS UN PASS. Dix pages
 // d'application avaient passé la critique : le point d'entrée disait « SANS OBJET » au non_juge et rendait PASS,
 // pendant que l'instance, jouée ensuite, donnait deux défauts. La page de base (motion-verte.html) est verte pour

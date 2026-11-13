@@ -20,6 +20,12 @@
 //   node run-oracles-design.mjs <deck.pptx|livret.pdf> [--seuil-mm 10] [--pages-libres 1,4]   (TF-2386 : oracle-document-imprime seul)
 //   node run-oracles-design.mjs --corpus <dossier-corpus>
 //   node run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>
+//   node run-oracles-design.mjs --barre-externe <BARRE-EXTERNE.md> [--minimum N]   (TF-2466 : l'étape 0 de systeme-de-marque, oracle-barre-externe)
+//   node run-oracles-design.mjs --liste-demande <REVUE.md>                          (TF-2466 : la revue de critique-le-design, oracle-liste-demande)
+//
+// TF-2466 — oracle-textes-application (T4-1…T4-4) entre dans la passe d'une page d'APPLICATION (C14 de ameliore-le-design, avant C15 ;
+// D7 de critique-le-design) : classée comme pour X7 (déclaration, marqueur de structure, --type-page). Une page éditoriale ou non classée,
+// ou une page d'application dont aucune chaîne n'est extraite, est dite SANS OBJET à voix haute ; elle ne tombe pas en SKIP.
 //
 // --rendu : détecte render_page.py (digit-ai-page-html) et oracle-a11y.py
 // (quality-oracles) aux chemins canoniques sous ~/.claude/skills/. Si les deux
@@ -106,7 +112,8 @@ const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !=
   && args[args.indexOf(a) - 1] !== '--oracle' && args[args.indexOf(a) - 1] !== '--instance'
   && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
   && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine'
-  && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres' && args[args.indexOf(a) - 1] !== '--statut-attendu');
+  && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres' && args[args.indexOf(a) - 1] !== '--statut-attendu'
+  && args[args.indexOf(a) - 1] !== '--minimum');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
@@ -411,6 +418,31 @@ if (opt('--dtcg')) {
   sortir(r.verdict, [r], r.non_juge, code);
 }
 
+// ── Modes d'artefact de conception : un document Markdown, pas une page (TF-2466) ─────────────────────────
+// Deux oracles jugent un DOCUMENT que les skills de la forge font écrire et que ce point d'entrée ne savait pas
+// recevoir : le relevé de barre externe (étape 0 de systeme-de-marque, B1–B4) et la revue à liste de contrôle de la
+// demande (critique-le-design, D1–D5). Passé comme cible, un .md partait aux juges HTML et rendait un verdict sur
+// du bruit. Chaque mode rend le verdict du seul oracle de son document, sous la forme des modes --corpus et --dtcg.
+// Un verdict hors PASS/FAIL (`sans_objet` de oracle-liste-demande : aucune section « Liste de contrôle de la demande »,
+// `donnees_insuffisantes` : fichier introuvable) se rend SKIP exit 2 et le dit : un contrôle qui n'a rien jugé ne se lit pas « vert ».
+for (const mode of [
+  { option: '--barre-externe', oracle: 'oracle-barre-externe.mjs', nom: 'barre externe', reglages: () => (opt('--minimum') ? ['--minimum', opt('--minimum')] : []) },
+  { option: '--liste-demande', oracle: 'oracle-liste-demande.mjs', nom: 'liste de contrôle de la demande', reglages: () => [] },
+]) {
+  if (!args.includes(mode.option)) continue;
+  const fichier = opt(mode.option);
+  if (!fichier || fichier.startsWith('--')) sortir('SKIP', [], [`${mode.option} sans fichier : passer le document à juger (${mode.option} <fichier.md>) — rien n'a été jugé`], 2);
+  const r = lancer(mode.oracle, [fichier, ...mode.reglages()]);
+  const verdict = r.verdict === 'PASS' || r.verdict === 'FAIL' ? r.verdict : 'SKIP';
+  const code = verdict === 'PASS' ? 0 : verdict === 'FAIL' ? 1 : 2;
+  if (!jsonOnly) process.stderr.write(`${verdict} — ${mode.nom} (${path.basename(fichier)})\n`);
+  sortir(verdict, [r], [
+    ...(r.non_juge || []),
+    ...(verdict === 'SKIP' ? [`${r.oracle || mode.oracle} a rendu « ${r.verdict} »${r.raison ? ` (${r.raison})` : ''} : rien n'a été jugé de ${path.basename(fichier)}, et un contrôle sans objet ne vaut pas PASS`] : []),
+    'oracle-slop, oracle-tokens, oracle-taste, oracle-images, oracle-mobile, oracle-surcouche, render_page.py et oracle-a11y : SANS OBJET — entrée Markdown, ni page ni CSS',
+  ], code);
+}
+
 // ── Mode livrable ──────────────────────────────────────────────────────────
 if (!cible || !fs.existsSync(cible)) {
   sortir('SKIP', [], ['cible absente : passer un fichier .html ou --corpus <dossier>'], 2);
@@ -552,6 +584,22 @@ function passeFichier(fichier, { muet = false } = {}) {
   if (aUneActionNommee) {
     out.push(lancer('oracle-perceptibilite.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
   } else if (!muet) sansObjet.push('oracle-perceptibilite : SANS OBJET — aucune action nommée par une exigence (data-exigence) dans le document');
+
+  // TF-2466 : les textes d'application (T4-1…T4-4 : une erreur dit sa cause et sa réparation, un état vide invite à agir, un libellé
+  // dit ce que la personne contrôle) sont dus à une page d'APPLICATION — C14 de ameliore-le-design, joué avant C15, et D7 de
+  // critique-le-design. Même classement que pour X7 (déclaration, marqueur de structure, --type-page), décidé une fois sur le document.
+  // Une page d'application dont le fichier ne porte aucune chaîne extractible (texte rendu par script, par API) fait rendre SKIP à
+  // l'oracle : l'agrégat ne tombe pas en INDÉTERMINÉ pour autant, le défaut de lecture est dit SANS OBJET et non rendu « vert ».
+  if (typePage.type === 'application') {
+    const textes = lancer('oracle-textes-application.mjs', [fichier]);
+    if (textes.verdict === 'SKIP' && !textes.raison) {
+      if (!muet) sansObjet.push('oracle-textes-application : SANS OBJET — ' + ((textes.non_juge || []).filter(n => /^aucune chaîne extraite/.test(n))[0] || 'aucune chaîne extraite du fichier')
+        + '. Ce n\'est pas un PASS des textes d\'application : les chaînes rendues par un script ou venues d\'une API se jugent à part (oracle-textes-application <chaines.json>)');
+    } else out.push(textes);
+  } else if (!muet) {
+    sansObjet.push(`oracle-textes-application : SANS OBJET — page non classée application (${typePage.type === 'editoriale' ? `déclarée éditoriale, ${typePage.source}` : 'ni déclaration, ni marqueur data-panneau-tache / data-branche / data-exigence'}) : `
+      + 'ses erreurs, états vides et libellés ne sont pas jugés par T4 ; pour les juger, la déclarer (--type-page application, ou <meta name="forge-type-page" content="application">) ou jouer l\'oracle seul (--oracle textes-application)');
+  }
 
   return out;
 }
