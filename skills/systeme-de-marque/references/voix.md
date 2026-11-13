@@ -73,7 +73,7 @@ constance : un libellé d'action qui change entre deux écrans est un défaut
 localisable, pas une nuance.
 
 Depuis le 12/09/2026 (TF-1064), une seconde chose est vérifiable et l'est :
-`oracles\oracle-textes-application.mjs` juge la **présence** de ce que E-12 exige —
+`oracle-textes-application`, joué par `oracles\run-oracles-design.mjs <page.html> --oracle textes-application`, juge la **présence** de ce que E-12 exige —
 une cause et une réparation dans une erreur (T4-1), une action dans un état vide (T4-2),
 un libellé d'action qui nomme autre chose que « Valider » (T4-3), aucune excuse (T4-4).
 Il ne juge **toujours pas** la justesse du ton ni la fidélité à la voix du produit :

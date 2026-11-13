@@ -2000,6 +2000,70 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2491 (relevé du 13/11/2026, lot dh de la campagne du matin) — LES SKILLS PRESCRIVENT LE LANCEUR, PAS LA COMMANDE DIRECTE.
+// Depuis TF-2466, run-oracles-design.mjs appelle oracle-barre-externe (--barre-externe), oracle-liste-demande (--liste-demande) et
+// oracle-textes-application (--oracle textes-application, ou la passe d'une page d'application). Les skills continuaient d'écrire
+// `node oracles/oracle-….mjs` : deux voies coexistaient, et seule la directe, sans le classement de la page ni le contrat de sortie
+// du point d'entrée, était dite à celui qui exécute. Le verrou lit les .md des skills : aucun ne nomme plus le fichier d'un de ces
+// trois oracles, et chaque skill touché prescrit le lanceur avec son mode. Une mention par le seul nom de la règle (« juge
+// oracle-textes-application T4-3 ») n'est pas une commande et reste permise.
+{
+  console.log(String.fromCharCode(10) + 'les skills prescrivent run-oracles-design et son mode, pas la commande directe de trois oracles (TF-2491) — deux sens');
+  const FICHIER_DIRECT = /oracle-(barre-externe|liste-demande|textes-application)\.mjs/;
+  const lire = f => fs.readFileSync(path.join(ici, '..', f), 'utf8');
+  const mdDe = d => fs.readdirSync(path.join(ici, '..', d), { withFileTypes: true }).flatMap(e =>
+    e.isDirectory() ? mdDe(`${d}/${e.name}`) : e.name.endsWith('.md') ? [`${d}/${e.name}`] : []);
+  const directes = texte => texte.split(String.fromCharCode(10)).filter(l => FICHIER_DIRECT.test(l));
+
+  // Sens rouge : le défaut tel que les skills l'écrivaient, dans les trois formes de chemin du dépôt.
+  for (const cmd of [
+    'node oracles\\oracle-barre-externe.mjs BARRE-EXTERNE.md [--minimum 5]',
+    'node oracles/oracle-liste-demande.mjs <REVUE.md>',
+    'node "$FORGE_DESIGN_ROOT/oracles/oracle-textes-application.mjs" <fichier.html>   # C14, AVANT C15',
+  ]) ligne(directes(`Contrôle :\n${cmd}\n`).length === 1, `sens rouge · la commande directe est repérée : ${cmd.slice(0, 60)}`);
+  // Sens vert : le lanceur et son mode, et la mention par le nom de la règle, ne sont pas des commandes directes.
+  for (const cmd of [
+    'node oracles\\run-oracles-design.mjs --barre-externe BARRE-EXTERNE.md [--minimum 5]',
+    'node oracles/run-oracles-design.mjs --liste-demande <REVUE.md>',
+    'node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> --oracle textes-application   # C14, AVANT C15',
+    'un libellé nomme ce que la personne contrôle — juge `oracle-textes-application` T4-3',
+  ]) ligne(directes(`Contrôle :\n${cmd}\n`).length === 0, `sens vert · le lanceur ou la mention par le nom n'est pas repéré : ${cmd.slice(0, 60)}`);
+
+  // Les skills : aucune ligne ne prescrit plus la commande directe.
+  const tous = mdDe('skills');
+  const restes = tous.flatMap(f => directes(lire(f)).map(l => `${f} : ${l.trim().slice(0, 70)}`));
+  ligne(tous.length > 0 && restes.length === 0,
+    `skills · ${tous.length} fichiers .md lus, aucune commande directe d'oracle-barre-externe, oracle-liste-demande ou oracle-textes-application${restes.length ? ' — restent : ' + restes.join(' | ') : ''}`);
+
+  // Chaque skill touché prescrit le lanceur ET son mode : l'affordance n'est pas retirée, elle est redirigée (loi n° 1).
+  for (const [doc, motif, nom] of [
+    ['skills/systeme-de-marque/SKILL.md', /run-oracles-design\.mjs\s+--barre-externe\s+BARRE-EXTERNE\.md/, 'étape 0 de systeme-de-marque'],
+    ['skills/critique-le-design/SKILL.md', /run-oracles-design\.mjs\s+--liste-demande\s+<REVUE\.md>/, 'liste de contrôle de la demande de critique-le-design'],
+    ['skills/ameliore-le-design/references/criteres-sortie.md', /run-oracles-design\.mjs"?\s+<[^>]+>\s+--oracle textes-application/, 'C14 de ameliore-le-design'],
+  ]) ligne(motif.test(lire(doc)), `prescrit · ${doc} : le lanceur et son mode pour ${nom}`);
+
+  // Le remède prescrit se joue : la commande de C14 donne le verdict de l'oracle direct, aux deux sens.
+  const jouerT4 = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx(f), '--oracle', 'textes-application', '--json-only'], { encoding: 'utf8' });
+    let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, json };
+  };
+  const t4Vert = jouerT4('textes-application-carte-choix-verte.html');
+  ligne(t4Vert.code === 0 && t4Vert.json?.verdict === 'PASS' && t4Vert.json?.oracles?.length === 1 && t4Vert.json?.oracles[0].oracle === 'oracle-textes-application',
+    `remède joué · <page> --oracle textes-application sur la page conforme : oracle-textes-application seul, PASS exit 0 (obtenu ${t4Vert.json?.verdict}, exit ${t4Vert.code})`);
+  const t4Rouge = jouerT4('textes-application-carte-choix-rouge.html');
+  ligne(t4Rouge.code === 1 && t4Rouge.json?.verdict === 'FAIL' && (t4Rouge.json?.oracles?.[0]?.findings || []).some(f => f.regle === 'T4-2'),
+    `remède joué · la même commande sur l'état vide qui constate sans inviter : FAIL exit 1, T4-2 (obtenu ${t4Rouge.json?.verdict}, exit ${t4Rouge.code})`);
+  // Le fichier de chaînes extraites, que C14 dit aussi lire, passe par la même commande.
+  const t4JsonVert = jouerT4('textes-application-verte.json');
+  ligne(t4JsonVert.code === 0 && t4JsonVert.json?.verdict === 'PASS',
+    `remède joué · la même commande sur un fichier de chaînes conforme (.json) : PASS exit 0 (obtenu ${t4JsonVert.json?.verdict}, exit ${t4JsonVert.code})`);
+  const t4JsonRouge = jouerT4('textes-application-rouge.json');
+  ligne(t4JsonRouge.code === 1 && t4JsonRouge.json?.verdict === 'FAIL' && ['T4-1', 'T4-2'].every(r => (t4JsonRouge.json?.oracles?.[0]?.findings || []).some(f => f.regle === r)),
+    `remède joué · la même commande sur le fichier de chaînes fautif (.json) : FAIL exit 1, T4-1 et T4-2 (obtenu ${t4JsonRouge.json?.verdict}, exit ${t4JsonRouge.code})`);
+}
+// FIN TF-2491
+
 // TF-2121 (lot Produit-86 du 03/11/2026) — UNE PAGE D'APPLICATION SANS INSTANCE SERVIE N'EST PAS UN PASS. Dix pages
 // d'application avaient passé la critique : le point d'entrée disait « SANS OBJET » au non_juge et rendait PASS,
 // pendant que l'instance, jouée ensuite, donnait deux défauts. La page de base (motion-verte.html) est verte pour

@@ -69,7 +69,7 @@ désigné sans critère de comparaison). Fixtures : `oracles/fixtures/liste-dema
 
 ## Contrôle exécuté
 
-`node oracles\oracle-liste-demande.mjs <REVUE.md>` — il refuse :
+`node oracles\run-oracles-design.mjs --liste-demande <REVUE.md>` — il refuse :
 
 - une ligne sans preuve **et** sans motif de non-traitement (`D1`) ;
 - un **compte annoncé** en titre qui ne correspond pas au nombre de lignes (`D2`) — c'est le défaut

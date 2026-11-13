@@ -54,7 +54,7 @@ après, ce n'est plus un arbitrage, c'est une renégociation.
 
 ## Ce que le contrôle ne fera jamais
 
-`node oracles\oracle-barre-externe.mjs BARRE-EXTERNE.md` vérifie la **présence** et la
+`node oracles\run-oracles-design.mjs --barre-externe BARRE-EXTERNE.md` (qui joue `oracle-barre-externe`) vérifie la **présence** et la
 **complétude** — jamais la justesse. Sont déclarés hors jugement, dans le `non_juge` de l'oracle :
 la pertinence du panel (cinq références bien choisies valent mieux que quinze au hasard, et aucun
 script ne sait faire la différence), l'atteinte de la barre (le relevé dit où est le niveau, il ne

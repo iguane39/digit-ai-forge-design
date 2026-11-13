@@ -133,7 +133,7 @@ libres. La promesse résumait la demande (« semaine au choix »), sans la citer
 un bouton « Voir les N évènements », non demandé, est passé de même. Retour humain : « ça n'a
 jamais été demandé ».
 
-Contrôle exécuté : `node oracles\oracle-liste-demande.mjs <revue-implementation.md>` — **D4**
+Contrôle exécuté : `node oracles\run-oracles-design.mjs --liste-demande <revue-implementation.md>` — **D4**
 refuse une ligne dont le point demandé n'est pas cité entre guillemets (hors ligne `AJOUT`) ;
 **D5** refuse une demande citée qui désigne un modèle sans que la ligne nomme un critère de
 comparaison et ce modèle. Il ne lit ni la demande d'origine ni le livrable : il ne sait pas que la

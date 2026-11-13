@@ -13,7 +13,7 @@ node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA7, si champs de 
 node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
 node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, si dialog/popover/role=dialog (TF-0796)
 node oracles/oracle-declencheurs.mjs <cible.html>     # DE1–DE3 + registre des déclencheurs (TF-0797)
-node oracles/oracle-textes-application.mjs <cible.html>  # T4-1–T4-4, D7 Contenu (TF-1064)
+node oracles/run-oracles-design.mjs <cible.html> --oracle textes-application  # T4-1–T4-4, D7 Contenu (TF-1064)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
 python <…>/render_page.py <cible.html> --widths 3840,2560,1920,1440,1024,768,390   # V1–V7, 7 breakpoints × 2 thèmes
 ```

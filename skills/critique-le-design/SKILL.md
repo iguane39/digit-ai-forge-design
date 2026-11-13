@@ -1,7 +1,7 @@
 ---
 name: critique-le-design
 description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en huit dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
-version: 1.5.0
+version: 1.6.0
 ---
 
 # Critique le design
@@ -58,7 +58,7 @@ ce qui est interdit, c'est qu'il DISPARAISSE : il porte `NON TRAITÉ — <motif>
 le bloc « non traité » d'une restitution : *un reste sans motif est un silence*.
 
 Gabarit et bornes : `references/liste-de-controle-demande.md`. **Contrôle exécuté** :
-`node oracles\oracle-liste-demande.mjs <REVUE.md>` — D1 une ligne sans preuve ni motif · D2 le
+`node oracles\run-oracles-design.mjs --liste-demande <REVUE.md>` — D1 une ligne sans preuve ni motif · D2 le
 compte annoncé ne colle pas au nombre de lignes (*le défaut du 22/08 en une soustraction*) ·
 D3 une preuve qui n'en est pas une (« vérifié », « fait », « ok » seuls) · D4 un point non cité
 entre guillemets, mot pour mot (TF-1940) · D5 une demande qui désigne un modèle (« comme pour X »)
@@ -104,7 +104,7 @@ propres scripts de contraste et de débordement (ledger du produit, seq 441).
 | D4 | Accessibilité | contraste, focus, clavier, sémantique | `oracle-a11y` + `render_page.py` V2 |
 | D5 | Adaptation | breakpoints, tactile, orientation, **tenue jusqu'au 4K — un écran dont le rendu n'a pas été mesuré à 2560 et 3840 n'est pas jugé adapté** | `oracle-mobile` + `render_page.py` (7 largeurs, E5) |
 | D6 | Interaction | états des composants, retours, erreurs, vides, **champs typés/proposés/bornés/atteignables/compilables**, **choix exclusif posé avant ses champs** | `oracle-saisie` SA1–SA7 + `oracle-panneau-tache` PA1–PA6 + parcours exécuté |
-| D7 | Contenu | libellés, erreurs, états vides, constance du vocabulaire | `oracle-textes-application` T4-1…T4-4 (plancher E-12) + lecture |
+| D7 | Contenu | libellés, erreurs, états vides, constance du vocabulaire | `oracle-textes-application` T4-1…T4-4 (plancher E-12, joué par `run-oracles-design.mjs <page.html> --oracle textes-application`) + lecture |
 
 Détail des barèmes, red flags et règle de verdict : `references/grille.md`.
 

@@ -1,7 +1,7 @@
 ---
 name: systeme-de-marque
 description: Verrouille l'identité visuelle et verbale d'une marque en artefacts exécutables — un tokens.css (couleurs OKLCH, échelle typographique, espacement 4pt, mouvement — durées et easings, thèmes clair et sombre) et un MARQUE.md (voix, ton, vocabulaire, anti-références) — réutilisés ensuite par tous les livrables produits pour ce client. Sans logo : trois concepts jugés, arrêtés pour revue humaine. Use when / déclencher dès que l'utilisateur veut poser, extraire, figer ou documenter la charte d'un client, demande des tokens de design, une palette, un choix de polices ou une ligne éditoriale à partir d'un logo, d'un site, d'une charte PDF ou de trois mots de ton, veut que plusieurs livrables partagent la même identité, ou n'a pas de logo. Ne pas déclencher pour appliquer la charte Digit-AI maison (→ digit-ai-page-html, digit-ai-pptx), pour arbitrer entre plusieurs directions artistiques concurrentes (→ studio-de-direction), ni pour construire une maquette (→ ameliore-le-design).
-version: 1.4.0
+version: 1.5.0
 ---
 
 # Système de marque
@@ -23,7 +23,7 @@ des deux artefacts, et le fait que la sortie soit **jugée par oracle**, pas rel
 
 ```
 0. Barre externe → references/barre-externe.md  (AVANT toute proposition)
-                   node oracles/oracle-barre-externe.mjs BARRE-EXTERNE.md
+                   node oracles/run-oracles-design.mjs --barre-externe BARRE-EXTERNE.md
 1. Mode          → client (défaut) ou digit-ai
 2. Extraction    → references/extraction.md
    Sans logo     → references/produit-sans-logo.md  (trois concepts, puis arrêt pour revue humaine)
@@ -65,7 +65,7 @@ aucune notion de barre externe, de référence du domaine, ni d'état de l'art.
    arbitre des IMAGES, pas une description.* C'est mot pour mot ce qui a manqué — une direction
    décrite au vert, refusée dès qu'elle a été vue.
 
-**Contrôlé** : `node oracles\oracle-barre-externe.mjs BARRE-EXTERNE.md [--minimum 5]` — B1 daté ·
+**Contrôlé** : `node oracles\run-oracles-design.mjs --barre-externe BARRE-EXTERNE.md [--minimum 5]` — B1 daté ·
 B2 N références sourcées ET exploitées · B3 écarts motivés · B4 arbitrage humain déclaré sur
 captures. **L'oracle ne juge jamais le beau** : présence et complétude, comme la forge le fait déjà
 pour la voix (« la justesse d'une voix n'est pas décidable par script ; ce qui EST vérifiable, c'est

@@ -57,7 +57,7 @@ quelque chose. Un « Valider » parfaitement câblé passe C15 et rate C14. L'or
 donc : on juge le texte, puis le câblage.
 
 ```bash
-node oracles/oracle-textes-application.mjs <maquette.html>
+node oracles/run-oracles-design.mjs <maquette.html> --oracle textes-application
 ```
 
 Sur un `.html`, l'oracle extrait les littéraux de `placeholder`, `title`,
@@ -87,7 +87,7 @@ en `SANS OBJET` ceux qui ne s'appliquent pas :
 ```bash
 python scripts/check_maquette.py <fichier.html>
 node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> [--mobile] [--tokens tokens.css] [--rendu]
-node "$FORGE_DESIGN_ROOT/oracles/oracle-textes-application.mjs" <fichier.html>   # C14, AVANT C15
+node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> --oracle textes-application   # C14, AVANT C15
 ```
 
 `FORGE_DESIGN_ROOT` est lu dans l'environnement, puis dans le `.env` de la forge,
