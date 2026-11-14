@@ -169,11 +169,28 @@ const police = (nomVar) => {
   const pile = varDe(nomVar);
   return pile ? pile.split(",")[0].replaceAll('"', "").replaceAll("'", "").trim() : null;
 };
-const typo = {
-  heading: police("police-titres") || police("police-titre") || "Roboto",
-  body: police("police-corps") || police("police-texte") || "DM Sans",
-  mono: police("police-mono") || "Consolas",
-};
+// TF-2541 (14/11/2026) — une police introuvable ne se REMPLACE plus par un repli (« Roboto », « DM Sans », « Consolas ») que DESIGN.md
+// présentait comme la charte : sur factory.digit-ai.fr, dont tokens.css nomme ses polices --font-display et --font-body, la charte
+// annonçait Roboto et DM Sans, et un prompt de refresh a borné le design par elles. Les variables lues sont celles du contrat
+// (references/tokens.md : --police-titre, --police-corps, --police-mono, et leurs variantes) et la triade --font-display, --font-body,
+// --font-meta des produits qui nomment leurs polices ainsi (--font-meta se lit comme la police du code et des données). Un rôle sans
+// variable trouvée est DIT absent dans DESIGN.md, sans valeur inventée.
+const ROLES_POLICE = [
+  { cle: "heading", libelle: "titres", variables: ["police-titres", "police-titre", "font-display"] },
+  { cle: "body", libelle: "corps", variables: ["police-corps", "police-texte", "font-body"] },
+  { cle: "mono", libelle: "code et données", variables: ["police-mono", "font-meta"] },
+];
+const typo = {};
+const policesAbsentes = [];
+for (const role of ROLES_POLICE) {
+  const trouvee = role.variables.map(police).find(Boolean);
+  if (trouvee) typo[role.cle] = trouvee; else policesAbsentes.push(role);
+}
+const nomsDesVariables = (role) => role.variables.map((v) => `\`--${v}\``).join(", ");
+if (policesAbsentes.length) {
+  console.error(`AVERTISSEMENT — ${tokensPath} ne nomme pas la police des ${policesAbsentes.map((r) => r.libelle).join(", ")} : `
+    + "DESIGN.md le DIT et n'invente aucune police de repli (TF-2541).");
+}
 
 // ---- espacement et rayons : échelle 4 px du contrat ---------------------------------------
 const nombre = (v) => (v ? parseFloat(v) * (v.includes("rem") ? 16 : 1) : null);
@@ -308,13 +325,17 @@ token au-delà du plafond, aucune courbe à dépassement), R1–R7 (craft du ges
 const sha = (p) => createHash("sha256").update(readFileSync(p, "utf8").split("\r\n").join("\n")).digest("hex");
 const yaml = (o, indent = "  ") => Object.entries(o).map(([k, v]) => `${indent}${k}: ${typeof v === "string" ? `"${v}"` : v}`).join("\n");
 
+// TF-2541 : un rôle de police sans variable n'a pas de clé (aucune valeur inventée) ; un commentaire YAML dit pourquoi.
+const yamlTypo = [yaml(typo), ...policesAbsentes.map((r) => `  # ${r.cle} : non prescrit — aucune des variables ${r.variables.map((v) => `--${v}`).join(", ")} dans tokens.css`)]
+  .filter(Boolean).join("\n");
+
 const doc = `---
 name: ${nom}
 version: 1.0.0
 colors:
 ${yaml(couleurs)}
 typography:
-${yaml(typo)}
+${yamlTypo}
 spacing:
 ${yaml(spacing)}
 rounded:
@@ -348,7 +369,10 @@ Les états sémantiques \`danger\` (${couleurs.danger})${couleurs.success ? ` et
 
 ## Typographie
 
-Titres en **${typo.heading}**, corps en **${typo.body}**, code et données en **${typo.mono}**.
+${ROLES_POLICE.filter((r) => typo[r.cle]).map((r) => `${r.libelle} en **${typo[r.cle]}**`).join(", ").replace(/^./, (c) => c.toUpperCase())}${policesAbsentes.length < ROLES_POLICE.length ? "." : ""}${policesAbsentes.length ? `
+⚠ ${policesAbsentes.length > 1 ? "Polices non prescrites" : "Police non prescrite"} : ${policesAbsentes.map((r) => `${r.libelle} (aucune des variables ${nomsDesVariables(r)} dans \`tokens.css\`)`).join(" ; ")}.
+Cette charte ne peut pas ${policesAbsentes.length > 1 ? "les nommer et n'en invente" : "la nommer et n'en invente"} pas : à prescrire dans \`tokens.css\` (contrat :
+\`references/tokens.md\`) puis à régénérer.` : ""}
 Échelle typographique et interlignage : voir \`tokens.css\` (source unique).
 
 ## Composants

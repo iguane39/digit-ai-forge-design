@@ -304,6 +304,50 @@ try {
   const docSansDa = existsSync(sortieSansDa) ? readFileSync(sortieSansDa, "utf8") : "";
   ok("TF-1777 · … et DESIGN.md écrit la limite au lieu d'un principe générique",
     /## Principes\s+⚠/.test(docSansDa) && !docSansDa.includes("La référence spécifique prime sur l'adjectif"));
+
+  // --- TF-2541 · une police introuvable se DIT, elle ne se remplace pas par un repli ---------
+  // Le cas réel (factory.digit-ai.fr, 14/11/2026) : tokens.css nomme ses polices --font-display et --font-body ; le générateur ne
+  // lisait que --police-*, retombait sur « Roboto » et « DM Sans », et DESIGN.md (NE PAS ÉDITER) les annonçait comme la charte.
+  console.log("\nTF-2541 · polices : --font-display / --font-body lues, une police absente est dite et jamais remplacée");
+  const sansPolices = TOKENS_COMPLET.split("\n").filter((l) => !/--police-/.test(l)).join("\n");
+  const tokensFont = ecrire("tokens-font.css", sansPolices.replace(
+    "--accent: #8a4b2a;",
+    '--accent: #8a4b2a;\n  --font-display: "Iowan Old Style", "Palatino Linotype", serif;\n  --font-body: Georgia, serif;\n  --font-meta: "Courier New", monospace;'));
+  const sortieFont = join(atelier, "DESIGN-font.md");
+  const r2541Font = lancer(["--tokens", tokensFont, "--marque", marque, "--sortie", sortieFont]);
+  const docFont = existsSync(sortieFont) ? readFileSync(sortieFont, "utf8") : "";
+  ok("TF-2541 · sens vert : des polices nommées --font-display, --font-body, --font-meta → exit 0, sans avertissement de police",
+    r2541Font.status === 0 && !/ne nomme pas la police/.test(r2541Font.stderr), `exit ${r2541Font.status} ${r2541Font.stderr.slice(0, 160)}`);
+  ok("TF-2541 · … et DESIGN.md annonce les polices du produit (Iowan Old Style, Georgia, Courier New)",
+    docFont.includes('heading: "Iowan Old Style"') && docFont.includes('body: "Georgia"') && docFont.includes('mono: "Courier New"')
+    && docFont.includes("Titres en **Iowan Old Style**, corps en **Georgia**, code et données en **Courier New**."));
+  ok("TF-2541 · … sans aucune des polices de repli d'avant (Roboto, DM Sans, Consolas)",
+    !/Roboto|DM Sans|Consolas/.test(docFont));
+
+  const tokensSansPolice = ecrire("tokens-sans-police.css", sansPolices);
+  const sortieSansPolice = join(atelier, "DESIGN-sans-police.md");
+  const r2541Sans = lancer(["--tokens", tokensSansPolice, "--marque", marque, "--sortie", sortieSansPolice]);
+  const docSansPolice = existsSync(sortieSansPolice) ? readFileSync(sortieSansPolice, "utf8") : "";
+  ok("TF-2541 · sens rouge : aucune variable de police → AVERTISSEMENT sur stderr, DESIGN.md écrit (exit 0)",
+    r2541Sans.status === 0 && /ne nomme pas la police des titres, corps, code et données/.test(r2541Sans.stderr), `exit ${r2541Sans.status} ${r2541Sans.stderr.slice(0, 200)}`);
+  ok("TF-2541 · … aucune police de repli écrite : ni Roboto, ni DM Sans, ni Consolas, et aucune clé heading / body / mono",
+    !/Roboto|DM Sans|Consolas/.test(docSansPolice) && !/^\s+(heading|body|mono):/m.test(docSansPolice));
+  ok("TF-2541 · … la section Typographie DIT chaque police non prescrite et les variables lues",
+    /## Typographie\s+⚠ Polices non prescrites : titres \(aucune des variables `--police-titres`, `--police-titre`, `--font-display` dans `tokens.css`\) ; corps/.test(docSansPolice)
+    && docSansPolice.includes("`--font-meta`"));
+  ok("TF-2541 · … et le YAML dit pourquoi la clé manque (commentaire, pas de valeur)",
+    /typography:\n  # heading : non prescrit — aucune des variables --police-titres, --police-titre, --font-display dans tokens\.css/.test(docSansPolice));
+
+  const tokensPoliceMonoAbsente = ecrire("tokens-sans-mono.css", TOKENS_COMPLET.split("\n").filter((l) => !/--police-mono/.test(l)).join("\n"));
+  const sortieSansMono = join(atelier, "DESIGN-sans-mono.md");
+  const r2541SansMono = lancer(["--tokens", tokensPoliceMonoAbsente, "--marque", marque, "--sortie", sortieSansMono]);
+  const docSansMono = existsSync(sortieSansMono) ? readFileSync(sortieSansMono, "utf8") : "";
+  ok("TF-2541 · sens rouge : une seule police absente (le code) → les deux autres restent annoncées, la manquante est dite, sans Consolas",
+    r2541SansMono.status === 0 && docSansMono.includes("Titres en **Fraunces**, corps en **Inter**.")
+    && /⚠ Police non prescrite : code et données \(aucune des variables `--police-mono`, `--font-meta` dans `tokens\.css`\)/.test(docSansMono)
+    && !docSansMono.includes("Consolas"));
+  ok("TF-2541 · sens vert : les polices du contrat (--police-titres, --police-corps, --police-mono) se lisent comme avant, phrase inchangée",
+    doc.includes("Titres en **Fraunces**, corps en **Inter**, code et données en **IBM Plex Mono**.") && !doc.includes("Police non prescrite"));
 } finally {
   rmSync(atelier, { recursive: true, force: true });
 }
