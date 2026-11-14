@@ -1047,6 +1047,16 @@ function lancer(cas, argv) {
 let echecs = 0;
 const ligne = (ok, txt) => { console.log(`${ok ? '  ok  ' : ' ÉCHEC'} ${txt}`); if (!ok) echecs++; };
 
+// TF-2562 — deux écritures d'une même racine ne se comparent pas par égalité de chaînes : `path.resolve` ne normalise ni la lettre
+// de lecteur ni la casse (« c:/dev/x » contre « C:\dev\x »), et le dossier temporaire du poste peut s'écrire en 8.3. On compare les
+// chemins réels (fs.realpathSync.native rend la forme canonique du disque), sans casse sous Windows.
+const cheminReel = p => { try { return fs.realpathSync.native(p); } catch { return path.resolve(p); } };
+const memeChemin = (a, b) => {
+  if (!a || !b) return false;
+  const [x, y] = [cheminReel(a), cheminReel(b)];
+  return process.platform === 'win32' ? x.toLowerCase() === y.toLowerCase() : x === y;
+};
+
 const sautes = [];
 
 for (const cas of CAS) {
@@ -1767,8 +1777,13 @@ for (const cas of CAS) {
 // motion-verte.html : exit 2 depuis un dossier portant ce `.env`, exit 0 depuis un dossier neutre. Les entrées admises sont
 // --racine, $FORGE_DESIGN_ROOT, le `.env` de la forge elle-même (celui du dossier parent du script, lieu fixe de l'installation)
 // et le dossier parent du script. Le `.env` d'essai ne porte aucune valeur secrète : une seule ligne FORGE_DESIGN_ROOT.
+// TF-2562 (14/11/2026) — LA RECETTE NE DÉPEND NI DE LA CASSE DU CHEMIN NI DU .env LOCAL DU CLONE. Le clone de C:\dev porte un .env
+// ignoré par git qui nomme FORGE_DESIGN_ROOT (« c:/dev/… ») : les deux cas témoin et sens rouge, qui jouaient le script du clone,
+// lisaient CE fichier (3e entrée) et comparaient `path.resolve(racine) === forge` — ÉCHEC dans le clone, vert dans une copie propre.
+// Le point d'entrée se joue maintenant dans une copie de la forge SANS .env (le fichier du clone n'entre plus dans le verdict) et
+// les racines se comparent par chemin réel, sans casse sous Windows (memeChemin).
 {
-  console.log(String.fromCharCode(10) + 'run-oracles-design · racine de forge (TF-2431) — le .env du dossier courant n\'est plus lu');
+  console.log(String.fromCharCode(10) + 'run-oracles-design · racine de forge (TF-2431, TF-2562) — le .env du dossier courant n\'est plus lu ; ni casse ni .env du clone n\'entrent dans le verdict');
   const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'racine-env-'));
   try {
     const hostile = path.join(dossier, 'hostile');
@@ -1776,25 +1791,56 @@ for (const cas of CAS) {
     const ailleurs = path.join(dossier, 'ailleurs');
     for (const d of [hostile, neutre, ailleurs]) fs.mkdirSync(d);
     fs.writeFileSync(path.join(hostile, '.env'), `FORGE_DESIGN_ROOT=${ailleurs}\n`, 'utf8');
-    const forge = path.resolve(ici, '..');
-    const jouer = (cwd, args = [], env = {}) => {
+    // La copie de la forge : ce que le point d'entrée lit (oracles, corpus, scripts, skills), jamais un .env, ni les fixtures.
+    const forge = path.join(dossier, 'forge');
+    const racineReelle = path.resolve(ici, '..');
+    for (const d of ['oracles', 'corpus', 'scripts', 'skills']) {
+      fs.cpSync(path.join(racineReelle, d), path.join(forge, d), {
+        recursive: true,
+        filter: s => path.basename(s) !== '.env' && s !== path.join(racineReelle, 'oracles', 'fixtures'),
+      });
+    }
+    const scriptCopie = path.join(forge, 'oracles', 'run-oracles-design.mjs');
+    const jouer = (cwd, args = [], env = {}, script = scriptCopie) => {
       const e = { ...process.env, ...env }; if (!('FORGE_DESIGN_ROOT' in env)) delete e.FORGE_DESIGN_ROOT;
-      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), fx('motion-verte.html'), ...args, '--json-only'], { cwd, encoding: 'utf8', env: e });
+      const r = spawnSync(process.execPath, [script, fx('motion-verte.html'), ...args, '--json-only'], { cwd, encoding: 'utf8', env: e });
       let json = null; try { json = JSON.parse((r.stdout || '').trim()); } catch { /* illisible : la ligne le dira */ }
       return { code: r.status, json };
     };
     const depuisNeutre = jouer(neutre);
     const depuisHostile = jouer(hostile);
-    ligne(depuisNeutre.code === 0 && depuisNeutre.json?.verdict === 'PASS' && path.resolve(depuisNeutre.json?.racine) === forge,
-      `témoin · depuis un dossier neutre : PASS exit 0, racine = la forge (obtenu ${depuisNeutre.json?.verdict}, exit ${depuisNeutre.code})`);
-    ligne(depuisHostile.code === depuisNeutre.code && depuisHostile.json?.verdict === depuisNeutre.json?.verdict && path.resolve(depuisHostile.json?.racine) === forge,
+    ligne(depuisNeutre.code === 0 && depuisNeutre.json?.verdict === 'PASS' && memeChemin(depuisNeutre.json?.racine, forge),
+      `témoin · depuis un dossier neutre : PASS exit 0, racine = la forge, sans .env (obtenu ${depuisNeutre.json?.verdict}, exit ${depuisNeutre.code})`);
+    ligne(depuisHostile.code === depuisNeutre.code && depuisHostile.json?.verdict === depuisNeutre.json?.verdict && memeChemin(depuisHostile.json?.racine, forge),
       `sens rouge · depuis un dossier dont le .env nomme une autre racine : le même verdict, la même racine, exit identique — le .env du dossier courant n'est pas lu (obtenu ${depuisHostile.json?.verdict}, exit ${depuisHostile.code}, racine ${depuisHostile.json?.racine})`);
     const parOption = jouer(hostile, ['--racine', ailleurs]);
     ligne(parOption.code === 2 && parOption.json?.verdict === 'SKIP' && (parOption.json?.non_juge || []).some(n => /racine de forge non résolue/.test(n)),
       `sens vert · --racine nomme la racine, depuis n'importe quel dossier : SKIP exit 2 quand elle n'a pas d'oracles, jamais un PASS (obtenu ${parOption.json?.verdict}, exit ${parOption.code})`);
     const parVariable = jouer(neutre, [], { FORGE_DESIGN_ROOT: ailleurs });
-    ligne(parVariable.code === 2 && parVariable.json?.verdict === 'SKIP' && path.resolve(parVariable.json?.racine) === ailleurs,
+    ligne(parVariable.code === 2 && parVariable.json?.verdict === 'SKIP' && memeChemin(parVariable.json?.racine, ailleurs),
       `sens vert · $FORGE_DESIGN_ROOT de l'environnement reste honorée : racine nommée, SKIP exit 2 faute d'oracles (obtenu ${parVariable.json?.verdict}, exit ${parVariable.code})`);
+    // TF-2562 — le .env de la FORGE (3e entrée) reste honoré, et son écriture de la racine ne change pas le verdict. Le .env d'essai
+    // est posé dans la copie : c'est lui, et non celui du clone, que la recette fait lire.
+    const envForge = path.join(forge, '.env');
+    fs.writeFileSync(envForge, `FORGE_DESIGN_ROOT=${ailleurs}\n`, 'utf8');
+    const parEnvForge = jouer(neutre);
+    ligne(parEnvForge.code === 2 && parEnvForge.json?.verdict === 'SKIP' && memeChemin(parEnvForge.json?.racine, ailleurs),
+      `sens vert · le .env de la forge nomme la racine (3e entrée) : SKIP exit 2 faute d'oracles chez la racine nommée (obtenu ${parEnvForge.json?.verdict}, exit ${parEnvForge.code})`);
+    // La même racine écrite comme le .env du clone l'écrit (minuscules, barres obliques) : sous Windows elle désigne le même dossier,
+    // le verdict est celui de la forge, et la comparaison d'avant (`path.resolve(...) === forge`) disait ÉCHEC à tort — le cas rouge.
+    const variante = forge.toLowerCase().replace(/\\/g, '/');
+    fs.writeFileSync(envForge, `FORGE_DESIGN_ROOT=${variante}\n`, 'utf8');
+    const parVariante = jouer(neutre);
+    if (process.platform !== 'win32') {
+      console.log('  SKIP  casse du chemin : sous ce système la casse distingue deux dossiers, le cas ne vaut que sous Windows');
+    } else {
+      const ancienne = path.resolve(parVariante.json?.racine || '') === forge;
+      ligne(parVariante.code === 0 && parVariante.json?.verdict === 'PASS' && ancienne === false && memeChemin(parVariante.json?.racine, forge),
+        `sens rouge · racine écrite « ${variante} » : le même dossier (PASS exit 0, memeChemin vrai) là où l'égalité de chaînes d'avant se trompait (path.resolve === forge : ${ancienne}) (obtenu ${parVariante.json?.verdict}, exit ${parVariante.code})`);
+    }
+    ligne(!memeChemin(forge, ailleurs) && !memeChemin(forge, path.join(forge, 'inexistant')),
+      'sens rouge · memeChemin ne confond pas deux dossiers différents, ni un dossier et un chemin qui n\'existe pas');
+    fs.rmSync(envForge, { force: true });
     const source = fs.readFileSync(path.join(ici, 'run-oracles-design.mjs'), 'utf8');
     ligne(!/process\.cwd\(\)/.test(source), 'verrou · run-oracles-design.mjs ne lit plus le dossier courant (aucun process.cwd())');
   } finally {
