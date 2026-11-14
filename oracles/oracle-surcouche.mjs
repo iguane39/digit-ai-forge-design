@@ -54,6 +54,8 @@ import { plageDeRegles } from './lib/regles-jouees.mjs';
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
 const REGLES_JOUEES = ['SC1', 'SC2', 'SC3', 'SC4', 'SC5'];
 let plageJouee = plageDeRegles(REGLES_JOUEES); // SC4 seule quand aucun composant en sur-couche n'existe (TF-2384)
+// TF-2293 — les règles qui jugent un composant, sans objet quand aucun n'existe ; SC4 (le thème) reste jouée : les sous-plages en dérivent.
+const REGLES_SANS_OBJET_SANS_COMPOSANT = ['SC1', 'SC2', 'SC3', 'SC5'];
 
 const DOM = 'Composant dynamique et sur-couche : habillage explicite depuis les jetons';
 const args = process.argv.slice(2);
@@ -138,12 +140,12 @@ for (const [i, a] of ARBRES.entries()) {
 // est évaluée, avec ou sans sur-couche. Sans composant ni thème sombre, l'oracle reste SKIP : rien à juger.
 const sc4Seule = composants.length === 0 && reglesDeclarentUnThemeSombre(regles);
 if (composants.length === 0 && !sc4Seule) {
-  NJ.push('aucun composant en sur-couche dans ce document (ni <dialog>, ni [popover], ni role="dialog"/"alertdialog") et aucun thème sombre déclaré (ni bloc [data-theme="dark"] portant des jetons, ni règle prefers-color-scheme) : SC1–SC5 sans objet, SC4 non évaluée');
+  NJ.push(`aucun composant en sur-couche dans ce document (ni <dialog>, ni [popover], ni role="dialog"/"alertdialog") et aucun thème sombre déclaré (ni bloc [data-theme="dark"] portant des jetons, ni règle prefers-color-scheme) : ${plageJouee} sans objet, SC4 non évaluée`);
   sortir('SKIP', 2);
 }
 if (sc4Seule) {
-  plageJouee = 'SC4';
-  NJ.push('aucun composant en sur-couche dans ce document : SC1–SC3 et SC5 sans objet ; SC4 évaluée seule parce que le document déclare un thème sombre (TF-2384) — elle juge le thème de la page, pas un composant');
+  plageJouee = plageDeRegles(REGLES_JOUEES.filter(r => !REGLES_SANS_OBJET_SANS_COMPOSANT.includes(r)));
+  NJ.push(`aucun composant en sur-couche dans ce document : ${plageDeRegles(REGLES_SANS_OBJET_SANS_COMPOSANT)} sans objet ; ${plageJouee} évaluée seule parce que le document déclare un thème sombre (TF-2384) — elle juge le thème de la page, pas un composant`);
 }
 
 // ── Appariement élément → règles CSS ───────────────────────────────────────

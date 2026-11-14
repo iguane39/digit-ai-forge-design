@@ -387,7 +387,7 @@ if (temporels.length && /addEventListener\(\s*['"]keydown['"][\s\S]{0,300}?preve
 
 // ── Verdict ────────────────────────────────────────────────────────────────
 if (toutesSaisies.length === 0) {
-  NON_JUGE.push('aucun champ de saisie dans le document : SA1–SA7 sans objet ici, jamais PASS par défaut sur un domaine absent');
+  NON_JUGE.push(`aucun champ de saisie dans le document : ${PLAGE_JOUEE} sans objet ici, jamais PASS par défaut sur un domaine absent`);
 }
 const RANG = { bloquant: 0, majeur: 1, avertissement: 2, info: 3 };
 F.sort((x, y) => RANG[x.sev] - RANG[y.sev]);

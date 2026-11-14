@@ -3991,8 +3991,8 @@ for (const cas of CAS) {
     const verte = jouerSC(fx('surcouche-sc4-sans-composant-verte.html'));
     ligne(verte.code === 0 && verte.json.verdict === 'PASS' && verte.json.findings.every(f => f.msg === 'SC4 sans écart' || f.sev !== 'info'),
       'sens vert · sans composant, thème sombre déclaré jusqu\'au navigateur : PASS, et la ligne dit « SC4 sans écart », pas « SC1–SC5 »');
-    ligne(verte.json.non_juge.some(n => /SC1–SC3 et SC5 sans objet/.test(n) && /SC4 évaluée seule/.test(n)),
-      'sens vert · le non_juge dit que SC1–SC3 et SC5 sont sans objet et que SC4 est évaluée seule');
+    ligne(verte.json.non_juge.some(n => /SC1–SC3, SC5 sans objet/.test(n) && /SC4 évaluée seule/.test(n)),
+      'sens vert · le non_juge dit que SC1–SC3, SC5 sont sans objet et que SC4 est évaluée seule');
     const rouge = jouerSC(fx('surcouche-sc4-sans-composant-rouge.html'));
     ligne(rouge.code === 1 && rouge.json.verdict === 'FAIL' && durs(rouge.json).length === 1 && durs(rouge.json)[0].regle === 'SC4' && /color-scheme: dark/.test(durs(rouge.json)[0].msg),
       'sens rouge · sans composant, thème sombre sans color-scheme: dark : UN bloquant SC4, FAIL exit 1 (le défaut du format des dossiers)');

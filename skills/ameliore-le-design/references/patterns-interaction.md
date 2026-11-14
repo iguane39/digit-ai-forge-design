@@ -84,7 +84,7 @@ Trois règles dures en découlent :
    second accès, en rappel, en action de rangée. Seul, il rend la fonctionnalité
    invisible — c'est le défaut du 31/08, et il coûte deux tours.
 
-Balisage attendu, qui rend le critère mesurable (`oracle-declencheurs`, DE1–DE3) :
+Balisage attendu, qui rend le critère mesurable (`oracle-declencheurs`, DE1–DE3, DE4 en avertissement) :
 
 | Attribut | Sur quoi |
 |---|---|
@@ -143,7 +143,7 @@ Cinq volets, pour **tout** champ, quel que soit son format et son contexte
 d'un écran **livré et audité** : la campagne de tests le mesurait câblé, et il
 l'était — le défaut n'était mesurable par aucun référentiel ; COMPILABLE en vient
 d'un troisième, TF-1343, même défaut de fond : l'affordance mesurée câblée, la
-contrainte réelle absente). Contrôle exécutable : `oracle-saisie` (SA1–SA7).
+contrainte réelle absente). Contrôle exécutable : `oracle-saisie` (SA1–SA7, SA8 en avertissement).
 
 **TYPÉ** — tout format connu prend son type d'entrée natif : `date`,
 `datetime-local`, `month`, `week`, `time`, `email`, `tel`, `url`, `number`,

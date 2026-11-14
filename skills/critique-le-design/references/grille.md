@@ -9,10 +9,10 @@ node oracles/oracle-taste.mjs   <cible.html>          # TA1–TA4
 node oracles/oracle-mobile.mjs  <cible.html>          # si cible mobile
 node oracles/oracle-images.mjs  <cible.html>          # si visuels générés
 node oracles/oracle-restitution.mjs <cible.html>      # si data-restitution (RL, TF-0235)
-node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA7, si champs de saisie (TF-0736/0739, TF-1343)
+node oracles/oracle-saisie.mjs  <cible.html>          # SA1–SA7, SA8 (avertissement), si champs de saisie (TF-0736/0739, TF-1343)
 node oracles/oracle-panneau-tache.mjs <cible.html>    # PA1–PA6, si panneau de création balisé (TF-0707/0708)
-node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, si dialog/popover/role=dialog (TF-0796)
-node oracles/oracle-declencheurs.mjs <cible.html>     # DE1–DE3 + registre des déclencheurs (TF-0797)
+node oracles/oracle-surcouche.mjs <cible.html> [--tokens tokens.css]  # SC1–SC4, SC5 (avertissement), si dialog/popover/role=dialog (TF-0796)
+node oracles/oracle-declencheurs.mjs <cible.html>     # DE1–DE3, DE4 (avertissement) + registre des déclencheurs (TF-0797)
 node oracles/run-oracles-design.mjs <cible.html> --oracle textes-application  # T4-1–T4-4, D7 Contenu (TF-1064)
 python ~/.claude/skills/quality-oracles/scripts/oracle-a11y.py <cible.html>
 python <…>/render_page.py <cible.html> --widths 3840,2560,1920,1440,1024,768,390   # V1–V7, 7 breakpoints × 2 thèmes
@@ -112,14 +112,14 @@ RF8 et RF9 viennent de trois retours utilisateur en deux semaines sur des écran
 passait l'audit d'interface : l'affordance existait et elle était câblée. Ce qui
 manquait — la valeur proposée, la borne, la surface de geste, l'ordre du choix — ne
 figurait dans aucune grille. D6 Interaction s'instruit désormais avec `oracle-saisie`
-(SA1–SA7) et `oracle-panneau-tache` (PA1–PA6) ; une dimension D6 notée sans avoir
+(SA1–SA7, SA8 en avertissement) et `oracle-panneau-tache` (PA1–PA6) ; une dimension D6 notée sans avoir
 lancé ces deux-là, sur une page qui porte des champs ou un panneau, est `non_juge`.
 
 RF10 vient du même genre de fait, un cran plus tard dans la chaîne (TF-0796, produit 02,
 01/09/2026) : une fenêtre `dialog` **PASS** à sa campagne s'est affichée en boîte sombre aux
 boutons natifs sur le poste de l'utilisateur, parce que la grille juge ce que la page dessine
 et jamais ce que le navigateur dessine à sa place. D2 Système s'instruit désormais avec
-`oracle-surcouche` (SC1–SC4) dès que la page porte un `<dialog>`, un `[popover]` ou un
+`oracle-surcouche` (SC1–SC4, SC5 en avertissement) dès que la page porte un `<dialog>`, un `[popover]` ou un
 `role="dialog"` — dans son DOM statique **ou** dans ses gabarits ; sans cet oracle, la
 dimension est `non_juge` sur une telle page. Le volet complet, avec le fait qui le fonde :
 `critique-implementation.md`, contrôle 7.

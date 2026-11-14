@@ -8,7 +8,9 @@
 // `REGLES_HORS_PLAGE` : porte d'appel, voie d'approbation), et ce verrou, à double sens, refuse trois dérives :
 //   1. une règle émise (`add('sév', 'Xn', …)`, `regle: 'Xn'`) qui ne figure à aucune des deux listes ;
 //   2. une règle déclarée que le fichier n'émet pas, ou déclarée aux deux listes ;
-//   3. un message qui cite une plage entre guillemets simples ou doubles, « sans écart » ou « déclenchée » à la suite.
+//   3. un message qui cite une plage entre guillemets simples ou doubles, « sans écart », « déclenchée » ou « sans objet » à la suite.
+// TF-2293 (14/11/2026) étend le verrou aux sous-plages : un message « sans objet » qui ne cite qu'une partie des règles en dérive
+// sa plage d'une seconde liste `REGLES_SANS_OBJET_<CAS>`, que le verrou refuse si elle contient une règle hors REGLES_JOUEES.
 // Le sens vert joue en plus les oracles sur une fixture verte : le message rendu est la plage dérivée de la liste.
 //
 // Exclu : oracle-exploitabilite, dont le verrou propre (self-test-exploitabilite.mjs, TF-2250) traite X0 comme porte.
@@ -20,7 +22,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { plageDeRegles, reglesEmises, reglesDeclarees, reglesHorsPlage, ecartDeListe } from './lib/regles-jouees.mjs';
+import { plageDeRegles, reglesEmises, reglesDeclarees, reglesHorsPlage, sousListesSansObjet, ecartDeListe } from './lib/regles-jouees.mjs';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
 const fx = n => path.join(ici, 'fixtures', n);
@@ -31,9 +33,9 @@ const oracles = fs.readdirSync(ici).filter(f => /^oracle-.*\.mjs$/.test(f) && f 
 const sources = Object.fromEntries(oracles.map(f => [f, fs.readFileSync(path.join(ici, f), 'utf8')]));
 const dotes = oracles.filter(f => reglesDeclarees(sources[f]).length > 0);
 
-// Une plage citée en dur : un littéral entre guillemets droits (pas un gabarit) qui contient « Xn–Xm » puis « sans écart »
-// ou « déclenchée ». Les gabarits (`…${PLAGE_JOUEE}…`) ne sont pas des littéraux.
-const RX_PLAGE_EN_DUR = /(['"])(?:(?!\1)[^\n`])*\b[A-Z]{1,3}(?:-[A-Z]+)?-?\d+(?:–|…|-|\/)[A-Z]{0,3}(?:-[A-Z]+)?-?\d+(?:(?!\1)[^\n`])*(?:sans écart|déclenchée)/;
+// Une plage citée en dur : un littéral entre guillemets droits (pas un gabarit) qui contient « Xn–Xm » puis « sans écart »,
+// « déclenchée » ou « sans objet » (TF-2293). Les gabarits (`…${PLAGE_JOUEE}…`) ne sont pas des littéraux.
+const RX_PLAGE_EN_DUR = /(['"])(?:(?!\1)[^\n`])*\b[A-Z]{1,3}(?:-[A-Z]+)?-?\d+(?:–|…|-|\/)[A-Z]{0,3}(?:-[A-Z]+)?-?\d+(?:(?!\1)[^\n`])*(?:sans écart|déclenchée|sans objet)/;
 const plageEnDur = src => src.split('\n').filter(l => !/^\s*\/\//.test(l) && RX_PLAGE_EN_DUR.test(l));
 
 console.log('plageDeRegles — la fonction');
@@ -47,8 +49,8 @@ console.log('Les listes déclarées — chaque oracle, au vrai fichier');
 ligne(dotes.length >= 20, `au moins 20 oracles déclarent REGLES_JOUEES (obtenu ${dotes.length} : ${dotes.map(f => f.replace(/^oracle-|\.mjs$/g, '')).join(', ')})`);
 for (const f of dotes) {
   const e = ecartDeListe(sources[f]);
-  const bilan = `hors liste : ${e.emises_non_declarees.join(' ') || 'aucune'} ; sans émission : ${e.declarees_non_emises.join(' ') || 'aucune'} ; en double : ${e.en_double.join(' ') || 'aucune'}`;
-  ligne(!e.emises_non_declarees.length && !e.declarees_non_emises.length && !e.en_double.length,
+  const bilan = `hors liste : ${e.emises_non_declarees.join(' ') || 'aucune'} ; sans émission : ${e.declarees_non_emises.join(' ') || 'aucune'} ; en double : ${e.en_double.join(' ') || 'aucune'} ; sous-liste hors jouées : ${e.sous_liste_hors_jouees.join(' ') || 'aucune'}`;
+  ligne(!e.emises_non_declarees.length && !e.declarees_non_emises.length && !e.en_double.length && !e.sous_liste_hors_jouees.length,
     `${f} · REGLES_JOUEES [${reglesDeclarees(sources[f]).join(' ')}]${reglesHorsPlage(sources[f]).length ? ` + hors plage [${reglesHorsPlage(sources[f]).join(' ')}]` : ''} égale les règles émises (${bilan})`);
 }
 const nus = oracles.filter(f => !dotes.includes(f) && plageEnDur(sources[f]).length);
@@ -70,6 +72,18 @@ const retourEnDurHorsListe = "sortir('PASS', F.length ? F : [{ sev: 'info', regl
 ligne(plageEnDur(retourEnDurHorsListe).length === 1, 'une plage en dur entre guillemets doubles (« aucune des règles Z1–Z9 déclenchée ») est vue');
 ligne(plageEnDur('msg: `${PLAGE_JOUEE} sans écart`').length === 0 && plageEnDur('// M1–M8 sans écart (ancien)').length === 0,
   'sens vert · un gabarit dérivé et un commentaire ne sont pas des plages en dur');
+// TF-2293 — les messages « sans objet » et leurs sous-plages.
+const sansObjetEnDur = sources['oracle-declencheurs.mjs'].replace('${PLAGE_JOUEE} sans objet`', "DE1–DE3 sans objet'").replace('NJ.push(`aucun déclencheur', "NJ.push('aucun déclencheur");
+ligne(plageEnDur(sansObjetEnDur).length === 1, 'sens rouge · TF-2293 · le retour de « DE1–DE3 sans objet » en dur dans le non_juge est vu');
+ligne(plageEnDur("NJ.push('aucune image dans le document : I1–I2, I5–I6 sans objet');").length === 1, 'sens rouge · TF-2293 · une sous-plage « I1–I2, I5–I6 sans objet » écrite en dur est vue');
+ligne(plageEnDur('NJ.push(`aucune image dans le document : ${plageDeRegles(REGLES_SANS_OBJET_SANS_IMAGE)} sans objet`);').length === 0,
+  'sens vert · TF-2293 · une sous-plage dérivée de sa liste n\'est pas une plage en dur');
+const sousListes = sousListesSansObjet(sources['oracle-images.mjs']);
+ligne(Object.keys(sousListes).join(' ') === 'REGLES_SANS_OBJET_SANS_IMAGE' && sousListes.REGLES_SANS_OBJET_SANS_IMAGE.join(' ') === 'I1 I2 I5 I6',
+  `sens vert · TF-2293 · la sous-liste d'images est lue (obtenu : ${JSON.stringify(sousListes)})`);
+const sousListeFantome = ecartDeListe(sources['oracle-surcouche.mjs'].replace("['SC1', 'SC2', 'SC3', 'SC5']", "['SC1', 'SC2', 'SC3', 'SC5', 'SC9']"));
+ligne(sousListeFantome.sous_liste_hors_jouees.join(' ') === 'REGLES_SANS_OBJET_SANS_COMPOSANT:SC9',
+  `sens rouge · TF-2293 · une règle SC9 de sous-liste que REGLES_JOUEES ne contient pas est vue (obtenu : ${sousListeFantome.sous_liste_hors_jouees.join(' ') || 'rien'})`);
 
 console.log('Le message rendu — sens vert, les oracles joués sur une fixture verte');
 // [oracle, fixture verte, arguments en plus]. Chaque oracle dont la fixture rend la ligne « sans écart » doit y dire la
@@ -104,6 +118,124 @@ for (const [nom, fixture] of VERTES) {
   ligne(dit.includes(plage), `${f} sur ${path.basename(fixture)} · la ligne rendue cite « ${plage} » (obtenu « ${dit} »)`);
 }
 ligne(atteints >= 14, `au moins 14 jeux (oracle, entrée) rendent la ligne « sans écart » dite par la liste (obtenu ${atteints} sur ${VERTES.length})`);
+
+// Un oracle joué sur une cible (ou sans), sa sortie JSON lue ; null si elle ne l'est pas.
+const jouer = (nom, cible) => {
+  const r = spawnSync(process.execPath, [path.join(ici, `oracle-${nom}.mjs`), ...(cible ? [cible] : []), '--json-only'], { encoding: 'utf8', timeout: 120000 });
+  try { return JSON.parse(r.stdout); } catch { return null; }
+};
+// TF-2293 — oracle-exploitabilite (hors verrou : X0 est sa porte) ne garde plus sa copie de plageDeRegles : une seule fonction, celle de la lib.
+{
+  const f = 'oracle-exploitabilite.mjs';
+  const src = fs.readFileSync(path.join(ici, f), 'utf8');
+  const copieLocale = s => /\bfunction\s+plageDeRegles\b|\b(?:const|let)\s+plageDeRegles\s*=/.test(s);
+  const importe = s => /import\s*\{[^}]*\bplageDeRegles\b[^}]*\}\s*from\s*['"]\.\/lib\/regles-jouees\.mjs['"]/.test(s);
+  ligne(importe(src) && !copieLocale(src), `sens vert · TF-2293 · ${f} importe plageDeRegles de lib/regles-jouees.mjs et n'en garde aucune copie`);
+  ligne(copieLocale(src + '\nfunction plageDeRegles(regles) { return regles.join(); }\n') && !importe('import { lireGrille } from "./lib/grille.mjs";'),
+    `sens rouge · TF-2293 · le retour d'une copie locale de plageDeRegles, ou l'absence de l'import, est vu`);
+  const sansCible = jouer('exploitabilite', null);
+  const attendu = `${plageDeRegles(reglesDeclarees(src))} sans écart`;
+  ligne(sansCible?.findings?.[0]?.msg === attendu, `${f} sans cible · la ligne rendue cite « ${attendu} » depuis la fonction de la lib (obtenu « ${sansCible?.findings?.[0]?.msg} »)`);
+}
+
+console.log('La documentation — la plage citée pour un oracle atteint sa dernière règle jouée (TF-2293)');
+// Un document qui écrit « oracle-saisie (SA1–SA7) » alors que l'oracle joue aussi SA8 dit un périmètre plus étroit que le joué, comme
+// le message de sortie que TF-2287 a corrigé. Le verrou lit les .md de la forge : après « oracle-<nom> », la première plage du préfixe
+// de l'oracle (dans les 90 caractères, sans franchir une autre mention d'oracle) doit finir à sa dernière règle, ou à la règle que
+// « , SAn » lui ajoute (« SA1–SA7, SA8 en avertissement »). Posé pour les trois oracles que l'item nomme ; les autres citations
+// périmées de la forge (PA1–PA6, T1–T6, M1–M8, D1–D3, I1–I6, R11–R13…) restent à aligner, une par oracle, par cette même liste.
+const DOCUMENTES = ['saisie', 'surcouche', 'declencheurs'];
+const racineForge = path.join(ici, '..');
+function* documents(dossier) {
+  for (const e of fs.readdirSync(dossier, { withFileTypes: true })) {
+    if (['node_modules', 'output', 'input', 'dist', 'corpus', '.git'].includes(e.name)) continue;
+    const p = path.join(dossier, e.name);
+    if (e.isDirectory()) yield* documents(p); else if (/\.md$/.test(e.name)) yield p;
+  }
+}
+const numeroDe = r => Number(/(\d+)$/.exec(r)[1]);
+// Les plages citées après « oracle-<nom> » dans un texte, et leur borne haute (l'extension « , Xp » comprise).
+function plagesCitees(texte, nom, regles) {
+  const prefixe = /^(.*?)\d+$/.exec(regles[0])[1];
+  const rx = new RegExp(`\\b${prefixe}(\\d+)–${prefixe}(\\d+)(?:,\\s+${prefixe}(\\d+))?`);
+  const trouvees = [];
+  for (const m of texte.matchAll(new RegExp(`oracle-${nom}(?![\\w-])`, 'g'))) {
+    const fenetre = texte.slice(m.index + m[0].length, m.index + m[0].length + 90).split('oracle-')[0];
+    const c = rx.exec(fenetre);
+    if (c) trouvees.push({ citee: c[0], haut: Number(c[3] || c[2]) });
+  }
+  return trouvees;
+}
+const plagesPerimees = (texte, nom, regles) => plagesCitees(texte, nom, regles).filter(c => c.haut !== Math.max(...regles.map(numeroDe))).map(c => c.citee);
+const ligneDeRegistre = (texte, nom) => texte.split('\n').find(l => l.startsWith('|') && l.includes(`oracles/oracle-${nom}.mjs`)) || '';
+const reglesAbsentes = (texte, nom, regles) => { const l = ligneDeRegistre(texte, nom); return regles.filter(r => !new RegExp(`\\b${r}\\b`).test(l)); };
+const documentsForge = [...documents(racineForge)];
+for (const nom of DOCUMENTES) {
+  const regles = reglesDeclarees(sources[`oracle-${nom}.mjs`]);
+  const fautifs = documentsForge.flatMap(d => plagesPerimees(fs.readFileSync(d, 'utf8').replace(/\r\n/g, '\n'), nom, regles).map(c => `${path.relative(racineForge, d)} « ${c} »`));
+  ligne(regles.length > 0 && fautifs.length === 0, `oracle-${nom} · aucun .md ne cite une plage qui s'arrête avant ${regles[regles.length - 1]} (${documentsForge.length} .md lus ; obtenu : ${fautifs.join(' ; ') || 'aucune citation périmée'})`);
+  const registre = fs.readFileSync(path.join(ici, 'registre-entrees.md'), 'utf8');
+  const absentes = reglesAbsentes(registre, nom, regles);
+  ligne(regles.length > 0 && ligneDeRegistre(registre, nom) !== '' && absentes.length === 0, `oracle-${nom} · sa ligne du registre des entrées nomme chaque règle jouée (${regles.join(' ')} ; absentes : ${absentes.join(' ') || 'aucune'})`);
+}
+{
+  const regles = reglesDeclarees(sources['oracle-saisie.mjs']);
+  ligne(plagesPerimees('Contrôles : `oracle-saisie` (SA1–SA7) et `oracle-panneau-tache`.', 'saisie', regles).join() === 'SA1–SA7',
+    'sens rouge · TF-2293 · « oracle-saisie (SA1–SA7) » alors que SA8 est jouée : la citation périmée est vue');
+  ligne(plagesPerimees('node oracles/oracle-saisie.mjs <page.html>   # SA1–SA7 : typé, proposé', 'saisie', regles).join() === 'SA1–SA7',
+    'sens rouge · TF-2293 · la plage d\'une ligne de commande (« # SA1–SA7 : typé ») est vue de la même façon');
+  ligne(plagesPerimees('`oracle-saisie` (SA1–SA7, SA8 en avertissement) : un champ', 'saisie', regles).length === 0
+    && plagesPerimees('`oracle-saisie` SA1–SA7,\nSA8 en avertissement', 'saisie', regles).length === 0,
+    'sens vert · TF-2293 · la plage qui nomme sa règle d\'avertissement (« SA1–SA7, SA8 en avertissement »), même coupée à la ligne, est à jour');
+  ligne(plagesPerimees('`oracle-saisie` (SA1–SA8) ; `oracle-panneau-tache` (PA1–PA6)', 'saisie', regles).length === 0,
+    'sens vert · TF-2293 · la plage de l\'oracle suivant (PA1–PA6) n\'est pas imputée à oracle-saisie');
+  const ligneSans = '| Champs de saisie | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format, SA2 temporel, SA3 borne, SA4 aide, SA5 geste, SA6 clavier, SA7 pattern | cli | ✅ |';
+  ligne(reglesAbsentes(ligneSans, 'saisie', regles).join() === 'SA8', 'sens rouge · TF-2293 · une ligne du registre sans SA8 est vue (absente : SA8)');
+}
+
+console.log('Le message « sans objet » — chaque oracle sur une page minimale, la plage dérive de sa liste (TF-2293)');
+// [oracle, liste dont dérive la plage]. Une page minimale n'a ni déclencheur, ni image, ni champ, ni panneau, ni exigence, ni composant :
+// chaque oracle dit au non_juge les règles sans objet. Une plage figée (DE1–DE3, SA1–SA7) ne dit plus la liste jouée (DE1–DE4, SA1–SA8).
+const SANS_OBJET = [
+  ['declencheurs', 'REGLES_JOUEES'], ['images', 'REGLES_SANS_OBJET_SANS_IMAGE'], ['saisie', 'REGLES_JOUEES'],
+  ['panneau-tache', 'REGLES_SANS_OBJET_SANS_PANNEAU'], ['perceptibilite', 'REGLES_JOUEES'], ['surcouche', 'REGLES_JOUEES'],
+];
+for (const [nom, liste] of SANS_OBJET) {
+  const f = `oracle-${nom}.mjs`;
+  const regles = (liste === 'REGLES_JOUEES' ? reglesDeclarees(sources[f]) : sousListesSansObjet(sources[f])[liste]) || [];
+  if (!regles.length) { ligne(false, `${f} · la liste ${liste} est absente ou vide : la plage « sans objet » n'en dérive pas`); continue; }
+  const attendu = `${plageDeRegles(regles)} sans objet`;
+  const json = jouer(nom, MINIMALE);
+  const dit = (json?.non_juge || []).find(n => /sans objet/.test(n) && n.includes(plageDeRegles(regles).split(', ')[0])) || '';
+  ligne(!!json && dit.includes(attendu), `${f} sur une page minimale · le non_juge cite « ${attendu} » (liste ${liste}) (obtenu « ${dit.slice(0, 160) || 'aucun message sans objet'} »)`);
+}
+// La sous-plage de surcouche, côté thème sombre sans composant : SC4 seule est jouée, les quatre autres sont sans objet.
+{
+  const f = 'oracle-surcouche.mjs';
+  const sans = sousListesSansObjet(sources[f]).REGLES_SANS_OBJET_SANS_COMPOSANT || [];
+  const seule = reglesDeclarees(sources[f]).filter(r => !sans.includes(r));
+  const json = jouer('surcouche', fx('surcouche-sc4-sans-composant-verte.html'));
+  const nj = (json?.non_juge || []).find(n => /sans objet/.test(n)) || '';
+  ligne(sans.length > 0 && nj.includes(`${plageDeRegles(sans)} sans objet`) && nj.includes(`${plageDeRegles(seule)} évaluée seule`) && json.findings.some(x => x.msg === `${plageDeRegles(seule)} sans écart`),
+    `${f} sans composant, thème sombre déclaré · le non_juge cite « ${plageDeRegles(sans)} sans objet » et « ${plageDeRegles(seule)} évaluée seule », la ligne rendue dit « ${plageDeRegles(seule)} sans écart »`);
+}
+
+console.log('oracle-declencheurs — la ligne « sans écart » malgré le registre DE0, rendu à chaque passage (TF-2293)');
+// DE0 est toujours émise : la ligne « sans écart » dépendait d'un tableau de constats vide, qu'elle ne trouvait jamais.
+{
+  const f = 'oracle-declencheurs.mjs';
+  const plage = plageDeRegles(reglesDeclarees(sources[f]));
+  const verte = jouer('declencheurs', fx('declencheurs-verte.html'));
+  const ligneVerte = (verte?.findings || []).filter(x => x.regle === '—');
+  ligne(verte?.verdict === 'PASS' && ligneVerte.length === 1 && ligneVerte[0].msg === `${plage} sans écart` && verte.findings.some(x => x.regle === 'DE0'),
+    `sens vert · une page de déclencheurs sans écart : le registre DE0 ET la ligne « ${plage} sans écart » sont rendus (obtenu ${verte?.verdict}, constats ${(verte?.findings || []).map(x => x.regle).join(' ')})`);
+  const rouge = jouer('declencheurs', fx('declencheurs-rouge.html'));
+  ligne(rouge?.verdict === 'FAIL' && !rouge.findings.some(x => x.regle === '—') && rouge.findings.some(x => x.regle === 'DE0'),
+    `sens rouge · une page avec des écarts : la ligne « sans écart » n'est PAS rendue, le registre DE0 l'est (obtenu ${rouge?.verdict}, constats ${(rouge?.findings || []).map(x => x.regle).join(' ')})`);
+  const de4 = jouer('declencheurs', fx('declencheurs-de4-rouge.html'));
+  ligne(de4?.findings?.some(x => x.regle === 'DE4') && !de4.findings.some(x => x.regle === '—'),
+    `sens rouge · un avertissement DE4 est un constat : la ligne « sans écart » n'est pas rendue à côté (obtenu constats ${(de4?.findings || []).map(x => x.regle).join(' ')})`);
+}
 
 fs.rmSync(dossier, { recursive: true, force: true });
 console.log(echecs === 0 ? `\nTout vert — ${total} vérifications : les plages citées dérivent des listes jouées, deux sens.`

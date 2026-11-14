@@ -24,7 +24,7 @@ facturation, assistant multi-étapes — applique la grille **TYPÉ, PROPOSÉ, B
 ATTEIGNABLE, COMPILABLE** à chacun de ses champs, et le critère de choix des deux motifs de
 création à son panneau. Ces deux règles ne sont pas propres à l'écran 4 : elles valent
 pour tous les formats de champ et tous les contextes (TF-0736, mandat de généralisation
-explicite). Doctrine : `patterns-interaction.md` ; contrôles : `oracle-saisie` SA1–SA7
+explicite). Doctrine : `patterns-interaction.md` ; contrôles : `oracle-saisie` SA1–SA7, SA8 en avertissement
 et `oracle-panneau-tache` PA1–PA6 (C16, C17 de `criteres-sortie.md`).
 
 ## Complémentaires

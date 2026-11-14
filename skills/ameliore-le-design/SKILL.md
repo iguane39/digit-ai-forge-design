@@ -1,7 +1,7 @@
 ---
 name: ameliore-le-design
 description: Transforme une idée, une spécification, un design ou un produit web existant — URL, screenshot, fichier — en maquette navigable : redesign intégral et parcours d'écrans simulés (landing, connexion, tableau de bord, CRUD, catalogue, galerie, onboarding), cible web ou mobile, en un seul fichier HTML autonome, thèmes clair et sombre, zéro réseau. Deux fidélités, wireframe ou maquette. Use when / déclencher dès que l'utilisateur veut refondre, relooker, moderniser ou repenser le design d'un site ou d'une application, demande une maquette, un prototype cliquable ou une proposition visuelle à partir d'une URL, d'un screenshot ou d'un simple brief, ou veut montrer à un client ce que son produit pourrait devenir. Ne pas déclencher pour une page chartée Digit-AI (→ digit-ai-page-html), une fiche ou un schéma (→ digit-ai-fiches-html), poser les tokens (→ systeme-de-marque), arbitrer entre directions (→ studio-de-direction), ni auditer une appli en production (→ audite-et-corrige-l-appli).
-version: 2.3.0
+version: 2.4.0
 ---
 
 # Améliore le design
@@ -93,7 +93,7 @@ tout format connu ; valeur par défaut = meilleure hypothèse du système selon 
 métier justifiée, port = celui du protocole) ; bornes `min`/`max` posées par le sens,
 avec garde serveur symétrique au contrat du produit ; et **cible de geste qui couvre
 tout le composant** — sur un champ date natif, un clic n'importe où ouvre le sélecteur,
-la saisie clavier restant entière (`oracle-saisie` SA1–SA7, snippet de référence dans
+la saisie clavier restant entière (`oracle-saisie` SA1–SA7, SA8 en avertissement, snippet de référence dans
 `contrat-technique.md`). Toute promesse écrite dans l'aide est câblée dans le champ :
 « la période part de la dernière lecture » sans `value` est un défaut, pas une intention.
 Tout `pattern` COMPILE sous le drapeau `v` — celui que le navigateur applique réellement

@@ -75,9 +75,12 @@ const REGISTRE = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 
 function sortir(verdict, code) {
+  // TF-2293 — DE0 (registre) est rendue à CHAQUE passage : « F vide » n'arrivait jamais et la ligne « sans écart » n'était
+  // jamais écrite. Un écart est un constat hors REGLES_HORS_PLAGE ; sans lui, la ligne s'ajoute après le registre.
+  const sansEcart = !F.some(f => !REGLES_HORS_PLAGE.includes(f.regle));
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-declencheurs', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
+    verdict, findings: sansEcart ? [...F, { sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }] : F,
     non_juge: NJ, registre: REGISTRE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -184,7 +187,7 @@ for (const [i, a] of arbres(html, root).entries()) {
 }
 
 if (declencheurs.length === 0) {
-  NJ.push('aucun déclencheur dans ce document (ni bouton, ni lien, ni élément porteur de data-action/onclick) : DE1–DE3 sans objet');
+  NJ.push(`aucun déclencheur dans ce document (ni bouton, ni lien, ni élément porteur de data-action/onclick) : ${PLAGE_JOUEE} sans objet`);
   sortir('SKIP', 2);
 }
 

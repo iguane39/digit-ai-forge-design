@@ -47,6 +47,8 @@ import { plageDeRegles } from './lib/regles-jouees.mjs';
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
 const REGLES_JOUEES = ['I1', 'I2', 'I3', 'I4', 'I5', 'I6', 'I7', 'I8'];
 const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
+// TF-2293 — les règles sans objet quand le document n'a aucune image (message du non_juge), déclarées à côté : la sous-plage en dérive.
+const REGLES_SANS_OBJET_SANS_IMAGE = ['I1', 'I2', 'I5', 'I6'];
 
 const DOM = 'Visuels générés : traçabilité et budget';
 const args = process.argv.slice(2);
@@ -211,7 +213,7 @@ if (embarquees > 0 && manifeste === null) {
   add('bloquant', 'I5', `${embarquees} image(s) embarquée(s) et aucun <script id="manifeste-images"> : aucune traçabilité de génération`, path.basename(file));
 }
 if (embarquees === 0 && sources.length === 0) {
-  NJ.push('aucune image dans le document : I1–I2, I5–I6 sans objet');
+  NJ.push(`aucune image dans le document : ${plageDeRegles(REGLES_SANS_OBJET_SANS_IMAGE)} sans objet`);
 }
 
 // ── I7 · deux actifs déclarés variantes doivent RENDRE différemment ─────────

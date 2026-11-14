@@ -123,7 +123,7 @@ for (const [i, a] of arbres(html, root).entries()) {
 }
 
 if (actions.length === 0) {
-  NJ.push('aucun élément ne porte data-exigence="<id>" dans ce document : PC1–PC4 sans objet (convention TF-1219)');
+  NJ.push(`aucun élément ne porte data-exigence="<id>" dans ce document : ${PLAGE_JOUEE} sans objet (convention TF-1219)`);
   sortir('SKIP', 2);
 }
 

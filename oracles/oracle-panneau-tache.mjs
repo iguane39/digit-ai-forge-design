@@ -73,6 +73,8 @@ import { plageDeRegles } from './lib/regles-jouees.mjs';
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
 const REGLES_JOUEES = ['PA1', 'PA2', 'PA3', 'PA4', 'PA5', 'PA6', 'PA7'];
 const PLAGE_JOUEE = plageDeRegles(REGLES_JOUEES);
+// TF-2293 — les règles sans objet quand aucun panneau de création n'existe (PA7 se juge écran par écran, hors panneau), déclarées à côté.
+const REGLES_SANS_OBJET_SANS_PANNEAU = ['PA1', 'PA2', 'PA3', 'PA4', 'PA5', 'PA6'];
 
 const DOM = 'Panneau de tâche : choix exclusif, branches, coexistence';
 const args = process.argv.slice(2);
@@ -147,7 +149,7 @@ const panneaux = new Set(declares);
 for (const b of branchesToutes) { const p = panneauPorteur(b); if (p) panneaux.add(p); }
 
 if (panneaux.size === 0) {
-  NON_JUGE.push('aucun panneau de création détecté ([data-panneau-tache], ou conteneur portant des [data-branche]) : PA1–PA6 sans objet ici, jamais PASS par défaut sur un domaine absent');
+  NON_JUGE.push(`aucun panneau de création détecté ([data-panneau-tache], ou conteneur portant des [data-branche]) : ${plageDeRegles(REGLES_SANS_OBJET_SANS_PANNEAU)} sans objet ici, jamais PASS par défaut sur un domaine absent`);
 }
 
 // ── Écran porteur : le plus proche conteneur de route/écran, sinon la racine ──

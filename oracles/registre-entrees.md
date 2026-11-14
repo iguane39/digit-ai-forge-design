@@ -222,7 +222,7 @@ ancien, SA7 se déclare `non_juge` au lieu de rendre un faux verdict.
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Champs de saisie : typé, proposé, borné, atteignable | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format connu non typé natif, SA2 champ temporel sans valeur proposée, SA3 champ temporel ou numérique sans borne, SA4 promesse d'aide (valeur ou borne) non câblée dans le champ, SA5 cible de geste réduite à l'icône native (aucun `showPicker()` global), SA6 saisie clavier confisquée (`readonly` posé pour forcer le sélecteur, ou `preventDefault` sur `keydown`), SA7 attribut `pattern` qui ne compile pas sous le drapeau `v` (celui que le navigateur applique réellement — un motif cassé est ignoré en silence, `validity.valid` reste vrai) | cli | ✅ |
+| Champs de saisie : typé, proposé, borné, atteignable | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format connu non typé natif, SA2 champ temporel sans valeur proposée, SA3 champ temporel ou numérique sans borne, SA4 promesse d'aide (valeur ou borne) non câblée dans le champ, SA5 cible de geste réduite à l'icône native (aucun `showPicker()` global), SA6 saisie clavier confisquée (`readonly` posé pour forcer le sélecteur, ou `preventDefault` sur `keydown`), SA7 attribut `pattern` qui ne compile pas sous le drapeau `v` (celui que le navigateur applique réellement — un motif cassé est ignoré en silence, `validity.valid` reste vrai), SA8 (avertissement) champ textuel (text, email, tel, url, number, password) sans `autocomplete` ni `inputmode` | cli | ✅ |
 | Écran de création : choix exclusif, branches, coexistence | `node c:/dev/digit-ai-forge-design/oracles/oracle-panneau-tache.mjs <page.html>` — PA1 branches exclusives sans sélecteur qui les commande, PA2 sélecteur placé après les champs qu'il gouverne, PA3 plusieurs branches rendues simultanément, PA4 même renseignement demandé deux fois, PA5 tâche à branches en formulaire replié coexistant avec sa liste, PA6 panneau adressable dont la route n'est pointée par rien | cli | ✅ |
 
 ```json
@@ -311,7 +311,7 @@ poste**, à faire par un humain ou par un mandat qui le nomme. La ligne ci-desso
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Composant dynamique et sur-couche : habillage explicite depuis les jetons | `node c:/dev/digit-ai-forge-design/oracles/oracle-surcouche.mjs <page.html> [--tokens tokens.css]` — SC1 surface de la sur-couche sans fond, sans contour, et sans couleur de texte si le composant est natif, SC2 contrôle de la sur-couche sans fond ni couleur (« boutons natifs »), SC3 voile `::backdrop` d'un modal natif non habillé, SC4 `color-scheme` non déclaré par thème (`light` au bloc de base, `dark` au bloc sombre) | cli | ✅ |
+| Composant dynamique et sur-couche : habillage explicite depuis les jetons | `node c:/dev/digit-ai-forge-design/oracles/oracle-surcouche.mjs <page.html> [--tokens tokens.css]` — SC1 surface de la sur-couche sans fond, sans contour, et sans couleur de texte si le composant est natif, SC2 contrôle de la sur-couche sans fond ni couleur (« boutons natifs »), SC3 voile `::backdrop` d'un modal natif non habillé, SC4 `color-scheme` non déclaré par thème (`light` au bloc de base, `dark` au bloc sombre), SC5 (avertissement) modale ou tiroir qui ne contient pas son défilement (`overscroll-behavior: contain` ou `none` absent) | cli | ✅ |
 
 ```json
 [
@@ -372,7 +372,7 @@ maquette comme à l'implémentation — une nature se lit, elle ne se plaide pas
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Déclencheurs : nature du point d'entrée d'une fonctionnalité | `node c:/dev/digit-ai-forge-design/oracles/oracle-declencheurs.mjs <page.html> [--tokens tokens.css]` — DE1 action portée par un lien sans destination réelle, DE2 navigation portée par un bouton (`location`, `window.open`, `href` sur un `<button>`), DE3 fonctionnalité déclarée par `data-fonctionnalite` dont tous les points d'entrée sont fantômes, du texte nu ou des liens sans destination | cli | ✅ |
+| Déclencheurs : nature du point d'entrée d'une fonctionnalité | `node c:/dev/digit-ai-forge-design/oracles/oracle-declencheurs.mjs <page.html> [--tokens tokens.css]` — DE1 action portée par un lien sans destination réelle, DE2 navigation portée par un bouton (`location`, `window.open`, `href` sur un `<button>`), DE3 fonctionnalité déclarée par `data-fonctionnalite` dont tous les points d'entrée sont fantômes, du texte nu ou des liens sans destination, DE4 (avertissement) `<div>` ou `<span>` rendu cliquable par `onclick` sans `role` ni `tabindex` | cli | ✅ |
 
 ```json
 [

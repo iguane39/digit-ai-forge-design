@@ -103,10 +103,10 @@ node oracles/run-oracles-design.mjs --dtcg <source.tokens.json> <tokens.css>  # 
 node oracles/run-oracles-design.mjs --barre-externe <BARRE-EXTERNE.md> [--minimum N]   # B1–B4 : le relevé de barre externe de l'étape 0 de systeme-de-marque (TF-2466)
 node oracles/run-oracles-design.mjs --liste-demande <REVUE.md>                          # D1–D5 : la liste de contrôle de la demande de la revue de critique-le-design (TF-2466)
 
-node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA7 : typé, proposé, borné, atteignable, compilable
+node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA7, SA8 (avertissement) : typé, proposé, borné, atteignable, compilable
 node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
-node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4 : dialog, popover, ::backdrop, color-scheme ; SC4 seule dès qu'un thème sombre existe, avec ou sans sur-couche (TF-2384)
-node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3 : action = bouton, navigation = lien, fantome jamais seul
+node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4, SC5 (avertissement) : dialog, popover, ::backdrop, color-scheme ; SC4 seule dès qu'un thème sombre existe, avec ou sans sur-couche (TF-2384)
+node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3, DE4 (avertissement) : action = bouton, navigation = lien, fantome jamais seul
 node oracles/oracle-exploitabilite.mjs <page.html|url>… \
   [--etat-connexion etat.json] [--theme dark] [--largeur N] \
   [--accepter-certificat-local]                               # X0–X6 : écran rendu au volume réel (TF-1654), onglets sous le premier écran (TF-1916) ; X8 visite guidée câblée, X9 lexique et infobulles (TF-2158) ;
@@ -278,7 +278,7 @@ référentiel de la forge, parce que tous jugeaient la **présence** de l'afford
 jamais sa **valeur**, sa **borne**, sa **surface utile** ni l'**ordre** dans lequel
 elle demande de choisir.
 
-- `oracle-saisie` (SA1–SA7) : un champ au format connu est typé natif, porte la
+- `oracle-saisie` (SA1–SA7, SA8 en avertissement) : un champ au format connu est typé natif, porte la
   meilleure hypothèse du système comme valeur, des bornes posées par son sens, et une
   cible de geste qui couvre **tout** le composant — pas l'icône de vingt pixels au
   bord droit. Toute promesse écrite dans l'aide (« la période part de la dernière
@@ -305,7 +305,7 @@ oracles jugeaient ce que la **page** dessine ; aucun ne jugeait ce que le **navi
 dessine à sa place — la boîte d'un `dialog`, son voile `::backdrop`, les contrôles
 natifs, les barres de défilement.
 
-`oracle-surcouche` (SC1–SC4) exige l'habillage complet de tout composant en sur-couche —
+`oracle-surcouche` (SC1–SC4, SC5 en avertissement) exige l'habillage complet de tout composant en sur-couche —
 surface, contrôles, voile — et `color-scheme` déclaré **par thème** : `light` au bloc de
 base, `dark` au bloc sombre. Le socle le porte à la source (`scripts/generer-tokens-css.mjs`,
 verrouillé par `oracle-dtcg` D3) ; l'oracle vérifie qu'il est arrivé jusqu'à la page.
@@ -319,7 +319,7 @@ le lien a une signification particulière, tout comme le bouton a la sienne » (
 point d'entrée unique d'une fenêtre d'arborescence était un bouton **fantôme** : sans fond ni
 bordure, il se lisait comme du texte.
 
-`oracle-declencheurs` (DE1–DE3) porte le **registre des déclencheurs** : une action se
+`oracle-declencheurs` (DE1–DE3, DE4 en avertissement) porte le **registre des déclencheurs** : une action se
 déclenche par un bouton qui a l'air d'un bouton, une navigation se fait par un lien, et la
 variante fantôme est une action secondaire — jamais l'unique accès à une fonctionnalité. Le
 critère est mesurable et non discutable : l'oracle rend, dans le champ `registre` de son
