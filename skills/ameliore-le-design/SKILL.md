@@ -104,7 +104,7 @@ accepte tout (SA7, TF-1343).
 coexiste pas avec la liste qu'il alimente et ne rend que les champs de la branche
 retenue. Deux motifs de création sont légitimes — formulaire replié pour une création
 simple (≤ 4 champs, aucune branche), panneau adressable dès qu'il y a branche, étape ou
-plus de 4 champs (`oracle-panneau-tache` PA1–PA6, doctrine et balisage dans
+plus de 4 champs (`oracle-panneau-tache` PA1–PA7, doctrine et balisage dans
 `patterns-interaction.md`).
 
 **Secteur, cible et job de l'écran sont établis avant le premier choix visuel.**

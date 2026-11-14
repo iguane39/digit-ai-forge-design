@@ -104,7 +104,7 @@ node oracles/run-oracles-design.mjs --barre-externe <BARRE-EXTERNE.md> [--minimu
 node oracles/run-oracles-design.mjs --liste-demande <REVUE.md>                          # D1–D5 : la liste de contrôle de la demande de la revue de critique-le-design (TF-2466)
 
 node oracles/oracle-saisie.mjs <page.html>                    # SA1–SA7, SA8 (avertissement) : typé, proposé, borné, atteignable, compilable
-node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA6 : choix exclusif, branches, coexistence
+node oracles/oracle-panneau-tache.mjs <page.html>             # PA1–PA7 : choix exclusif, branches, coexistence, motif d'un écran de création
 node oracles/oracle-surcouche.mjs <page.html> [--tokens t.css] # SC1–SC4, SC5 (avertissement) : dialog, popover, ::backdrop, color-scheme ; SC4 seule dès qu'un thème sombre existe, avec ou sans sur-couche (TF-2384)
 node oracles/oracle-declencheurs.mjs <page.html>              # DE1–DE3, DE4 (avertissement) : action = bouton, navigation = lien, fantome jamais seul
 node oracles/oracle-exploitabilite.mjs <page.html|url>… \
@@ -243,11 +243,11 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | Oracle | Règles | Domaine |
 |---|---|---|
 | `oracle-slop` | S1–S12 | marqueurs de design généré ; S11 et S12 adaptées d’unslop (CC BY 4.0), voir `oracles/regles-importees-unslop.md` |
-| `oracle-tokens` | T1–T6 | traçabilité des tokens, parité des thèmes, contraste |
-| `oracle-mobile` | M1–M8, M10–M11 (avertissements) | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante ; délai de tap et `theme-color` en avertissement (TF-1911) |
+| `oracle-tokens` | T1–T8 | traçabilité des tokens, parité des thèmes, contraste, contraste non textuel (T7), focus prescrit et contrasté (T8) |
+| `oracle-mobile` | M1–M9, M10–M11 (avertissements) | viewport, cibles tactiles, safe areas, reflow, paysage, transparence réduite, survie de l'état saisi, coquille défilante, bandeau collé en haut d'écran ; délai de tap et `theme-color` en avertissement (TF-1911) |
 | `oracle-images` | I1–I7, I8 (avertissement) | alt, plafonds, zéro réseau, manifeste de génération, variantes déclarées qui rendent vraiment différemment ; `width` et `height` posés en avertissement (TF-1911) |
 | `oracle-corpus` | C1–C7 | colonnes, sources résolues, polices réflexes, monoculture inter-clients |
-| `oracle-dtcg` | D1–D3 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source |
+| `oracle-dtcg` | D1–D4 | pipeline de tokens : forme DTCG minimale, alias résolus, tokens.css synchronisé avec sa source, fraîcheur d'un bloc externe déclaré |
 | `oracle-bascule` | B-T1–B-T4 | bascule sombre : bouton en en-tête, câblé (attaché ou délégué), persisté, palette sombre dérivée ; un rendu figé (ni bouton, ni palette sombre, ni script de thème) n'est qu'un avertissement, comme G1 du socle (TF-1661) |
 | `oracle-caracteres-controle` | CC-P1 | aucun octet de contrôle (C0 hors tabulation et fin de ligne, DEL) dans la page ni dans ses feuilles de style locales liées : un échappement CSS lu en octal par un script, invisible à la capture (TF-1980) |
 | `oracle-valeur-affichee` | VA1–VA4 (VA0 : SKIP) | une valeur dérivée affichée (version, environnement, date) égale sa source : le produit déclare où la page l'affiche et la commande qui la donne (`valeurs-derivees.json`), l'oracle relit la page servie et rejoue la commande ; sans déclaration, SKIP dit, jamais PASS (TF-2043) |
@@ -255,7 +255,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-logo-petit` | LP1–LP5 | logo SVG rendu à 16 et 32 px (Chromium, fond transparent) contre sa référence à 128 px : LP1 trait plus fin qu'un pixel (plus de 20 % de l'encre), LP2 pièce ou trou fusionné ou perdu, LP3 contraste sous 3:1 sur le fond déclaré (`--fond`), LP4 rien à 16 px ou marge excessive, LP5 texte vivant ; le goût et la lisibilité sémantique ne sont pas jugés (TF-2074) |
 | `oracle-erreurs-formulaire` | EF0–EF4, EF5 (avertissement) | une valeur fausse par champ d'un formulaire visible (déclarée par `data-valeur-fausse` ou dérivée de `pattern`, `type`, `min`, `max`, `minlength`, `required`), sortie du champ puis envoi tenté (les écritures sont interceptées) : EF1 le champ est désigné (`aria-invalid` et message relié, un refus affiché ailleurs est cité), EF2 le message est à 120 px au plus du champ et dans la fenêtre, EF3 il reprend la saisie ou donne la forme attendue, EF4 l'envoi est retenu, EF5 le message paraît dès la sortie du champ ; enrôlé sur `--instance` ; seule requête d'écriture laissée passer : la vérification au champ qu'un formulaire déclare sans effet (`data-verifier="/chemin"`, ou dernier segment `/verifier` ; POST en fetch ou XHR, même origine, jamais l'`action` du formulaire ni une navigation), comptée à part et dite au non_juge (TF-2307) ; le composant qui le fait passer : `corpus/composants/saisie-erreurs.js` (TF-2172) |
 | `oracle-saisie` | SA1–SA7, SA8 (avertissement) | champs de saisie : typé, proposé, borné, atteignable (surface de geste et clavier), motif `pattern` compilable sous le drapeau v ; `autocomplete` ou `inputmode` posé en avertissement (TF-1911) ; une page sans champ de saisie rend SKIP motivé (exit 2), jamais PASS (TF-2535) |
-| `oracle-panneau-tache` | PA1–PA6 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste |
+| `oracle-panneau-tache` | PA1–PA7 | écran de création : choix exclusif avant ses champs, une seule branche rendue, panneau hors de sa liste, motif légitime de la création annoncée |
 | `oracle-surcouche` | SC1–SC4, SC5 (avertissement) | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème ; défilement contenu (`overscroll-behavior`) en avertissement (TF-1911) |
 | `oracle-fluidite` | F1 (bloquant), F2–F3 (avertissements) | page animée en WebGL : durée d'image mesurée de bout en bout — chaque image attend la fin du travail graphique (lecture d'un pixel du canevas), jamais un compte de rappels d'animation (D-108 (b)) ; pas de contexte WebGL, pas d'animation, synchronisation impossible ⇒ `SKIP` motivé, jamais `PASS` |
 | `oracle-declencheurs` | DE1–DE3, DE4 (avertissement) | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès ; un `div` ou `span` cliquable sans rôle ni `tabindex` en avertissement (TF-1911) |
@@ -291,7 +291,7 @@ elle demande de choisir.
   lecture ») est câblée dans le champ, sinon elle n'existe pas. Un `pattern` qui ne
   compile pas sous le drapeau `v` — celui que le navigateur applique réellement — est
   ignoré en silence : la contrainte déclarée n'existe pas non plus (SA7, TF-1343).
-- `oracle-panneau-tache` (PA1–PA6) : un choix exclusif se pose **avant** les champs
+- `oracle-panneau-tache` (PA1–PA7) : un choix exclusif se pose **avant** les champs
   qu'il commande ; un panneau de tâche ne coexiste pas avec la liste qu'il alimente ;
   une seule branche est rendue. Deux motifs de création restent légitimes — formulaire
   replié pour une création simple, panneau adressable pour une tâche à branches — au

@@ -63,9 +63,9 @@ Polices système — voir l'écart ci-dessus. Aucune cartographie dans ce run.
 |---|---|---|
 | `check_maquette.py` | **PASS** | 0 finding · 0,11 Mo · 7 routes · 0 ressource externe · breakpoints 480/768/1024 |
 | `oracle-slop` S1–S10 | **PASS** | 0 écart dur, 0 avertissement |
-| `oracle-tokens` T1–T6 | **PASS** | 33 tokens clairs, 14 sombres, **20 paires de contraste mesurées** |
-| `oracle-mobile` M1–M6 | **PASS** | contrôle négatif effectué : M4 passe bien en FAIL quand on retire le reflow |
-| `oracle-images` I1–I6 | **SANS OBJET** | aucune image dans le document |
+| `oracle-tokens` T1–T8 | **PASS** | 33 tokens clairs, 14 sombres, **20 paires de contraste mesurées** ; rejoué le 14/11/2026 sur T1–T8 : PASS, 6 avertissements T7 (traits sous 3:1, leur rôle n'est pas jugé) |
+| `oracle-mobile` M1–M11 | **PASS** | contrôle négatif effectué : M4 passe bien en FAIL quand on retire le reflow ; rejoué le 14/11/2026 sur M1–M11 : PASS, 2 avertissements (M10 délai de tap, M11 `theme-color`) |
+| `oracle-images` I1–I8 | **SANS OBJET** | aucune image dans le document ; rejoué le 14/11/2026 : PASS, I1–I2 et I5–I6 sans objet |
 | `render_page.py` V1–V7 | **NON LANCÉ** | Playwright non vérifié sur cette machine — contraste mesuré et débordements restent dus |
 | `oracle-a11y.py` | **NON LANCÉ** | idem |
 | Parcours C13 | **✗ ÉCHEC** | tracés depuis le code, **jamais cliqués dans un navigateur**. Voir `parcours.md` |

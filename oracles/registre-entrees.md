@@ -28,9 +28,9 @@ après cette date vivent dans les chapitres datés du bas de ce fichier, pas ici
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
 | Design généré : marqueurs de slop | `oracles/oracle-slop.mjs <page.html>` — S1 bandeau latéral > 1px, S2 texte en dégradé, S3 polices réflexes, S4 noir/blanc purs, S5 palette IA (violet→bleu, néon sur sombre), S6 emojis en production, S7 grille de cartes clonée, S8 easing à dépassement, S9 rayon uniforme + ombre non teintée, S10 sparkline décoratif, S11 halo coloré (avertissement), S12 forme floue (avertissement) | cli | ✅ |
-| Système de marque : traçabilité des tokens | `oracles/oracle-tokens.mjs <page.html> [--tokens tokens.css]` — T1 couleur en dur, T2 police en dur, T3 échelle 4pt, T4 parité clair/sombre, T5 contraste ≥ 4.5:1 sur paires résolvables, T6 chroma aux extrêmes (OKLCH) | cli | ✅ |
-| Cible mobile : contrat d'usage tactile | `oracles/oracle-mobile.mjs <page.html>` — M1 viewport et zoom, M2 cibles ≥ 44 px, M3 safe-area-inset, M4 reflow des tables sous 768 px, M5 orientation paysage, M6 prefers-reduced-motion | cli | ✅ |
-| Visuels générés : traçabilité et budget | `oracles/oracle-images.mjs <page.html> [--env .env]` — I1 alt utile, I2 plafond unitaire, I3 plafond global 10 Mo, I4 zéro image réseau, I5 manifeste de génération, I6 complétude prompt/modèle/date, I7 deux actifs déclarés variantes rendent différemment (empreintes identiques, ou encres identiques à empreintes différentes) | cli | ✅ |
+| Système de marque : traçabilité des tokens | `oracles/oracle-tokens.mjs <page.html> [--tokens tokens.css]` — T1 couleur en dur, T2 police en dur, T3 échelle 4pt, T4 parité clair/sombre, T5 contraste ≥ 4.5:1 sur paires résolvables, T6 chroma aux extrêmes (OKLCH), T7 contraste non textuel ≥ 3:1, T8 focus prescrit et contrasté | cli | ✅ |
+| Cible mobile : contrat d'usage tactile | `oracles/oracle-mobile.mjs <page.html>` — M1 viewport et zoom, M2 cibles ≥ 44 px, M3 safe-area-inset, M4 reflow des tables sous 768 px, M5 orientation paysage, M6 prefers-reduced-motion, M7 état saisi qui survit à la navigation, M8 barre basse hors flux dans une coquille défilante, M9 bandeau collé en haut d'écran sous le quart de l'écran, M10 délai de tap et M11 `theme-color` (avertissements) | cli | ✅ |
+| Visuels générés : traçabilité et budget | `oracles/oracle-images.mjs <page.html> [--env .env]` — I1 alt utile, I2 plafond unitaire, I3 plafond global 10 Mo, I4 zéro image réseau, I5 manifeste de génération, I6 complétude prompt/modèle/date, I7 deux actifs déclarés variantes rendent différemment (empreintes identiques, ou encres identiques à empreintes différentes), I8 `width` et `height` posés (avertissement) | cli | ✅ |
 | Page générée : discipline d'accent, de filets et de système | `oracles/oracle-taste.mjs <page.html>` — TA1 familles d'accent (avertissement), TA2 saturation d'accent (avertissement), TA3 filet haut ET bas sur chaque ligne, TA4 systèmes de design cohabitants | cli | ✅ |
 
 ## Entrées JSON
@@ -149,7 +149,7 @@ copie installée depuis ici recréerait la divergence qu'on solde.
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Mouvement : craft de l'animation, PRESCRIT et jugé | `node c:/dev/digit-ai-forge-design/oracles/oracle-motion.mjs <page.html>` — R1 `transition: all`, R2 entrée en `scale(0)`, R3 `ease-in` sur de l'UI, R4 durée > 300 ms sans justification déclarée, R5 `transform-origin: center` sur élément ancré, R6 propriété de layout animée, R7 survol animé sans `@media (hover: hover) and (pointer: fine)`, **R8 durée en dur alors que la feuille prescrit des tokens**, **R9 token de mouvement hors barème (plafond 300 ms)**, **R10 révocation `prefers-reduced-motion: reduce` absente ou sans effet (WCAG 2.2 SC 2.3.3)** ; dérivé de `review-animations` (Emil Kowalski, MIT) | cli | ✅ |
+| Mouvement : craft de l'animation, PRESCRIT et jugé | `node c:/dev/digit-ai-forge-design/oracles/oracle-motion.mjs <page.html>` — R1 `transition: all`, R2 entrée en `scale(0)`, R3 `ease-in` sur de l'UI, R4 durée > 300 ms sans justification déclarée, R5 `transform-origin: center` sur élément ancré, R6 propriété de layout animée, R7 survol animé sans `@media (hover: hover) and (pointer: fine)`, **R8 durée en dur alors que la feuille prescrit des tokens**, **R9 token de mouvement hors barème (plafond 300 ms)**, **R10 révocation `prefers-reduced-motion: reduce` absente ou sans effet (WCAG 2.2 SC 2.3.3)** ; avertissements : R11 animation `infinite` de plus de 5 s sans pause, R12 durée littérale d'`animate()` au-delà de 300 ms, R13 révocation qui ne couvre pas chaque sélecteur animé, R14 contrôle pressable sans règle `:active` ; dérivé de `review-animations` (Emil Kowalski, MIT) | cli | ✅ |
 
 ```json
   {
@@ -223,7 +223,7 @@ ancien, SA7 se déclare `non_juge` au lieu de rendre un faux verdict.
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
 | Champs de saisie : typé, proposé, borné, atteignable | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format connu non typé natif, SA2 champ temporel sans valeur proposée, SA3 champ temporel ou numérique sans borne, SA4 promesse d'aide (valeur ou borne) non câblée dans le champ, SA5 cible de geste réduite à l'icône native (aucun `showPicker()` global), SA6 saisie clavier confisquée (`readonly` posé pour forcer le sélecteur, ou `preventDefault` sur `keydown`), SA7 attribut `pattern` qui ne compile pas sous le drapeau `v` (celui que le navigateur applique réellement — un motif cassé est ignoré en silence, `validity.valid` reste vrai), SA8 (avertissement) champ textuel (text, email, tel, url, number, password) sans `autocomplete` ni `inputmode` | cli | ✅ |
-| Écran de création : choix exclusif, branches, coexistence | `node c:/dev/digit-ai-forge-design/oracles/oracle-panneau-tache.mjs <page.html>` — PA1 branches exclusives sans sélecteur qui les commande, PA2 sélecteur placé après les champs qu'il gouverne, PA3 plusieurs branches rendues simultanément, PA4 même renseignement demandé deux fois, PA5 tâche à branches en formulaire replié coexistant avec sa liste, PA6 panneau adressable dont la route n'est pointée par rien | cli | ✅ |
+| Écran de création : choix exclusif, branches, coexistence | `node c:/dev/digit-ai-forge-design/oracles/oracle-panneau-tache.mjs <page.html>` — PA1 branches exclusives sans sélecteur qui les commande, PA2 sélecteur placé après les champs qu'il gouverne, PA3 plusieurs branches rendues simultanément, PA4 même renseignement demandé deux fois, PA5 tâche à branches en formulaire replié coexistant avec sa liste, PA6 panneau adressable dont la route n'est pointée par rien, PA7 écran qui annonce une création sans aucun des trois motifs légitimes (formulaire replié, panneau adressable, page dédiée) | cli | ✅ |
 
 ```json
 [
@@ -541,7 +541,7 @@ prennent X8 et X9.
 
 | Domaine | Oracle (invocation) | Type | Statut |
 |---|---|---|---|
-| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes, X8 visite guidée câblée (TF-2158), X9 lexique déclaré et infobulles de ses termes (TF-2158) ; enrôlé en opt-in par `run-oracles-design.mjs <page.html> --instance <url\|page> [--etat-connexion etat.json]` | cli | ✅ |
+| Écran d'application : exploitabilité au volume réel des données | `node c:/dev/digit-ai-forge-design/oracles/oracle-exploitabilite.mjs <page.html\|url>… [--largeur N] [--hauteur-ecran N] [--etat-connexion etat.json] [--theme dark]` — X0 cible jugeable (HTTP < 400 ; redirection signalée, écran non jugé, SKIP si aucun écran jugé), X1 hauteur ≤ 4 fenêtres hors tableaux filtrables, X2 ligne médiane de tableau ≤ 80 px, X3 aucune valeur machine visible (snake_case, objet sérialisé), X4 colonnes côte à côte sans écart de plus de 3 fois au-delà de 1 500 px, X5 libellé de ligne ≤ 3 lignes, X6 onglets sous le premier écran (TF-1916), X8 visite guidée câblée (TF-2158), X9 lexique déclaré et infobulles de ses termes (TF-2158) ; enrôlé en opt-in par `run-oracles-design.mjs <page.html> --instance <url\|page> [--etat-connexion etat.json]` | cli | ✅ |
 
 ```json
 [
@@ -598,7 +598,7 @@ L'arbitrage d'autorité ci-dessus tient : elles entrent dans `oracle-motion`, au
   passe) mais ne nomme pas chaque sélecteur portant une `animation`, sauf règle universelle `*`.
 
 Preuves : trois paires de fixtures (`motion-boucle-*`, `motion-js-*`, `motion-couverture-*`),
-verrouillées par le bloc « oracle-motion R11–R13 (TF-1904) » de `self-test.mjs`. La rouge doit
+verrouillées par le bloc de `self-test.mjs` consacré à R11–R13 (TF-1904). La rouge doit
 rester PASS (exit 0) avec un avertissement de SA règle et aucune des deux autres : elle ne passe
 donc pas par la boucle `CAS`, où une rouge doit FAIL. Le bloc rejoue aussi la page de l'étude.
 

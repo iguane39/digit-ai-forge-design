@@ -20,7 +20,7 @@
 | Saisie de date | `<input type="date">` natif uniquement — aucun datepicker maison au MVP |
 | Champs de saisie | **TYPÉ, PROPOSÉ, BORNÉ, ATTEIGNABLE, COMPILABLE** pour tout champ, tout format, tout contexte — `oracle-saisie` SA1–SA7, SA8 en avertissement, doctrine dans `patterns-interaction.md` |
 | Geste d'ouverture | un champ temporel natif s'ouvre au clic **n'importe où** sur le champ (`showPicker()` délégué), garde `disabled`/`readOnly`, `try/catch`, clavier intact — `oracle-saisie` SA5/SA6 |
-| Écrans de création | deux motifs légitimes : formulaire replié (création simple) ou panneau adressable (tâche à branches) — `oracle-panneau-tache` PA1–PA6 |
+| Écrans de création | deux motifs légitimes : formulaire replié (création simple) ou panneau adressable (tâche à branches) — `oracle-panneau-tache` PA1–PA7 |
 | Impression | `@media print` fonctionnelle |
 
 ## Largeur de conception et grille de vérification — E5

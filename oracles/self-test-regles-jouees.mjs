@@ -31,6 +31,8 @@ const ligne = (ok, texte) => { total++; if (!ok) echecs++; console.log(`  ${ok ?
 
 const oracles = fs.readdirSync(ici).filter(f => /^oracle-.*\.mjs$/.test(f) && f !== 'oracle-exploitabilite.mjs').sort();
 const sources = Object.fromEntries(oracles.map(f => [f, fs.readFileSync(path.join(ici, f), 'utf8')]));
+// oracle-exploitabilite est hors de `oracles` (son verrou propre traite X0), mais ses citations en documentation se lisent comme les autres (TF-2534).
+const sourceDe = f => sources[f] ?? fs.readFileSync(path.join(ici, f), 'utf8');
 const dotes = oracles.filter(f => reglesDeclarees(sources[f]).length > 0);
 
 // Une plage citée en dur : un littéral entre guillemets droits (pas un gabarit) qui contient « Xn–Xm » puis « sans écart »,
@@ -151,9 +153,12 @@ console.log('La documentation — la plage citée pour un oracle atteint sa dern
 // Un document qui écrit « oracle-saisie (SA1–SA7) » alors que l'oracle joue aussi SA8 dit un périmètre plus étroit que le joué, comme
 // le message de sortie que TF-2287 a corrigé. Le verrou lit les .md de la forge : après « oracle-<nom> », la première plage du préfixe
 // de l'oracle (dans les 90 caractères, sans franchir une autre mention d'oracle) doit finir à sa dernière règle, ou à la règle que
-// « , SAn » lui ajoute (« SA1–SA7, SA8 en avertissement »). Posé pour les trois oracles que l'item nomme ; les autres citations
-// périmées de la forge (PA1–PA6, T1–T6, M1–M8, D1–D3, I1–I6, R11–R13…) restent à aligner, une par oracle, par cette même liste.
-const DOCUMENTES = ['saisie', 'surcouche', 'declencheurs'];
+// « , SAn » lui ajoute (« SA1–SA7, SA8 en avertissement »), ou à celle d'une seconde plage (« M1–M9, M10–M11 »). Posé d'abord pour trois
+// oracles (TF-2293), étendu le 14/11/2026 à huit autres, un par un (TF-2534 : PA, M, T, D de oracle-dtcg et de oracle-liste-demande, X, R, I) :
+// chacun a ses lignes ci-dessous. Les citations des oracles qui ne figurent pas ici (S1–S10 de oracle-slop dans demo/NOTE-partis-pris.md…)
+// restent à aligner, un oracle à la fois, par cette même liste.
+const DOCUMENTES = ['saisie', 'surcouche', 'declencheurs', 'panneau-tache', 'mobile', 'tokens', 'dtcg', 'liste-demande', 'exploitabilite', 'motion', 'images'];
+const SANS_LIGNE_DE_REGISTRE = ['dtcg', 'liste-demande'];
 const racineForge = path.join(ici, '..');
 function* documents(dossier) {
   for (const e of fs.readdirSync(dossier, { withFileTypes: true })) {
@@ -166,12 +171,12 @@ const numeroDe = r => Number(/(\d+)$/.exec(r)[1]);
 // Les plages citées après « oracle-<nom> » dans un texte, et leur borne haute (l'extension « , Xp » comprise).
 function plagesCitees(texte, nom, regles) {
   const prefixe = /^(.*?)\d+$/.exec(regles[0])[1];
-  const rx = new RegExp(`\\b${prefixe}(\\d+)–${prefixe}(\\d+)(?:,\\s+${prefixe}(\\d+))?`);
+  const rx = new RegExp(`\\b${prefixe}(\\d+)–${prefixe}(\\d+)(?:,\\s+${prefixe}(\\d+)(?:–${prefixe}(\\d+))?)?`);
   const trouvees = [];
   for (const m of texte.matchAll(new RegExp(`oracle-${nom}(?![\\w-])`, 'g'))) {
     const fenetre = texte.slice(m.index + m[0].length, m.index + m[0].length + 90).split('oracle-')[0];
     const c = rx.exec(fenetre);
-    if (c) trouvees.push({ citee: c[0], haut: Number(c[3] || c[2]) });
+    if (c) trouvees.push({ citee: c[0], haut: Number(c[4] || c[3] || c[2]) });
   }
   return trouvees;
 }
@@ -180,11 +185,17 @@ const ligneDeRegistre = (texte, nom) => texte.split('\n').find(l => l.startsWith
 const reglesAbsentes = (texte, nom, regles) => { const l = ligneDeRegistre(texte, nom); return regles.filter(r => !new RegExp(`\\b${r}\\b`).test(l)); };
 const documentsForge = [...documents(racineForge)];
 for (const nom of DOCUMENTES) {
-  const regles = reglesDeclarees(sources[`oracle-${nom}.mjs`]);
+  const regles = reglesDeclarees(sourceDe(`oracle-${nom}.mjs`));
   const fautifs = documentsForge.flatMap(d => plagesPerimees(fs.readFileSync(d, 'utf8').replace(/\r\n/g, '\n'), nom, regles).map(c => `${path.relative(racineForge, d)} « ${c} »`));
   ligne(regles.length > 0 && fautifs.length === 0, `oracle-${nom} · aucun .md ne cite une plage qui s'arrête avant ${regles[regles.length - 1]} (${documentsForge.length} .md lus ; obtenu : ${fautifs.join(' ; ') || 'aucune citation périmée'})`);
   const registre = fs.readFileSync(path.join(ici, 'registre-entrees.md'), 'utf8');
   const absentes = reglesAbsentes(registre, nom, regles);
+  // TF-2534 : oracle-dtcg et oracle-liste-demande n'ont jamais été remontés au registre des entrées (aucune ligne ne les nomme) : la
+  // ligne de registre qui n'existe pas ne se juge pas. La liste est explicite — une ligne qui y paraît un jour est jugée comme les autres.
+  if (SANS_LIGNE_DE_REGISTRE.includes(nom) && ligneDeRegistre(registre, nom) === '') {
+    console.log(`  --   oracle-${nom} · aucune ligne au registre des entrées (oracle jamais remonté) : rien à comparer à ${regles.join(' ')}`);
+    continue;
+  }
   ligne(regles.length > 0 && ligneDeRegistre(registre, nom) !== '' && absentes.length === 0, `oracle-${nom} · sa ligne du registre des entrées nomme chaque règle jouée (${regles.join(' ')} ; absentes : ${absentes.join(' ') || 'aucune'})`);
 }
 {
@@ -200,6 +211,24 @@ for (const nom of DOCUMENTES) {
     'sens vert · TF-2293 · la plage de l\'oracle suivant (PA1–PA6) n\'est pas imputée à oracle-saisie');
   const ligneSans = '| Champs de saisie | `node c:/dev/digit-ai-forge-design/oracles/oracle-saisie.mjs <page.html>` — SA1 format, SA2 temporel, SA3 borne, SA4 aide, SA5 geste, SA6 clavier, SA7 pattern | cli | ✅ |';
   ligne(reglesAbsentes(ligneSans, 'saisie', regles).join() === 'SA8', 'sens rouge · TF-2293 · une ligne du registre sans SA8 est vue (absente : SA8)');
+}
+// TF-2534 — les huit oracles ajoutés et la seconde plage (« R1–R10, R11–R14 ») : chaque citation d'avant est vue, chaque citation à jour passe.
+{
+  const reglesDe = nom => reglesDeclarees(sourceDe(`oracle-${nom}.mjs`));
+  const CAS_DOC = [
+    ['panneau-tache', '`oracle-panneau-tache` PA1–PA6 : un choix exclusif', 'PA1–PA6', '`oracle-panneau-tache` PA1–PA7 : un choix exclusif'],
+    ['mobile', 'node oracles/oracle-mobile.mjs <page.html>   # M1–M9, M10 (avertissements)', 'M1–M9, M10', 'node oracles/oracle-mobile.mjs <page.html>   # M1–M9, M10–M11 (avertissements)'],
+    ['tokens', '| `oracle-tokens` | T1–T6 | traçabilité', 'T1–T6', '| `oracle-tokens` | T1–T8 | traçabilité'],
+    ['dtcg', '`oracles/oracle-dtcg.mjs` (règles D1–D3) vérifie', 'D1–D3', '`oracles/oracle-dtcg.mjs` (règles D1–D4) vérifie'],
+    ['liste-demande', '`oracle-liste-demande` (D1–D3) juge', 'D1–D3', '`oracle-liste-demande` (D1–D5) juge'],
+    ['exploitabilite', '`oracle-exploitabilite` (X0–X6, X8) sur l\'instance', 'X0–X6, X8', '`oracle-exploitabilite` (X0–X6, X8–X9) sur l\'instance'],
+    ['motion', 'node oracles/oracle-motion.mjs <page.html>   # R1–R10, R11–R13 (avertissements)', 'R1–R10, R11–R13', 'node oracles/oracle-motion.mjs <page.html>   # R1–R10, R11–R14 (avertissements)'],
+    ['images', '`oracle-images` I1–I6 | SANS OBJET', 'I1–I6', '`oracle-images` I1–I8 | SANS OBJET'],
+  ];
+  for (const [nom, perime, citee, aJour] of CAS_DOC) {
+    ligne(plagesPerimees(perime, nom, reglesDe(nom)).join() === citee && plagesPerimees(aJour, nom, reglesDe(nom)).length === 0,
+      `TF-2534 · oracle-${nom} · sens rouge « ${citee} » vu comme périmé, sens vert « ${plageDeRegles(reglesDe(nom), '–')} » à jour (dernière règle ${reglesDe(nom).slice(-1)[0]})`);
+  }
 }
 
 console.log('Le message « sans objet » — chaque oracle sur une page minimale, la plage dérive de sa liste (TF-2293)');
@@ -254,7 +283,7 @@ console.log('Un SKIP ne rend jamais « sans écart » — chaque oracle joué su
 {
   const REPLI_SANS_GARDE = /findings: F\.length \? F : \[\{ sev: 'info', regle: '—', msg: [^\n]*sans écart/;
   const tous = oracles.concat('oracle-exploitabilite.mjs').sort();
-  const texteDe = f => sources[f] ?? fs.readFileSync(path.join(ici, f), 'utf8');
+  const texteDe = sourceDe;
   const nusDeGarde = tous.filter(f => REPLI_SANS_GARDE.test(texteDe(f)));
   ligne(nusDeGarde.length === 0, `aucun oracle ne garde le repli « sans écart » sans condition de SKIP (obtenu : ${nusDeGarde.join(', ') || 'aucun'} sur ${tous.length} oracles)`);
   const gardee = texteDe('oracle-saisie.mjs');

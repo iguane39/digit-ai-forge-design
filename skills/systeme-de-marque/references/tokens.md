@@ -250,7 +250,7 @@ depuis TF-0102 : voir `corpus/tokens-digit-ai.tokens.json` pour un exemple compl
 `alias`) et `scripts/generer-tokens-css.mjs` pour la transformation (zéro
 dépendance npm — pas de Style Dictionary, juste ce qu'il faut pour ce contrat).
 Intérêt : un seul endroit à éditer, et l'ouverture vers Figma Variables / autres
-plateformes sans ressaisie. `oracles/oracle-dtcg.mjs` (règles D1–D3) vérifie que
+plateformes sans ressaisie. `oracles/oracle-dtcg.mjs` (règles D1–D4) vérifie que
 le `tokens.css` livré est bien la régénération exacte de sa source — un tokens.css
 retouché à la main après génération est détecté, jamais silencieux.
 

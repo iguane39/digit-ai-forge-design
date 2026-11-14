@@ -232,7 +232,7 @@ Bon : une route dédiée ; en tête du panneau, la question qui tranche (« comm
 stockage vous autorise-t-il ? ») ; puis, et seulement puis, les champs de la branche
 retenue. L'autre branche n'est pas rendue.
 
-Balisage attendu, qui rend la règle mécanisable (`oracle-panneau-tache`, PA1–PA6) :
+Balisage attendu, qui rend la règle mécanisable (`oracle-panneau-tache`, PA1–PA7) :
 
 | Attribut | Sur quoi |
 |---|---|
