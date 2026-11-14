@@ -4631,6 +4631,44 @@ if (!OUTILLAGE_DOCUMENT.ok) {
   }
 }
 
+// TF-2546 (14/11/2026) — LES RÉFÉRENCES DU STUDIO DE DIRECTION SE JUGENT PAR M7. rubrique.md ouvrait « ## Les six critères » par un tableau
+// nu : le hook d'écriture refusait chaque copie faite sur son modèle (M7, « chapitre sans ouverture »), et la référence elle-même n'était
+// jugée par aucune recette. La règle est celle de check_markdown.py (skill digit-ai-page-html, installé sous ~/.claude/skills), jamais
+// réimplémentée ici : seul son verdict M7 est lu, M10, M14 et M18 relèvent de leur propre porte. Le sens rouge est l'ancien texte de
+// rubrique.md, reconstitué en retirant la phrase de lecture que la correction a posée.
+{
+  console.log(String.fromCharCode(10) + 'skills/studio-de-direction · chaque chapitre des références s\'ouvre par une phrase (M7, TF-2546)');
+  const verificateur = path.join(os.homedir(), '.claude', 'skills', 'digit-ai-page-html', 'scripts', 'check_markdown.py');
+  if (!PYTHON || !fs.existsSync(verificateur)) {
+    console.log(`  SKIP  ${!PYTHON ? 'Python indisponible' : `check_markdown.py introuvable (${verificateur})`} : les références du studio ne sont pas jugées par M7 sur ce poste`);
+  } else {
+    const refusM7 = chemin => {
+      const r = spawnSync(PYTHON, [verificateur, chemin, '--output', 'json'], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+      let json = null; try { json = JSON.parse(r.stdout); } catch { /* illisible : la ligne le dira */ }
+      return json ? (json.fails || []).filter(f => /^M7 /.test(f)) : null;
+    };
+    const references = path.join(ici, '..', 'skills', 'studio-de-direction', 'references');
+    const fichiers = fs.readdirSync(references).filter(f => /\.md$/.test(f)).sort();
+    ligne(fichiers.length >= 3, `le studio porte au moins 3 références à juger (obtenu ${fichiers.length} : ${fichiers.join(', ')})`);
+    for (const f of fichiers) {
+      const refus = refusM7(path.join(references, f));
+      ligne(refus !== null && refus.length === 0, `sens vert · references/${f} : aucun chapitre sans ouverture (obtenu ${refus === null ? 'sortie illisible' : `${refus.length} refus M7`})`);
+    }
+    const reel = fs.readFileSync(path.join(references, 'rubrique.md'), 'utf8');
+    const ancien = reel.replace(/(^## Les six critères\r?\n\r?\n)[^|\r\n][^\r\n]*\r?\n\r?\n/m, '$1');
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'rubrique-m7-'));
+    try {
+      const fichierAncien = path.join(dossier, 'rubrique-ancienne.md');
+      fs.writeFileSync(fichierAncien, ancien, 'utf8');
+      const refus = refusM7(fichierAncien);
+      ligne(ancien !== reel && refus !== null && refus.length === 1 && /Les six critères/.test(refus[0]),
+        `sens rouge · l'ancien texte de rubrique.md (tableau nu sous « Les six critères ») est refusé par M7 (obtenu ${refus === null ? 'sortie illisible' : `${refus.length} refus : ${refus.map(m => m.slice(0, 60)).join(' | ')}`})`);
+    } finally {
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok) && !(c.video && !OUTILLAGE_VIDEO.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

@@ -6,6 +6,8 @@ en même temps que les réponses.
 
 ## Les six critères
 
+Chaque ligne donne un critère, le test binaire qui le juge et la preuve qu'on doit pouvoir citer pour l'accorder.
+
 | # | Critère | Binaire | Preuve exigée |
 |---|---|---|---|
 | R1 | Ancrée dans le sujet | la direction cite au moins deux éléments du monde du sujet (matériau, instrument, vernaculaire, artefact) | les deux éléments, nommés |

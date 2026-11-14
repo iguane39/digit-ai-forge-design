@@ -15,6 +15,8 @@ jugement illisible.
 
 ## Axes utilisables
 
+Chaque ligne propose un axe : ses deux pôles, et la situation où il est le bon.
+
 | Axe | Pôle A | Pôle B | Quand il est le bon |
 |---|---|---|---|
 | Matériau | numérique assumé (aplats, grilles) | matière (papier, encre, texture) | marque à ancrage physique ou artisanal |
