@@ -43,10 +43,11 @@ const NJ = ['adéquation des valeurs à la charte (palette, voix) — arbitrage 
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 
+// TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-dtcg', domaine: DOM, artefact: derive || source || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: derive }],
+    verdict, findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: derive }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

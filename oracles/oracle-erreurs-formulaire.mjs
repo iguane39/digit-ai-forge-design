@@ -89,11 +89,12 @@ const add = (sev, regle, msg, where, extra) => F.push({ sev, regle, msg, where, 
 const MESURES = [];
 let eprouves = 0;
 
+// TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-erreurs-formulaire', domaine: DOM, artefact: cibles.join(' ') || null,
     verdict, largeur: LARGEUR, hauteur_ecran: HAUTEUR, proximite_px: PROXIMITE, champs_eprouves: eprouves,
-    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: cibles.join(' ') }],
+    findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: cibles.join(' ') }],
     non_juge: NJ, mesures: MESURES,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

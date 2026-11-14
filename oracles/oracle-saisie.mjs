@@ -106,10 +106,11 @@ if (!SUPPORT_V) {
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 
+// TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-saisie', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
+    verdict, findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);
@@ -388,6 +389,10 @@ if (temporels.length && /addEventListener\(\s*['"]keydown['"][\s\S]{0,300}?preve
 // ── Verdict ────────────────────────────────────────────────────────────────
 if (toutesSaisies.length === 0) {
   NON_JUGE.push(`aucun champ de saisie dans le document : ${PLAGE_JOUEE} sans objet ici, jamais PASS par défaut sur un domaine absent`);
+  // TF-2535 : « jamais PASS par défaut » se tient : une page sans champ n'a rien à juger, l'oracle rend SKIP exit 2 (aucun constat n'est
+  // possible ici : SA1–SA8 naissent tous d'un champ). Le point d'entrée dit ce cas SANS OBJET, jamais un SKIP qui fait tomber l'agrégat.
+  if (!jsonOnly) process.stderr.write('SKIP — aucun champ de saisie : rien n\'a été jugé\n');
+  sortir('SKIP', 2);
 }
 const RANG = { bloquant: 0, majeur: 1, avertissement: 2, info: 3 };
 F.sort((x, y) => RANG[x.sev] - RANG[y.sev]);

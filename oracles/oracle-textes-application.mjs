@@ -947,7 +947,8 @@ if (EST_POINT_D_ENTREE) {
     process.stdout.write(JSON.stringify({
       oracle: 'oracle-textes-application', domaine: DOM, artefact: file || null,
       verdict,
-      findings: findings && findings.length ? findings
+      // TF-2535 : un SKIP n'a rien jugé, il ne rend jamais la ligne « sans écart ».
+      findings: (findings && findings.length) || verdict === 'SKIP' ? findings || []
         : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file || null }],
       non_juge: NON_JUGE,
     }, null, jsonOnly ? 0 : 2));

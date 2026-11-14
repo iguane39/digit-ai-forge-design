@@ -75,11 +75,12 @@ const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 const mesures = {};
 
+// TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-logo-petit', domaine: DOM, artefact: fichiers.join(' ') || null,
     verdict, tailles: TAILLES, reference: REFERENCE, seuils: SEUILS, mesures,
-    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: fichiers.join(' ') }],
+    findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: fichiers.join(' ') }],
     non_juge: NJ,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

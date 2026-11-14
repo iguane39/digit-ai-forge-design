@@ -74,10 +74,11 @@ const NON_JUGE = [
 const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 
+// TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-bascule', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
+    verdict, findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

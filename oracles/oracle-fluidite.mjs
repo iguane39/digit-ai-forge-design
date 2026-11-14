@@ -56,11 +56,12 @@ const NJ = [
 const F = [];
 let mesures = null;
 
+// TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
 function sortir(verdict, code) {
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-fluidite', domaine: DOM, artefact: cible || null, verdict,
     largeur: LARGEUR, hauteur: HAUTEUR,
-    findings: F.length ? F : [{ sev: 'info', regle: '—', msg: 'durée d\'image sans écart (règles de lib/fluidite.mjs)', where: cible }],
+    findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: 'durée d\'image sans écart (règles de lib/fluidite.mjs)', where: cible }],
     non_juge: NJ, ...(mesures ? { mesures } : {}),
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

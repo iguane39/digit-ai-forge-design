@@ -593,8 +593,15 @@ function passeFichier(fichier, { muet = false } = {}) {
   if (aDesImages) out.push(lancer('oracle-images.mjs', [fichier]));
   else if (!muet) sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
 
-  if (aDesChamps) out.push(lancer('oracle-saisie.mjs', [fichier]));
-  else if (!muet) sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans le document');
+  if (aDesChamps) {
+    // TF-2535 : une page qui ne porte que des cases, des boutons radio, des champs cachés ou des fichiers a des balises <input> sans
+    // aucune saisie à juger ; oracle-saisie rend alors SKIP motivé. Ce SKIP-là est un SANS OBJET (dit à voix haute), pas un juge
+    // indisponible : il ne fait pas tomber l'agrégat en SKIP. Tout autre SKIP de l'oracle reste un SKIP.
+    const saisie = lancer('oracle-saisie.mjs', [fichier]);
+    if (saisie.verdict === 'SKIP' && (saisie.non_juge || []).some(n => /^aucun champ de saisie dans le document/.test(n))) {
+      if (!muet) sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie à juger dans le document (cases, boutons radio, champs cachés et fichiers ne sont pas des saisies)');
+    } else out.push(saisie);
+  } else if (!muet) sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans le document');
 
   if (aUnPanneau) out.push(lancer('oracle-panneau-tache.mjs', [fichier]));
   else if (!muet) sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');

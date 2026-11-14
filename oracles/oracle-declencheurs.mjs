@@ -77,7 +77,8 @@ const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 function sortir(verdict, code) {
   // TF-2293 — DE0 (registre) est rendue à CHAQUE passage : « F vide » n'arrivait jamais et la ligne « sans écart » n'était
   // jamais écrite. Un écart est un constat hors REGLES_HORS_PLAGE ; sans lui, la ligne s'ajoute après le registre.
-  const sansEcart = !F.some(f => !REGLES_HORS_PLAGE.includes(f.regle));
+  // TF-2535 : un SKIP n'a rien jugé, il ne rend jamais la ligne « sans écart ».
+  const sansEcart = verdict !== 'SKIP' && !F.some(f => !REGLES_HORS_PLAGE.includes(f.regle));
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-declencheurs', domaine: DOM, artefact: file || null,
     verdict, findings: sansEcart ? [...F, { sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }] : F,
