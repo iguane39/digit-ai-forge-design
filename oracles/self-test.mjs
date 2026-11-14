@@ -1739,6 +1739,28 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2497 (relevé du 13/11/2026 par l'agent du lot dg, après TF-2473) — DEUX DOCUMENTS DÉCRIVENT L'OUTILLAGE DE --rendu SANS NOMMER LA VARIABLE.
+// `criteres-sortie.md` (ameliore-le-design) et `baseline/README.md` disaient « Python, playwright, les scripts aux chemins canoniques » :
+// ils ne citaient pas le repli retiré (TF-2473 ne les voyait donc pas), mais ne disaient pas non plus comment un produit dont playwright
+// vit dans un environnement uv rend le rendu jouable. Le verrou : chacun nomme $FORGE_DESIGN_PYTHON, la commande qui donne le chemin de
+// l'interpréteur du produit et celles qui le posent (PowerShell, sh), comme le message du SKIP. Double sens : le texte d'avant, refusé.
+{
+  console.log(String.fromCharCode(10) + 'documents de l\'outillage de --rendu (TF-2497) — la variable et la commande qui la pose sont nommées');
+  const nommeLaVariable = (texte) => /\$FORGE_DESIGN_PYTHON|`FORGE_DESIGN_PYTHON`/.test(texte)
+    && /`uv run python -c "import sys; print\(sys\.executable\)"`/.test(texte)
+    && /`\$env:FORGE_DESIGN_PYTHON = '<chemin>'` \(PowerShell\)/.test(texte) && /`export FORGE_DESIGN_PYTHON=<chemin>` \(sh\)/.test(texte);
+  const avant = [
+    'Avec `--rendu` : si l\'outillage est détecté (Python, module `playwright`, les deux scripts aux chemins canoniques), l\'orchestrateur les lance lui-même.',
+    'Nécessite le même outillage que `--rendu` de `run-oracles-design.mjs` : Python, `playwright` (`pip install playwright && playwright install chromium`) et `render_page.py`.',
+  ];
+  for (const a of avant) ligne(!nommeLaVariable(a), `sens rouge · le texte d'avant, qui décrit l'outillage sans nommer la variable, est refusé (« ${a.slice(0, 58)}… »)`);
+  const racineDocs = path.resolve(ici, '..');
+  for (const doc of ['skills/ameliore-le-design/references/criteres-sortie.md', 'baseline/README.md']) {
+    const texte = fs.readFileSync(path.join(racineDocs, doc), 'utf8').replace(/\r?\n/g, ' ');
+    ligne(nommeLaVariable(texte), `sens vert · ${doc} nomme $FORGE_DESIGN_PYTHON, la commande qui donne l'interpréteur du produit et celles qui la posent`);
+  }
+}
+
 // TF-2431 (lot Produit-82 du 10/11/2026) — LE VERDICT DU POINT D'ENTRÉE NE DÉPEND PAS DU DOSSIER D'OÙ IL EST LANCÉ. La racine de
 // forge se cherchait aussi dans le `.env` du dossier COURANT : lancé depuis un dossier dont le `.env` nomme un autre
 // FORGE_DESIGN_ROOT, le même fichier, la même commande rendaient SKIP exit 2 au lieu de PASS exit 0. Mesuré le 12/11/2026 sur

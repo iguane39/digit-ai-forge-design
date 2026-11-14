@@ -32,6 +32,14 @@ Nécessite le même outillage que `--rendu` de `run-oracles-design.mjs` : Python
 `~/.claude/skills/digit-ai-page-html/scripts/render_page.py`. Outillage absent ⇒
 `SKIP` motivé, jamais une erreur ni un `PASS` par défaut.
 
+L'interpréteur Python est celui que désigne `$FORGE_DESIGN_PYTHON`, sinon celui du PATH, sinon `.venv`
+sous la racine de la forge (TF-2461), jamais l'environnement `uv` du dossier courant. Un produit dont
+`playwright` vit dans un environnement `uv` pose `$FORGE_DESIGN_PYTHON` sur son interpréteur :
+`uv run python -c "import sys; print(sys.executable)"`, lancée depuis le dossier du produit, donne le
+chemin, que `$env:FORGE_DESIGN_PYTHON = '<chemin>'` (PowerShell)
+ou `export FORGE_DESIGN_PYTHON=<chemin>` (sh) pose avant de relancer ; sans elle, le rendu est `SKIP` (TF-2473),
+et le message nomme la variable et cette commande.
+
 Diff pixel en Node pur (`oracles/lib/png.mjs`, seul `node:zlib` natif — aucune
 dépendance supplémentaire à `--rendu`, qui a déjà besoin de Python/Playwright pour
 la capture elle-même).

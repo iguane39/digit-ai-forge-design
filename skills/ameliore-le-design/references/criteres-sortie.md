@@ -103,12 +103,19 @@ se juge avec `--instance` (critique d'implémentation, `critique-le-design`).
 
 Sans `--rendu` : `render_page.py` (V1–V7) et `oracle-a11y.py` restent `non_juge` —
 c'est au parcours de contrôle de les lancer à la main, sur les **deux** thèmes.
-Avec `--rendu` : si l'outillage est détecté (Python, module `playwright`, les deux
-scripts aux chemins canoniques), l'orchestrateur les lance lui-même — `render_page.py`
-sur le fichier fourni et sur une copie générée avec `data-theme="dark"`, puis
+Avec `--rendu` : si l'outillage est détecté (interpréteur Python désigné par
+`$FORGE_DESIGN_PYTHON`, sinon celui du PATH, sinon `.venv` sous la racine de la forge, avec
+le module `playwright` ; les deux scripts aux chemins canoniques), l'orchestrateur les lance
+lui-même — `render_page.py` sur le fichier fourni et sur une copie générée avec `data-theme="dark"`, puis
 `oracle-a11y.py` — et agrège leurs verdicts dans `oracles`. Outillage manquant ⇒
 `SKIP` motivé sur cette entrée, jamais une erreur ; les autres oracles continuent
 de rendre leur verdict normalement.
+
+Un produit dont `playwright` vit dans un environnement `uv` pose `$FORGE_DESIGN_PYTHON` sur son
+interpréteur : sans elle, `--rendu` rend `SKIP` (TF-2461, TF-2473). Depuis le dossier du produit,
+`uv run python -c "import sys; print(sys.executable)"` donne le chemin, que
+`$env:FORGE_DESIGN_PYTHON = '<chemin>'` (PowerShell) ou `export FORGE_DESIGN_PYTHON=<chemin>` (sh) pose
+avant de relancer ; le `SKIP` nomme la variable et cette commande.
 
 Un oracle indisponible — runtime absent, Playwright manquant, quota épuisé — se
 déclare en `non_juge`. Il ne se contourne pas par une approbation sur lecture de code.
