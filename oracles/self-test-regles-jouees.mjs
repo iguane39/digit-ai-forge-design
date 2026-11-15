@@ -344,6 +344,47 @@ console.log('oracle-declencheurs — la ligne « sans écart » malgré le regis
     `sens rouge · un avertissement DE4 est un constat : la ligne « sans écart » n'est pas rendue à côté (obtenu constats ${(de4?.findings || []).map(x => x.regle).join(' ')})`);
 }
 
+console.log('Un constat d\'information n\'est pas un écart : il ne remplace pas la ligne « sans écart » (TF-2584)');
+// Mesuré le 15/11/2026 par l'agent du lot de : panneau-tache-verte.html rendait PASS avec pour seul constat PA7 (info), slop-verte.html S1 (info) —
+// le repli `F.length ? F : [ligne]` prenait ce constat pour un écart et la ligne disparaissait. Le modèle est celui d'oracle-declencheurs : un écart
+// est un constat qui n'est pas info. Quatre oracles émettent un constat d'information qui n'est ni le résultat d'une règle ni un SKIP (PA7, S1 et S3,
+// T4, M4) ; barre-externe, baseline, fluidite, caracteres-controle, faits-commerciaux et liste-demande rendent un info qui EST leur ligne de verdict.
+{
+  const CAS = [
+    // [oracle, fixture verte (le constat d'information seul), règle du constat, message de la ligne rendue]
+    ['panneau-tache', 'panneau-tache-verte.html', 'PA7', 'sans écart'],
+    ['panneau-tache', 'panneau-tache-page-dediee-verte.html', 'PA7', 'sans écart'],
+    ['slop', 'slop-verte.html', 'S1', 'déclenchée'],
+    ['slop', 'socle-charte-verte.html', 'S3', 'déclenchée'],
+    ['tokens', 'tokens-t5-declaree-verte.html', 'T4', 'sans écart'],
+    ['mobile', 'mobile-m4-repli-sans-ecart-verte.html', 'M4', 'sans écart'],
+  ];
+  for (const [nom, fixture, regle, fin] of CAS) {
+    const json = jouer(nom, fx(fixture));
+    const plage = plageDeRegles(reglesDeclarees(sources[`oracle-${nom}.mjs`]));
+    const attendu = fin === 'déclenchée' ? `aucune des règles ${plage} déclenchée` : `${plage} sans écart`;
+    const lignes = (json?.findings || []).filter(x => x.regle === '—');
+    ligne(json?.verdict === 'PASS' && json.findings.some(x => x.sev === 'info' && x.regle === regle) && lignes.length === 1 && lignes[0].msg === attendu,
+      `sens vert · oracle-${nom} sur ${fixture} : le constat d'information ${regle} ET la ligne « ${attendu} » sont rendus (obtenu ${json?.verdict}, constats ${(json?.findings || []).map(x => `${x.sev}:${x.regle}`).join(' ')})`);
+  }
+  // Sens rouge : un constat qui n'est pas info est un écart, la ligne ne se rend pas à côté.
+  const avert = jouer('mobile', fx('mobile-repli-socle-verte.html'));
+  ligne(avert?.verdict === 'PASS' && avert.findings.some(x => x.sev === 'info' && x.regle === 'M4') && avert.findings.some(x => x.sev === 'avertissement') && !avert.findings.some(x => x.regle === '—'),
+    `sens rouge · oracle-mobile : M4 en info à côté d'avertissements (M5, M11) — des écarts : la ligne « sans écart » n'est PAS rendue (obtenu ${(avert?.findings || []).map(x => `${x.sev}:${x.regle}`).join(' ')})`);
+  for (const [nom, fixture] of [['panneau-tache', 'panneau-tache-rouge.html'], ['slop', 'slop-rouge.html'], ['tokens', 'tokens-rouge.html']]) {
+    const json = jouer(nom, fx(fixture));
+    ligne(json?.verdict === 'FAIL' && !(json.findings || []).some(x => x.regle === '—'),
+      `sens rouge · oracle-${nom} sur ${fixture} : FAIL, la ligne « sans écart » n'est pas rendue (obtenu ${json?.verdict}, ${(json?.findings || []).length} constat(s))`);
+  }
+  // Le texte : le repli qui prend tout constat pour un écart (`F.length ? F : [ligne]`) ne revient pas dans les quatre oracles.
+  const ANCIEN_REPLI = /F\.length(?: \|\| verdict === 'SKIP')? \? F : \[\{ sev: 'info', regle: '—', msg: [^\n]*(?:sans écart|déclenchée)/;
+  const avecInfo = ['panneau-tache', 'slop', 'tokens', 'mobile'];
+  const revenus = avecInfo.filter(n => ANCIEN_REPLI.test(sources[`oracle-${n}.mjs`]));
+  ligne(revenus.length === 0, `aucun des oracles qui émettent un constat d'information (${avecInfo.join(', ')}) ne garde le repli « F.length ? F : [ligne] » (obtenu : ${revenus.join(', ') || 'aucun'})`);
+  const rendu = sources['oracle-panneau-tache.mjs'].replace(/verdict, findings: sansEcart \? \[\.\.\.F, (\{[^\n]*\})\] : F,/, "verdict, findings: F.length || verdict === 'SKIP' ? F : [$1],");
+  ligne(rendu !== sources['oracle-panneau-tache.mjs'] && ANCIEN_REPLI.test(rendu), 'sens rouge · le retour du repli « F.length || verdict === \'SKIP\' ? F : [ligne] » dans oracle-panneau-tache est vu');
+}
+
 console.log('Un SKIP ne rend jamais « sans écart » — chaque oracle joué sur un fichier absent, et oracle-saisie sur une page sans champ (TF-2535)');
 // « sans écart » dit qu'un jugement a eu lieu et n'a rien trouvé. Un oracle qui rend SKIP n'a rien jugé : la ligne mentait (mesuré le
 // 14/11/2026 par l'agent du lot de, sur une page minimale : declencheurs, perceptibilite et surcouche rendaient « <plage> sans écart » avec

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fbf9f5">
+<title>Fixture verte — oracle-mobile M4 en info, aucun autre constat : la ligne « sans écart » reste rendue</title>
+<!--
+  TF-2584 (15/11/2026). Le repli en cartes du socle (thead masqué, étiquettes restituées cellule par cellule) lève M4 en INFORMATION :
+  ce n'est pas un écart. Sur une page qui ne porte rien d'autre — orientation paysage prévue (M5), couleur de barre déclarée (M11), aucun
+  contrôle tactile (M10) —, l'oracle rend PASS avec M4 en info ET la ligne « sans écart » ; avant la correction, le constat d'information
+  tenait lieu de ligne et celle-ci disparaissait.
+
+  Attendu : PASS, exit 0 — M4 en info, puis « M1–M11 sans écart ».
+-->
+<style>
+  body { margin: 0; padding: 16px; }
+  @media (orientation: landscape) { body { padding: 8px; } }
+
+  @media (max-width: 900px) {
+    table, tbody, tr, td { display: block; }
+    thead { display: none; }
+    tr { border-bottom: 1px solid; margin-bottom: 12px; }
+    td::before { content: attr(data-label); font-weight: 600; }
+  }
+</style>
+</head>
+<body>
+  <h1>Dossiers ouverts</h1>
+  <table>
+    <thead><tr><th>Dossier</th><th>Ouvert le</th><th>Statut</th></tr></thead>
+    <tbody>
+      <tr><td data-label="Dossier">D-1042</td><td data-label="Ouvert le">02/07/2026</td><td data-label="Statut">En cours</td></tr>
+      <tr><td data-label="Dossier">D-1043</td><td data-label="Ouvert le">03/07/2026</td><td data-label="Statut">Clos</td></tr>
+    </tbody>
+  </table>
+</body>
+</html>

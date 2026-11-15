@@ -93,10 +93,12 @@ const F = [];
 const add = (sev, regle, msg, where) => F.push({ sev, regle, msg, where });
 
 // TF-2535 — « sans écart » dit qu'un jugement a eu lieu : un SKIP n'a rien jugé, il ne rend jamais cette ligne.
+// TF-2584 — un écart est un constat qui n'est pas info : un constat d'information (PA7, motif légitime reconnu) ne remplace pas la ligne, il la précède.
 function sortir(verdict, code) {
+  const sansEcart = verdict !== 'SKIP' && !F.some(f => f.sev !== 'info');
   process.stdout.write(JSON.stringify({
     oracle: 'oracle-panneau-tache', domaine: DOM, artefact: file || null,
-    verdict, findings: F.length || verdict === 'SKIP' ? F : [{ sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }],
+    verdict, findings: sansEcart ? [...F, { sev: 'info', regle: '—', msg: `${PLAGE_JOUEE} sans écart`, where: file }] : F,
     non_juge: NON_JUGE,
   }, null, jsonOnly ? 0 : 2));
   process.exit(code);

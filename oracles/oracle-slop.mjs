@@ -504,4 +504,5 @@ if (!jsonOnly) {
     : `PASS${n ? ` — ${n} avertissement(s)` : ' — aucun marqueur'}\n`);
 }
 if (dur.length) sortir('FAIL', F, 1);
-sortir('PASS', F.length ? F : [{ sev: 'info', regle: '—', msg: `aucune des règles ${PLAGE_JOUEE} déclenchée`, where: file }], 0);
+// TF-2584 — un écart est un constat qui n'est pas info : un constat d'information (S1, S3 exemptées) ne remplace pas la ligne, il la précède.
+sortir('PASS', F.some(f => f.sev !== 'info') ? F : [...F, { sev: 'info', regle: '—', msg: `aucune des règles ${PLAGE_JOUEE} déclenchée`, where: file }], 0);
