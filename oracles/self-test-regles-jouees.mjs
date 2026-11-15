@@ -172,19 +172,32 @@ function* documents(dossier) {
 }
 const numeroDe = r => Number(/(\d+)$/.exec(r)[1]);
 // Les plages citées après « oracle-<nom> » dans un texte, leurs bornes (l'extension « , Xp » comprise) et les numéros qu'elles couvrent.
+// TF-2585 (15/11/2026) — la plage peut aussi PRÉCÉDER le nom : « (M1–M8) | `oracle-mobile` », le tableau des critères de sortie la pose dans
+// la cellule d'avant. Deux lectures, et deux seulement : le nom ouvre une cellule de tableau (la dernière plage de la cellule d'avant), ou la
+// plage le touche (rien entre elle et lui que de la ponctuation). Une autre mention d'oracle sur la ligne coupe : la plage entre deux noms
+// appartient à celui qui la précède, jamais aux deux.
 function plagesCitees(texte, nom, regles) {
   const prefixe = /^(.*?)\d+$/.exec(regles[0])[1];
-  const rx = new RegExp(`\\b${prefixe}(\\d+)–${prefixe}(\\d+)(?:,\\s+${prefixe}(\\d+)(?:–${prefixe}(\\d+))?)?`);
+  const motif = `\\b${prefixe}(\\d+)–${prefixe}(\\d+)(?:,\\s+${prefixe}(\\d+)(?:–${prefixe}(\\d+))?)?`;
+  const rx = new RegExp(motif);
+  const rxToutes = new RegExp(motif, 'g');
   const trouvees = [];
+  const ajouter = c => {
+    const couvertes = new Set();
+    for (let n = Number(c[1]); n <= Number(c[2]); n++) couvertes.add(n);
+    if (c[3]) for (let n = Number(c[3]); n <= Number(c[4] || c[3]); n++) couvertes.add(n);
+    trouvees.push({ citee: c[0], bas: Number(c[1]), haut: Number(c[4] || c[3] || c[2]), couvertes });
+  };
   for (const m of texte.matchAll(new RegExp(`oracle-${nom}(?![\\w-])`, 'g'))) {
     const fenetre = texte.slice(m.index + m[0].length, m.index + m[0].length + 90).split('oracle-')[0];
     const c = rx.exec(fenetre);
-    if (c) {
-      const couvertes = new Set();
-      for (let n = Number(c[1]); n <= Number(c[2]); n++) couvertes.add(n);
-      if (c[3]) for (let n = Number(c[3]); n <= Number(c[4] || c[3]); n++) couvertes.add(n);
-      trouvees.push({ citee: c[0], bas: Number(c[1]), haut: Number(c[4] || c[3] || c[2]), couvertes });
-    }
+    if (c) ajouter(c);
+    const avant = texte.slice(Math.max(0, m.index - 90), m.index).split('\n').pop();
+    if (avant.includes('oracle-')) continue;
+    const ouvreUneCellule = /\|\s*[`*]*$/.test(avant);
+    const zone = ouvreUneCellule ? avant.replace(/\|\s*[`*]*$/, '').split('|').pop() : avant;
+    const derniere = [...zone.matchAll(rxToutes)].pop();
+    if (derniere && (ouvreUneCellule || /^[\s)\]`*:;,.—–(-]*$/.test(zone.slice(derniere.index + derniere[0].length)))) ajouter(derniere);
   }
   return trouvees;
 }
@@ -257,6 +270,34 @@ for (const nom of DOCUMENTES) {
       && plagesTroueuses(`\`oracle-exploitabilite\` (${plageDeRegles(x)})`, 'exploitabilite', x).length === 0
       && plagesTroueuses('`oracle-mobile` (M1–M11)', 'mobile', m).length === 0,
     `sens vert · TF-2576 · la plage dérivée de la liste jouée (« ${plageDeRegles(m)} », « ${plageDeRegles(x)} ») n'est jamais un trou : X7, que l'oracle ne joue pas, n'est pas exigée`);
+}
+// TF-2585 — la plage citée AVANT le nom : le tableau de criteres-sortie.md la pose dans la cellule d'avant (« (M1–M8) | `oracle-mobile` »).
+{
+  const reglesDe = nom => reglesDeclarees(sourceDe(`oracle-${nom}.mjs`));
+  const ligneC = (critere, plage, nom) => `| C0 | ${critere} (${plage}) | \`oracle-${nom}\` — **si cible** | bloquant |`;
+  for (const [nom, perimee, aJour] of [['mobile', 'M1–M8', 'M1–M11'], ['images', 'I1–I6', 'I1–I8'], ['slop', 'S1–S10', 'S1–S12']]) {
+    const r = reglesDe(nom);
+    ligne(plagesPerimees(ligneC('Contrat tenu', perimee, nom), nom, r).join() === perimee && plagesPerimees(ligneC('Contrat tenu', aJour, nom), nom, r).length === 0,
+      `TF-2585 · oracle-${nom} · sens rouge « ${perimee} » avant le nom, dans la cellule d'avant, vu comme périmé · sens vert « ${aJour} » à jour`);
+  }
+  const s = reglesDe('saisie'), d = reglesDe('dtcg'), l = reglesDe('liste-demande');
+  ligne(plagesPerimees(ligneC('Champs typés', 'SA1–SA7, SA8 en avertissement', 'saisie'), 'saisie', s).length === 0
+      && plagesPerimees(ligneC('Champs typés', 'SA1–SA7', 'saisie'), 'saisie', s).join() === 'SA1–SA7',
+    'TF-2585 · sens vert « SA1–SA7, SA8 en avertissement » avant le nom (la règle d\'avertissement prolonge la plage) · sens rouge « SA1–SA7 » seul');
+  ligne(plagesPerimees('la plage M1–M8 `oracle-mobile` juge', 'mobile', reglesDe('mobile')).join() === 'M1–M8'
+      && plagesPerimees('la plage M1–M8 de la grille, puis `oracle-mobile` juge', 'mobile', reglesDe('mobile')).length === 0,
+    'TF-2585 · une plage qui touche le nom est la sienne (« M1–M8 `oracle-mobile` ») · sens vert : séparée de lui par des mots, elle n\'est pas imputée');
+  ligne(plagesPerimees('`oracle-dtcg` (D1–D4), `oracle-liste-demande` (D1–D5)', 'liste-demande', l).length === 0
+      && plagesPerimees('`oracle-dtcg` (D1–D3), `oracle-liste-demande` (D1–D5)', 'dtcg', d).join() === 'D1–D3',
+    'TF-2585 · sens vert · la plage entre deux noms appartient à celui qui la précède (D1–D4 n\'est pas imputée à oracle-liste-demande) · sens rouge · D1–D3 reste vue pour oracle-dtcg');
+  // oracle-slop reste hors de DOCUMENTES : demo/NOTE-partis-pris.md cite encore « S1–S10 », relevé d'un run daté. Le tableau des critères de
+  // sortie, lui, est verrouillé pour les trois oracles du sujet.
+  const criteres = fs.readFileSync(path.join(racineForge, 'skills', 'ameliore-le-design', 'references', 'criteres-sortie.md'), 'utf8').replace(/\r\n/g, '\n');
+  for (const nom of ['mobile', 'images', 'slop']) {
+    const r = reglesDe(nom);
+    ligne(plagesCitees(criteres, nom, r).length > 0 && plagesPerimees(criteres, nom, r).length === 0 && plagesTroueuses(criteres, nom, r).length === 0,
+      `TF-2585 · criteres-sortie.md cite pour oracle-${nom} la plage jouée « ${plageDeRegles(r)} » (citations lues : ${plagesCitees(criteres, nom, r).map(c => c.citee).join(' ; ') || 'aucune'})`);
+  }
 }
 
 console.log('Le message « sans objet » — chaque oracle sur une page minimale, la plage dérive de sa liste (TF-2293)');
