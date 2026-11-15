@@ -2,6 +2,8 @@
 
 ## Critères binaires, figés avant la première génération
 
+Chaque ligne donne un critère de sortie, la preuve qui l'établit et ce qu'un échec coûte : bloquant ou avertissement.
+
 | # | Critère | Moyen de preuve | Verdict |
 |---|---|---|---|
 | C1 | Zéro débordement, zéro chevauchement, contraste conforme | `render_page.py` (V1–V7), **7 breakpoints (3840 → 390) × 2 thèmes** | bloquant |

@@ -124,6 +124,8 @@ une fois, jamais par omission. Détail : `references/criteres-sortie.md` §Boucl
 
 ## Références
 
+Chaque référence s'ouvre au moment que sa ligne nomme, pas avant.
+
 | Fichier | À lire quand |
 |---|---|
 | `references/ingestion.md` | au démarrage, pour tout entrant |

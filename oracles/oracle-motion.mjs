@@ -462,6 +462,7 @@ const dureesIsolees = (valeur) => [...valeur.matchAll(/(?<![\w.-])(\d*\.?\d+)\s*
 // ── R14 · contrôle pressable sans retour d'appui :active (avertissement, TF-1911) ──
 // Un seul constat par page : le nombre de contrôles atteints par aucune règle `:active`.
 // L'appariement est celui de la bibliothèque partagée (dernier compound, ancêtres non remontés).
+let nbPressables = 0;
 if (html) {
   const parties = [];
   for (const b of blocs) {
@@ -473,6 +474,7 @@ if (html) {
   const pressables = arbres(brut, html).flatMap(r => elements(r)).filter(e =>
     e.tag === 'button' || String(e.attrs.role || '').toLowerCase() === 'button'
     || (e.tag === 'input' && ['button', 'submit', 'reset'].includes(String(e.attrs.type || '').toLowerCase())));
+  nbPressables = pressables.length;
   const sansAppui = pressables.filter(e => !parties.some(p => correspond(e, p)));
   if (sansAppui.length) {
     add('avertissement', 'R14',
@@ -482,6 +484,18 @@ if (html) {
   }
 }
 
+// TF-2576 : « jamais PASS par défaut sur un domaine absent » se tient. Une page sans AUCUN mouvement (ni transition ni animation hors du bloc
+// de révocation, ni @keyframes, ni token de mouvement, ni appel animate(), ni survol qui transforme) et sans contrôle pressable (R14) n'a
+// rien de ce que R1–R14 jugent : l'oracle rend SKIP motivé exit 2, jamais « R1–R14 sans écart ». Un constat déjà posé le garde en jugement.
+// Le point d'entrée dit ce cas SANS OBJET.
+const mouvementPresent = prescrit || hoverAnime
+  || /(?:^|[;{\s])(?:transition|animation)[\w-]*\s*:/i.test(cssHorsRevocation) || /@keyframes/i.test(cssHorsRevocation)
+  || scriptsJs.some(s => /(?<![\w$])animate\s*\(/.test(s));
+if (!F.length && !mouvementPresent && nbPressables === 0) {
+  NON_JUGE.unshift(`aucun mouvement dans le document (ni transition ni animation, ni @keyframes, ni token de mouvement, ni appel animate(), ni survol animé) et aucun contrôle pressable : ${PLAGE_JOUEE} sans objet ici, jamais PASS par défaut sur un domaine absent`);
+  if (!jsonOnly) process.stderr.write('SKIP — aucun mouvement dans le document : rien n\'a été jugé\n');
+  sortir('SKIP', F, 2);
+}
 F.sort((a, b) => ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[a.sev] - ({ bloquant: 0, majeur: 1, avertissement: 2, info: 3 })[b.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
 if (durs.length) sortir('FAIL', F, 1);

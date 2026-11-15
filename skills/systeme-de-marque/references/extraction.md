@@ -2,6 +2,8 @@
 
 ## Protocole par entrant
 
+Le type de l'entrant décide de ce qu'on en extrait : chaque ligne dit ce qui l'est et ce qui reste hors de portée.
+
 | Entrant | Extractible | Hors de portée |
 |---|---|---|
 | Charte PDF ou guideline | palette nommée, polices sous licence, règles d'usage, interdits | l'usage réel en interface |

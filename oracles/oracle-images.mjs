@@ -215,6 +215,14 @@ if (embarquees > 0 && manifeste === null) {
 }
 if (embarquees === 0 && sources.length === 0) {
   NJ.push(`aucune image dans le document : ${plageDeRegles(REGLES_SANS_OBJET_SANS_IMAGE)} sans objet`);
+  // TF-2576 : « jamais PASS par défaut sur un domaine absent » se tient. Une page sans image ni manifeste, dont le fichier tient sous
+  // son plafond, n'a rien de visuel à juger : l'oracle rend SKIP motivé exit 2, jamais un PASS qui dit « 0 image(s) ». Un constat déjà
+  // posé (I3 : fichier trop lourd) ou un manifeste présent (I5, I6) garde l'oracle en jugement. Le point d'entrée dit ce cas SANS OBJET.
+  if (manifeste === null && F.length === 0) {
+    NJ.push('I3, I7, I8 : sans image ni manifeste, le plafond de poids du fichier tenu ne juge aucun visuel et les variantes n\'ont rien à comparer — rien n\'a été jugé');
+    if (!jsonOnly) process.stderr.write('SKIP — aucune image dans le document : rien n\'a été jugé\n');
+    sortir('SKIP', 2);
+  }
 }
 
 // ── I7 · deux actifs déclarés variantes doivent RENDRE différemment ─────────

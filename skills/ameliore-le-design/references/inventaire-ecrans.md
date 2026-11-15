@@ -6,6 +6,8 @@ secteur et **l'hypothèse est nommée** dans la note de partis pris.
 
 ## Socle
 
+Le socle réunit les écrans que toute maquette porte, quel que soit le produit ; chaque ligne donne le contenu minimal de l'écran.
+
 | # | Écran | Contenu minimal |
 |---|---|---|
 | 1 | Landing page | proposition de valeur, preuve, un moment signature, CTA |

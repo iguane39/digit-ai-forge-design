@@ -15,6 +15,8 @@ y atteste les chiffres montrés comme des faits (CL5), et la section « Contrôl
 
 ## Introduction
 
+Chaque ligne porte un texte de l'introduction du clip et le budget de caractères dans lequel il doit tenir.
+
 | Élément | Texte | Caractères | Budget |
 |---|---|---|---|
 | Titre | À REMPLACER | | 30 |

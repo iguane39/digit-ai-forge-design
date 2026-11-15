@@ -4637,22 +4637,28 @@ if (!OUTILLAGE_DOCUMENT.ok) {
 // réimplémentée ici : seul son verdict M7 est lu, M10, M14 et M18 relèvent de leur propre porte. Le sens rouge est l'ancien texte de
 // rubrique.md, reconstitué en retirant la phrase de lecture que la correction a posée.
 {
-  console.log(String.fromCharCode(10) + 'skills/studio-de-direction · chaque chapitre des références s\'ouvre par une phrase (M7, TF-2546)');
+  console.log(String.fromCharCode(10) + 'skills · chaque chapitre de chaque fichier Markdown s\'ouvre par une phrase (M7, TF-2546, TF-2576)');
   const verificateur = path.join(os.homedir(), '.claude', 'skills', 'digit-ai-page-html', 'scripts', 'check_markdown.py');
   if (!PYTHON || !fs.existsSync(verificateur)) {
-    console.log(`  SKIP  ${!PYTHON ? 'Python indisponible' : `check_markdown.py introuvable (${verificateur})`} : les références du studio ne sont pas jugées par M7 sur ce poste`);
+    console.log(`  SKIP  ${!PYTHON ? 'Python indisponible' : `check_markdown.py introuvable (${verificateur})`} : les fichiers Markdown des skills ne sont pas jugés par M7 sur ce poste`);
   } else {
     const refusM7 = chemin => {
       const r = spawnSync(PYTHON, [verificateur, chemin, '--output', 'json'], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
       let json = null; try { json = JSON.parse(r.stdout); } catch { /* illisible : la ligne le dira */ }
       return json ? (json.fails || []).filter(f => /^M7 /.test(f)) : null;
     };
+    // TF-2576 : la recette ne juge plus les seules références du studio, mais TOUT fichier Markdown de TOUS les skills de la forge (SKILL.md,
+    // références, gabarits) : douze refus M7 dans dix fichiers hors studio passaient inaperçus, et le hook d'écriture refusait chaque copie.
     const references = path.join(ici, '..', 'skills', 'studio-de-direction', 'references');
-    const fichiers = fs.readdirSync(references).filter(f => /\.md$/.test(f)).sort();
-    ligne(fichiers.length >= 3, `le studio porte au moins 3 références à juger (obtenu ${fichiers.length} : ${fichiers.join(', ')})`);
+    const racineSkills = path.join(ici, '..', 'skills');
+    const marcherMd = d => fs.readdirSync(d, { withFileTypes: true }).flatMap(e =>
+      e.isDirectory() ? marcherMd(path.join(d, e.name)) : /\.md$/.test(e.name) ? [path.join(d, e.name)] : []);
+    const fichiers = marcherMd(racineSkills).sort();
+    ligne(fichiers.length >= 28, `les skills de la forge portent au moins 28 fichiers Markdown à juger (obtenu ${fichiers.length})`);
+    ligne(fs.readdirSync(references).filter(f => /\.md$/.test(f)).length >= 3, 'le studio porte toujours au moins 3 références à juger');
     for (const f of fichiers) {
-      const refus = refusM7(path.join(references, f));
-      ligne(refus !== null && refus.length === 0, `sens vert · references/${f} : aucun chapitre sans ouverture (obtenu ${refus === null ? 'sortie illisible' : `${refus.length} refus M7`})`);
+      const refus = refusM7(f);
+      ligne(refus !== null && refus.length === 0, `sens vert · ${path.relative(racineSkills, f).split(path.sep).join('/')} : aucun chapitre sans ouverture (obtenu ${refus === null ? 'sortie illisible' : `${refus.length} refus M7`})`);
     }
     const reel = fs.readFileSync(path.join(references, 'rubrique.md'), 'utf8');
     const ancien = reel.replace(/(^## Les six critères\r?\n\r?\n)[^|\r\n][^\r\n]*\r?\n\r?\n/m, '$1');

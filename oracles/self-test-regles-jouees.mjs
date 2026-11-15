@@ -104,7 +104,10 @@ const VERTES = [
   // TF-2535 : sur une page minimale, declencheurs, saisie et surcouche n'ont rien à juger et rendent SKIP, qui ne rend plus la ligne « sans
   // écart » (elle y était rendue À TORT) : leur ligne se lit sur une fixture verte qu'ils jugent vraiment.
   ['declencheurs', 'declencheurs-verte.html'], ['saisie', 'saisie-sa8-verte.html'], ['surcouche', 'surcouche-sc5-verte.html'],
-  ...['images', 'motion', 'panneau-tache', 'slop'].map(n => [n, MINIMALE]),
+  // TF-2576 : sur une page minimale, images, motion et panneau-tache n'ont rien à juger et rendent SKIP (la ligne n'y était rendue qu'à
+  // tort) : leur ligne se lit sur une fixture verte qu'ils jugent vraiment — des images sans écart, un appui, un panneau sans annonce.
+  ['images', 'images-i8-verte.html'], ['motion', 'motion-appui-verte.html'], ['panneau-tache', 'panneau-tache-sans-annonce-verte.html'],
+  ['slop', MINIMALE],
 ];
 let atteints = 0;
 for (const [nom, fixture] of VERTES) {
@@ -168,7 +171,7 @@ function* documents(dossier) {
   }
 }
 const numeroDe = r => Number(/(\d+)$/.exec(r)[1]);
-// Les plages citées après « oracle-<nom> » dans un texte, et leur borne haute (l'extension « , Xp » comprise).
+// Les plages citées après « oracle-<nom> » dans un texte, leurs bornes (l'extension « , Xp » comprise) et les numéros qu'elles couvrent.
 function plagesCitees(texte, nom, regles) {
   const prefixe = /^(.*?)\d+$/.exec(regles[0])[1];
   const rx = new RegExp(`\\b${prefixe}(\\d+)–${prefixe}(\\d+)(?:,\\s+${prefixe}(\\d+)(?:–${prefixe}(\\d+))?)?`);
@@ -176,11 +179,20 @@ function plagesCitees(texte, nom, regles) {
   for (const m of texte.matchAll(new RegExp(`oracle-${nom}(?![\\w-])`, 'g'))) {
     const fenetre = texte.slice(m.index + m[0].length, m.index + m[0].length + 90).split('oracle-')[0];
     const c = rx.exec(fenetre);
-    if (c) trouvees.push({ citee: c[0], haut: Number(c[4] || c[3] || c[2]) });
+    if (c) {
+      const couvertes = new Set();
+      for (let n = Number(c[1]); n <= Number(c[2]); n++) couvertes.add(n);
+      if (c[3]) for (let n = Number(c[3]); n <= Number(c[4] || c[3]); n++) couvertes.add(n);
+      trouvees.push({ citee: c[0], bas: Number(c[1]), haut: Number(c[4] || c[3] || c[2]), couvertes });
+    }
   }
   return trouvees;
 }
 const plagesPerimees = (texte, nom, regles) => plagesCitees(texte, nom, regles).filter(c => c.haut !== Math.max(...regles.map(numeroDe))).map(c => c.citee);
+// TF-2576 — un TROU : la plage finit à la bonne règle mais en saute une jouée au milieu (« M1–M8, M10–M11 » alors que M9 est jouée) ; la borne
+// haute seule ne le voit pas. Une règle que l'oracle ne joue pas (X7 d'oracle-exploitabilite) n'est jamais un trou : seule la liste jouée compte.
+const plagesTroueuses = (texte, nom, regles) => plagesCitees(texte, nom, regles)
+  .filter(c => regles.map(numeroDe).some(n => n >= c.bas && n <= c.haut && !c.couvertes.has(n))).map(c => c.citee);
 const ligneDeRegistre = (texte, nom) => texte.split('\n').find(l => l.startsWith('|') && l.includes(`oracles/oracle-${nom}.mjs`)) || '';
 const reglesAbsentes = (texte, nom, regles) => { const l = ligneDeRegistre(texte, nom); return regles.filter(r => !new RegExp(`\\b${r}\\b`).test(l)); };
 const documentsForge = [...documents(racineForge)];
@@ -188,6 +200,8 @@ for (const nom of DOCUMENTES) {
   const regles = reglesDeclarees(sourceDe(`oracle-${nom}.mjs`));
   const fautifs = documentsForge.flatMap(d => plagesPerimees(fs.readFileSync(d, 'utf8').replace(/\r\n/g, '\n'), nom, regles).map(c => `${path.relative(racineForge, d)} « ${c} »`));
   ligne(regles.length > 0 && fautifs.length === 0, `oracle-${nom} · aucun .md ne cite une plage qui s'arrête avant ${regles[regles.length - 1]} (${documentsForge.length} .md lus ; obtenu : ${fautifs.join(' ; ') || 'aucune citation périmée'})`);
+  const troues = documentsForge.flatMap(d => plagesTroueuses(fs.readFileSync(d, 'utf8').replace(/\r\n/g, '\n'), nom, regles).map(c => `${path.relative(racineForge, d)} « ${c} »`));
+  ligne(troues.length === 0, `oracle-${nom} · aucun .md ne cite une plage qui saute une règle jouée (TF-2576 ; obtenu : ${troues.join(' ; ') || 'aucun trou'})`);
   const registre = fs.readFileSync(path.join(ici, 'registre-entrees.md'), 'utf8');
   const absentes = reglesAbsentes(registre, nom, regles);
   // TF-2534 : oracle-dtcg et oracle-liste-demande n'ont jamais été remontés au registre des entrées (aucune ligne ne les nomme) : la
@@ -229,6 +243,20 @@ for (const nom of DOCUMENTES) {
     ligne(plagesPerimees(perime, nom, reglesDe(nom)).join() === citee && plagesPerimees(aJour, nom, reglesDe(nom)).length === 0,
       `TF-2534 · oracle-${nom} · sens rouge « ${citee} » vu comme périmé, sens vert « ${plageDeRegles(reglesDe(nom), '–')} » à jour (dernière règle ${reglesDe(nom).slice(-1)[0]})`);
   }
+  // TF-2576 — un TROU : la plage cite la bonne dernière règle et en saute une jouée au milieu. La borne haute seule ne le voit pas.
+  const m = reglesDe('mobile'), x = reglesDe('exploitabilite');
+  const troue = 'node oracles/oracle-mobile.mjs <page.html>   # M1–M8, M10–M11 (avertissements)';
+  ligne(plagesPerimees(troue, 'mobile', m).length === 0 && plagesTroueuses(troue, 'mobile', m).join() === 'M1–M8, M10–M11',
+    'sens rouge · TF-2576 · « M1–M8, M10–M11 » (M9 sautée, dernière règle M11 citée) : la borne haute le laisse passer, le trou est vu');
+  ligne(plagesTroueuses('`oracle-mobile` (M1–M9, M10–M11)', 'mobile', m).length === 0
+      && plagesTroueuses('`oracle-mobile` (M1–M4, M6–M11)', 'mobile', m).join() === 'M1–M4, M6–M11',
+    'sens rouge · TF-2576 · « M1–M4, M6–M11 » (M5 sautée au milieu de la première plage) est vue');
+  ligne(plagesTroueuses('`oracle-exploitabilite` (X0–X3, X5–X9)', 'exploitabilite', x).join() === 'X0–X3, X5–X9',
+    'sens rouge · TF-2576 · « X0–X3, X5–X9 » (X4 sautée) est vue même quand une autre règle citée (X7) n\'est pas jouée');
+  ligne(plagesTroueuses(`\`oracle-mobile\` (${plageDeRegles(m)})`, 'mobile', m).length === 0
+      && plagesTroueuses(`\`oracle-exploitabilite\` (${plageDeRegles(x)})`, 'exploitabilite', x).length === 0
+      && plagesTroueuses('`oracle-mobile` (M1–M11)', 'mobile', m).length === 0,
+    `sens vert · TF-2576 · la plage dérivée de la liste jouée (« ${plageDeRegles(m)} », « ${plageDeRegles(x)} ») n'est jamais un trou : X7, que l'oracle ne joue pas, n'est pas exigée`);
 }
 
 console.log('Le message « sans objet » — chaque oracle sur une page minimale, la plage dérive de sa liste (TF-2293)');
@@ -336,6 +364,71 @@ console.log('Un SKIP ne rend jamais « sans écart » — chaque oracle joué su
   const vraiChamp = entree(fx('saisie-sa8-verte.html'));
   ligne(vraiChamp.saisie?.verdict === 'PASS' && !(vraiChamp.json?.non_juge || []).some(n => /^oracle-saisie : SANS OBJET/.test(n)),
     `sens vert · une page à vrai champ : oracle-saisie est joué par le point d'entrée et PASS, sans SANS OBJET (obtenu ${vraiChamp.saisie?.verdict})`);
+}
+
+console.log('Une page sans l\'objet jugé rend SKIP motivé — images, panneau-tache et motion, jamais un PASS « sans écart » (TF-2576)');
+// « jamais PASS par défaut sur un domaine absent » était écrit au non_juge de ces trois oracles, qui rendaient pourtant PASS exit 0 sur une
+// page sans image, sans panneau de création, sans mouvement (« PA1–PA7 sans écart », « R1–R14 sans écart », « 0 image(s) ») : même classe que
+// oracle-saisie (TF-2535). Chaque oracle rend SKIP exit 2, motivé au non_juge, aucun constat ; un objet partiel (un manifeste d'images, un
+// bouton, un écran qui annonce une création) le garde en jugement ; et le point d'entrée dit le cas SANS OBJET, sans faire tomber l'agrégat.
+{
+  const jouerCode = (nom, cible) => {
+    const r = spawnSync(process.execPath, [path.join(ici, `oracle-${nom}.mjs`), cible, '--json-only'], { encoding: 'utf8', timeout: 120000 });
+    let json = null; try { json = JSON.parse(r.stdout); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, json };
+  };
+  const dit = o => `${o.json?.verdict} exit ${o.code}, ${(o.json?.findings || []).length} constat(s)`;
+  const ecrire = (nom, contenu) => { const p = path.join(dossier, nom); fs.writeFileSync(p, contenu); return p; };
+  const page = corps => `<!DOCTYPE html>\n<html lang="fr"><head><meta charset="utf-8"><title>Page</title></head><body><main><h1>Titre</h1>${corps}</main></body></html>\n`;
+  const SANS_SON_OBJET = [
+    ['images', /^aucune image dans le document : I1–I2, I5–I6 sans objet/, 'images-i8-verte.html'],
+    ['panneau-tache', /^aucun panneau de création détecté .* PA1–PA6 sans objet ici/, 'panneau-tache-sans-annonce-verte.html'],
+    ['motion', /^aucun mouvement dans le document .* R1–R14 sans objet ici/, 'motion-appui-verte.html'],
+  ];
+  for (const [nom, motif, verte] of SANS_SON_OBJET) {
+    const vide = jouerCode(nom, MINIMALE);
+    ligne(vide.code === 2 && vide.json?.verdict === 'SKIP' && (vide.json.findings || []).length === 0 && (vide.json.non_juge || []).some(n => motif.test(n)),
+      `sens rouge · oracle-${nom} sur une page sans son objet : SKIP exit 2 motivé au non_juge, aucun constat (obtenu ${dit(vide)})`);
+    const avecObjet = jouerCode(nom, fx(verte));
+    ligne(avecObjet.code === 0 && avecObjet.json?.verdict === 'PASS' && !(avecObjet.json.non_juge || []).some(n => motif.test(n)),
+      `sens vert · oracle-${nom} sur ${verte} : PASS exit 0, jugé (obtenu ${dit(avecObjet)})`);
+  }
+  // Un objet partiel garde le jugement : le manifeste d'images sans image (I6), un bouton sans CSS de mouvement (R14), un écran qui annonce une
+  // création sans panneau (PA7) ; un bloc de révocation seul n'est pas du mouvement.
+  const manifesteSeul = jouerCode('images', ecrire('manifeste-seul.html', page('<script type="application/json" id="manifeste-images">[{"id":"hero"}]</script>')));
+  ligne(manifesteSeul.code === 1 && manifesteSeul.json?.verdict === 'FAIL' && (manifesteSeul.json.findings || []).some(x => x.regle === 'I6'),
+    `sens vert · oracle-images sur une page sans image mais avec un manifeste incomplet : jugé, FAIL pour I6 (obtenu ${dit(manifesteSeul)})`);
+  const boutonSeul = jouerCode('motion', ecrire('bouton-seul.html', page('<button type="button">Valider</button>')));
+  ligne(boutonSeul.code === 0 && boutonSeul.json?.verdict === 'PASS' && (boutonSeul.json.findings || []).some(x => x.regle === 'R14'),
+    `sens vert · oracle-motion sur une page sans mouvement mais avec un bouton : jugé, PASS avec l'avertissement R14 (obtenu ${dit(boutonSeul)})`);
+  const revocationSeule = jouerCode('motion', ecrire('revocation-seule.html', page('<p>Texte.</p>').replace('</head>', '<style>@media (prefers-reduced-motion: reduce) { * { animation: none; transition: none; } }</style></head>')));
+  ligne(revocationSeule.code === 2 && revocationSeule.json?.verdict === 'SKIP',
+    `sens rouge · oracle-motion sur une page qui ne porte qu'un bloc de révocation : SKIP, une révocation n'est pas du mouvement (obtenu ${dit(revocationSeule)})`);
+  const annonceSeule = jouerCode('panneau-tache', ecrire('annonce-seule.html', page('<section data-ecran="liste"><button type="button">Nouveau lot</button></section>')));
+  ligne(annonceSeule.code === 1 && annonceSeule.json?.verdict === 'FAIL' && (annonceSeule.json.findings || []).some(x => x.regle === 'PA7'),
+    `sens vert · oracle-panneau-tache sur un écran qui annonce une création sans panneau : jugé, FAIL pour PA7 (obtenu ${dit(annonceSeule)})`);
+
+  // Le point d'entrée : les trois oracles rendus SKIP par une page sans leur objet sont dits SANS OBJET, l'agrégat ne tombe pas en SKIP.
+  // La balise vue par le point d'entrée (un <img> et un data-branche dans un commentaire) lance l'oracle, qui rend SKIP : c'est ce SKIP-là qu'il lit.
+  const entree = cible => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, '--json-only'], { encoding: 'utf8', timeout: 120000, maxBuffer: 64 * 1024 * 1024 });
+    let json = null; try { json = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, json };
+  };
+  const base = fs.readFileSync(fx('saisie-sa8-verte.html'), 'utf8');
+  const finCorps = base.lastIndexOf('</body>');
+  const commentee = ecrire('commentee.html', `${base.slice(0, finCorps)}<!-- <img src="a.png"> data-branche="x" -->\n${base.slice(finCorps)}`);
+  const parEntree = entree(commentee);
+  const lance = n => (parEntree.json?.oracles || []).some(o => o.oracle === `oracle-${n}`);
+  const disSansObjet = re => (parEntree.json?.non_juge || []).some(n => re.test(n));
+  ligne(parEntree.json?.verdict === 'PASS' && parEntree.code === 0 && !lance('images') && !lance('panneau-tache') && !lance('motion')
+      && disSansObjet(/^oracle-images : SANS OBJET — aucune image dans le document \(aucun élément/)
+      && disSansObjet(/^oracle-panneau-tache : SANS OBJET — aucun panneau de création ni écran qui annonce/)
+      && disSansObjet(/^oracle-motion : SANS OBJET — aucun mouvement dans le document/),
+    `sens rouge · une page dont les seules balises sont dans un commentaire : images, panneau-tache et motion rendent SKIP, le point d'entrée les dit SANS OBJET et reste PASS exit 0 (obtenu ${parEntree.json?.verdict} exit ${parEntree.code})`);
+  const objets = entree(fx('motion-appui-verte.html'));
+  ligne((objets.json?.oracles || []).some(o => o.oracle === 'oracle-motion' && o.verdict === 'PASS') && !(objets.json?.non_juge || []).some(n => /^oracle-motion : SANS OBJET/.test(n)),
+    `sens vert · une page à mouvement : oracle-motion est joué par le point d'entrée et PASS, sans SANS OBJET (obtenu ${(objets.json?.oracles || []).find(o => o.oracle === 'oracle-motion')?.verdict})`);
 }
 
 fs.rmSync(dossier, { recursive: true, force: true });

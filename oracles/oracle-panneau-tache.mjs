@@ -330,6 +330,7 @@ const soumetUnFormulaire = el => {
                 // une page dédiée d'une liste qui porte une barre de recherche
 };
 
+let ecransJugesPA7 = 0;
 {
   const ecransDeclares = tous.filter(el =>
     aAttr(el, 'data-ecran') || aAttr(el, 'data-route-ecran') || (el.tag === 'section' && at(el, 'id')));
@@ -358,10 +359,17 @@ const soumetUnFormulaire = el => {
         `[data-ecran=${nomEcran(p)}]`);
     }
   }
+  ecransJugesPA7 = juges;
   if (!juges) NON_JUGE.push('PA7 : aucun écran n\'annonce de création (aucune affordance dont le libellé tient en 4 mots avec le verbe de création dans les 2 premiers) — la règle est sans objet ici, jamais PASS par défaut');
 }
 
 // ── Verdict ────────────────────────────────────────────────────────────────
+// TF-2576 : « jamais PASS par défaut sur un domaine absent » se tient. Sans panneau de création (PA1–PA6) et sans écran qui annonce une
+// création (PA7), rien n'a été jugé : l'oracle rend SKIP motivé exit 2, jamais « PA1–PA7 sans écart ». Le point d'entrée dit ce cas SANS OBJET.
+if (panneaux.size === 0 && ecransJugesPA7 === 0) {
+  if (!jsonOnly) process.stderr.write('SKIP — aucun panneau de création ni écran qui annonce une création : rien n\'a été jugé\n');
+  sortir('SKIP', 2);
+}
 const RANG = { bloquant: 0, majeur: 1, avertissement: 2, info: 3 };
 F.sort((x, y) => RANG[x.sev] - RANG[y.sev]);
 const durs = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');

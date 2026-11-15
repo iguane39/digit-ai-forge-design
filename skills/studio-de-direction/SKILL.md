@@ -67,6 +67,8 @@ de son élimination. Un commanditaire qui ne voit qu'une proposition n'a rien ch
 
 ## Références
 
+Chaque référence s'ouvre au moment que sa ligne nomme, pas avant.
+
 | Fichier | À lire quand |
 |---|---|
 | `references/axes-de-divergence.md` | avant de générer quoi que ce soit |

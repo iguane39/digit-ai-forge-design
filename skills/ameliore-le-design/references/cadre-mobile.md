@@ -65,6 +65,8 @@ valent 0 et la règle ne sert à rien. Vérifié par `oracle-mobile` M3.
 
 ## Patterns attendus, au moins trois en fonctionnement
 
+Chaque ligne nomme un pattern mobile et ce que la maquette doit montrer en fonctionnement pour qu'on le tienne pour tenu.
+
 | Pattern | Ce qu'il doit démontrer |
 |---|---|
 | Barre d'onglets basse | 3 à 5 destinations, état actif visible, atteignable au pouce |

@@ -2,6 +2,8 @@
 
 ## Protocole par type
 
+Le type de l'entrant décide du protocole : chaque ligne dit comment le lire, ce qu'on en tire et ce qui reste hors de portée.
+
 | Entrant | Protocole | Extractible | Hors de portée |
 |---|---|---|---|
 | URL de site | fetch + rendu Playwright multi-breakpoints, **≤ 15 pages** | arborescence, composants, palette réelle, densité, vocabulaire | parcours authentifiés |

@@ -71,6 +71,8 @@ restitution. Sans `ffprobe`, la règle du MP4 rend SKIP motivé et le verdict ne
 
 ## Références
 
+Chaque référence s'ouvre au moment que sa ligne nomme, pas avant.
+
 | Fichier | À lire quand |
 |---|---|
 | `references/bible.md` | avant la première ligne : format, contrat de rendu, couleurs, mouvement, musique, vérité |

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="utf-8">
+<title>Fixture verte — un panneau adressable, aucun écran qui annonce une création</title>
+<!-- TF-2576 : un panneau de création à branches, sur sa propre route, et AUCUN écran qui annonce une création (PA7 n'a rien à juger :
+     pas de « Nouveau », « Créer » ni « Ajouter »). L'oracle juge PA1–PA6 sur ce panneau, sans écart, et rend la ligne « sans écart » :
+     c'est la fixture qui la fait rendre (les autres fixtures vertes du panneau portent un constat d'information PA7). -->
+<style>
+  :root { --fond: #ffffff; --texte: #16181d; }
+  body { font-family: system-ui, sans-serif; background: var(--fond); color: var(--texte); }
+  [data-branche]:not([data-branche-active]) { display: none; }
+</style>
+</head>
+<body>
+
+<nav><a href="#stockage-connexion" data-action="ouvrir-connexion-stockage">Connexion d'un stockage</a></nav>
+
+<section id="stockage-connexion" data-ecran="stockage-connexion">
+  <h1>Connecter un stockage</h1>
+
+  <form data-panneau-tache="connexion-stockage" data-route="#stockage-connexion">
+
+    <fieldset data-commande-branches>
+      <legend>Comment ce stockage vous autorise-t-il ?</legend>
+      <label><input type="radio" name="mode" value="oauth" checked> Autorisation déléguée (OAuth)</label>
+      <label><input type="radio" name="mode" value="jeton"> Jeton généré à la main</label>
+    </fieldset>
+
+    <div data-branche="oauth" data-branche-active>
+      <p>
+        <label for="cle-application">Clé d'application</label>
+        <input type="text" id="cle-application" name="cle_application">
+      </p>
+    </div>
+
+    <div data-branche="jeton" hidden>
+      <p>
+        <label for="jeton-direct">Jeton d'accès</label>
+        <input type="password" id="jeton-direct" name="jeton_direct">
+      </p>
+    </div>
+
+    <button type="submit">Connecter</button>
+  </form>
+</section>
+
+</body>
+</html>

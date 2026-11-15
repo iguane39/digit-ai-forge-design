@@ -69,6 +69,8 @@ une serait pire.
 
 ## Deux modes
 
+Une critique se rend en l'un de deux modes, selon ce que la demande attend : chaque ligne dit la sortie du mode et quand le choisir.
+
 | Mode | Sortie | Quand |
 |---|---|---|
 | `complet` (défaut) | rapport Markdown + relevé JSON des oracles | avant envoi client, revue de fin de lot |
@@ -96,6 +98,8 @@ propres scripts de contraste et de débordement (ledger du produit, seq 441).
 
 ## Les sept dimensions
 
+La critique note sept dimensions ; chaque ligne dit ce que la dimension mesure et l'oracle ou la lecture qui la juge.
+
 | # | Dimension | Ce qu'elle mesure | Adossée à |
 |---|---|---|---|
 | D1 | Intention | direction lisible, ancrée dans le sujet, non générique | `oracle-slop` + lecture |
@@ -109,6 +113,8 @@ propres scripts de contraste et de débordement (ledger du produit, seq 441).
 Détail des barèmes, red flags et règle de verdict : `references/grille.md`.
 
 ## Références
+
+Chaque référence s'ouvre au moment que sa ligne nomme, pas avant.
 
 | Fichier | À lire quand |
 |---|---|

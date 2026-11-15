@@ -577,9 +577,15 @@ function passeFichier(fichier, { muet = false } = {}) {
     return [lancer(script, avecTokens && opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier])];
   }
   const out = [];
+  // TF-2576 : un oracle qui rend SKIP motivé « aucun objet à juger » (page sans mouvement, sans image, sans panneau de création) est un SANS OBJET
+  // dit à voix haute, pas un juge indisponible : il ne fait pas tomber l'agrégat en SKIP. Sur la copie sans socle (muet), son résultat reste dans
+  // la liste, pour que la comparaison des constats retrouve l'oracle des deux côtés. Tout autre SKIP de ces oracles reste un SKIP.
+  const sansObjetDit = (res, motif) => res.verdict === 'SKIP' && !res.raison && (res.non_juge || []).some(n => motif.test(n));
   out.push(lancer('oracle-slop.mjs', [fichier]));
   out.push(lancer('oracle-tokens.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
-  out.push(lancer('oracle-motion.mjs', [fichier]));
+  const motion = lancer('oracle-motion.mjs', [fichier]);
+  if (!muet && sansObjetDit(motion, /^aucun mouvement dans le document/)) sansObjet.push('oracle-motion : SANS OBJET — aucun mouvement dans le document (ni transition, ni animation, ni token de mouvement) et aucun contrôle pressable');
+  else out.push(motion);
   out.push(lancer('oracle-bascule.mjs', [fichier]));
   // TF-1980 : un octet de contrôle dans la page ou une feuille de style locale (« \25F7 » lu en octal par un script).
   out.push(lancer('oracle-caracteres-controle.mjs', [fichier]));
@@ -590,8 +596,11 @@ function passeFichier(fichier, { muet = false } = {}) {
   if (estMobile) out.push(lancer('oracle-mobile.mjs', [fichier]));
   else if (!muet) sansObjet.push(`oracle-mobile : SANS OBJET — ${MOTIF_SANS_OBJET}`);
 
-  if (aDesImages) out.push(lancer('oracle-images.mjs', [fichier]));
-  else if (!muet) sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
+  if (aDesImages) {
+    const images = lancer('oracle-images.mjs', [fichier]);
+    if (!muet && sansObjetDit(images, /^aucune image dans le document/)) sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document (aucun élément <img> ni <source> dans l\'arbre de la page, ni manifeste d\'images)');
+    else out.push(images);
+  } else if (!muet) sansObjet.push('oracle-images : SANS OBJET — aucune image dans le document');
 
   if (aDesChamps) {
     // TF-2535 : une page qui ne porte que des cases, des boutons radio, des champs cachés ou des fichiers a des balises <input> sans
@@ -603,8 +612,11 @@ function passeFichier(fichier, { muet = false } = {}) {
     } else out.push(saisie);
   } else if (!muet) sansObjet.push('oracle-saisie : SANS OBJET — aucun champ de saisie dans le document');
 
-  if (aUnPanneau) out.push(lancer('oracle-panneau-tache.mjs', [fichier]));
-  else if (!muet) sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
+  if (aUnPanneau) {
+    const panneau = lancer('oracle-panneau-tache.mjs', [fichier]);
+    if (!muet && sansObjetDit(panneau, /^aucun panneau de création détecté/)) sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création ni écran qui annonce une création dans le document');
+    else out.push(panneau);
+  } else if (!muet) sansObjet.push('oracle-panneau-tache : SANS OBJET — aucun panneau de création balisé (data-panneau-tache / data-branche) dans le document');
 
   if (aUnDeclencheur) {
     out.push(lancer('oracle-declencheurs.mjs', opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier]));
