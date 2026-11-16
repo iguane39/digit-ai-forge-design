@@ -46,7 +46,7 @@
 
 import fs from 'node:fs';
 import { parse as parseHtml, elements, arbres, css, cssRulesDeep, visibleText } from './lib/html.mjs';
-import { declarationsPour as declarationsDe } from './lib/selecteurs.mjs';
+import { declarationsEnCascade as declarationsDe } from './lib/selecteurs.mjs';
 import { plageDeRegles } from './lib/regles-jouees.mjs';
 // TF-2287 — les règles que l'oracle JOUE, déclarées UNE fois ; la plage citée à la sortie en dérive, jamais écrite en dur.
 // Une règle neuve s'ajoute ici : self-test-regles-jouees.mjs refuse la liste qui s'écarte des règles émises par ce fichier.
@@ -68,7 +68,7 @@ const NJ = [
   'navigation portée par un routeur applicatif (data-action interprété par un aiguillage JS) — indécidable statiquement : DE2 ne juge que la navigation ÉCRITE sur le bouton',
   'justesse du découpage en fonctionnalités et pertinence des libellés — jugement de conception',
   'DE4 : ne lit que les <div> et <span> porteurs d\'un onclick écrit sur l\'élément — un écouteur posé par addEventListener ou délégué (data-action interprété par un aiguillage JS) n\'est pas tracé ; un role SEUL ou un tabindex SEUL lève l\'avertissement sans prouver que l\'élément est complet (clavier ET rôle)',
-  'partie ANCÊTRE d\'un sélecteur descendant (« .carte .bouton ») — seul le dernier compound est confronté à l\'élément, l\'arbre n\'est pas remonté : une règle qui ne s\'applique qu\'en contexte est comptée comme si elle s\'appliquait (TF-0833)',
+  'cascade du navigateur, reproduite et non exécutée (TF-2627) : le sélecteur ENTIER est appliqué (ancêtres, enfant, frères), puis !important, spécificité et ordre — une règle `.tf-actions button` ne vaut plus pour un bouton hors de .tf-actions ; restent hors champ les raccourcis concurrents à spécificités différentes (background contre background-color), @layer, :is()/:not() au-delà d\'une approximation, et un style posé par un script à l\'exécution',
 ];
 const F = [];
 const REGISTRE = [];
@@ -103,8 +103,10 @@ const regles = cssRulesDeep(cssText).filter(r => !r.atRules.some(a => /\bprint\b
 // toute la page en boutons fantômes. TF-0921 (08/09) a retrouvé la même mécanique intacte
 // dans `oracle-surcouche.mjs` : deux implémentations divergentes du même geste, dont une
 // déjà corrigée. La règle vit désormais à UN endroit, `lib/selecteurs.mjs`, que les deux
-// oracles partagent — dernier compound, toutes ses conditions tenues, ancêtres non remontés
-// (approximation LARGE dite au non_juge, mais plus jamais l'inverse d'une intersection).
+// oracles partagent — dernier compound, toutes ses conditions tenues.
+// TF-2627 (lot Produit-82 du 10/11/2026, récidive de TF-2430) : les ancêtres n'étaient pas remontés, et `.tf-actions button
+// { background: none }` faisait lire « fantôme » chaque bouton de la page, jusqu'à 7 écrans refusés à tort. L'élément est
+// maintenant jugé sur la cascade du sélecteur ENTIER (declarationsEnCascade, déjà celle d'oracle-perceptibilite, TF-1774).
 const declarationsPour = el => declarationsDe(el, regles);
 
 // ── Ce qui est un déclencheur, et de quelle nature ─────────────────────────

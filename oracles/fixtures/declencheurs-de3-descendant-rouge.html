@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture rouge — le bouton DANS le conteneur de la règle descendante reste un fantôme (TF-2627)</title>
+<!--
+  TF-2627. Paire de declencheurs-de3-descendant-verte.html : la même règle,
+      .tf-actions button { background: none; border: none }
+  et la même fonctionnalité « export » à un seul point d'entrée. Ici le bouton est DANS .tf-actions : la règle
+  l'habille vraiment, il n'a ni fond ni bordure, c'est l'unique accès fantôme que DE3 doit refuser.
+  Une correction qui n'appliquerait plus la règle nulle part aveuglerait DE3 : cette page l'en empêche.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; padding: 32px; }
+  .tf-actions button { font: inherit; background: none; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Portail</h1>
+    <div class="tf-actions">
+      <button type="button" data-fonctionnalite="export">Exporter</button>
+    </div>
+  </main>
+</body>
+</html>

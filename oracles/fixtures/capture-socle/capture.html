@@ -2,8 +2,10 @@
 <!-- FIXTURE — run-oracles-design --origine, composant du socle servi (TF-2430, lot Produit-82 du 10/11/2026).
      La capture d'une instance servie dont le composant table-filters du socle reste en ressources liées
      (feuille et script, adresses « racine du site »). Le seul bouton porte une fonctionnalité déclarée et AUCUN style
-     propre : c'est la règle `.tf-actions button { background: none; border: none }` de la feuille du socle qui le fait
-     lire « fantôme » (l'appariement ne remonte pas les ancêtres), donc DE3. Posée en bloc COMPOSANT-EMBARQUE scellé, la
+     propre, et il est posé DANS `.tf-actions` : c'est la règle `.tf-actions button { background: none; border: none }` de la
+     feuille du socle qui l'habille en « fantôme », donc DE3. (Avant TF-2627, l'appariement ne remontait pas les ancêtres et le
+     bouton se lisait fantôme même posé hors de `.tf-actions` ; ce cas-là est la paire declencheurs-de3-descendant-verte.html.)
+     Posée en bloc COMPOSANT-EMBARQUE scellé, la
      feuille serait imputée au socle (TF-0830) et la page passerait ; servie, elle était imputée à l'auteur.
      Attendu : avec la feuille et le script du socle servis tels quels, DE3 est mis au compte du socle (PASS) ; avec un
      composant servi édité sous le même nom, ou la même règle dans une feuille de l'auteur, DE3 reste à l'auteur (FAIL).
@@ -19,7 +21,9 @@
 <body>
   <main>
     <h1>Portail</h1>
-    <button type="button" data-fonctionnalite="export">Exporter</button>
+    <div class="tf-actions">
+      <button type="button" data-fonctionnalite="export">Exporter</button>
+    </div>
   </main>
 </body>
 </html>

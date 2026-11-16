@@ -3568,6 +3568,51 @@ for (const cas of CAS) {
     ligne(m.code === 0 && m.verdict === 'PASS' && NEUVES.every(x => vues.has(x)),
       `mesure de l'étude 20261019i · boucle de 40 s + animate(1,2 s) + révocation partielle : PASS exit 0, R11 R12 R13 signalées (exit ${m.code}, ${[...vues].filter(x => NEUVES.includes(x)).join(' ')})`);
   } finally {
+// TF-2627 (lot Produit-82 du 10/11/2026, récidive de TF-2430) — DE3 NE PREND PLUS UNE RÈGLE À SÉLECTEUR DESCENDANT POUR UNE RÈGLE DE TOUTE LA PAGE.
+// `.tf-actions button { background: none; border: none }` s'appariait à chaque bouton de la page (seul le dernier compound était confronté) :
+// DE3 refusait sept écrans d'un portail pour des boutons posés hors de `.tf-actions`, PASS sans la feuille du composant, FAIL avec. L'oracle
+// juge maintenant sur la cascade du sélecteur ENTIER (declarationsEnCascade). Sens vert : le bouton hors du conteneur reste un bouton natif,
+// avec la règle écrite dans la page, avec la feuille passée par --tokens, et sans elle ; sens rouge : le même bouton posé DANS le conteneur
+// est un fantôme, la règle seule le rend tel, et l'unique accès fantôme reste refusé.
+{
+  console.log(String.fromCharCode(10) + 'oracle-declencheurs DE3 (TF-2627) — la règle à sélecteur descendant ne vaut que dans son conteneur');
+  const atelier = fs.mkdtempSync(path.join(os.tmpdir(), 'declencheurs-de3-'));
+  try {
+    const REGLE = '  .tf-actions button { font: inherit; background: none; border: none; cursor: pointer; }\n';
+    const feuille = path.join(atelier, 'table-filters.css');
+    fs.writeFileSync(feuille, REGLE.trim() + '\n', 'utf8');
+    const lire = f => fs.readFileSync(f, 'utf8').replace(/\r\n/g, '\n');
+    const verte = fx('declencheurs-de3-descendant-verte.html'), rouge = fx('declencheurs-de3-descendant-rouge.html');
+    const sansRegle = (src, nom) => {
+      if (!src.includes(REGLE)) throw new Error(`la règle du composant est introuvable dans ${nom}`);
+      const f = path.join(atelier, nom); fs.writeFileSync(f, src.replace(REGLE, ''), 'utf8'); return f;
+    };
+    const jouerDe = (f, ...plus) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-declencheurs.mjs'), f, ...plus, '--json-only'], { encoding: 'utf8' });
+      let json = null; try { json = JSON.parse((r.stdout || '').trim()); } catch { /* illisible : la ligne le dira */ }
+      return { code: r.status, json, natures: (json?.registre || []).map(x => x.nature), de3: (json?.findings || []).some(x => x.regle === 'DE3') };
+    };
+    const vInline = jouerDe(verte);
+    ligne(vInline.code === 0 && vInline.json?.verdict === 'PASS' && !vInline.de3 && vInline.natures.includes('bouton-natif') && !vInline.natures.includes('bouton-fantome'),
+      `sens vert · règle \`.tf-actions button\` écrite dans la page, bouton HORS de .tf-actions : bouton natif, PASS exit 0, pas de DE3 (obtenu ${vInline.json?.verdict}, exit ${vInline.code}, natures ${vInline.natures.join(', ')})`);
+    const vSans = jouerDe(sansRegle(lire(verte), 'verte-sans-feuille.html'));
+    const vFeuille = jouerDe(path.join(atelier, 'verte-sans-feuille.html'), '--tokens', feuille);
+    ligne(vSans.code === 0 && vFeuille.code === 0 && !vSans.de3 && !vFeuille.de3 && vSans.json?.verdict === 'PASS' && vFeuille.json?.verdict === 'PASS',
+      `sens vert · le même écran sans la feuille du composant, puis avec elle (--tokens) : PASS aux deux, comme sur le portail (obtenu ${vSans.json?.verdict}/${vFeuille.json?.verdict}, exit ${vSans.code}/${vFeuille.code})`);
+    const rInline = jouerDe(rouge);
+    ligne(rInline.code === 1 && rInline.json?.verdict === 'FAIL' && rInline.de3 && rInline.natures.join() === 'bouton-fantome',
+      `sens rouge · le même bouton posé DANS .tf-actions est un fantôme, unique accès : FAIL exit 1, DE3 (obtenu ${rInline.json?.verdict}, exit ${rInline.code}, natures ${rInline.natures.join(', ')})`);
+    const rSans = jouerDe(sansRegle(lire(rouge), 'rouge-sans-regle.html'));
+    const rFeuille = jouerDe(path.join(atelier, 'rouge-sans-regle.html'), '--tokens', feuille);
+    ligne(rSans.code === 0 && rSans.json?.verdict === 'PASS' && !rSans.de3 && rFeuille.code === 1 && rFeuille.de3,
+      `sens rouge · la règle est bien ce qui rend le bouton fantôme : sans elle PASS, avec la feuille passée par --tokens FAIL DE3 (obtenu ${rSans.json?.verdict}/${rFeuille.json?.verdict})`);
+    ligne((vInline.json?.non_juge || []).some(n => /cascade du navigateur, reproduite et non exécutée/.test(n)),
+      'sens vert · le non_juge dit que la cascade est reproduite, non exécutée, et ce qui reste hors champ');
+  } finally {
+    fs.rmSync(atelier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
     fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
   }
 }

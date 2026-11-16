@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — une règle à sélecteur descendant ne s'applique pas hors de son conteneur (TF-2627)</title>
+<!--
+  TF-2627 (lot Produit-82 du 10/11/2026, récidive de TF-2430). Sur un portail, DE3 refusait sept écrans pour des
+  boutons de ligne « sans fond » : la règle du composant de filtres,
+      .tf-actions button { background: none; border: none }
+  s'apparie à tous les boutons de la page, alors qu'elle ne vaut que pour les boutons posés DANS .tf-actions. La
+  contre-épreuve rendait PASS sans la feuille du composant, FAIL avec.
+
+  Cette page est le même cas : la règle est posée, la fonctionnalité « export » n'a qu'un point d'entrée, et ce bouton
+  est HORS de .tf-actions. Il garde son apparence de bouton natif : DE3 se tait, avec et sans la règle.
+  La paire rouge (declencheurs-de3-descendant-rouge.html) met le même bouton DANS .tf-actions, où la règle l'habille
+  vraiment en fantôme.
+-->
+<style>
+  :root { color-scheme: light; --fond: #fbf9f5; --texte: #1d2126; --trait: #d8d2c6; }
+  body { background: var(--fond); color: var(--texte); font-family: Georgia, serif; margin: 0; padding: 32px; }
+  .tf-actions button { font: inherit; background: none; border: none; cursor: pointer; }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Portail</h1>
+    <div class="tf-actions">
+      <a href="/filtres">Filtres</a>
+    </div>
+    <button type="button" data-fonctionnalite="export">Exporter</button>
+  </main>
+</body>
+</html>
