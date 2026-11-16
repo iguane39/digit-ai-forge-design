@@ -94,6 +94,23 @@ ligne(sansRacine.status === 1 && (jSans?.findings || []).some(f => f.regle === '
   'rouge · page hors forge sans --racine refusée, rien écrit dans baseline/ de la forge (exit ' + sansRacine.status + ')');
 try { fs.rmSync(pollue, { recursive: true, force: true }); } catch { /* best-effort */ }
 
+// ── TF-2594 : un jugement qui n'a rien jugé (SKIP) ne laisse aucun dossier dans l'arbre ──
+// baseline/ existe déjà dans la racine jetable (les approbations ci-dessus) : c'est le cas qui créait
+// un dossier et un historique.jsonl par page balayée (172 dossiers au balayage des fixtures du 15/11/2026).
+const dossiersAvant = fs.readdirSync(path.join(racine, 'baseline')).sort().join('|');
+const sansSlug = lancer([fx('tokens-verte.html'), '--widths', '600']);
+ligne(sansSlug.json?.verdict === 'SKIP' && !fs.existsSync(path.join(racine, 'baseline', 'tokens-verte')),
+  'rouge · sans --slug, SKIP : aucun dossier baseline/<nom du fichier>/ écrit (verdict ' + sansSlug.json?.verdict + ')');
+const slugInconnu = lancer([fx('tokens-verte.html'), '--slug', 'slug-sans-baseline', '--widths', '600']);
+ligne(slugInconnu.json?.verdict === 'SKIP' && !fs.existsSync(path.join(racine, 'baseline', 'slug-sans-baseline')),
+  'rouge · --slug sans baseline approuvée, SKIP : aucun dossier ni historique.jsonl écrit (verdict ' + slugInconnu.json?.verdict + ')');
+ligne(fs.readdirSync(path.join(racine, 'baseline')).sort().join('|') === dossiersAvant,
+  'rouge · après les deux SKIP, la liste des dossiers de baseline/ est inchangée');
+const jugeVerteApres = lancer([fx('tokens-rouge.html'), '--slug', 'verte', '--widths', '600']);
+const histoApres = (() => { try { return fs.readFileSync(path.join(racine, 'baseline', 'verte', 'historique.jsonl'), 'utf8').trim().split('\n').map(l => JSON.parse(l)); } catch { return []; } })();
+ligne(jugeVerteApres.json?.verdict !== 'SKIP' && histoApres[histoApres.length - 1]?.action === 'jugement',
+  'verte · sous --slug explicite avec baseline approuvée, le jugement reste journalisé (verdict ' + jugeVerteApres.json?.verdict + ')');
+
 // ── TF-1797 : une instance servie (URL locale) se juge par le même moteur ───
 const port = 18000 + Math.floor(Math.random() * 2000);
 const serveur = spawn(outillage.python, ['-m', 'http.server', String(port), '--bind', '127.0.0.1', '--directory', racine], { stdio: 'ignore' });

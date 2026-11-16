@@ -14,7 +14,8 @@
 //   · création/mise à jour uniquement via --approuver, hors boucle de jugement ;
 //     refusée si le dernier verdict journalisé pour ce slug est un FAIL non
 //     encore rejugé — on n'entérine pas une régression au lieu de la corriger ;
-//   · chaque approbation est journalisée dans baseline/<slug>/historique.jsonl ;
+//   · chaque approbation est journalisée dans baseline/<slug>/historique.jsonl ; un jugement l'est aussi,
+//     mais seulement sous --slug explicite et s'il a rendu PASS ou FAIL : un SKIP n'écrit rien (TF-2594) ;
 //   · TF-1798 — un ÉCART VOULU (refonte décidée, nouveau composant) s'approuve après
 //     un FAIL avec `--motif "<écart voulu>"` : le motif est exigé, tracé à
 //     l'historique et publié au rapport. Sans motif, B3 refuse et nomme ce remède.
@@ -270,8 +271,11 @@ nettoyer(tmp);
 
 const dur = F.filter(f => f.sev === 'bloquant' || f.sev === 'majeur');
 const verdict = dur.length ? 'FAIL' : juges > 0 ? 'PASS' : 'SKIP';
+// TF-2594 — un jugement qui n'a rien jugé (SKIP) ou dont le slug est déduit du nom du fichier n'écrit rien :
+// un balayage des fixtures a créé 172 dossiers baseline/ à un historique SKIP chacun. Seul un --slug explicite
+// et un jugement rendu (PASS ou FAIL) laissent une trace, car B3 lit ce dernier verdict.
 try {
-  if (fs.existsSync(path.dirname(dossierBaseline)) || juges > 0 || dur.length) {
+  if (args.includes('--slug') && verdict !== 'SKIP') {
     fs.mkdirSync(dossierBaseline, { recursive: true });
     fs.appendFileSync(historique, JSON.stringify({ date_iso: new Date().toISOString(), action: 'jugement', verdict, ecarts: dur.length }) + '\n');
   }
