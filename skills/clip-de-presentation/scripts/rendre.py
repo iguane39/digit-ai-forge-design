@@ -7,6 +7,7 @@ photographie la page et pousse l'image dans FFmpeg, puis ajoute la musique.
 Usage :
   python rendre.py clip.html --sortie clip.mp4 --musique musique.wav [--fps 30]
   python rendre.py clip.html --planche planche.jpg --instants 1,4.5,9,15   (contrôle, sans vidéo)
+  python rendre.py clip.html --plein images/ --instants 1,4.5,9,15         (contrôle : un PNG 1920 x 1080 par instant)
   python rendre.py clip.html --sortie essai.mp4 --debut 10 --fin 16        (extrait)
 
 Les instants d'une planche sont en temps du MP4 : introduction comprise, donc temps du code + 6 s
@@ -15,12 +16,12 @@ quand le clip est enveloppé par M.introduire.
 import argparse
 import io
 import pathlib
+import struct
 import subprocess
 import sys
 import time
 
 import static_ffmpeg
-from PIL import Image, ImageDraw
 from playwright.sync_api import sync_playwright
 
 static_ffmpeg.add_paths()
@@ -52,6 +53,7 @@ def image(page, t):
 
 
 def planche(page, instants, sortie, colonnes=4):
+    from PIL import Image, ImageDraw   # Pillow ne sert qu'aux planches : --plein et la vidéo n'en ont pas besoin
     vignettes = []
     for t in instants:
         im = Image.open(io.BytesIO(image(page, t))).convert("RGB")
@@ -66,6 +68,21 @@ def planche(page, instants, sortie, colonnes=4):
         feuille.paste(v, ((k % colonnes) * 480, (k // colonnes) * h))
     feuille.save(sortie, quality=90)
     print(f"planche écrite : {sortie} ({len(instants)} instants)")
+
+
+def plein(page, instants, dossier, largeur, hauteur):
+    # Une planche réduit chaque vignette à 480 px, soit le quart de 1920 : une étiquette de 24 px n'y fait plus que 6 px et le
+    # plancher ne s'y lit pas. Chaque instant s'écrit ici à la taille du rendu (1920 x 1080 par défaut), en PNG.
+    sortie = pathlib.Path(dossier)
+    sortie.mkdir(parents=True, exist_ok=True)
+    for t in instants:
+        page.evaluate("t => window.rendre(t)", t)
+        fichier = sortie / f"plein-{t:07.2f}s.png"
+        fichier.write_bytes(page.screenshot(type="png"))
+        taille = struct.unpack(">II", fichier.read_bytes()[16:24])   # largeur et hauteur, lues dans l'en-tête IHDR du PNG
+        if taille != (largeur, hauteur):
+            sys.exit(f"image pleine taille de {taille[0]} x {taille[1]} au lieu de {largeur} x {hauteur} : {fichier}")
+    print(f"images pleine taille écrites : {sortie} ({len(instants)} instants, {largeur} x {hauteur})")
 
 
 def video(page, duree, fps, sortie, musique, debut, fin):
@@ -109,14 +126,18 @@ def main():
     a.add_argument("--debut", type=float, default=0)
     a.add_argument("--fin", type=float)
     a.add_argument("--planche")
+    a.add_argument("--plein", help="dossier où écrire chaque instant de --instants à la taille du rendu (1920 x 1080)")
     a.add_argument("--instants", default="")
     o = a.parse_args()
     with sync_playwright() as p:
         nav, page = ouvrir(p, o.html, o.largeur, o.hauteur)
         duree = page.evaluate("window.DUREE")
-        if o.planche:
+        if o.planche or o.plein:
             instants = [float(x) for x in o.instants.split(",") if x.strip()] or [duree * k / 16 for k in range(16)]
-            planche(page, instants, o.planche)
+            if o.planche:
+                planche(page, instants, o.planche)
+            if o.plein:
+                plein(page, instants, o.plein, o.largeur, o.hauteur)
         if o.sortie:
             video(page, duree, o.fps, o.sortie, o.musique, o.debut, o.fin)
         nav.close()

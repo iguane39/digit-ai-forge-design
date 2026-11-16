@@ -1,7 +1,7 @@
 ---
 name: clip-de-presentation
 description: Produit un clip de présentation en motion design d'environ 60 s — Canvas 2D animé en continu, musique composée en code, rendu image par image en MP4 1920×1080 à 30 i/s — à partir d'un sujet, de sources et du dossier de marque du produit. Introduction et carte de fin portent le logo, le nom et le lien de la marque ; les légendes suivent un récit client à budgets de caractères ; chaque affirmation est sourcée, chaque chiffre de décor étiqueté « exemple » ; le clip est jugé par oracle-clip (ffprobe, planches, budgets, étiquettes de 24 px, marque en paramètre). Use when / déclencher dès que l'utilisateur demande une vidéo de présentation, un clip, une animation ou une vidéo de lancement d'un produit, du motion design, une série de clips au même style, ou la reprise des textes d'un clip en récit client. Ne pas déclencher pour analyser ou résumer une vidéo existante (→ regarde-une-video), pour des diapositives, même animées (→ digit-ai-pptx), ni pour une maquette d'interface navigable (→ ameliore-le-design).
-version: 1.1.0
+version: 1.2.0
 ---
 
 # Clip de présentation
@@ -36,6 +36,7 @@ textes en récit client, et le jugement par `oracle-clip`.
                 entrée et sortie : references/entree-et-sortie.md
 7. Contrôler  → python scripts/rendre.py <clip>/clip.html --planche <clip>/planche-1.jpg --instants <16 instants ou plus>
                 trois planches au moins, lues comme un spectateur, introduction comprise
+                et 4 images pleine taille au moins : python scripts/rendre.py <clip>/clip.html --plein <clip>/pleines --instants <liste>
 8. Rendre     → python scripts/rendre.py <clip>/clip.html --sortie <MP4 chez le produit> --musique <clip>/musique.wav
 9. Juger      → node oracles/oracle-clip.mjs <clip> --mp4 <MP4>, depuis la racine de forge-design
 10. Restituer → le MP4, le storyboard, les planches, le verdict d'oracle-clip tel quel, non_juge compris

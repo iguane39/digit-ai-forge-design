@@ -21,7 +21,7 @@
  * Exit  : 0 tout vert · 1 au moins un rouge
  */
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -246,7 +246,7 @@ console.log("\nSKILL.md et gabarits");
   const fm = /^---\n([\s\S]*?)\n---/.exec(skillMd);
   const champ = (n) => (fm ? (new RegExp(`^${n}:\\s*(.*)$`, "m").exec(fm[1]) || [])[1] : undefined);
   const desc = champ("description") || "";
-  ok("frontmatter : name clip-de-presentation, version 1.1.0", champ("name") === "clip-de-presentation" && champ("version") === "1.1.0");
+  ok("frontmatter : name clip-de-presentation, version 1.2.0", champ("name") === "clip-de-presentation" && champ("version") === "1.2.0");
   ok(`description de 1 024 caractères au plus (${desc.length}), avec « Use when » et « Ne pas déclencher »`,
     desc.length > 0 && desc.length <= 1024 && /Use when/.test(desc) && /Ne pas déclencher/.test(desc));
   ok("la description renvoie vers regarde-une-video, digit-ai-pptx et ameliore-le-design",
@@ -286,6 +286,54 @@ if (!python) {
         && wa.toString("latin1", 0, 4) === "RIFF" && wa.readUInt16LE(22) === 2 && wa.readUInt32LE(24) === 48000, `exit ${a.status}, ${wa.length} octets ${(a.stderr || "").slice(0, 160)}`);
       ok("musique.py est déterministe : mêmes arguments, mêmes octets", b.status === 0 && wa.length > 44 && wa.equals(wb));
       ok("musique.py écrit sa sortie console en UTF-8 lisible", /musique écrite/.test(a.stdout || ""), (a.stdout || "").slice(0, 120));
+    } finally { rmSync(atelier, { recursive: true, force: true }); }
+  }
+}
+
+// ---------------------------------------------------------------- rendre.py --plein (TF-2603)
+// Une planche réduit chaque vignette à 480 px, le quart de 1920 : une étiquette de 24 px n'y fait plus que 6 px et le plancher que le skill
+// prescrit ne s'y lit pas (retour RA-22 du 12/11/2026 : deux défauts vus seulement sur des images pleine taille écrites hors du skill).
+// `--plein <dossier>` écrit chaque instant à la taille du rendu. Sens vert : quatre instants, quatre PNG de 1920 x 1080 mesurés dans l'en-tête du
+// fichier. Sens rouge : la même commande dont l'écriture redevient une vignette de 480 px est refusée par la garde de taille de rendre.py.
+console.log("\nrendre.py --plein : des images à la taille du rendu, à côté des planches");
+{
+  const outils = python ? spawnSync(python, ["-I", "-c", "import playwright, static_ffmpeg"], { encoding: "utf8" }) : { status: 1 };
+  const lire = (f) => lireTexte(join(SKILL, f));
+  const dit = (texte) => /--plein/.test(texte) && /4 images pleine taille|quatre images pleine taille/.test(texte);
+  const bible = lire("references/bible.md"), skillMd = lire("SKILL.md"), consigne = lire("references/consigne-agents.md");
+  ok("la bible, SKILL.md et la consigne des agents prescrivent --plein et au moins 4 images pleine taille à côté des 3 planches",
+    dit(bible) && dit(skillMd) && dit(consigne), `bible ${dit(bible)}, SKILL.md ${dit(skillMd)}, consigne ${dit(consigne)}`);
+  ok("sens rouge · la bible sans --plein ne dit plus la prescription", !dit(bible.replace(/--plein/g, "")));
+  if (!python || outils.status !== 0) {
+    console.log("  SAUT  python, playwright ou static_ffmpeg absent : rendre.py --plein n'est pas rejoué");
+  } else {
+    const atelier = mkdtempSync(join(tmpdir(), "clip-plein-"));
+    try {
+      const page = join(atelier, "clip.html");
+      writeFileSync(page, "<!doctype html><meta charset=\"utf-8\"><style>html,body{margin:0;background:#101317}canvas{display:block}</style><canvas id=\"c\" width=\"1920\" height=\"1080\"></canvas>"
+        + "<script>window.DUREE=2;window.rendre=function(t){var x=document.getElementById('c').getContext('2d');x.fillStyle='#101317';x.fillRect(0,0,1920,1080);"
+        + "x.fillStyle='#ffffff';x.font='700 24px sans-serif';x.fillText('étiquette de 24 px à t='+t.toFixed(1),100,100);};</script>\n", "utf8");
+      const env = { ...process.env, PYTHONUTF8: "1" };
+      const taille = (f) => { const b = readFileSync(f); return b.toString("latin1", 1, 4) === "PNG" ? [b.readUInt32BE(16), b.readUInt32BE(20)] : null; };
+      const sortie = join(atelier, "pleines");
+      const r = spawnSync(python, [join(ICI, "rendre.py"), page, "--plein", sortie, "--instants", "0.5,1,1.5,1.9"], { encoding: "utf8", env, timeout: 240000 });
+      const fichiers = existsSync(sortie) ? readdirSync(sortie).filter((f) => /^plein-.*\.png$/.test(f)).sort() : [];
+      const tailles = fichiers.map((f) => taille(join(sortie, f)));
+      ok("rendre.py --plein écrit un PNG par instant, chacun de 1920 x 1080", r.status === 0 && fichiers.length === 4 && tailles.every((t) => t && t[0] === 1920 && t[1] === 1080),
+        `exit ${r.status}, ${fichiers.length} fichiers, tailles ${JSON.stringify(tailles)} ${(r.stderr || "").slice(-200)}`);
+      ok("rendre.py --plein dit ce qu'il a écrit, en UTF-8 lisible", /images pleine taille écrites/.test(r.stdout || ""), (r.stdout || "").slice(0, 120));
+      // Sens rouge : l'écriture redevient une vignette de 480 px ; la garde de taille de rendre.py la refuse, sans rien laisser passer.
+      const source = lireTexte(join(ICI, "rendre.py"));
+      const sain = 'fichier.write_bytes(page.screenshot(type="png"))';
+      const muet = source.split(sain).length - 1;
+      ok("la ligne d'écriture de --plein existe une fois dans rendre.py (la mutation s'applique)", muet === 1, `trouvée ${muet} fois`);
+      if (muet === 1) {
+        const mutant = join(atelier, "rendre-vignette.py");
+        writeFileSync(mutant, source.replace(sain, 'fichier.write_bytes(page.screenshot(type="png", clip={"x": 0, "y": 0, "width": 480, "height": 270}))'), "utf8");
+        const m = spawnSync(python, [mutant, page, "--plein", join(atelier, "vignettes"), "--instants", "0.5"], { encoding: "utf8", env, timeout: 240000 });
+        ok("sens rouge · une écriture à 480 px (la vignette d'une planche) est refusée : exit non nul et la taille nommée",
+          m.status !== 0 && /480 x 270 au lieu de 1920 x 1080/.test(m.stderr || ""), `exit ${m.status} ${(m.stderr || "").slice(-200)}`);
+      }
     } finally { rmSync(atelier, { recursive: true, force: true }); }
   }
 }

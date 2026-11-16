@@ -36,7 +36,9 @@ Rien d'autre n'est figé : le storyboard est à toi.
    utile, ou par une carte maison qui la vérifie aussi. Le lien de la marque est posé par `M.carteFin` :
    ne le redessine pas, et laisse libre la zone y = 770 à 830.
 7. **Contrôler** : trois planches au moins (`scripts/rendre.py --planche`), de 16 instants ou plus,
-   introduction comprise, lues comme un spectateur, corrigées et rejouées.
+   introduction comprise, et 4 images pleine taille au moins (`scripts/rendre.py --plein <dossier> --instants …`,
+   un PNG de 1920 x 1080 par instant : sur une planche, une étiquette de 24 px n'en fait plus que 6), lues comme un
+   spectateur, corrigées et rejouées.
 8. **Rendre** le MP4 au nom donné, dans le dossier de sortie du produit, puis vérifier par `ffprobe` :
    1920 × 1080, 30 i/s, 65 à 67 s, H.264 `yuv420p`, son AAC.
 9. **Juger** : depuis la racine de forge-design, `node oracles/oracle-clip.mjs <dossier> --mp4 <MP4>` ;

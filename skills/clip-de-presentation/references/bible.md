@@ -118,7 +118,12 @@ C'est l'étape 5 de la méthode, et elle se fait avant le rendu complet.
 1. `python scripts/rendre.py <clip>/clip.html --planche <clip>/planche-1.jpg --instants <liste>`, avec un
    instant au milieu de chaque plan et un au milieu de chaque transition : 16 instants au moins, en
    temps du MP4, introduction comprise. Trois planches au moins sur la vie du clip.
-2. Lire chaque planche comme un spectateur : texte coupé, chevauchement, élément hors cadre, plan vide,
+   Une planche réduit chaque vignette à 480 px, le quart de 1920 : une étiquette de 24 px n'y fait plus que
+   6 px, et le plancher ne s'y lit pas. À côté des 3 planches, écris **4 images pleine taille au moins** :
+   `python scripts/rendre.py <clip>/clip.html --plein <clip>/pleines --instants <liste>` écrit un PNG de 1920 x 1080
+   par instant, à choisir sur les plans les plus chargés (une étiquette sous un zoom de caméra, un élément posé sur un
+   texte, un tampon sur une ligne). Le 12/11/2026, deux défauts d'un clip n'ont été vus que sur de telles images.
+2. Lire chaque planche et chaque image pleine taille comme un spectateur : texte coupé, chevauchement, élément hors cadre, plan vide,
    contraste insuffisant, légende illisible, couleur hors marque, étiquette rendue sous 24 px par un
    zoom de caméra. Corriger, puis rejouer la planche.
 3. Seulement ensuite, rendre la vidéo complète.
