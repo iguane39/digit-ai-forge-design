@@ -158,9 +158,9 @@ console.log('La documentation — la plage citée pour un oracle atteint sa dern
 // de l'oracle (dans les 90 caractères, sans franchir une autre mention d'oracle) doit finir à sa dernière règle, ou à la règle que
 // « , SAn » lui ajoute (« SA1–SA7, SA8 en avertissement »), ou à celle d'une seconde plage (« M1–M9, M10–M11 »). Posé d'abord pour trois
 // oracles (TF-2293), étendu le 14/11/2026 à huit autres, un par un (TF-2534 : PA, M, T, D de oracle-dtcg et de oracle-liste-demande, X, R, I) :
-// chacun a ses lignes ci-dessous. Les citations des oracles qui ne figurent pas ici (S1–S10 de oracle-slop dans demo/NOTE-partis-pris.md…)
-// restent à aligner, un oracle à la fois, par cette même liste.
-const DOCUMENTES = ['saisie', 'surcouche', 'declencheurs', 'panneau-tache', 'mobile', 'tokens', 'dtcg', 'liste-demande', 'exploitabilite', 'motion', 'images'];
+// chacun a ses lignes ci-dessous ; oracle-slop les rejoint avec TF-2595 (demo/NOTE-partis-pris.md citait S1–S10, relevé rejoué sur S1–S12).
+// Les citations des oracles qui ne figurent pas encore ici restent à aligner, un oracle à la fois, par cette même liste.
+const DOCUMENTES = ['saisie', 'surcouche', 'declencheurs', 'panneau-tache', 'mobile', 'tokens', 'dtcg', 'liste-demande', 'exploitabilite', 'motion', 'images', 'slop'];
 const SANS_LIGNE_DE_REGISTRE = ['dtcg', 'liste-demande'];
 const racineForge = path.join(ici, '..');
 function* documents(dossier) {
@@ -251,6 +251,7 @@ for (const nom of DOCUMENTES) {
     ['exploitabilite', '`oracle-exploitabilite` (X0–X6, X8) sur l\'instance', 'X0–X6, X8', '`oracle-exploitabilite` (X0–X6, X8–X9) sur l\'instance'],
     ['motion', 'node oracles/oracle-motion.mjs <page.html>   # R1–R10, R11–R13 (avertissements)', 'R1–R10, R11–R13', 'node oracles/oracle-motion.mjs <page.html>   # R1–R10, R11–R14 (avertissements)'],
     ['images', '`oracle-images` I1–I6 | SANS OBJET', 'I1–I6', '`oracle-images` I1–I8 | SANS OBJET'],
+    ['slop', '| `oracle-slop` S1–S10 | **PASS** |', 'S1–S10', '| `oracle-slop` S1–S12 | **PASS** |'],
   ];
   for (const [nom, perime, citee, aJour] of CAS_DOC) {
     ligne(plagesPerimees(perime, nom, reglesDe(nom)).join() === citee && plagesPerimees(aJour, nom, reglesDe(nom)).length === 0,
@@ -271,6 +272,26 @@ for (const nom of DOCUMENTES) {
       && plagesTroueuses('`oracle-mobile` (M1–M11)', 'mobile', m).length === 0,
     `sens vert · TF-2576 · la plage dérivée de la liste jouée (« ${plageDeRegles(m)} », « ${plageDeRegles(x)} ») n'est jamais un trou : X7, que l'oracle ne joue pas, n'est pas exigée`);
 }
+// TF-2595 — le repli « sans écart » d'oracle-barre-externe n'était pas atteignable : B1 à B4 posent chacune un constat avant tout appel de
+// sortir(), donc `F.length ? F : [...]` ne rendait jamais son second membre. Il est retiré ; ce bloc tient les deux sens. Le sens vert lit la
+// sortie réelle (une fixture verte : exactement un constat par règle jouée ; un fichier absent : B1 seul, FAIL), le sens rouge est la source
+// d'avant, repli remis, que le contrôle de source voit.
+{
+  const f = 'oracle-barre-externe.mjs';
+  const src = sources[f];
+  const repli = s => /findings:\s*F\.length\s*\?\s*F\s*:\s*\[/.test(s);
+  ligne(src && !repli(src), `${f} · sortir() rend F tel quel : aucun repli « F.length ? F : [...] » inatteignable (TF-2595)`);
+  const avecRepli = src.replace(/findings:\s*F,[^\r\n]*/, 'findings: F.length ? F : [{ sev: "info", regle: "B1-B4", msg: "sans écart", where: cible }],');
+  ligne(avecRepli !== src && repli(avecRepli), 'sens rouge · TF-2595 · le retour du repli « findings: F.length ? F : [...] » est vu par le contrôle de source');
+  const lancer = cible => { const r = spawnSync(process.execPath, [path.join(ici, f), cible, '--json'], { encoding: 'utf8', timeout: 120000 }); let j = null; try { j = JSON.parse(r.stdout); } catch { /* illisible */ } return { code: r.status, json: j }; };
+  const verte = lancer(fx('barre-externe-verte.md'));
+  const parRegle = (verte.json?.findings || []).map(x => x.regle).join(' ');
+  ligne(verte.code === 0 && verte.json?.verdict === 'PASS' && parRegle === reglesDeclarees(src).join(' '),
+    `sens vert · TF-2595 · ${f} sur sa fixture verte : un constat par règle jouée, dans l'ordre (obtenu « ${parRegle} », exit ${verte.code})`);
+  const absent = lancer(path.join(dossier, 'releve-absent.md'));
+  ligne(absent.code === 1 && absent.json?.verdict === 'FAIL' && (absent.json?.findings || []).length === 1 && absent.json.findings[0].regle === 'B1',
+    `sens rouge · TF-2595 · ${f} sur un relevé absent : FAIL, un constat B1, jamais une ligne « sans écart » (obtenu ${absent.json?.verdict}, ${(absent.json?.findings || []).map(x => x.regle).join(' ')})`);
+}
 // TF-2585 — la plage citée AVANT le nom : le tableau de criteres-sortie.md la pose dans la cellule d'avant (« (M1–M8) | `oracle-mobile` »).
 {
   const reglesDe = nom => reglesDeclarees(sourceDe(`oracle-${nom}.mjs`));
@@ -290,8 +311,8 @@ for (const nom of DOCUMENTES) {
   ligne(plagesPerimees('`oracle-dtcg` (D1–D4), `oracle-liste-demande` (D1–D5)', 'liste-demande', l).length === 0
       && plagesPerimees('`oracle-dtcg` (D1–D3), `oracle-liste-demande` (D1–D5)', 'dtcg', d).join() === 'D1–D3',
     'TF-2585 · sens vert · la plage entre deux noms appartient à celui qui la précède (D1–D4 n\'est pas imputée à oracle-liste-demande) · sens rouge · D1–D3 reste vue pour oracle-dtcg');
-  // oracle-slop reste hors de DOCUMENTES : demo/NOTE-partis-pris.md cite encore « S1–S10 », relevé d'un run daté. Le tableau des critères de
-  // sortie, lui, est verrouillé pour les trois oracles du sujet.
+  // oracle-slop est dans DOCUMENTES depuis TF-2595 (la note de partis pris cite S1–S12). Le tableau des critères de sortie est verrouillé
+  // en plus pour les trois oracles du sujet.
   const criteres = fs.readFileSync(path.join(racineForge, 'skills', 'ameliore-le-design', 'references', 'criteres-sortie.md'), 'utf8').replace(/\r\n/g, '\n');
   for (const nom of ['mobile', 'images', 'slop']) {
     const r = reglesDe(nom);

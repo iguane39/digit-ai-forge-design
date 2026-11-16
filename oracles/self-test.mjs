@@ -4634,19 +4634,22 @@ if (!OUTILLAGE_DOCUMENT.ok) {
 // TF-2546 (14/11/2026) — LES RÉFÉRENCES DU STUDIO DE DIRECTION SE JUGENT PAR M7. rubrique.md ouvrait « ## Les six critères » par un tableau
 // nu : le hook d'écriture refusait chaque copie faite sur son modèle (M7, « chapitre sans ouverture »), et la référence elle-même n'était
 // jugée par aucune recette. La règle est celle de check_markdown.py (skill digit-ai-page-html, installé sous ~/.claude/skills), jamais
-// réimplémentée ici : seul son verdict M7 est lu, M10, M14 et M18 relèvent de leur propre porte. Le sens rouge est l'ancien texte de
+// réimplémentée ici : seuls ses verdicts M7 et M18 sont lus (M18 depuis TF-2595), M10 et M14 relèvent de leur propre porte. Le sens rouge est l'ancien texte de
 // rubrique.md, reconstitué en retirant la phrase de lecture que la correction a posée.
 {
-  console.log(String.fromCharCode(10) + 'skills · chaque chapitre de chaque fichier Markdown s\'ouvre par une phrase (M7, TF-2546, TF-2576)');
+  console.log(String.fromCharCode(10) + 'skills · chaque chapitre de chaque fichier Markdown s\'ouvre par une phrase et aucun identifiant n\'est muet (M7 et M18, TF-2546, TF-2576, TF-2595)');
   const verificateur = path.join(os.homedir(), '.claude', 'skills', 'digit-ai-page-html', 'scripts', 'check_markdown.py');
   if (!PYTHON || !fs.existsSync(verificateur)) {
     console.log(`  SKIP  ${!PYTHON ? 'Python indisponible' : `check_markdown.py introuvable (${verificateur})`} : les fichiers Markdown des skills ne sont pas jugés par M7 sur ce poste`);
   } else {
-    const refusM7 = chemin => {
+    // TF-2595 : M18 (identifiant muet) se joue avec M7 sur les mêmes fichiers ; M10 et M14 relèvent encore de leur propre porte.
+    const refusRegle = (chemin, regle) => {
       const r = spawnSync(PYTHON, [verificateur, chemin, '--output', 'json'], { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
       let json = null; try { json = JSON.parse(r.stdout); } catch { /* illisible : la ligne le dira */ }
-      return json ? (json.fails || []).filter(f => /^M7 /.test(f)) : null;
+      return json ? (json.fails || []).filter(f => f.startsWith(`${regle} `)) : null;
     };
+    const refusM7 = chemin => refusRegle(chemin, 'M7');
+    const refusM18 = chemin => refusRegle(chemin, 'M18');
     // TF-2576 : la recette ne juge plus les seules références du studio, mais TOUT fichier Markdown de TOUS les skills de la forge (SKILL.md,
     // références, gabarits) : douze refus M7 dans dix fichiers hors studio passaient inaperçus, et le hook d'écriture refusait chaque copie.
     const references = path.join(ici, '..', 'skills', 'studio-de-direction', 'references');
@@ -4657,8 +4660,9 @@ if (!OUTILLAGE_DOCUMENT.ok) {
     ligne(fichiers.length >= 28, `les skills de la forge portent au moins 28 fichiers Markdown à juger (obtenu ${fichiers.length})`);
     ligne(fs.readdirSync(references).filter(f => /\.md$/.test(f)).length >= 3, 'le studio porte toujours au moins 3 références à juger');
     for (const f of fichiers) {
-      const refus = refusM7(f);
-      ligne(refus !== null && refus.length === 0, `sens vert · ${path.relative(racineSkills, f).split(path.sep).join('/')} : aucun chapitre sans ouverture (obtenu ${refus === null ? 'sortie illisible' : `${refus.length} refus M7`})`);
+      const refus = refusM7(f), muets = refusM18(f);
+      ligne(refus !== null && refus.length === 0 && muets !== null && muets.length === 0,
+        `sens vert · ${path.relative(racineSkills, f).split(path.sep).join('/')} : aucun chapitre sans ouverture ni identifiant muet (obtenu ${refus === null || muets === null ? 'sortie illisible' : `${refus.length} refus M7, ${muets.length} refus M18`})`);
     }
     const reel = fs.readFileSync(path.join(references, 'rubrique.md'), 'utf8');
     const ancien = reel.replace(/(^## Les six critères\r?\n\r?\n)[^|\r\n][^\r\n]*\r?\n\r?\n/m, '$1');
@@ -4669,6 +4673,17 @@ if (!OUTILLAGE_DOCUMENT.ok) {
       const refus = refusM7(fichierAncien);
       ligne(ancien !== reel && refus !== null && refus.length === 1 && /Les six critères/.test(refus[0]),
         `sens rouge · l'ancien texte de rubrique.md (tableau nu sous « Les six critères ») est refusé par M7 (obtenu ${refus === null ? 'sortie illisible' : `${refus.length} refus : ${refus.map(m => m.slice(0, 60)).join(' | ')}`})`);
+      // TF-2595 : M18 a refusé RD-7 sur un Markdown de skill sans que la recette le sache. Même page, deux sens : « RD-7 » employé nu est
+      // refusé par M18 seul (M7 se tait, la page s'ouvre bien) ; le même renvoi glosé en ligne passe.
+      const entete = '# Titre\n\nUn paragraphe d\'ouverture qui dit quelque chose de concret sur le sujet traité.\n\n## Section\n\n';
+      const fichierMuet = path.join(dossier, 'renvoi-muet.md'), fichierGlose = path.join(dossier, 'renvoi-glose.md');
+      fs.writeFileSync(fichierMuet, `${entete}La règle RD-7 s'applique ici sans autre explication.\n`, 'utf8');
+      fs.writeFileSync(fichierGlose, `${entete}La règle RD-7 (renvoi de design 7 : le contraste se mesure) s'applique ici.\n`, 'utf8');
+      const muet = refusM18(fichierMuet), glose = refusM18(fichierGlose);
+      ligne(muet !== null && muet.length === 1 && /RD-7/.test(muet[0]) && (refusM7(fichierMuet) || []).length === 0,
+        `sens rouge · TF-2595 · « RD-7 » employé sans son sens est refusé par M18 seul (obtenu ${muet === null ? 'sortie illisible' : `${muet.length} refus : ${muet.map(m => m.slice(0, 60)).join(' | ')}`})`);
+      ligne(glose !== null && glose.length === 0 && (refusM7(fichierGlose) || []).length === 0,
+        `sens vert · TF-2595 · le même renvoi glosé en ligne passe M7 et M18 (obtenu ${glose === null ? 'sortie illisible' : `${glose.length} refus M18`})`);
     } finally {
       fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
     }
