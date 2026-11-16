@@ -1,7 +1,7 @@
 ---
 name: clip-de-presentation
 description: Produit un clip de présentation en motion design d'environ 60 s — Canvas 2D animé en continu, musique composée en code, rendu image par image en MP4 1920×1080 à 30 i/s — à partir d'un sujet, de sources et du dossier de marque du produit. Introduction et carte de fin portent le logo, le nom et le lien de la marque ; les légendes suivent un récit client à budgets de caractères ; chaque affirmation est sourcée, chaque chiffre de décor étiqueté « exemple » ; le clip est jugé par oracle-clip (ffprobe, planches, budgets, étiquettes de 24 px, marque en paramètre). Use when / déclencher dès que l'utilisateur demande une vidéo de présentation, un clip, une animation ou une vidéo de lancement d'un produit, du motion design, une série de clips au même style, ou la reprise des textes d'un clip en récit client. Ne pas déclencher pour analyser ou résumer une vidéo existante (→ regarde-une-video), pour des diapositives, même animées (→ digit-ai-pptx), ni pour une maquette d'interface navigable (→ ameliore-le-design).
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Clip de présentation

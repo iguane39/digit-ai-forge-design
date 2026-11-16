@@ -62,10 +62,15 @@
     const d = sc.getImageData(0, 0, 1, 1).data;
     return '#' + [d[0], d[1], d[2]].map(x => x.toString(16).padStart(2, '0')).join('');
   };
-  const JETONS = { fond: '--fond', carte: '--surface', trait: '--trait', encre: '--texte', faible: '--texte-faible',
-    accent: '--accent', accent2: '--accent-2', succes: '--texte-succes', alerte: '--texte-alerte', erreur: '--texte-erreur' };
+  // Chaque clé lit ses jetons dans l'ordre : le nom de systeme-de-marque d'abord, puis, en repli, celui du socle HTML
+  // (--bg, --ink, --muted, --line, --blue, --teal, --green, --amber, --red) que portent les dossiers de marque issus de ce socle.
+  const JETONS = { fond: ['--fond', '--bg'], carte: ['--surface', '--card'], trait: ['--trait', '--line'], encre: ['--texte', '--ink'],
+    faible: ['--texte-faible', '--muted'], accent: ['--accent', '--blue'], accent2: ['--accent-2', '--teal'],
+    succes: ['--texte-succes', '--green'], alerte: ['--texte-alerte', '--amber'], erreur: ['--texte-erreur', '--red'] };
   const lus = {};
-  for (const [cle, nom] of Object.entries(JETONS)) { const v = M.couleur(lire(nom)); if (v) { M.C[cle] = v; lus[cle] = true; } }
+  for (const [cle, noms] of Object.entries(JETONS)) {
+    for (const nom of noms) { const v = M.couleur(lire(nom)); if (v) { M.C[cle] = v; lus[cle] = true; break; } }
+  }
   if (Object.keys(lus).length) {
     // Une marque à un seul accent : le second accent est le même, jamais une teinte étrangère à la marque.
     if (!lus.accent2) M.C.accent2 = M.C.accent;

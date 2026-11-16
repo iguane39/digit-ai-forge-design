@@ -1223,7 +1223,7 @@ JavaScript (chaînes, gabarits, commentaires et expressions régulières sépar�
 | CL3 | budgets de caractères : titre de l'introduction 30, phrase 90, étape 16 et 6 étapes au plus, légende 61, ligne du titre de fin 40 et 2 lignes au plus | majeur |
 | CL4 | étiquette à chasse fixe sous 24 px : taille écrite d'un `M.puce`, défaut de `M.puce` dans la bibliothèque chargée, `F.mono(n)`, police littérale à chasse fixe ; un texte d'une autre police sous 24 px | majeur ; avertissement pour l'autre police |
 | CL5 | nombre écrit dans un texte du script, qu'aucune ligne datée de la table de preuves (statut « attestée » ou « partielle ») n'atteste, sans l'étiquette « exemple » dans la source | majeur |
-| CL6 | littéral d'image de logo, adresse ou nom de la marque déclarée, dans le script du clip ou dans sa bibliothèque ; déclaration de marque illisible ; logo déclaré introuvable ; aucune déclaration | majeur ; avertissement sans déclaration |
+| CL6 | littéral d'image de logo, adresse ou nom de la marque déclarée, dans le script du clip ou dans sa bibliothèque ; déclaration de marque illisible ; logo déclaré introuvable ; aucune déclaration ; aucun jeton de couleur lu (la feuille de jetons de la page ne déclare aucun des noms que la bibliothèque lit, TF-2602) | majeur ; avertissement sans déclaration |
 | CL7 | `Math.random`, `Date.now`, `performance.now` ou `new Date` dans le script du clip | majeur |
 
 | Domaine | Oracle (invocation) | Type | Statut |

@@ -4456,6 +4456,23 @@ if (!OUTILLAGE_DOCUMENT.ok) {
       return { code: r.status, json };
     };
     // Le faux dossier personnel n'a de sens que si un Python avec playwright existe (détection de l'outillage).
+      // TF-2602 : motion.js lit les jetons un nom après l'autre (systeme-de-marque, puis socle HTML) ; une feuille qui n'en déclare aucun rend
+      // le clip entier aux couleurs neutres de repli, sans bruit. Sens rouge : une feuille aux noms étrangers. Sens vert, les deux remèdes que le
+      // message prescrit : la feuille de la marque (noms de systeme-de-marque, la verte), et une feuille aux seuls noms du socle HTML.
+      fs.writeFileSync(path.join(atelier, 'marque', 'tokens-etrangers.css'), ':root { --couleur-fond: #101317; --couleur-texte: #F1F3F6; --police-titre: system-ui; }\n', 'utf8');
+      fs.writeFileSync(path.join(atelier, 'marque', 'tokens-socle.css'), ':root { --bg: #FAFBFF; --ink: #0F172A; --blue: #2563EB; }\n:root[data-theme="dark"] { --bg: #0B1220; --ink: #EEF2F8; --blue: #7DA2F5; }\n', 'utf8');
+      const etrangers = jouerClip(copie({ html: s => remplacer(s, '../marque/tokens.css', '../marque/tokens-etrangers.css') }));
+      ligne(pourSeule(etrangers, 'CL6') && etrangers.durs.length === 1 && /aucun jeton de couleur lu/.test(etrangers.durs[0].msg) && etrangers.mesures.jetons_couleur?.declares_et_lus === 0,
+        `CL6 sens rouge · TF-2602 · une feuille de jetons dont aucun nom n'est lu par la bibliothèque : FAIL pour CL6 seule (obtenu ${etrangers.verdict}, ${JSON.stringify(etrangers.mesures.jetons_couleur)})`);
+      const socle = jouerClip(copie({ html: s => remplacer(s, '../marque/tokens.css', '../marque/tokens-socle.css') }));
+      ligne(socle.code === 0 && socle.mesures.jetons_couleur?.declares_et_lus === 3,
+        `CL6 sens vert · TF-2602 · une feuille aux seuls noms du socle HTML (--bg, --ink, --blue) est lue, 3 noms (obtenu ${socle.verdict}, ${JSON.stringify(socle.mesures.jetons_couleur)})`);
+      const marqueOk = jouerClip(copie());
+      ligne(marqueOk.code === 0 && marqueOk.mesures.jetons_couleur?.declares_et_lus >= 1,
+        `CL6 sens vert · TF-2602 · la feuille de la marque (noms de systeme-de-marque) est lue (obtenu ${marqueOk.verdict}, ${JSON.stringify(marqueOk.mesures.jetons_couleur)})`);
+      const enLigne = jouerClip(copie({ html: s => remplacer(s, '<link rel="stylesheet" href="../marque/tokens.css">', '<style>:root { --fond: #101317; }</style>') }));
+      ligne(enLigne.code === 0 && enLigne.mesures.jetons_couleur?.declares_et_lus === 1,
+        `CL6 sens vert · TF-2602 · un bloc <style> de la page qui déclare --fond compte comme une feuille (obtenu ${enLigne.verdict}, ${JSON.stringify(enLigne.mesures.jetons_couleur)})`);
     const sonde = jouer('run-oracles-design.mjs', [fx('rendu-l2-verte.html'), '--rendu']);
     const rendus = j => (j?.oracles || []).filter(o => /^render_page/.test(o.oracle));
     if (rendus(sonde.json).some(o => o.verdict === 'SKIP')) {

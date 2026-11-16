@@ -46,18 +46,21 @@ storyboard, contrôle, rendu. Ce qui fait la différence :
 
 Le clip prend le thème sombre de la marque, c'est-à-dire le bloc `:root[data-theme="dark"]` du
 `tokens.css` de `systeme-de-marque`. `motion.js` l'expose par `M.C`, et convertit lui-même les jetons
-OKLCH. Le tableau donne la correspondance ; une ligne est une clé de `M.C`.
+OKLCH. Le tableau donne la correspondance ; une ligne est une clé de `M.C`. Chaque clé lit d'abord le
+jeton de `systeme-de-marque`, puis, à défaut, le nom du socle HTML que portent les dossiers de marque issus
+de ce socle : une clé qui ne trouve ni l'un ni l'autre garde son repli neutre, et `oracle-clip` (CL6) refuse
+le clip dont aucun jeton de couleur n'est déclaré sous un nom que la bibliothèque lit.
 
-| Clé de `M.C` | Jeton lu dans `tokens.css` | Usage dans la bibliothèque |
+| Clé de `M.C` | Jeton lu dans `tokens.css`, puis repli du socle HTML | Usage dans la bibliothèque |
 |---|---|---|
-| `fond` | `--fond` | fond, voile de la carte de fin |
-| `carte` | `--surface` | fond des étiquettes |
-| `trait` | `--trait` | traits de décor |
-| `encre` | `--texte` | titres, légendes |
-| `faible` | `--texte-faible` | phrase d'introduction, sous-titre, nom de la marque |
-| `accent` | `--accent` | trame du fond, étiquettes, lueur des titres |
-| `accent2` | `--accent-2`, facultatif ; sinon `--accent` | chemins, particules, filets, mot accentué d'une légende, lien |
-| `succes`, `alerte`, `erreur` | `--texte-succes`, `--texte-alerte`, `--texte-erreur`, facultatifs | coche, états de décor |
+| `fond` | `--fond`, puis `--bg` | fond, voile de la carte de fin |
+| `carte` | `--surface`, puis `--card` | fond des étiquettes |
+| `trait` | `--trait`, puis `--line` | traits de décor |
+| `encre` | `--texte`, puis `--ink` | titres, légendes |
+| `faible` | `--texte-faible`, puis `--muted` | phrase d'introduction, sous-titre, nom de la marque |
+| `accent` | `--accent`, puis `--blue` | trame du fond, étiquettes, lueur des titres |
+| `accent2` | `--accent-2`, puis `--teal`, facultatifs ; sinon `--accent` | chemins, particules, filets, mot accentué d'une légende, lien |
+| `succes`, `alerte`, `erreur` | `--texte-succes`, `--texte-alerte`, `--texte-erreur`, puis `--green`, `--amber`, `--red`, facultatifs | coche, états de décor |
 | `fond2`, `pale` | dérivés : mélanges de `fond` et `carte`, de `faible` et `fond` | centre du dégradé, texte pâle |
 
 Aucune autre couleur en dur dans un clip. Les titres sont en police de titre graisse 800, les légendes

@@ -2,13 +2,14 @@
 /**
  * self-test.mjs — verrou de la bibliothèque motion.js et des scripts du skill clip-de-presentation (TF-2405).
  *
- * Les six défauts connus du pipeline versé le 10/11/2026 sont tenus aux DEUX sens, sur des fonctions
+ * Les six défauts connus du pipeline versé le 10/11/2026, plus la lecture des jetons du socle HTML (D7, TF-2602),
+ * sont tenus aux DEUX sens, sur des fonctions
  * pures jouées dans un bac à sable Node, avec un canvas factice qui journalise chaque texte dessiné
  * (police, taille, échelle de la transformation courante) :
  *   vert  : la bibliothèque du skill tient la propriété ;
  *   rouge : la même bibliothèque, la ligne fautive d'origine remise à sa place, la perd. Le test
  *           prouve qu'il sait voir le défaut, et il le prouvera à chaque rejeu.
- * `--motion <fichier>` joue les six propriétés sur une autre bibliothèque, par exemple celle d'origine :
+ * `--motion <fichier>` joue les sept propriétés sur une autre bibliothèque, par exemple celle d'origine :
  * c'est la mesure « rouge sur l'ancien code ».
  *
  * S'y ajoutent : la marque lue dans la page (nom, logo, lien, jetons), aucune marque codée en dur dans
@@ -135,6 +136,19 @@ const PROPRIETES = [
     const a = minimumEtapes(M, ETAPES), b = minimumEtapes(M, ETAPES_LONGUES);
     return [a >= 24 - 1e-9 && b >= 24 - 1e-9, `plus petite taille rendue : ${a.toFixed(2)} px (5 étapes), ${b.toFixed(2)} px (6 étapes de 16 caractères)`];
   }],
+  ["D7", "les noms du socle HTML sont lus en repli : avec les jetons du dossier de marque Digit-AI, 9 clés de M.C sur 10 au moins quittent le repli neutre", (M, src) => {
+    // Les jetons du thème sombre du socle HTML (boilerplate de digit-ai-page-html), tels que le dossier de marque Digit-AI les porte :
+    // ni --fond, ni --texte, ni --accent-2, ni --texte-succes n'y figurent sous ce nom (TF-2602, retour RA-21 du 12/11/2026).
+    const socle = { "--bg": "#0B1220", "--surface": "#121B2E", "--ink": "#EEF2F8", "--muted": "#A9B4C4", "--line": "#263248", "--blue": "#7DA2F5",
+      "--teal": "#5FE6D6", "--green": "#7BE0A0", "--amber": "#FBBF6D", "--red": "#F5A3A3" };
+    const CLES = ["fond", "carte", "trait", "encre", "faible", "accent", "accent2", "succes", "alerte", "erreur"];
+    const neutre = charger(src).C, lues = charger(src, { jetons: socle }).C;
+    const quittes = CLES.filter((k) => lues[k] !== neutre[k]);
+    // Le nom de systeme-de-marque garde la priorité : posé avec celui du socle, il l'emporte.
+    const mixte = charger(src, { jetons: { "--fond": "#123456", "--bg": "#654321" } }).C;
+    return [quittes.length >= 9 && mixte.fond === "#123456",
+      `${quittes.length} clés sur 10 quittent le repli neutre (au repli : ${CLES.filter((k) => !quittes.includes(k)).join(", ") || "aucune"}) ; avec --fond et --bg posés, fond = ${mixte.fond}`];
+  }],
 ];
 
 // Chaque défaut remis à sa place : [propriété, ligne corrigée, ligne d'origine]. La ligne corrigée doit exister
@@ -147,29 +161,33 @@ const MUTATIONS = [
   ["D5", "M.sortie = p => { p = M.clamp(p); return p >= 1 ? 1 : 1 - Math.pow(2, -10 * p); };", "M.sortie = p => 1 - Math.pow(2, -10 * M.clamp(p));"],
   ["D5", "M.rebond = p => { p = M.clamp(p); if (p <= 0) return 0; const c", "M.rebond = p => { p = M.clamp(p); const c"],
   ["D6", "const s = M.lerp(s0, 1, p) * k;", "const s = p * k;"],
+  ["D7", "for (const nom of noms) { const v = M.couleur(lire(nom)); if (v) { M.C[cle] = v; lus[cle] = true; break; } }",
+    "for (const nom of noms.slice(0, 1)) { const v = M.couleur(lire(nom)); if (v) { M.C[cle] = v; lus[cle] = true; break; } }"],
 ];
 
-const jouer = (M) => PROPRIETES.map(([id, titre, f]) => { try { const [v, d] = f(M); return { id, titre, v, d }; } catch (e) { return { id, titre, v: false, d: `exception : ${e.message}` }; } });
+const jouer = (M, src) => PROPRIETES.map(([id, titre, f]) => { try { const [v, d] = f(M, src); return { id, titre, v, d }; } catch (e) { return { id, titre, v: false, d: `exception : ${e.message}` }; } });
 
 const iAutre = process.argv.indexOf("--motion");
 if (iAutre > 0) {
   const autre = resolve(process.argv[iAutre + 1] || "");
-  console.log(`\nles six propriétés, jouées sur ${autre}`);
+  console.log(`\nles sept propriétés, jouées sur ${autre}`);
   if (!existsSync(autre)) { console.log(`  ROUGE fichier introuvable : ${autre}`); process.exit(1); }
-  for (const r of jouer(charger(lireTexte(autre)))) ok(`${r.id} · ${r.titre}`, r.v, r.d);
-  console.log(rouges.length ? `\nROUGE — ${rouges.length} propriété(s) sur 6 ne tiennent pas dans ${autre}.` : `\nTout vert — les 6 propriétés tiennent dans ${autre}.`);
+  const texteAutre = lireTexte(autre);
+  for (const r of jouer(charger(texteAutre), texteAutre)) ok(`${r.id} · ${r.titre}`, r.v, r.d);
+  console.log(rouges.length ? `\nROUGE — ${rouges.length} propriété(s) sur 7 ne tiennent pas dans ${autre}.` : `\nTout vert — les 7 propriétés tiennent dans ${autre}.`);
   process.exit(rouges.length ? 1 : 0);
 }
 
 const source = lireTexte(MOTION);
-console.log("\nmotion.js du skill · sens vert : les six défauts corrigés");
-for (const r of jouer(charger(source))) ok(`${r.id} · ${r.titre}`, r.v, r.d);
+console.log("\nmotion.js du skill · sens vert : les six défauts corrigés et les jetons du socle lus");
+for (const r of jouer(charger(source), source)) ok(`${r.id} · ${r.titre}`, r.v, r.d);
 
 console.log("\nmotion.js · sens rouge : chaque ligne d'origine remise à sa place est vue");
 for (const [id, corrigee, origine] of MUTATIONS) {
   const n = source.split(corrigee).length - 1;
   if (n !== 1) { ok(`${id} · la ligne corrigée « ${corrigee.slice(0, 60)} » existe une fois`, false, `trouvée ${n} fois : la mutation ne s'applique plus`); continue; }
-  const r = jouer(charger(source.replace(corrigee, origine))).find((x) => x.id === id);
+  const muteeSource = source.replace(corrigee, origine);
+  const r = jouer(charger(muteeSource), muteeSource).find((x) => x.id === id);
   ok(`${id} · « ${origine.slice(0, 70)} » remis : la propriété tombe`, r && !r.v, r ? r.d : "propriété introuvable");
 }
 
@@ -228,7 +246,7 @@ console.log("\nSKILL.md et gabarits");
   const fm = /^---\n([\s\S]*?)\n---/.exec(skillMd);
   const champ = (n) => (fm ? (new RegExp(`^${n}:\\s*(.*)$`, "m").exec(fm[1]) || [])[1] : undefined);
   const desc = champ("description") || "";
-  ok("frontmatter : name clip-de-presentation, version 1.0.0", champ("name") === "clip-de-presentation" && champ("version") === "1.0.0");
+  ok("frontmatter : name clip-de-presentation, version 1.1.0", champ("name") === "clip-de-presentation" && champ("version") === "1.1.0");
   ok(`description de 1 024 caractères au plus (${desc.length}), avec « Use when » et « Ne pas déclencher »`,
     desc.length > 0 && desc.length <= 1024 && /Use when/.test(desc) && /Ne pas déclencher/.test(desc));
   ok("la description renvoie vers regarde-une-video, digit-ai-pptx et ameliore-le-design",

@@ -45,6 +45,7 @@ const NON_JUGE = [
   'CL5 ne lit que les nombres écrits dans les littéraux du script : un nombre calculé (compteur, concaténation) ou un littéral fait de chiffres seuls (« 189 », « 0 ») n\'est pas lu, ni une date, ni un numéro d\'ordre après étape, plan, partie, phase, niveau, chapitre, acte, scène, lot ou version ; la co-présence à l\'écran du chiffre et de l\'étiquette « exemple » n\'est pas jugée, ni la vérité d\'une preuve attestée',
   'CL3 lit les formats du skill et de la série d\'origine : M.introduire({ intro: {…} }) ou Object.assign, M.legende(ctx, t, \'…\'), tableaux LEG / LEGENDES, M.carteFin(…, titre | { titre }), constantes TITRE_FIN ; un texte construit à l\'exécution n\'est pas lu',
   'CL6 reconnaît un logo à son littéral d\'image qui contient « logo » ou au fichier déclaré, et le nom de la marque à l\'égalité avec le nom déclaré : une image de décor n\'est pas jugée',
+  'CL6 lit les NOMS de jetons que la bibliothèque cherche et ceux que déclarent les feuilles liées et les blocs <style> de la page : ni @import, ni la valeur d\'un jeton, ni le thème où il est posé ne sont suivis, et une couleur illisible garde son repli neutre',
   'CL1 juge le format du fichier, pas son contenu : images, synchronisation avec les impacts de la musique et niveau sonore ne sont pas mesurés',
   'CL2 dit que les planches existent et se lisent ; leur fraîcheur par rapport au clip et leur lecture par un spectateur ne sont pas jugées',
   'CL7 cherche l\'horloge et le hasard dans le script du clip ; l\'indépendance de rendre(t) à l\'ordre des appels n\'est pas exécutée',
@@ -457,6 +458,33 @@ for (const m of horsScripts.matchAll(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']|ur
   const v = m[1] || m[2];
   if (/logo/i.test(v) || (logoDeclare && path.basename(v).toLowerCase() === logoDeclare)) {
     add('majeur', 'CL6', `logo posé dans la page hors de la déclaration de marque (« ${v} »)`, ou(html.slice(0, m.index).split('\n').length));
+  }
+}
+
+// ── CL6 · les jetons de couleur que la bibliothèque lit (TF-2602) ──────────
+// motion.js lit chaque couleur dans la feuille de jetons de la marque, un nom après l'autre, et garde un repli neutre pour toute clé
+// qu'il ne trouve pas : un clip dont la feuille ne déclare aucun des noms lus se rend entier aux couleurs neutres, sans bruit (12/11/2026).
+// Les noms lus se tirent de la bibliothèque que la page charge (les littéraux « --nom » hors polices), les noms déclarés des feuilles liées
+// et des blocs <style> de la page : aucun nom commun, c'est un refus.
+if (motion && motion.present) {
+  const luesParLaBibliotheque = [...new Set(JB.filter(j => j.t === 'str' && /^--[a-z][a-z0-9-]*$/i.test(j.v) && !/^--police-/i.test(j.v)).map(j => j.v))];
+  if (luesParLaBibliotheque.length) {
+    const declares = new Set();
+    const lireFeuille = (css) => { for (const m of css.replace(/\/\*[\s\S]*?\*\//g, ' ').matchAll(/(--[a-z][a-z0-9-]*)\s*:/gi)) declares.add(m[1]); };
+    for (const m of html.matchAll(/<link\b[^>]*>/gi)) {
+      const href = (/\bhref\s*=\s*["']([^"']+)["']/i.exec(m[0]) || [])[1];
+      if (!href || !/\brel\s*=\s*["'][^"']*stylesheet/i.test(m[0]) || /^[a-z]+:\/\//i.test(href)) continue;
+      const feuille = path.resolve(DOSSIER, href.replace(/[?#].*$/, ''));
+      if (fs.existsSync(feuille) && fs.statSync(feuille).isFile()) lireFeuille(fs.readFileSync(feuille, 'utf8'));
+    }
+    for (const m of html.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) lireFeuille(m[1]);
+    const communs = luesParLaBibliotheque.filter(n => declares.has(n));
+    mesures.jetons_couleur = { lus_par_la_bibliotheque: luesParLaBibliotheque.length, declares_et_lus: communs.length };
+    if (!communs.length) {
+      add('majeur', 'CL6', `aucun jeton de couleur lu : la feuille de jetons de la page ne déclare aucun des ${luesParLaBibliotheque.length} noms que ${path.basename(motion.chemin)} lit `
+        + `(${luesParLaBibliotheque.slice(0, 6).join(', ')}…), et le clip se rendrait aux couleurs neutres de repli — lier le tokens.css de la marque (systeme-de-marque), `
+        + `qui porte --fond, --texte, --accent… ou les noms du socle HTML (--bg, --ink, --blue…)`, NOM_PAGE);
+    }
   }
 }
 
