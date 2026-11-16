@@ -36,6 +36,12 @@
 // cible. Sans --rendu, comportement strictement inchangé. Outillage manquant
 // ⇒ SKIP motivé dans les résultats, jamais une erreur.
 //
+// --etats-visibilite [--visibilite-selecteur <css>] (TF-2678) : une page dont des éléments (clips, blocs, cartes) ne s'affichent qu'à
+// une date ou sous une condition de données se rend dans ses DEUX états extrêmes, aucun élément piloté visible puis tous visibles,
+// chacun en thème clair et sombre : deux jeux de rendus, jamais le seul état forcé « tout visible » ni le seul état servi. Les éléments
+// pilotés sont ceux du sélecteur (défaut [data-visibilite-pilotee]) ; la page les masque par `hidden` ou par un style en ligne. Sans
+// l'option, une page qui porte le marqueur le dit au non_juge : seul son état servi a été rendu. Sans --rendu, l'option ne joue rien.
+//
 // --fluidite (D-108 (b)) : force oracle-fluidite (durée d'image de bout en bout d'une page animée) sur une
 // page dont le canevas WebGL n'est pas lisible dans le fichier (moteur 3D embarqué, bundle externe). Sans
 // l'option, il part tout seul quand le document porte un canevas WebGL ET une boucle d'animation.
@@ -90,7 +96,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { detecterOutillageRendu, direInterpreteur, injecterThemeSombre, neutraliserVisite } from './lib/rendu.mjs';
+import { detecterOutillageRendu, direInterpreteur, injecterThemeSombre, neutraliserVisite, forcerVisibilite, SELECTEUR_VISIBILITE } from './lib/rendu.mjs';
 import { lireGrille } from './lib/grille.mjs';
 import { blocsDuSocle, neutraliser } from './lib/socle.mjs';
 import { estCibleMobile, MOTIF_SANS_OBJET } from './lib/cible-mobile.mjs';
@@ -105,6 +111,7 @@ import { capturesManquantes } from './lib/captures.mjs';
 const args = process.argv.slice(2);
 const jsonOnly = args.includes('--json-only');
 const rendu = args.includes('--rendu');
+const etatsVisibilite = args.includes('--etats-visibilite');
 // Grille de rendu — LUE au corpus, jamais écrite ici (TF-1066, loi n° 4 du noyau :
 // une donnée volatile est une donnée, pas du code). Source, date et raison de chaque
 // largeur : corpus\grille-viewports.json, entrée GL45 de corpus\guidelines.csv.
@@ -118,7 +125,7 @@ const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !=
   && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
   && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine'
   && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres' && args[args.indexOf(a) - 1] !== '--statut-attendu'
-  && args[args.indexOf(a) - 1] !== '--minimum');
+  && args[args.indexOf(a) - 1] !== '--minimum' && args[args.indexOf(a) - 1] !== '--visibilite-selecteur');
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
@@ -390,21 +397,41 @@ function lancerRendu(cible) {
   }
   const html = fs.readFileSync(cible, 'utf8');
   const base = `forge-design-rendu-${process.pid}-${Date.now()}`;
-  const tmpClair = path.join(os.tmpdir(), `${base}-clair.html`);
-  const tmpSombre = path.join(os.tmpdir(), `${base}-sombre.html`);
   // TF-2199 : la visite guidée ouverte au premier affichage recouvre la page statique et fabrique des écarts ; elle est
   // masquée dans les copies de rendu (son câblage est jugé par X8 sur l'instance), et le rapport le dit.
   const statique = neutraliserVisite(html);
-  fs.writeFileSync(tmpClair, statique, 'utf8');
-  fs.writeFileSync(tmpSombre, injecterThemeSombre(statique), 'utf8');
+  // TF-2678 : une page à visibilité pilotée par des données se rend dans ses deux états extrêmes quand l'option le demande.
+  // Le marqueur par défaut se lit dans la page ; un sélecteur propre au produit ne se lit pas, il est pris pour présent.
+  const selecteurVisibilite = opt('--visibilite-selecteur') || SELECTEUR_VISIBILITE;
+  const pilotee = selecteurVisibilite === SELECTEUR_VISIBILITE ? /data-visibilite-pilotee/.test(html) : true;
+  const etats = etatsVisibilite && pilotee ? ['aucun', 'tous'] : [null];
   const out = [];
-  try {
-    out.push(lancerRenderPage(tmpClair, 'clair', outillage));
-    // TF-1775 : le schéma du navigateur suit le thème demandé, et render_page dit si la page l'a réécrit.
-    out.push(lancerRenderPage(tmpSombre, 'sombre', outillage, ['--theme', 'sombre']));
-  } finally {
-    nettoyerRendu(tmpClair);
-    nettoyerRendu(tmpSombre);
+  for (const etat of etats) {
+    const copie = etat ? forcerVisibilite(statique, etat, selecteurVisibilite) : statique;
+    const suffixe = etat ? `, visibilité ${etat}` : '';
+    const tmpClair = path.join(os.tmpdir(), `${base}-${etat || 'servi'}-clair.html`);
+    const tmpSombre = path.join(os.tmpdir(), `${base}-${etat || 'servi'}-sombre.html`);
+    fs.writeFileSync(tmpClair, copie, 'utf8');
+    fs.writeFileSync(tmpSombre, injecterThemeSombre(copie), 'utf8');
+    try {
+      out.push(lancerRenderPage(tmpClair, `clair${suffixe}`, outillage));
+      // TF-1775 : le schéma du navigateur suit le thème demandé, et render_page dit si la page l'a réécrit.
+      out.push(lancerRenderPage(tmpSombre, `sombre${suffixe}`, outillage, ['--theme', 'sombre']));
+    } finally {
+      nettoyerRendu(tmpClair);
+      nettoyerRendu(tmpSombre);
+    }
+  }
+  if (etatsVisibilite && pilotee) {
+    const note = `visibilité pilotée par des données (${selecteurVisibilite}) : deux jeux de rendus, « aucun » (les éléments pilotés masqués par style) puis « tous » (hidden et display:none en ligne retirés, même sur ce que la page crée après le chargement) ; `
+      + 'un élément que la page masque par une classe n\'est pas défait, et l\'état réellement servi, entre les deux, n\'est pas rendu (TF-2678)';
+    for (const r of out) r.non_juge = [...(r.non_juge || []), note];
+  } else if (etatsVisibilite) {
+    const note = `--etats-visibilite : aucun élément ${SELECTEUR_VISIBILITE} dans la page, une seule passe (l'état servi) — SANS OBJET ; marquer les éléments dont la visibilité vient des données, ou passer --visibilite-selecteur <css> (TF-2678)`;
+    for (const r of out) r.non_juge = [...(r.non_juge || []), note];
+  } else if (pilotee && selecteurVisibilite === SELECTEUR_VISIBILITE) {
+    const note = `page à visibilité pilotée par des données (${SELECTEUR_VISIBILITE}) : seul l'état SERVI a été rendu ; --etats-visibilite rend les deux états extrêmes, aucun élément piloté visible puis tous visibles (TF-2678)`;
+    for (const r of out) r.non_juge = [...(r.non_juge || []), note];
   }
   if (/data-visite/.test(html)) {
     const note = 'visite guidée masquée dans la copie rendue (style sur [data-visite-etape], TF-2199) : le rendu statique ne juge pas la page recouverte par sa bulle ; '

@@ -60,6 +60,16 @@ déclare — jamais de conformité jugée sans référentiel.
    bouton « Aucun » qui détruit l'affichage sans un mot — tous deux reproductibles en deux clics,
    tous deux absents du rendu au repos. Un état vide qui ne se déclare pas est **bloquant**
    (`etat_muet`) ; un état dont le déclencheur est absent est **NON JOUÉ**, jamais vert.
+   **Visibilité pilotée par des données** (TF-2678) : une page dont des éléments (clips, blocs, cartes) ne
+   s'affichent qu'à une date ou sous une condition de données se rend et se critique dans ses **deux états
+   extrêmes**, aucun élément piloté visible puis tous visibles, chacun en thème clair et sombre — jamais dans le
+   seul état « tout visible » forcé, qui n'est pas celui que le visiteur voit. `run-oracles-design.mjs <page> --rendu
+   --etats-visibilite [--visibilite-selecteur <css>]` rend les deux jeux ; les éléments pilotés portent
+   `data-visibilite-pilotee` (ou le sélecteur passé), et la page les masque par `hidden` ou par un style en ligne.
+   *Mesure qui l'impose* : le 15/11/2026, rendus et critique d'une page de clips ont été joués clips forcés, et l'état
+   réellement servi, chaque clip masqué jusqu'à sa date de publication, n'a jamais été rendu ; la feuille de style
+   prévoyait ce cas par une demi-largeur vide. Sans l'option, une page qui porte le marqueur le dit au `non_juge` :
+   seul l'état servi a été rendu. Une consigne de campagne de rendu reprend ce contrôle pour toute page de cette forme.
 6. **Voix** : libellés, messages d'erreur et états vides confrontés à `MARQUE.md` (registre,
    vocabulaire, anti-références). Dérive de ton = écart mineur nommé.
 7. **Livré à l'écran** (TF-0796) : tout composant chargé dynamiquement ou rendu en sur-couche

@@ -119,6 +119,33 @@ export function neutraliserVisite(html) {
   return style + html;
 }
 
+/** Le marqueur par défaut des éléments dont la visibilité vient des données (TF-2678). */
+export const SELECTEUR_VISIBILITE = '[data-visibilite-pilotee]';
+
+/**
+ * Copie du HTML dont les éléments à visibilité pilotée par des données sont forcés dans un état extrême (TF-2678, 15/11/2026).
+ * Une page dont chaque clip, bloc ou carte reste masqué jusqu'à sa date de publication se rendait en « tout visible » forcé, et son
+ * état servi (rien de visible, ou une demi-largeur vide) n'était jamais vu. Deux états, et deux seulement : `aucun` (le style masque
+ * chaque élément du sélecteur) et `tous` (un script, posé avant ceux de la page, retire `hidden` et le `display: none` en ligne de
+ * chaque élément du sélecteur, y compris ceux que la page crée ou remasque après le chargement). Un masquage par une classe de la page
+ * n'est pas défait : le sélecteur doit désigner l'élément que la page masque par `hidden` ou par style en ligne. Une copie de rendu
+ * seulement : le livrable n'est pas modifié.
+ */
+export function forcerVisibilite(html, etat, selecteur = SELECTEUR_VISIBILITE) {
+  if (etat !== 'aucun' && etat !== 'tous') throw new Error(`état de visibilité inconnu : ${etat} (aucun | tous)`);
+  const sel = String(selecteur).replace(/[<>]/g, '');
+  const injection = etat === 'aucun'
+    ? `<style data-forge-visibilite="aucun">${sel}{display:none !important}</style>`
+    : '<script data-forge-visibilite="tous">(function(){var S=' + JSON.stringify(sel) + ';function m(){'
+      + 'document.querySelectorAll(S).forEach(function(e){e.hidden=false;e.removeAttribute("hidden");'
+      + 'if(e.style&&e.style.display==="none")e.style.removeProperty("display");});}'
+      + 'm();document.addEventListener("DOMContentLoaded",m);window.addEventListener("load",m);'
+      + 'new MutationObserver(m).observe(document,{subtree:true,childList:true,attributes:true,attributeFilter:["hidden","style"]});})();</script>';
+  if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, m => m + injection);
+  if (/<html\b[^>]*>/i.test(html)) return html.replace(/<html\b[^>]*>/i, m => m + injection);
+  return injection + html;
+}
+
 /**
  * Copie du HTML forcée en thème sombre — `data-theme="dark"` sur <html>, posé ou
  * réécrit. Mutualisée ici (TF-0286) : run-oracles-design et rendu-comparatif

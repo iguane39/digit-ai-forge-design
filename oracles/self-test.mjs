@@ -2839,6 +2839,50 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2678 (retour du 15/11/2026) — UNE PAGE À VISIBILITÉ PILOTÉE PAR DES DONNÉES SE RENDS DANS SES DEUX ÉTATS EXTRÊMES. Les rendus et la critique d'une page de
+// clips avaient été joués clips forcés visibles ; l'état servi, chaque clip masqué jusqu'à sa date, n'a jamais été rendu. `--rendu --etats-visibilite`
+// rend deux jeux (aucun élément piloté visible, puis tous), chacun en clair et en sombre. La fixture rouge porte un bandeau de 2 400 px dans le bloc
+// piloté : il déborde (V1) quand le bloc est visible, jamais dans l'état servi. Sens vert : sans écart dans les deux états, une page sans marqueur
+// n'est rendue qu'une fois et le dit. Sens rouge : l'état « tous » refuse, l'état « aucun » passe, et l'état servi seul ne voit rien (le témoin).
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design --rendu --etats-visibilite (TF-2678) — deux jeux de rendus pour une page à visibilité pilotée');
+  const { forcerVisibilite } = await import('./lib/rendu.mjs');
+  const page = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>t</title></head><body><section data-visibilite-pilotee hidden>x</section></body></html>';
+  const aucun = forcerVisibilite(page, 'aucun'), tous = forcerVisibilite(page, 'tous');
+  ligne(/<style data-forge-visibilite="aucun">\[data-visibilite-pilotee\]\{display:none !important\}<\/style>/.test(aucun) && !/<script data-forge-visibilite/.test(aucun)
+    && /<script data-forge-visibilite="tous">/.test(tous) && /removeAttribute\("hidden"\)/.test(tous) && tous.includes('<section data-visibilite-pilotee hidden>'),
+    'forcerVisibilite · « aucun » pose un style qui masque, « tous » un script qui retire hidden ; la page d\'origine n\'est pas modifiée');
+  let refus = null; try { forcerVisibilite(page, 'moitie'); } catch (e) { refus = e.message; }
+  ligne(/état de visibilité inconnu/.test(refus || ''), `forcerVisibilite · un état autre que aucun | tous est refusé, jamais deviné (obtenu « ${refus} »)`);
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+    sautes.push('run-oracles-design --etats-visibilite (rendu)');
+  } else {
+    const rendu = (f, ...plus) => {
+      const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), f, '--rendu', ...plus, '--json-only'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      const rp = (j?.oracles || []).filter(o => /^render_page/.test(o.oracle));
+      const etat = e => rp.filter(o => o.oracle.includes(`visibilité ${e}`));
+      const dit = re => rp.length > 0 && rp.every(o => (o.non_juge || []).some(n => re.test(n)));
+      return { code: r.status, verdict: j?.verdict, rp, aucun: etat('aucun'), tous: etat('tous'), dit };
+    };
+    const pasV1 = o => !o.findings.some(x => x.regle === 'V1');
+    const vert = rendu(fx('visibilite-pilotee-verte.html'), '--etats-visibilite');
+    ligne(vert.rp.length === 4 && vert.aucun.length === 2 && vert.tous.length === 2 && vert.rp.every(o => o.verdict === 'PASS') && vert.code === 0 && vert.dit(/deux jeux de rendus/),
+      `sens vert · bloc piloté propre : deux jeux de rendus (aucun, tous) × clair et sombre, 4 passes PASS, exit 0, le non_juge le dit (obtenu ${vert.rp.length} passes, ${vert.rp.map(o => o.verdict).join('/')}, exit ${vert.code})`);
+    const rouge = rendu(fx('visibilite-pilotee-rouge.html'), '--etats-visibilite');
+    ligne(rouge.rp.length === 4 && rouge.aucun.length === 2 && rouge.tous.length === 2 && rouge.code === 1 && rouge.verdict === 'FAIL'
+      && rouge.aucun.every(o => o.verdict === 'PASS' && pasV1(o)) && rouge.tous.every(o => o.verdict === 'FAIL' && o.findings.some(x => x.regle === 'V1')),
+      `sens rouge · bandeau de 2 400 px dans le bloc piloté : l'état « tous » refuse en V1 (clair et sombre), l'état « aucun » passe, verdict FAIL exit 1 (obtenu aucun ${rouge.aucun.map(o => o.verdict).join('/')}, tous ${rouge.tous.map(o => o.verdict).join('/')}, exit ${rouge.code})`);
+    const servi = rendu(fx('visibilite-pilotee-rouge.html'));
+    ligne(servi.rp.length === 2 && servi.rp.every(o => o.verdict === 'PASS') && servi.code === 0 && servi.dit(/seul l'état SERVI a été rendu/) && servi.rp.every(o => !/visibilité (aucun|tous)/.test(o.oracle)),
+      `témoin · la même page sans l'option : état servi seul, 2 passes PASS, le défaut n'y est pas vu et le non_juge dit que seul l'état servi a été rendu (obtenu ${servi.rp.length} passes, ${servi.rp.map(o => o.verdict).join('/')})`);
+    const sans = rendu(fx('rendu-l2-verte.html'), '--etats-visibilite');
+    ligne(sans.rp.length === 2 && sans.rp.every(o => o.verdict === 'PASS') && sans.dit(/aucun élément \[data-visibilite-pilotee\].*SANS OBJET/),
+      `sens vert · une page sans marqueur : une seule passe (clair, sombre), dite SANS OBJET au non_juge, jamais deux jeux inventés (obtenu ${sans.rp.length} passes)`);
+  }
+}
+
 // TF-2219, TF-2199 — le verrou dédié d'oracle-exploitabilite (X2 volume minimal, X9 lexique) est rejoué par la recette d'ensemble.
 // Il a son propre fichier (comme self-test-baseline et self-test-decouverte) ; sans outillage de rendu il sort 0 avec un SKIP motivé.
 {
@@ -3524,50 +3568,6 @@ for (const cas of CAS) {
   }
 }
 
-// TF-1904 (étude 20261019i, mesuré le 19/10/2026) — une page jetable de 9 lignes portant une
-// boucle infinie de 40 s, une animation JavaScript de 1,2 s et une révocation reduced-motion qui
-// ne couvre qu'un des deux éléments animés rendait PASS, exit 0, sans une alerte. R11, R12 et
-// R13 sont des AVERTISSEMENTS : elles ne rougissent aucun livrable existant. Les trois paires de
-// fixtures ne passent donc pas par CAS (la rouge y doit FAIL, exit 1) : ici la rouge doit rester
-// PASS, exit 0, avec UN avertissement de SA règle et aucune des deux autres.
-{
-  console.log(String.fromCharCode(10) + 'oracle-motion R11–R13 (TF-1904) — avertissements, deux sens, aucun livrable rougi');
-  const NEUVES = ['R11', 'R12', 'R13'];
-  const jouer = f => {
-    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-motion.mjs'), f, '--json-only'], { encoding: 'utf8' });
-    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
-    return { code: r.status, verdict: j?.verdict, f: j?.findings || [] };
-  };
-  const paires = [
-    ['R11', 'motion-boucle-verte.html', 'motion-boucle-rouge.html'],
-    ['R12', 'motion-js-verte.html', 'motion-js-rouge.html'],
-    ['R13', 'motion-couverture-verte.html', 'motion-couverture-rouge.html'],
-  ];
-  for (const [regle, verte, rouge] of paires) {
-    const v = jouer(fx(verte)), r = jouer(fx(rouge));
-    ligne(v.code === 0 && v.verdict === 'PASS' && !v.f.some(x => NEUVES.includes(x.regle)),
-      `${regle} · sens vert : ${verte} sans aucun avertissement R11–R13 (exit ${v.code}, ${v.verdict})`);
-    const siennes = r.f.filter(x => x.regle === regle);
-    ligne(r.code === 0 && r.verdict === 'PASS' && siennes.length > 0 && siennes.every(x => x.sev === 'avertissement'),
-      `${regle} · sens rouge : ${rouge} lève ${regle} en avertissement SANS rougir la page (exit ${r.code}, ${r.verdict}, ×${siennes.length})`);
-    const autres = r.f.filter(x => NEUVES.includes(x.regle) && x.regle !== regle);
-    ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune des deux autres règles neuves (obtenu ×${autres.length})`);
-  }
-  // Le cas mesuré par l'étude, tel quel : les trois défauts sur UNE page, aucun refus, trois avertissements.
-  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-r11-r13-'));
-  try {
-    const page = path.join(dossier, 'mesure-etude.html');
-    fs.writeFileSync(page, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Mesure</title><style>'
-      + '@keyframes t { to { transform: rotate(360deg); } } @keyframes d { to { transform: translateX(-9px); } }'
-      + '.tourniquet { animation: t 2s linear infinite; } .derive { animation: d 40s linear infinite; }'
-      + '@media (prefers-reduced-motion: reduce) { .tourniquet { animation: none; } }'
-      + '</style></head><body><h1>Mesure</h1><div class="tourniquet">a</div><div class="derive">b</div>'
-      + '<script>Motion.animate(".derive", { opacity: [0, 1] }, { duration: 1.2 });</script></body></html>', 'utf8');
-    const m = jouer(page);
-    const vues = new Set(m.f.filter(x => x.sev === 'avertissement').map(x => x.regle));
-    ligne(m.code === 0 && m.verdict === 'PASS' && NEUVES.every(x => vues.has(x)),
-      `mesure de l'étude 20261019i · boucle de 40 s + animate(1,2 s) + révocation partielle : PASS exit 0, R11 R12 R13 signalées (exit ${m.code}, ${[...vues].filter(x => NEUVES.includes(x)).join(' ')})`);
-  } finally {
 // TF-2627 (lot Produit-82 du 10/11/2026, récidive de TF-2430) — DE3 NE PREND PLUS UNE RÈGLE À SÉLECTEUR DESCENDANT POUR UNE RÈGLE DE TOUTE LA PAGE.
 // `.tf-actions button { background: none; border: none }` s'appariait à chaque bouton de la page (seul le dernier compound était confronté) :
 // DE3 refusait sept écrans d'un portail pour des boutons posés hors de `.tf-actions`, PASS sans la feuille du composant, FAIL avec. L'oracle
@@ -3613,6 +3613,50 @@ for (const cas of CAS) {
   }
 }
 
+// TF-1904 (étude 20261019i, mesuré le 19/10/2026) — une page jetable de 9 lignes portant une
+// boucle infinie de 40 s, une animation JavaScript de 1,2 s et une révocation reduced-motion qui
+// ne couvre qu'un des deux éléments animés rendait PASS, exit 0, sans une alerte. R11, R12 et
+// R13 sont des AVERTISSEMENTS : elles ne rougissent aucun livrable existant. Les trois paires de
+// fixtures ne passent donc pas par CAS (la rouge y doit FAIL, exit 1) : ici la rouge doit rester
+// PASS, exit 0, avec UN avertissement de SA règle et aucune des deux autres.
+{
+  console.log(String.fromCharCode(10) + 'oracle-motion R11–R13 (TF-1904) — avertissements, deux sens, aucun livrable rougi');
+  const NEUVES = ['R11', 'R12', 'R13'];
+  const jouer = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-motion.mjs'), f, '--json-only'], { encoding: 'utf8' });
+    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return { code: r.status, verdict: j?.verdict, f: j?.findings || [] };
+  };
+  const paires = [
+    ['R11', 'motion-boucle-verte.html', 'motion-boucle-rouge.html'],
+    ['R12', 'motion-js-verte.html', 'motion-js-rouge.html'],
+    ['R13', 'motion-couverture-verte.html', 'motion-couverture-rouge.html'],
+  ];
+  for (const [regle, verte, rouge] of paires) {
+    const v = jouer(fx(verte)), r = jouer(fx(rouge));
+    ligne(v.code === 0 && v.verdict === 'PASS' && !v.f.some(x => NEUVES.includes(x.regle)),
+      `${regle} · sens vert : ${verte} sans aucun avertissement R11–R13 (exit ${v.code}, ${v.verdict})`);
+    const siennes = r.f.filter(x => x.regle === regle);
+    ligne(r.code === 0 && r.verdict === 'PASS' && siennes.length > 0 && siennes.every(x => x.sev === 'avertissement'),
+      `${regle} · sens rouge : ${rouge} lève ${regle} en avertissement SANS rougir la page (exit ${r.code}, ${r.verdict}, ×${siennes.length})`);
+    const autres = r.f.filter(x => NEUVES.includes(x.regle) && x.regle !== regle);
+    ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune des deux autres règles neuves (obtenu ×${autres.length})`);
+  }
+  // Le cas mesuré par l'étude, tel quel : les trois défauts sur UNE page, aucun refus, trois avertissements.
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'motion-r11-r13-'));
+  try {
+    const page = path.join(dossier, 'mesure-etude.html');
+    fs.writeFileSync(page, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Mesure</title><style>'
+      + '@keyframes t { to { transform: rotate(360deg); } } @keyframes d { to { transform: translateX(-9px); } }'
+      + '.tourniquet { animation: t 2s linear infinite; } .derive { animation: d 40s linear infinite; }'
+      + '@media (prefers-reduced-motion: reduce) { .tourniquet { animation: none; } }'
+      + '</style></head><body><h1>Mesure</h1><div class="tourniquet">a</div><div class="derive">b</div>'
+      + '<script>Motion.animate(".derive", { opacity: [0, 1] }, { duration: 1.2 });</script></body></html>', 'utf8');
+    const m = jouer(page);
+    const vues = new Set(m.f.filter(x => x.sev === 'avertissement').map(x => x.regle));
+    ligne(m.code === 0 && m.verdict === 'PASS' && NEUVES.every(x => vues.has(x)),
+      `mesure de l'étude 20261019i · boucle de 40 s + animate(1,2 s) + révocation partielle : PASS exit 0, R11 R12 R13 signalées (exit ${m.code}, ${[...vues].filter(x => NEUVES.includes(x)).join(' ')})`);
+  } finally {
     fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
   }
 }
@@ -4412,6 +4456,23 @@ if (!OUTILLAGE_DOCUMENT.ok) {
       ligne(sansDecl.code === 0 && sansDecl.f.some(x => x.regle === 'CL6' && x.sev === 'avertissement'), 'CL6 · sans déclaration de marque : avertissement, pas de refus');
       const commentaires = jouerClip(copie({ html: s => remplacer(s, 'const LEGENDES = [', "// ancien : LOGO.src = 'logo-sombre.png' ; lien 'atelier-ferrand.example'\n  const motifLogo = /logo-sombre\\.png/;\n  const LEGENDES = [") }));
       ligne(commentaires.code === 0, 'CL6 sens vert · un logo cité en commentaire ou dans une expression régulière n\'est pas un logo codé en dur');
+      // TF-2602 : motion.js lit les jetons un nom après l'autre (systeme-de-marque, puis socle HTML) ; une feuille qui n'en déclare aucun rend
+      // le clip entier aux couleurs neutres de repli, sans bruit. Sens rouge : une feuille aux noms étrangers. Sens vert, les deux remèdes que le
+      // message prescrit : la feuille de la marque (noms de systeme-de-marque, la verte), et une feuille aux seuls noms du socle HTML.
+      fs.writeFileSync(path.join(atelier, 'marque', 'tokens-etrangers.css'), ':root { --couleur-fond: #101317; --couleur-texte: #F1F3F6; --police-titre: system-ui; }\n', 'utf8');
+      fs.writeFileSync(path.join(atelier, 'marque', 'tokens-socle.css'), ':root { --bg: #FAFBFF; --ink: #0F172A; --blue: #2563EB; }\n:root[data-theme="dark"] { --bg: #0B1220; --ink: #EEF2F8; --blue: #7DA2F5; }\n', 'utf8');
+      const etrangers = jouerClip(copie({ html: s => remplacer(s, '../marque/tokens.css', '../marque/tokens-etrangers.css') }));
+      ligne(pourSeule(etrangers, 'CL6') && etrangers.durs.length === 1 && /aucun jeton de couleur lu/.test(etrangers.durs[0].msg) && etrangers.mesures.jetons_couleur?.declares_et_lus === 0,
+        `CL6 sens rouge · TF-2602 · une feuille de jetons dont aucun nom n'est lu par la bibliothèque : FAIL pour CL6 seule (obtenu ${etrangers.verdict}, ${JSON.stringify(etrangers.mesures.jetons_couleur)})`);
+      const socle = jouerClip(copie({ html: s => remplacer(s, '../marque/tokens.css', '../marque/tokens-socle.css') }));
+      ligne(socle.code === 0 && socle.mesures.jetons_couleur?.declares_et_lus === 3,
+        `CL6 sens vert · TF-2602 · une feuille aux seuls noms du socle HTML (--bg, --ink, --blue) est lue, 3 noms (obtenu ${socle.verdict}, ${JSON.stringify(socle.mesures.jetons_couleur)})`);
+      const marqueOk = jouerClip(copie());
+      ligne(marqueOk.code === 0 && marqueOk.mesures.jetons_couleur?.declares_et_lus >= 1,
+        `CL6 sens vert · TF-2602 · la feuille de la marque (noms de systeme-de-marque) est lue (obtenu ${marqueOk.verdict}, ${JSON.stringify(marqueOk.mesures.jetons_couleur)})`);
+      const enLigne = jouerClip(copie({ html: s => remplacer(s, '<link rel="stylesheet" href="../marque/tokens.css">', '<style>:root { --fond: #101317; }</style>') }));
+      ligne(enLigne.code === 0 && enLigne.mesures.jetons_couleur?.declares_et_lus === 1,
+        `CL6 sens vert · TF-2602 · un bloc <style> de la page qui déclare --fond compte comme une feuille (obtenu ${enLigne.verdict}, ${JSON.stringify(enLigne.mesures.jetons_couleur)})`);
     });
 
     // CL7 : l'horloge et le hasard
@@ -4501,23 +4562,6 @@ if (!OUTILLAGE_DOCUMENT.ok) {
       return { code: r.status, json };
     };
     // Le faux dossier personnel n'a de sens que si un Python avec playwright existe (détection de l'outillage).
-      // TF-2602 : motion.js lit les jetons un nom après l'autre (systeme-de-marque, puis socle HTML) ; une feuille qui n'en déclare aucun rend
-      // le clip entier aux couleurs neutres de repli, sans bruit. Sens rouge : une feuille aux noms étrangers. Sens vert, les deux remèdes que le
-      // message prescrit : la feuille de la marque (noms de systeme-de-marque, la verte), et une feuille aux seuls noms du socle HTML.
-      fs.writeFileSync(path.join(atelier, 'marque', 'tokens-etrangers.css'), ':root { --couleur-fond: #101317; --couleur-texte: #F1F3F6; --police-titre: system-ui; }\n', 'utf8');
-      fs.writeFileSync(path.join(atelier, 'marque', 'tokens-socle.css'), ':root { --bg: #FAFBFF; --ink: #0F172A; --blue: #2563EB; }\n:root[data-theme="dark"] { --bg: #0B1220; --ink: #EEF2F8; --blue: #7DA2F5; }\n', 'utf8');
-      const etrangers = jouerClip(copie({ html: s => remplacer(s, '../marque/tokens.css', '../marque/tokens-etrangers.css') }));
-      ligne(pourSeule(etrangers, 'CL6') && etrangers.durs.length === 1 && /aucun jeton de couleur lu/.test(etrangers.durs[0].msg) && etrangers.mesures.jetons_couleur?.declares_et_lus === 0,
-        `CL6 sens rouge · TF-2602 · une feuille de jetons dont aucun nom n'est lu par la bibliothèque : FAIL pour CL6 seule (obtenu ${etrangers.verdict}, ${JSON.stringify(etrangers.mesures.jetons_couleur)})`);
-      const socle = jouerClip(copie({ html: s => remplacer(s, '../marque/tokens.css', '../marque/tokens-socle.css') }));
-      ligne(socle.code === 0 && socle.mesures.jetons_couleur?.declares_et_lus === 3,
-        `CL6 sens vert · TF-2602 · une feuille aux seuls noms du socle HTML (--bg, --ink, --blue) est lue, 3 noms (obtenu ${socle.verdict}, ${JSON.stringify(socle.mesures.jetons_couleur)})`);
-      const marqueOk = jouerClip(copie());
-      ligne(marqueOk.code === 0 && marqueOk.mesures.jetons_couleur?.declares_et_lus >= 1,
-        `CL6 sens vert · TF-2602 · la feuille de la marque (noms de systeme-de-marque) est lue (obtenu ${marqueOk.verdict}, ${JSON.stringify(marqueOk.mesures.jetons_couleur)})`);
-      const enLigne = jouerClip(copie({ html: s => remplacer(s, '<link rel="stylesheet" href="../marque/tokens.css">', '<style>:root { --fond: #101317; }</style>') }));
-      ligne(enLigne.code === 0 && enLigne.mesures.jetons_couleur?.declares_et_lus === 1,
-        `CL6 sens vert · TF-2602 · un bloc <style> de la page qui déclare --fond compte comme une feuille (obtenu ${enLigne.verdict}, ${JSON.stringify(enLigne.mesures.jetons_couleur)})`);
     const sonde = jouer('run-oracles-design.mjs', [fx('rendu-l2-verte.html'), '--rendu']);
     const rendus = j => (j?.oracles || []).filter(o => /^render_page/.test(o.oracle));
     if (rendus(sonde.json).some(o => o.verdict === 'SKIP')) {
