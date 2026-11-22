@@ -319,6 +319,7 @@ const refusee = (libelle, msg, ou) => {
 // ── S6 · Emojis en production ──────────────────────────────────────────────
 {
   const emoji = /\p{Extended_Pictographic}/u;
+  const TYPOGRAPHIQUE = /^[\u2190-\u21FF\u00A9\u00AE\u2122]$/u;
   const vus = new Set();
   // TF-0436 (lot Produit-05 20260820b, 21/08) : un oracle de forme ne juge pas un texte que le
   // livrable n'a pas ÉCRIT. Le contenu CITÉ — <pre>, <code>, <blockquote>, [data-cite] (sources
@@ -336,8 +337,15 @@ const refusee = (libelle, msg, ou) => {
     for (const t of visibleText(a.r)) {
       if (exclus.has(t)) continue;
       if (!emoji.test(t.text)) continue;
-      for (const ch of [...t.text]) {
+      const car = [...t.text];
+      for (let i = 0; i < car.length; i++) {
+        const ch = car[i];
         if (!emoji.test(ch) || vus.has(ch)) continue;
+        // TF-2701 (constat du 15/11/2026, factory-digit-ai-fr) : « ↔ » du nom d'un service du catalogue,
+        // « Réconcilier (Gold ↔ modèle sémantique) », est Extended_Pictographic sans être un emoji. Une
+        // flèche typographique ou ©, ®, ™ s'affiche en texte : seule la sélection d'emoji explicite (U+FE0F)
+        // en fait un pictogramme. Exemption étroite, jamais un blocage de plage : tout le reste reste refusé.
+        if (TYPOGRAPHIQUE.test(ch) && car[i + 1] !== '\uFE0F') continue;
         vus.add(ch);
         add('majeur', 'S6', `emoji « ${ch} » dans l'interface : utiliser une icône SVG dessinée`,
           a.statique ? L(t.start) : `fragment de gabarit JS n°${a.n}`);

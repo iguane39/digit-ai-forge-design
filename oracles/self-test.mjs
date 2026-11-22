@@ -109,6 +109,17 @@ const CAS = [
     rouge: [fx('slop-runtime-rouge.html')],
   },
   {
+    // TF-2701 (constat du 15/11/2026, factory-digit-ai-fr) — S6 prenait pour un emoji la flèche « ↔ » du nom
+    // exact d'un service du catalogue (« Réconcilier (Gold ↔ modèle sémantique) ») : 2 pages refusées à tort,
+    // à arbitrer à la main. Les flèches typographiques (U+2190 à U+21FF), ©, ® et ™ s'affichent en texte ;
+    // seule la sélection d'emoji explicite (U+FE0F) ou un vrai pictogramme en fait un emoji. La verte porte
+    // ces signes nus et doit PASSER ; la rouge porte les mêmes avec U+FE0F, plus ➡️ et 🚀, et reste refusée.
+    oracle: 'oracle-slop.mjs',
+    regles: ['S6'],
+    verte: [fx('slop-s6-verte.html')],
+    rouge: [fx('slop-s6-rouge.html')],
+  },
+  {
     oracle: 'oracle-tokens.mjs',
     regles: ['T1', 'T2', 'T3', 'T4', 'T5', 'T6'],
     verte: [fx('tokens-verte.html')],
@@ -3723,6 +3734,20 @@ for (const cas of CAS) {
     const autres = r.f.filter(x => NEUVES.includes(x.regle) && x.regle !== regle);
     ligne(autres.length === 0, `${regle} · sens rouge : pour la bonne raison, aucune autre règle neuve (obtenu ×${autres.length})`);
   }
+}
+
+// TF-2701 (22/11/2026) — S6 refuse les bons signes, pas toute la plage. La table ci-dessus joue la verte et la rouge ;
+// ce bloc dit QUELS signes la rouge fait refuser : « ↔ » suivi de U+FE0F, « ➡ » suivi de U+FE0F, « ™ » suivi de U+FE0F
+// et 🚀, jamais la flèche « ← » nue de la même page. Une exemption qui s'étendrait à la page entière passerait la verte
+// et la rouge d'en haut sans que rien ne le dise.
+{
+  console.log(String.fromCharCode(10) + 'oracle-slop S6 (TF-2701) — flèche typographique nue admise, emoji explicite refusé');
+  const r = spawnSync(process.execPath, [path.join(ici, 'oracle-slop.mjs'), fx('slop-s6-rouge.html'), '--json-only'], { encoding: 'utf8' });
+  let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+  const refuses = (j?.findings || []).filter(x => x.regle === 'S6').map(x => /« (.+) »/.exec(x.msg)?.[1]).sort();
+  const attendus = ['↔', '➡', '™', '\u{1F680}'].sort();
+  ligne(JSON.stringify(refuses) === JSON.stringify(attendus),
+    `S6 · rouge : refuse exactement ↔ ➡ ™ 🚀 (obtenu ${refuses.join(' ')}), jamais la flèche « ← » nue`);
 }
 
 // TF-2043 (02/11/2026) — LA VALEUR AFFICHÉE ÉGALE SA SOURCE, ET SANS DÉCLARATION L'ORACLE SE TAIT EN LE DISANT.
