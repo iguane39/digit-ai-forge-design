@@ -258,7 +258,7 @@ for (const res of sortie.resultats) {
   }
   if (ecranRefuse(res.statut, STATUT.code)) { add('avertissement', 'EF0', motifDuRefus(res.statut, STATUT.code), ou); continue; }
   if (sansSlashFinal(res.url_finale) !== sansSlashFinal(res.cible)) {
-    add('avertissement', 'EF0', `redirigé vers ${res.url_finale} : écran non jugé, la page d'arrivée n'est pas celle demandée (connexion ?) — fournir --etat-connexion`, ou);
+    add('avertissement', 'EF0', `redirigé vers ${res.url_finale} : écran non jugé, la page d'arrivée n'est pas celle demandée (connexion ?) — fournir --etat-connexion ; l'état se fabrique : node <forge-design>/scripts/fabriquer-etat-connexion.mjs --url <page de connexion> --sortie <etat.json> --identifiant-env <VARIABLE> --secret-env <VARIABLE>`, ou);
     continue;
   }
   const champs = res.champs || [];

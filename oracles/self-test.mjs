@@ -1931,6 +1931,85 @@ for (const cas of CAS) {
   }
 }
 
+// TF-2781 (22/11/2026) — L'ÉTAT DE CONNEXION SE FABRIQUE, IL NE SE RÉCLAME PAS. Chez Produit-12, deux passages de critique
+// ont été perdus en SKIP X0 faute d'un état Playwright que rien ne fabriquait. `scripts/fabriquer-etat-connexion.mjs` se
+// connecte à une application d'essai servie derrière un vrai formulaire (POST, cookie de session posé par le serveur) avec des
+// valeurs lues de VARIABLES D'ENVIRONNEMENT, écrit l'état, et cet état fait juger l'écran lui-même par oracle-exploitabilite.
+// Sens rouges : secret refusé (exit 1, aucun fichier), variable absente (exit 2, la variable est NOMMÉE, jamais sa valeur),
+// chemin de sortie sous un dépôt git (exit 2, rien écrit) ; et aucune sortie ne porte l'identifiant ni le secret.
+{
+  console.log(String.fromCharCode(10) + 'fabriquer-etat-connexion (TF-2781) — connexion réelle, état jugé, trois refus, secret jamais affiché');
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')}`);
+  } else {
+    const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'fabrique-etat-'));
+    const identifiant = 'essai@exemple.test';
+    const secret = 'mdp-' + Math.random().toString(36).slice(2, 12);
+    const code = `const http=require('http');const fs=require('fs');const ecran=fs.readFileSync(${JSON.stringify(fx('exploitabilite-rouge.html'))},'utf8');`
+      + `const ID=${JSON.stringify(identifiant)},SECRET=${JSON.stringify(secret)};`
+      + `const page=(m)=>'<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>Connexion</title></head><body><main><h1>Connexion</h1>'+m`
+      + `+'<form method="post" action="/connexion"><input type="email" name="email" aria-label="Adresse"><input type="password" name="mot" aria-label="Mot de passe"><button type="submit">Se connecter</button></form></main></body></html>';`
+      + `const s=http.createServer((q,r)=>{if(q.url==='/connexion'&&q.method==='POST'){let c='';q.on('data',d=>c+=d);q.on('end',()=>{const p=new URLSearchParams(c);`
+      + `if(p.get('email')===ID&&p.get('mot')===SECRET){r.writeHead(302,{'Set-Cookie':'session=ouverte; Path=/','Location':'/ecran'});return r.end();}`
+      + `r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});r.end(page('<p>Refusé</p>'));});return;}`
+      + `if(q.url==='/connexion'){r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return r.end(page(''));}`
+      + `if(/session=ouverte/.test(q.headers.cookie||'')){r.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});return r.end(ecran);}`
+      + `r.writeHead(302,{Location:'/connexion'});r.end();});s.listen(0,'127.0.0.1',()=>console.log(s.address().port));`;
+    const serveur = spawn(process.execPath, ['-e', code], { stdio: ['ignore', 'pipe', 'ignore'] });
+    try {
+      const port = await new Promise((ok, ko) => {
+        serveur.stdout.once('data', d => ok(Number(String(d).trim())));
+        serveur.once('exit', () => ko(new Error('serveur d\'essai arrêté')));
+      });
+      const script = path.join(ici, '..', 'scripts', 'fabriquer-etat-connexion.mjs');
+      const etat = path.join(dossier, 'etat.json');
+      const fabriquer = (env, ...a) => {
+        const r = spawnSync(process.execPath, [script, '--url', `http://127.0.0.1:${port}/connexion`, '--identifiant-env', 'FORGE_ESSAI_ID', '--secret-env', 'FORGE_ESSAI_MDP', ...a],
+          { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1', ...env } });
+        let json = null; try { json = JSON.parse((r.stdout || '').trim().split(/\r?\n/).pop()); } catch { /* illisible : la ligne le dira */ }
+        return { code: r.status, json, sortie: (r.stdout || '') + (r.stderr || '') };
+      };
+      const bon = { FORGE_ESSAI_ID: identifiant, FORGE_ESSAI_MDP: secret };
+      const ok = fabriquer(bon, '--sortie', etat);
+      const ecrit = fs.existsSync(etat) ? JSON.parse(fs.readFileSync(etat, 'utf8')) : null;
+      ligne(ok.code === 0 && ok.json?.ok === true && (ecrit?.cookies || []).some(c => c.name === 'session' && c.value === 'ouverte'),
+        `sens vert · la connexion réelle écrit l'état, avec le cookie de session posé par le serveur (obtenu exit ${ok.code}, cookies ${ok.json?.cookies})`);
+      ligne(!ok.sortie.includes(secret) && !ok.sortie.includes(identifiant),
+        'sens vert · la sortie ne porte ni l\'identifiant ni le secret');
+      const jugee = spawnSync(process.execPath, [path.join(ici, 'oracle-exploitabilite.mjs'), `http://127.0.0.1:${port}/ecran`, '--etat-connexion', etat, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+      let jj = null; try { jj = JSON.parse(jugee.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      const regles = new Set((jj?.findings || []).map(f => f.regle));
+      ligne(jugee.status === 1 && !regles.has('X0') && ['X1', 'X2', 'X3', 'X4', 'X5'].every(x => regles.has(x)),
+        `sens vert · l'état fabriqué fait juger l'écran lui-même (X1 à X5, aucun X0) : le SKIP de redirection est levé (obtenu ${jj?.verdict}, ${[...regles].join(' ')})`);
+      const sansEtat = spawnSync(process.execPath, [path.join(ici, 'oracle-exploitabilite.mjs'), `http://127.0.0.1:${port}/ecran`, '--json-only'],
+        { encoding: 'utf8', env: { ...process.env, PYTHONUTF8: '1' } });
+      let js = null; try { js = JSON.parse(sansEtat.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      const x0 = (js?.findings || []).find(f => f.regle === 'X0');
+      ligne(sansEtat.status === 2 && /fabriquer-etat-connexion\.mjs/.test(x0?.msg || ''),
+        `sens rouge · sans état, X0 dit SKIP exit 2 ET nomme le script qui fabrique l'état (obtenu ${js?.verdict}, exit ${sansEtat.status})`);
+
+      const refuse = path.join(dossier, 'refuse.json');
+      const faux = fabriquer({ ...bon, FORGE_ESSAI_MDP: 'mauvais-' + secret }, '--sortie', refuse);
+      ligne(faux.code === 1 && faux.json?.ok === false && !fs.existsSync(refuse) && !faux.sortie.includes(secret),
+        `sens rouge · secret refusé par l'application : exit 1, aucun état écrit, secret non affiché (obtenu exit ${faux.code})`);
+      const sans = fabriquer({ ...bon, FORGE_ESSAI_MDP: '' }, '--sortie', path.join(dossier, 'sans.json'));
+      ligne(sans.code === 2 && /FORGE_ESSAI_MDP/.test(sans.json?.message || '') && !fs.existsSync(path.join(dossier, 'sans.json')),
+        `sens rouge · variable du secret absente : exit 2, la variable est NOMMÉE, rien écrit (obtenu exit ${sans.code})`);
+      const dansDepot = path.join(ici, 'etat-fabrique-refuse.json');
+      const depot = fabriquer(bon, '--sortie', dansDepot);
+      ligne(depot.code === 2 && !fs.existsSync(dansDepot) && /dépôt git/.test(depot.json?.message || ''),
+        `sens rouge · sortie sous un dépôt git : exit 2, rien écrit, l'état d'une session est un secret (obtenu exit ${depot.code})`);
+      const valeurEnArgument = fabriquer(bon, '--sortie', path.join(dossier, 'v.json'), '--secret', secret);
+      ligne(valeurEnArgument.code === 2 && /option inconnue/.test(valeurEnArgument.json?.message || '') && !valeurEnArgument.sortie.includes(secret),
+        `sens rouge · une valeur passée en argument est refusée (option inconnue), jamais acceptée ni répétée (obtenu exit ${valeurEnArgument.code})`);
+    } finally {
+      serveur.kill();
+      fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
 // TF-1687 — UN ORACLE QUI N'EST SUR AUCUN CHEMIN N'EST JAMAIS JOUÉ. oracle-exploitabilite est
 // enrôlé dans le point d'entrée en OPT-IN : il ne juge que l'instance alimentée qu'on lui fournit
 // (--instance). La même page, toute verte par ailleurs (motion-verte.html), sert aux trois sens :
