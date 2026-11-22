@@ -26,7 +26,9 @@
 //       sinon la règle requalifierait tout l'existant au lieu de le faire progresser.
 //   R9  token de mouvement hors barème — une durée prescrite au-delà du PLAFOND (le même
 //       seuil que R4, une seule constante pour les deux : prescrire et juger ne peuvent
-//       pas diverger), ou une courbe à dépassement (rebond déguisé, cf. slop S8).
+//       pas diverger), ou une courbe à dépassement (rebond déguisé, cf. slop S8). Un token de
+//       durée que seule une `animation` consomme (révélation, tampon) est exempté (TF-2708) : R4
+//       ne borne que les transitions d'interface.
 //   R10 révocation `prefers-reduced-motion: reduce` absente, ou DÉCLARÉE SANS EFFET —
 //       un @media qui ne neutralise rien est une affordance non câblée (loi n° 1).
 //       Règle jouée, pas un avertissement : c'était le statut de C4 dans check_maquette,
@@ -76,6 +78,7 @@ const NON_JUGE = [
   'cohésion du mouvement avec la personnalité du composant — jugement humain',
   'timing asymétrique entrée/sortie : intention non décidable sur le fichier seul',
   'durées des `animation` (décoratives, loaders) — seules les transitions UI sont bornées (R4)',
+  'R9 : l\'usage d\'un token de durée se lit dans la feuille jugée (déclarations `transition`, `animation`, ou une custom property relais) ; un token consommé par un script (getComputedStyle) ou par une feuille non intégrée à la page n\'est pas vu comme consommé, donc reste refusé s\'il dépasse le plafond',
   'CSS porté par des gabarits JS (runtime) — non parsé par cette v1',
   'finalité de chaque geste (« ce mouvement sert à quoi ») — un token prescrit une durée, pas une intention',
   'durées passées à `animate()` : R12 ne lit que les durées numériques LITTÉRALES — une durée portée par une variable, un jeton ou une expression n\'est pas résolue ; R8 ne juge que le CSS',
@@ -294,6 +297,29 @@ if (hoverAnime && !/@media[^{]*\(\s*hover\s*:\s*hover\s*\)/i.test(cssText)) {
 // ── R9 · token de mouvement hors barème ───────────────────────────────────
 // Le seuil est PLAFOND_MS, celui de R4 : la marque ne peut pas prescrire ce que
 // l'oracle refusera derrière.
+/** Où un token de durée est consommé : 'transition', 'animation' ou 'autre' (TF-2708). Un token relayé par une
+ *  autre custom property suit la chaîne ; la révocation reduced-motion n'est pas un usage. */
+function usagesDuToken(nom, vus = new Set()) {
+  const usages = new Set();
+  if (vus.has(nom)) return usages;
+  vus.add(nom);
+  const lit = new RegExp(`var\\(\\s*--${nom.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*[,)]`);
+  for (const b of blocsHorsRevocation) {
+    for (const d of b.decl.split(';')) {
+      const i = d.indexOf(':');
+      if (i < 0 || !lit.test(d.slice(i + 1))) continue;
+      const prop = d.slice(0, i).trim().toLowerCase();
+      if (/^transition(-duration)?$/.test(prop)) usages.add('transition');
+      else if (/^animation(-duration|-delay)?$/.test(prop)) usages.add('animation');
+      else if (prop.startsWith('--')) {
+        const relais = usagesDuToken(prop.slice(2), vus);
+        if (relais.size) relais.forEach(u => usages.add(u)); else usages.add('autre');
+      } else usages.add('autre');
+    }
+  }
+  return usages;
+}
+
 if (!prescrit) {
   NON_JUGE.push('R9 SANS OBJET — la feuille ne déclare aucun token de mouvement à mettre au barème');
 } else {
@@ -301,6 +327,17 @@ if (!prescrit) {
     const ms = msDe(valeur);
     const max = ms.length ? Math.max(...ms) : 0;
     if (max > PLAFOND_MS) {
+      // TF-2708 (constat du 15/11/2026, factory-digit-ai-fr) : R4 ne borne que les TRANSITIONS d'interface, et
+      // le brief du run autorisait --duration-reveal jusqu'à 640 ms. Un token que seule une `animation`
+      // consomme (révélation, tampon, décor) ne prescrit rien que R4 refuserait : il sort du barème des
+      // transitions. Un token consommé par une transition (R4 le refuse aussi), ou par aucune déclaration
+      // lue, reste refusé : l'usage hors barème se PROUVE à la feuille, il ne se présume pas.
+      const usages = usagesDuToken(nom);
+      if (usages.size && !usages.has('transition') && !usages.has('autre')) {
+        add('info', 'R9', `token --${nom} de ${Math.round(max)} ms > ${PLAFOND_MS} ms consommé seulement par une animation `
+          + '(hors barème des transitions, R4 ne le borne pas) : exempté', ':root');
+        continue;
+      }
       add('majeur', 'R9', `token --${nom} prescrit ${Math.round(max)} ms > ${PLAFOND_MS} ms : `
         + 'la marque prescrirait exactement ce que R4 refuse', ':root');
     }

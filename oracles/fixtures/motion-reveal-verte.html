@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture verte - oracle-motion R9 (tokens de revelation consommes par une animation)</title>
+<style>
+  /* TF-2708 : le brief d'un run autorise --duration-reveal jusqu'a 640 ms. R4 ne borne que les
+     TRANSITIONS d'interface ; un token que seule une `animation` consomme n'est pas une duree de
+     transition, et R9 ne doit pas le refuser. Deux chemins de consommation : direct
+     (animation-duration) et relaye par une autre custom property (--anim-reveal). */
+  :root {
+    --dur-etat: 120ms;
+    --dur-surface: 280ms;
+    --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-reveal: 640ms;
+    --duration-tampon: 560ms;
+    --anim-reveal: fondu var(--duration-reveal) var(--ease-apparition) both;
+  }
+  @keyframes fondu { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes tampon { from { opacity: 0; } to { opacity: 1; } }
+
+  .section-revelee { animation: var(--anim-reveal); }
+  .sceau { animation-name: tampon; animation-duration: var(--duration-tampon); animation-timing-function: var(--ease-apparition); }
+
+  /* Une vraie transition d'interface, sous le plafond, consomme un token du barème */
+  .card { transition: opacity var(--dur-surface) var(--ease-apparition); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture verte motion - revelation</h1>
+  <div class="section-revelee">section revelee</div>
+  <div class="sceau">sceau</div>
+  <div class="card">carte</div>
+</body>
+</html>

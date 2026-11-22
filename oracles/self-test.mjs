@@ -396,6 +396,17 @@ const CAS = [
     rouge: [fx('motion-revocation-rouge.html')],
   },
   {
+    // TF-2708 (constat du 15/11/2026, factory-digit-ai-fr) — R9 refusait tout token de durée > 300 ms, quel que
+    // soit son usage, alors que R4 ne borne que les transitions d'interface et que le brief du run autorisait
+    // --duration-reveal jusqu'à 640 ms. La verte porte deux tokens de 640 et 560 ms que seule une `animation`
+    // consomme (direct, et relayé par une autre custom property) et doit PASSER ; la rouge garde un token de
+    // 560 ms consommé par une transition et un token de 700 ms qu'aucune déclaration ne consomme, et reste refusée.
+    oracle: 'oracle-motion.mjs',
+    regles: ['R4', 'R9'],
+    verte: [fx('motion-reveal-verte.html')],
+    rouge: [fx('motion-reveal-rouge.html')],
+  },
+  {
     // TF-1035 (constat en passant, lot marque Digit-AI, 11/09/2026) — D3 compare le dérivé à
     // l'octet près, EN-TÊTE COMPRIS : dtcg-verte.tokens.json ne vit pas au chemin par défaut
     // historique (« corpus/tokens-digit-ai.tokens.json »), donc cette fixture retombe en FAIL si
@@ -3748,6 +3759,25 @@ for (const cas of CAS) {
   const attendus = ['↔', '➡', '™', '\u{1F680}'].sort();
   ligne(JSON.stringify(refuses) === JSON.stringify(attendus),
     `S6 · rouge : refuse exactement ↔ ➡ ™ 🚀 (obtenu ${refuses.join(' ')}), jamais la flèche « ← » nue`);
+}
+
+// TF-2708 (22/11/2026) — R9 refuse les bons tokens, pas tous. La table ci-dessus joue la verte et la rouge ; ce bloc dit
+// QUELS tokens la rouge fait refuser : --duration-tampon (consommé par une transition) et --duration-orphelin (consommé
+// par rien), jamais --duration-reveal (consommé par une animation), que la verte exempte avec un constat d'information.
+{
+  console.log(String.fromCharCode(10) + 'oracle-motion R9 (TF-2708) — token d\'animation exempté, token de transition ou orphelin refusé');
+  const jouer = f => {
+    const r = spawnSync(process.execPath, [path.join(ici, 'oracle-motion.mjs'), f, '--json-only'], { encoding: 'utf8' });
+    let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+    return j?.findings || [];
+  };
+  const nom = x => /token --([\w-]+)/.exec(x.msg)?.[1];
+  const refuses = jouer(fx('motion-reveal-rouge.html')).filter(x => x.regle === 'R9' && x.sev === 'majeur').map(nom).sort();
+  ligne(JSON.stringify(refuses) === JSON.stringify(['duration-orphelin', 'duration-tampon']),
+    `R9 · rouge : refuse duration-tampon et duration-orphelin, jamais duration-reveal (obtenu ${refuses.join(' ')})`);
+  const exemptes = jouer(fx('motion-reveal-verte.html')).filter(x => x.regle === 'R9' && x.sev === 'info').map(nom).sort();
+  ligne(JSON.stringify(exemptes) === JSON.stringify(['duration-reveal', 'duration-tampon']),
+    `R9 · verte : exempte duration-reveal et duration-tampon avec un constat d'information (obtenu ${exemptes.join(' ')})`);
 }
 
 // TF-2043 (02/11/2026) — LA VALEUR AFFICHÉE ÉGALE SA SOURCE, ET SANS DÉCLARATION L'ORACLE SE TAIT EN LE DISANT.

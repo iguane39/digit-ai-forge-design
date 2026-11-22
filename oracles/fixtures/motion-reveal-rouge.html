@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fixture rouge - oracle-motion R9 (l'exemption de l'animation ne s'etend pas aux transitions)</title>
+<style>
+  /* TF-2708 : la meme page que la verte, mais deux tokens hors barème qu'aucune animation
+     n'excuse : --duration-tampon (560 ms) est consomme par une TRANSITION d'interface (R4 la
+     refuse aussi), --duration-orphelin (700 ms) n'est consomme par aucune declaration lue.
+     --duration-reveal (640 ms), consomme par une animation, reste exempte : R9 doit nommer les
+     deux premiers et JAMAIS le troisieme. */
+  :root {
+    --dur-surface: 280ms;
+    --ease-apparition: cubic-bezier(0.16, 1, 0.3, 1);
+    --duration-reveal: 640ms;
+    --duration-tampon: 560ms;
+    --duration-orphelin: 700ms;
+  }
+  @keyframes fondu { from { opacity: 0; } to { opacity: 1; } }
+
+  .section-revelee { animation: fondu var(--duration-reveal) var(--ease-apparition) both; }
+  .sceau { opacity: 0; transition: opacity var(--duration-tampon) var(--ease-apparition); }
+  .card { transition: opacity var(--dur-surface) var(--ease-apparition); }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+  <h1>Fixture rouge motion - revelation</h1>
+  <div class="section-revelee">section revelee</div>
+  <div class="sceau">sceau</div>
+  <div class="card">carte</div>
+</body>
+</html>
