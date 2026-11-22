@@ -11,7 +11,8 @@
 //         non jugées, même lecture que check_html.py G1 et oracle-tokens T4 (TF-1661)
 //   B-T2  câblé — un écouteur de clic atteint CE bouton (attachement direct par
 //         getElementById / querySelector + addEventListener ou onclick=, attribut
-//         onclick inline, ou DÉLÉGATION : addEventListener('click') sur
+//         onclick inline, BOUCLE (querySelectorAll parcouru par forEach/map/for…of dont
+//         le corps pose l'écouteur, TF-2790), ou DÉLÉGATION : addEventListener('click') sur
 //         document/body/window avec closest()/matches() sur un sélecteur qui vise ce
 //         bouton, ou lecture de data-theme-toggle sur la cible) ET le JS inline mute
 //         data-theme sur la racine (<html>/documentElement) quelque part — un bouton
@@ -262,6 +263,67 @@ if (bouton) {
     if (!m || !coincideBouton(m[1], m[3], bouton)) continue;
     const usage = new RegExp(`\\b${alias}\\b\\s*\\.\\s*(?:addEventListener\\(\\s*['"]click['"]|onclick\\s*=)`);
     if (usage.test(texteScripts)) ecouteurTrouve = true;
+  }
+  // TF-2790 (retour du 16/11/2026, factory-digit-ai-fr) — LA BOUCLE EST UN CÂBLAGE, PAS UNE ABSENCE.
+  // `document.querySelectorAll('[data-theme-toggle]').forEach((b) => b.addEventListener('click', …))`
+  // posait un écouteur sur CHAQUE bouton de bascule, avec le comportement du site servi : B-T2 rendait
+  // « bascule morte » (1 cycle de correction de la maquette). La même preuve statique que l'attachement
+  // direct existe — un sélecteur qui vise CE bouton, et un écouteur de clic posé par la boucle qui le
+  // parcourt. Quatre formes sont lues : forEach/map sur la sélection (nue, Array.from ou [...]), `for … of`
+  // sur la sélection, et les deux mêmes par un alias (`const boutons = document.querySelectorAll(…)`). La
+  // boucle doit POSER un écouteur de clic DANS SON CORPS (appariement des parenthèses) : une boucle qui ne
+  // fait que changer aria-pressed, ou qui parcourt autre chose, ne câble rien et reste refusée.
+  const viseBoutonParSelecteur = (sel) => sel.split(',').some((morceau) => {
+    const s = morceau.trim();
+    const parId = /#([\w-]+)/.exec(s);
+    const parClasse = /\.([\w-]+)/.exec(s);
+    return (parId && bouton.attrs.id === parId[1]) ||
+      (parClasse && classesDe(bouton).includes(parClasse[1])) ||
+      (/\[\s*data-theme-toggle/i.test(s) && Object.prototype.hasOwnProperty.call(bouton.attrs || {}, 'data-theme-toggle'));
+  });
+  const POSE_ECOUTEUR = /addEventListener\(\s*['"]click['"]|\.onclick\s*=/;
+  // Le corps d'une boucle se lit par appariement des parenthèses et accolades : un écouteur posé plus loin,
+  // sur autre chose, ne compte pas pour la boucle qui précède.
+  const jusqueFermeture = (texte, debut) => {
+    let prof = 1, guillemet = null;
+    for (let i = debut; i < texte.length; i++) {
+      const c = texte[i];
+      if (guillemet) { if (c === '\\') i++; else if (c === guillemet) guillemet = null; continue; }
+      if (c === '"' || c === "'" || c === '`') { guillemet = c; continue; }
+      if ('([{'.includes(c)) prof++;
+      else if (')]}'.includes(c) && --prof === 0) return texte.slice(debut, i);
+    }
+    return texte.slice(debut);
+  };
+  const poseDansAppel = (texte, debut) => POSE_ECOUTEUR.test(jusqueFermeture(texte, debut));
+  const poseDansInstruction = (texte, debut) => {
+    const suite = texte.slice(debut).replace(/^\s+/, '');
+    return POSE_ECOUTEUR.test(suite.startsWith('{') ? jusqueFermeture(suite, 1) : suite.split(/[;\n]/)[0]);
+  };
+  const BOUCLE_SUR = (expression) => new RegExp(`(?:^|[^\\w$.])for\\s*\\(\\s*(?:const|let|var)\\s+[\\w$]+\\s+of\\s*${expression}\\s*\\)`, 'g');
+  const aliasDeBoucle = [];
+  for (const m of texteScripts.matchAll(/document\.querySelectorAll\(\s*(['"])([^'"]+)\1\s*\)/g)) {
+    if (!viseBoutonParSelecteur(m[2])) continue;
+    const avant = texteScripts.slice(Math.max(0, m.index - 80), m.index);
+    const fin = m.index + m[0].length;
+    // (a) forEach / map sur la sélection, nue ou enveloppée : Array.from(…) ou […]
+    const boucle = /^\s*[)\]]?\s*\.\s*(?:forEach|map)\(/.exec(texteScripts.slice(fin));
+    if (boucle && poseDansAppel(texteScripts, fin + boucle[0].length)) ecouteurTrouve = true;
+    // (b) for (const b of document.querySelectorAll(…)) b.addEventListener('click', …)
+    const pour = /^\s*\)/.exec(texteScripts.slice(fin));
+    if (pour && /for\s*\(\s*(?:const|let|var)\s+[\w$]+\s+of\s*$/.test(avant) && poseDansInstruction(texteScripts, fin + pour[0].length)) ecouteurTrouve = true;
+    // (c) la sélection est rangée sous un nom, relu ci-dessous
+    const alias = /(?:^|[^\w$.])(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:Array\.from\(\s*|\[\s*\.\.\.\s*)?$/.exec(avant);
+    if (alias) aliasDeBoucle.push(alias[1]);
+  }
+  for (const nom of aliasDeBoucle) {
+    const n = nom.replace(/[$]/g, '\\$');
+    for (const u of texteScripts.matchAll(new RegExp(`(?:^|[^\\w$.])${n}\\s*\\.\\s*(?:forEach|map)\\(`, 'g'))) {
+      if (poseDansAppel(texteScripts, u.index + u[0].length)) ecouteurTrouve = true;
+    }
+    for (const u of texteScripts.matchAll(BOUCLE_SUR(n))) {
+      if (poseDansInstruction(texteScripts, u.index + u[0].length)) ecouteurTrouve = true;
+    }
   }
 }
 

@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture verte — bascule cablee par BOUCLE sur les boutons</title>
+<!--
+  TF-2790. Le motif que B-T2 declarait mort alors qu'il fonctionne : la page porte
+  plusieurs boutons de bascule (en-tete et pied), et une boucle forEach pose un ecouteur
+  de clic sur CHACUN. Le comportement est celui du site servi ; seule la FORME differe
+  de l'attachement direct par getElementById.
+
+  Rien n'est relache : le selecteur de la boucle vise CE bouton, la boucle pose bien un
+  ecouteur de clic, la racine est mutee, la cle de persistance porte « theme », la
+  palette sombre est derivee des memes jetons.
+-->
+<style>
+  :root {
+    color-scheme: light;
+    --fond: #fbf9f5;
+    --fond-eleve: #f2eee6;
+    --texte: #1d2126;
+    --texte-secondaire: #4a5058;
+    --trait: #d8d2c6;
+    --police: Georgia, serif;
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --fond: #14171c;
+    --fond-eleve: #1e222a;
+    --texte: #ecefF2;
+    --texte-secondaire: #b8bfc9;
+    --trait: #333a45;
+  }
+  body { background: var(--fond); color: var(--texte); font-family: var(--police); margin: 0; padding: 32px; }
+  .accroche { font-size: 20px; }
+  .note { color: var(--texte-secondaire); }
+  .theme-toggle { background: var(--fond-eleve); color: var(--texte); border: 1px solid var(--trait); padding: 8px 16px; }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+  @media print { .theme-toggle { display: none; } }
+</style>
+</head>
+<body>
+  <header>
+    <button class="theme-toggle" type="button" data-theme-toggle aria-pressed="false">Theme sombre</button>
+  </header>
+  <h1 class="accroche">Une accroche assez longue pour etre mesuree par la regle de lisibilite, qui occupe cette fois toute la largeur que la page lui offre.</h1>
+  <p class="corps">Cette page ne pose aucun ecouteur par identifiant : une boucle parcourt les boutons de bascule et attache l'ecouteur a chacun. C'est le cablage le plus courant quand une page porte plusieurs boutons de meme role.</p>
+  <p class="note">La cle de persistance est une constante qui porte le mot theme, donc lisible statiquement.</p>
+
+  <script>
+    const CLE_THEME = 'produit02.preferences.theme';
+    const racine = document.documentElement;
+
+    function appliquer(theme) {
+      racine.setAttribute('data-theme', theme);
+      localStorage.setItem(CLE_THEME, theme);
+    }
+
+    appliquer(localStorage.getItem(CLE_THEME) || 'light');
+
+    // Un ecouteur par bouton, pose par la boucle qui les parcourt.
+    document.querySelectorAll('[data-theme-toggle]').forEach((bouton) => {
+      bouton.addEventListener('click', () => {
+        appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+      });
+    });
+  </script>
+</body>
+</html>

@@ -486,6 +486,17 @@ const CAS = [
     rouge: [fx('bascule-deleguee-morte-rouge.html')],
   },
   {
+    // TF-2790 (retour du 16/11/2026, factory-digit-ai-fr) — LA BOUCLE, TROISIÈME CÂBLAGE LU. Une bascule câblée
+    // par une boucle forEach sur les boutons, au comportement identique à celui du site servi, était jugée
+    // « bascule morte » : 1 cycle de correction de la maquette. Les deux fixtures ne diffèrent QUE par ce que
+    // fait la boucle : la verte y pose un écouteur de clic, la rouge n'y change que aria-pressed et laisse
+    // un écouteur voisin (sur le titre) à portée de lecture. Les autres formes sont jouées par un bloc dédié.
+    oracle: 'oracle-bascule.mjs',
+    regles: ['B-T2'],
+    verte: [fx('bascule-boucle-verte.html')],
+    rouge: [fx('bascule-boucle-morte-rouge.html')],
+  },
+  {
     // TF-1906 (retour Produit-79 du 18/10/2026) : CHAQUE DÉCLARATEUR D'UN VAR MULTIPLE. Le cas
     // réel — `var racine = document.documentElement, bouton = document.getElementById('theme')`
     // puis `bouton.addEventListener('click', …)` — rendait B-T2 bloquant alors que la bascule
@@ -3778,6 +3789,41 @@ for (const cas of CAS) {
   const exemptes = jouer(fx('motion-reveal-verte.html')).filter(x => x.regle === 'R9' && x.sev === 'info').map(nom).sort();
   ligne(JSON.stringify(exemptes) === JSON.stringify(['duration-reveal', 'duration-tampon']),
     `R9 · verte : exempte duration-reveal et duration-tampon avec un constat d'information (obtenu ${exemptes.join(' ')})`);
+}
+
+// TF-2790 (22/11/2026) — LA BOUCLE EST UN CÂBLAGE, EN CINQ FORMES, ET AUCUNE BOUCLE N'EST CRUE SUR PAROLE.
+// La table ci-dessus joue la forme forEach (verte) et une boucle sans écouteur (rouge). Ce bloc joue les autres formes
+// par réécriture de la boucle de la verte : Array.from, for…of sur la sélection, alias + forEach avec onclick, alias
+// spread + for…of à accolades — toutes PASS ; puis deux boucles qui ne câblent rien (sélecteur d'un autre bouton,
+// boucle sans écouteur suivie d'un écouteur voisin hors de son corps) — toutes FAIL par B-T2.
+{
+  console.log(String.fromCharCode(10) + 'oracle-bascule B-T2 (TF-2790) — bascule câblée par boucle : cinq formes reconnues, deux refus conservés');
+  const verte = fs.readFileSync(fx('bascule-boucle-verte.html'), 'utf8').replace(/\r\n/g, '\n');
+  const debut = verte.indexOf('    // Un ecouteur par bouton');
+  const fin = verte.indexOf('  </script>');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'bascule-boucle-'));
+  const pose = "    function basculer() { appliquer(racine.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); }\n";
+  const variantes = [
+    ['Array.from + forEach', true, "Array.from(document.querySelectorAll('.theme-toggle')).forEach((b) => b.addEventListener('click', basculer));\n"],
+    ['for…of sur la sélection', true, "for (const b of document.querySelectorAll('[data-theme-toggle]')) b.addEventListener('click', basculer);\n"],
+    ['alias + forEach + onclick', true, "const boutons = document.querySelectorAll('.theme-toggle');\n    boutons.forEach((b) => { b.onclick = basculer; });\n"],
+    ['alias spread + for…of à accolades', true, "const boutons = [...document.querySelectorAll('[data-theme-toggle]')];\n    for (const b of boutons) { b.addEventListener('click', basculer); }\n"],
+    ['sélecteur d\'un autre bouton', false, "document.querySelectorAll('.panneau-toggle').forEach((b) => b.addEventListener('click', basculer));\n"],
+    ['boucle sans écouteur, écouteur voisin hors de son corps', false, "for (const b of document.querySelectorAll('[data-theme-toggle]')) b.setAttribute('aria-pressed', 'false');\n    document.querySelector('.accroche').addEventListener('click', basculer);\n"],
+  ];
+  try {
+    for (const [nom, attendue, code] of variantes) {
+      const page = path.join(dossier, 'v.html');
+      fs.writeFileSync(page, verte.slice(0, debut) + pose + '    ' + code + verte.slice(fin), 'utf8');
+      const r = spawnSync(process.execPath, [path.join(ici, 'oracle-bascule.mjs'), page, '--json-only'], { encoding: 'utf8' });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+      const bt2 = (j?.findings || []).some(x => x.regle === 'B-T2');
+      ligne(attendue ? (r.status === 0 && j?.verdict === 'PASS') : (r.status === 1 && j?.verdict === 'FAIL' && bt2),
+        `B-T2 · ${nom} : ${attendue ? 'PASS' : 'FAIL par B-T2'} (obtenu ${j?.verdict}, exit ${r.status}${bt2 ? ', B-T2' : ''})`);
+    }
+  } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
 }
 
 // TF-2043 (02/11/2026) — LA VALEUR AFFICHÉE ÉGALE SA SOURCE, ET SANS DÉCLARATION L'ORACLE SE TAIT EN LE DISANT.
