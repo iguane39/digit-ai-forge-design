@@ -1,7 +1,7 @@
 ---
 name: ameliore-le-design
 description: Transforme une idée, une spécification, un design ou un produit web existant — URL, screenshot, fichier — en maquette navigable : redesign intégral et parcours d'écrans simulés (landing, connexion, tableau de bord, CRUD, catalogue, galerie, onboarding), cible web ou mobile, en un seul fichier HTML autonome, thèmes clair et sombre, zéro réseau. Deux fidélités, wireframe ou maquette. Use when / déclencher dès que l'utilisateur veut refondre, relooker, moderniser ou repenser le design d'un site ou d'une application, demande une maquette, un prototype cliquable ou une proposition visuelle à partir d'une URL, d'un screenshot ou d'un simple brief, ou veut montrer à un client ce que son produit pourrait devenir. Ne pas déclencher pour une page chartée Digit-AI (→ digit-ai-page-html), une fiche ou un schéma (→ digit-ai-fiches-html), poser les tokens (→ systeme-de-marque), arbitrer entre directions (→ studio-de-direction), ni auditer une appli en production (→ audite-et-corrige-l-appli).
-version: 2.5.0
+version: 2.6.0
 ---
 
 # Améliore le design
@@ -27,7 +27,8 @@ unique, les patterns d'interaction attendus, et l'orchestration du contrôle.
 0. Cadrage         → cible (web|mobile) et fidélité (wireframe|maquette), déclarées
 1. Ingestion       → references/ingestion.md
 2. Direction       → systeme-de-marque si tokens absents, sinon impeccable craft ;
-                     critique du plan avant tout code
+                     critique du plan avant tout code ; aucune direction arrêtée :
+                     3 designs à challenger (studio-de-direction, Claude, Codex, Gemini)
 3. Écrans          → references/inventaire-ecrans.md (tous produits, sans exception)
 4. Build           → references/contrat-technique.md + references/patterns-interaction.md
                      cible mobile → references/cadre-mobile.md
@@ -35,6 +36,18 @@ unique, les patterns d'interaction attendus, et l'orchestration du contrôle.
                      puis les 4 oracles de la forge (criteres-sortie.md §Critères)
 6. Restitution     → references/criteres-sortie.md §Restitution
 ```
+
+## Trois designs à challenger, et les images
+
+(D-240 (b) et réponse du porteur à D-231, 23/11/2026.) Quand la demande ne fixe aucune direction,
+la maquette ne part pas d'une seule proposition : `studio-de-direction` en produit 3, une par Claude,
+une par Codex et une par Gemini (skill `delegue-a-codex-et-gemini`, geste `concevoir`), jugées sur
+une rubrique figée, et l'humain challenge les 3 avant la construction. Une maquette dont la direction
+est déjà arrêtée (tokens présents, brief précis) se construit directement.
+
+Quand un écran a besoin d'une image (illustration, visuel d'ambiance, vignette), Claude la fait
+générer par le geste `image` du même skill, puis la regarde avant de l'intégrer en fichier local,
+au lieu de la dessiner par programme.
 
 ## Cible et fidélité — deux réglages, déclarés avant le premier écran
 

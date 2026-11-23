@@ -1,7 +1,7 @@
 ---
 name: studio-de-direction
 description: Fait converger plusieurs directions artistiques concurrentes vers une seule, retenue et argumentée : produit trois directions divergentes par construction sur un axe nommé, les juge sur une rubrique figée avant la première génération, et livre un DIRECTION.md portant la gagnante, les écartées avec leur raison, et le relevé de jugement. Use when / déclencher dès que l'utilisateur hésite entre plusieurs partis pris visuels, demande des variantes, des pistes, des propositions ou des directions à comparer, veut explorer avant de trancher, ou dit ne pas savoir quelle direction prendre pour un design. Ne pas déclencher pour figer les tokens d'une identité déjà arrêtée (→ systeme-de-marque), construire la maquette une fois la direction choisie (→ ameliore-le-design), juger un design déjà produit (→ critique-le-design), ni pour une boucle mono-candidat sans divergence (→ la-boucle).
-version: 1.0.0
+version: 1.1.0
 ---
 
 # Studio de direction
@@ -26,6 +26,7 @@ et la borne de coût.
 1. Axe            → references/axes-de-divergence.md — nommer l'axe AVANT de générer
 2. Rubrique       → references/rubrique.md — figée, validée en un tour
 3. Génération     → 3 directions, en parallèle si possible : references/run.md
+                     1 par Claude, 1 par Codex, 1 par Gemini (delegue-a-codex-et-gemini)
 4. Filtre         → node oracles/oracle-slop.mjs sur chaque direction
 5. Jugement       → rubrique appliquée, puis oracle-judge en AVIS OUTILLÉ
 6. Restitution    → DIRECTION.md : la gagnante, les 2 écartées, le relevé
@@ -57,6 +58,14 @@ verdict d'oracle. Pas de preuve ⇒ ✗.
 **Une direction qui déclenche une règle dure d'`oracle-slop` ne concourt pas.**
 Elle est écartée avant le jugement, avec son relevé. On ne met pas en compétition
 une proposition qui porte déjà un marqueur de design généré.
+
+**Trois directions, trois modèles** (D-240 (b) et réponse du porteur à D-231, 23/11/2026). Claude
+produit une direction ; Codex et Gemini produisent chacun la leur, sur le même axe, la même rubrique
+et le même écran signature, par le geste `concevoir` du skill `delegue-a-codex-et-gemini`, chacun dans
+son dossier jetable. Trois modèles divergent davantage que trois tirages d'un seul. La rubrique est
+figée avant de lancer les 2 agents tiers, et leurs directions passent `oracle-slop` comme celle de
+Claude. Si un agent tiers échoue ou dépasse son délai, Claude produit la direction manquante, et la
+restitution le dit.
 
 **Borne de coût : 3 directions, 1 passe de jugement, 1 approfondissement.** Au-delà,
 escalader. Une compétition qui s'étire indéfiniment est un aveu que la rubrique ne
