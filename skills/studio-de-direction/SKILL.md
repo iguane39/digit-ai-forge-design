@@ -1,7 +1,7 @@
 ---
 name: studio-de-direction
 description: Fait converger plusieurs directions artistiques concurrentes vers une seule, retenue et argumentée : produit trois directions divergentes par construction sur un axe nommé, les juge sur une rubrique figée avant la première génération, et livre un DIRECTION.md portant la gagnante, les écartées avec leur raison, et le relevé de jugement. Use when / déclencher dès que l'utilisateur hésite entre plusieurs partis pris visuels, demande des variantes, des pistes, des propositions ou des directions à comparer, veut explorer avant de trancher, ou dit ne pas savoir quelle direction prendre pour un design. Ne pas déclencher pour figer les tokens d'une identité déjà arrêtée (→ systeme-de-marque), construire la maquette une fois la direction choisie (→ ameliore-le-design), juger un design déjà produit (→ critique-le-design), ni pour une boucle mono-candidat sans divergence (→ la-boucle).
-version: 1.1.0
+version: 1.1.1
 ---
 
 # Studio de direction
@@ -66,6 +66,11 @@ son dossier jetable. Trois modèles divergent davantage que trois tirages d'un s
 figée avant de lancer les 2 agents tiers, et leurs directions passent `oracle-slop` comme celle de
 Claude. Si un agent tiers échoue ou dépasse son délai, Claude produit la direction manquante, et la
 restitution le dit.
+
+Seuls les agents que `agent-tiers.mjs etat` rend disponibles sur le poste sont lancés (consigne du
+porteur du 23/11/2026). Sur un poste sans Codex ni Gemini configuré, Claude produit les 3 directions
+lui-même, sur 3 axes distincts, et rien ne le signale comme un défaut. Si `etat` porte une `annonce`,
+elle se recopie une fois à l'utilisateur.
 
 **Borne de coût : 3 directions, 1 passe de jugement, 1 approfondissement.** Au-delà,
 escalader. Une compétition qui s'étire indéfiniment est un aveu que la rubrique ne
