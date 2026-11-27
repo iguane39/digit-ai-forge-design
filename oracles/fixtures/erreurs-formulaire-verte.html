@@ -3,7 +3,7 @@
      Un formulaire bâti avec le composant corpus/composants/saisie-erreurs.js (et sa feuille) : une valeur fausse se
      dit SOUS son champ (aria-invalid, message relié par aria-describedby), reprend la saisie et donne la forme
      attendue, dès la sortie du champ ; l'envoi fautif est retenu et un résumé à liens se pose en tête.
-     Le premier champ déclare sa valeur fausse (« costcontrol », le cas du porteur) ; le second la tire de son type.
+     Le premier champ déclare sa valeur fausse (« suivibudget », le cas du porteur) ; le second la tire de son type.
      Attendu : PASS, exit 0, 2 champs éprouvés. -->
 <html lang="fr">
 <head>
@@ -27,7 +27,7 @@
     <div class="champ">
       <label for="domaine">Domaine du client</label>
       <input id="domaine" name="domaine" type="text" required pattern="[a-z0-9]+(\.[a-z0-9]+)+"
-             data-valeur-fausse="costcontrol" data-exemple="costcontrol.client.fr">
+             data-valeur-fausse="suivibudget" data-exemple="suivibudget.client.fr">
     </div>
     <div class="champ">
       <label for="courriel">Courriel du contact</label>

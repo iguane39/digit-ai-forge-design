@@ -15,8 +15,8 @@
 //        `aria-describedby` ou `aria-errormessage`. Un refus affiché ailleurs (bandeau, alerte) sans champ désigné est
 //        BLOQUANT ; le texte du bandeau est cité. Message relié sans `aria-invalid` : majeur
 //   EF2  message PRÈS du champ et dans la fenêtre — à 120 px au plus du champ (`--proximite`), dans la fenêtre : majeur
-//   EF3  message qui REPREND la saisie ou DONNE la forme attendue — « « costcontrol » n'est pas un domaine complet.
-//        Écris-le ainsi : costcontrol.domaine-du-client.fr ». Un message court qui ne fait ni l'un ni l'autre est majeur ;
+//   EF3  message qui REPREND la saisie ou DONNE la forme attendue — « « suivibudget » n'est pas un domaine complet.
+//        Écris-le ainsi : suivibudget.domaine-du-client.fr ». Un message court qui ne fait ni l'un ni l'autre est majeur ;
 //        un message long dont aucune formulation n'est reconnue est un avertissement (la classe des formulations est ouverte)
 //   EF4  envoi RETENU — une requête d'écriture (POST, PUT, PATCH, DELETE) ou une navigation part malgré la valeur
 //        fausse : bloquant. Les requêtes d'écriture sont interceptées et refusées : rien n'est créé chez l'instance.

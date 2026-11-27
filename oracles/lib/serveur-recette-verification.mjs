@@ -29,7 +29,7 @@ http.createServer((req, res) => {
       try { valeur = String(JSON.parse(corps || '{}').valeur ?? ''); } catch { /* corps illisible : valeur vide */ }
       res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
       if (chemin.replace(/\/+$/, '').split('/').pop() === 'verifier') {
-        res.end(JSON.stringify({ ok: false, message: `« ${valeur} » n'est pas un domaine connu. Forme attendue : costcontrol.client.fr.` }));
+        res.end(JSON.stringify({ ok: false, message: `« ${valeur} » n'est pas un domaine connu. Forme attendue : suivibudget.client.fr.` }));
       } else {
         res.end(JSON.stringify({ ok: true }));
       }

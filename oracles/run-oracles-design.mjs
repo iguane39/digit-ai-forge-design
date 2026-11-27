@@ -77,6 +77,15 @@
 // et est dite au non_juge. Sans --origine, une page dont toutes les ressources se résolvent sur le disque est jugée telle
 // quelle, comme avant ; ce qui ne se résout pas est listé au non_juge avec le remède.
 //
+// TF-2888 (lot Produit-82 du 26/11/2026) — une page enregistrée dont les feuilles sont en `/actifs/…` (chemins relatifs à la
+// racine du site) rendait une cascade de FAIL sans cause (oracle-tokens T0, oracle-bascule B-T2 à B-T4, oracle-surcouche SC1 et
+// SC2, render_page V1), alors qu'aucune feuille n'avait été lue. Deux gestes. 1) Quand une --instance est une URL de la boucle
+// locale et qu'aucune --origine n'est donnée, ses chemins relatifs se résolvent contre l'origine de l'instance (même borne :
+// jamais d'hôte tiers). 2) Sans origine, une feuille ou un script lié et introuvable (hors hôte tiers, qui n'a jamais été lu)
+// remplace la cascade par UN constat nommé « ressources non intégrées : <liste> » (oracle `ressources-non-integrees`, SKIP, exit 2,
+// INDÉTERMINÉ) : les juges qui lisent la ressource absente (FEUILLES / SCRIPTS ci-dessous) ne sont pas joués et sont listés au
+// non_juge, render_page.py de même sous --rendu (oracle-a11y, structurel, reste joué). Ce que les autres juges trouvent reste dit.
+//
 // --valeurs-derivees <valeurs-derivees.json> (TF-2043) : enrôle oracle-valeur-affichee (VA1–VA4), qui compare
 // chaque valeur dérivée affichée (version, environnement, date) à la commande qui la donne. Opt-in par la
 // DÉCLARATION du produit : le fichier passé, sinon `valeurs-derivees.json` voisin de la page (dossier puis
@@ -388,7 +397,9 @@ function lancerOracleA11y(cible, outillage) {
   };
 }
 
-function lancerRendu(cible) {
+// TF-2888 : `sansPage` (une feuille de la page n'a pas été reçue) ne rend pas la page — render_page.py jugerait un document sans sa
+// mise en forme (V1 factice) —, et laisse oracle-a11y, structurel, sur le fichier tel quel.
+function lancerRendu(cible, { sansPage = false } = {}) {
   const outillage = detecterOutillageRendu({ racine: RACINE });
   if (!outillage.ok) {
     return [{ oracle: 'rendu(render_page+a11y)', verdict: 'SKIP',
@@ -404,7 +415,7 @@ function lancerRendu(cible) {
   // Le marqueur par défaut se lit dans la page ; un sélecteur propre au produit ne se lit pas, il est pris pour présent.
   const selecteurVisibilite = opt('--visibilite-selecteur') || SELECTEUR_VISIBILITE;
   const pilotee = selecteurVisibilite === SELECTEUR_VISIBILITE ? /data-visibilite-pilotee/.test(html) : true;
-  const etats = etatsVisibilite && pilotee ? ['aucun', 'tous'] : [null];
+  const etats = sansPage ? [] : etatsVisibilite && pilotee ? ['aucun', 'tous'] : [null];
   const out = [];
   for (const etat of etats) {
     const copie = etat ? forcerVisibilite(statique, etat, selecteurVisibilite) : statique;
@@ -512,8 +523,14 @@ let html = fs.readFileSync(cible, 'utf8');
 // TF-2309 — une page capturée d'une instance servie est rendue AUTONOME avant toute passe : ses feuilles de style et ses
 // scripts liés sont lus (à côté du fichier, ou à l'origine donnée) et intégrés. Les oracles et le rendu jugent alors le
 // fichier autonome (copie temporaire, jamais d'écriture à côté de la cible) ; les constats citent la cible.
-const origine = opt('--origine');
-if (origine) {
+const origineDonnee = opt('--origine');
+// TF-2888 : sans --origine, la première --instance qui est une URL de la boucle locale donne l'origine des chemins relatifs à la
+// racine du site (/actifs/app.css). Une instance qui est un fichier, ou un hôte tiers, ne donne rien : aucun accès réseau vers un tiers.
+const origineInstance = origineDonnee ? null : (instances.map(i => {
+  try { const u = new URL(i); return /^https?:$/.test(u.protocol) && estHoteLocal(i) ? u.origin : null; } catch { return null; }
+}).find(Boolean) || null);
+const origine = origineDonnee || origineInstance;
+if (origineDonnee) {
   let refus = null;
   try {
     const u = new URL(origine);
@@ -534,6 +551,16 @@ if (autonomie.declenche) {
 if (autonomie.declenche || autonomie.non_integrees.length) {
   autonomieDite = { integrees: autonomie.integrees, non_integrees: autonomie.non_integrees, notes: autonomie.notes };
 }
+// TF-2888 — les ressources liées que la page n'a pas pu recevoir : introuvables à côté du fichier et sans origine à lire, ou illisibles
+// à l'origine. Un hôte tiers n'a jamais été lu (raison dite « tiers » par lib/rendre-autonome.mjs) : il ne suspend aucun juge.
+const manquantes = autonomie.non_integrees.filter(x => !/tiers/.test(x.raison));
+// Les juges dont le verdict se lit dans la ressource absente. Une feuille absente : tous ceux qui lisent le CSS de la page ;
+// un script absent : ceux qui lisent sa logique. Sans la ressource ils rendraient FAIL pour une page qu'ils n'ont pas vue, ou PASS à vide.
+const FEUILLES = ['oracle-slop', 'oracle-tokens', 'oracle-motion', 'oracle-bascule', 'oracle-taste', 'oracle-mobile', 'oracle-panneau-tache',
+  'oracle-declencheurs', 'oracle-surcouche', 'oracle-perceptibilite'];
+const SCRIPTS = ['oracle-bascule', 'oracle-panneau-tache'];
+const feuillesAbsentes = !seul && manquantes.some(x => x.type === 'style');
+const suspendus = new Set(!seul ? [...(feuillesAbsentes ? FEUILLES : []), ...(manquantes.some(x => x.type === 'script') ? SCRIPTS : [])] : []);
 // Les constats d'une passe sur la copie autonome citent la cible, jamais le chemin temporaire.
 const citerLaCible = r => {
   if (fichierJuge === cible) return r;
@@ -588,6 +615,8 @@ const aUneAnimationWebgl = /getContext\s*\(\s*['"](?:experimental-)?webgl2?['"]|
 const estMobile = estCibleMobile(html, args);
 
 const sansObjet = [];
+// TF-2888 : les juges applicables à la page mais suspendus faute d'une ressource, nommés au constat unique.
+const nonJoues = new Set();
 
 // Une passe complète d'oracles de fichier sur UNE cible. Les oracles applicables sont
 // décidés une fois pour toutes sur le document réel (ci-dessus) : une passe sur la copie
@@ -673,10 +702,31 @@ function passeFichier(fichier, { muet = false } = {}) {
       + 'ses erreurs, états vides et libellés ne sont pas jugés par T4 ; pour les juger, la déclarer (--type-page application, ou <meta name="forge-type-page" content="application">) ou jouer l\'oracle seul (--oracle textes-application)');
   }
 
-  return out;
+  // TF-2888 : un juge qui lit une ressource que la page n'a pas reçue ne rend pas de verdict, il est dit non joué (constat unique ci-dessous).
+  if (!muet) for (const r of out) if (suspendus.has(r.oracle)) nonJoues.add(r.oracle);
+  return out.filter(r => !suspendus.has(r.oracle));
 }
 
 const resultats = passeFichier(fichierJuge).map(citerLaCible);
+// TF-2888 — UN constat nommé remplace la cascade de FAIL : la cause (la ressource absente) et le remède, au lieu de cinq règles sans cause.
+if (manquantes.length && !seul) {
+  const liste = manquantes.map(x => x.ref).join(', ');
+  resultats.push({
+    oracle: 'ressources-non-integrees', domaine: 'Ressources liées de la page (feuilles de style, scripts)',
+    verdict: 'SKIP', exit: 2, ecarts_durs: 0, avertissements: 0, a_confirmer: 0,
+    raison: `ressources non intégrées : ${liste}`,
+    findings: [{
+      sev: 'bloquant', regle: 'RN1', where: cible,
+      msg: `ressources non intégrées : ${manquantes.map(x => `${x.ref} (${x.raison})`).join(' ; ')}`,
+      voie: 'donner l\'instance servie (--instance <url de la boucle locale>) ou son origine (--origine <url de la boucle locale>) : les chemins relatifs à la racine du site s\'y résolvent ; '
+        + 'ou poser les ressources à côté de la page',
+    }],
+    non_juge: [
+      `${[...nonJoues].sort().join(', ') || 'aucun juge applicable'} : NON JOUÉS — le verdict de ces juges se lit dans ${manquantes.map(x => x.ref).join(', ')}, que la page n'a pas reçu${rendu && feuillesAbsentes ? ' ; render_page.py (V1–V7) de même, la page se rendrait sans sa feuille' : ''} ; `
+      + 'ce n\'est pas un PASS ni un FAIL de la page, elle se rejoue avec les ressources (TF-2888)',
+    ],
+  });
+}
 // TF-2432 — le code annoncé ne vaut que pour une INSTANCE servie : sans --instance, l'option n'a rien à qualifier, et le dire vaut mieux qu'un effet muet.
 if (statutAttendu.code !== null && !instances.length && !seul) {
   sansObjet.push(`--statut-attendu ${statutAttendu.code} sans effet : aucune --instance fournie, aucun écran servi n'a été lu`);
@@ -837,7 +887,7 @@ if (!seul) {
   }
 }
 
-if (rendu) resultats.push(...lancerRendu(fichierJuge).map(citerLaCible));
+if (rendu) resultats.push(...lancerRendu(fichierJuge, { sansPage: feuillesAbsentes }).map(citerLaCible));
 
 // ── Ce que cet orchestrateur ne couvre pas, et qui reste dû ────────────────
 const nonJuge = [
@@ -849,7 +899,7 @@ const nonJuge = [
   ]),
   ...(autonomie.declenche ? [
     `page capturée rendue AUTONOME avant les oracles (TF-2309) : ${autonomie.integrees.filter(x => x.type === 'style').length} feuille(s) de style et `
-    + `${autonomie.integrees.filter(x => x.type === 'script').length} script(s) intégrés (${autonomie.integrees.map(x => x.ref).join(', ')}), lus à côté du fichier ou à l'origine ${origine || 'déclarée dans la page'} ; `
+    + `${autonomie.integrees.filter(x => x.type === 'script').length} script(s) intégrés (${autonomie.integrees.map(x => x.ref).join(', ')}), lus à côté du fichier ou à l'origine ${origine ? `${origine}${origineInstance ? ' (celle de --instance, TF-2888)' : ''}` : 'déclarée dans la page'} ; `
     + 'les images, les polices, les @import et les imports relatifs d\'un module ne sont pas intégrés'
     + (autonomie.notes.length ? ` — ${autonomie.notes.join(' ; ')}` : ''),
   ] : []),

@@ -18,7 +18,7 @@
        <div class="champ">
          <label for="domaine">Domaine du client</label>
          <input id="domaine" name="domaine" required pattern="[a-z0-9-]+(\.[a-z0-9-]+)+"
-                data-exemple="costcontrol.domaine-du-client.fr">
+                data-exemple="suivibudget.domaine-du-client.fr">
          <p class="champ-erreur" id="domaine-erreur" hidden></p>   <!-- facultatif : créé s'il manque -->
        </div>
        <div data-resume-erreurs hidden></div>                          <!-- facultatif : créé en tête s'il manque -->
@@ -27,7 +27,7 @@
 
    RÈGLES DU PRODUIT : `SaisieErreurs.regle('domaine', function (valeur, champ) { return null | 'message'; })`, puis
    `data-regle="domaine"` sur le champ (plusieurs noms séparés par une espace). Le message REPREND la saisie et DONNE
-   la forme attendue : « « costcontrol » n'est pas un domaine complet. Écris-le avec son extension : costcontrol.domaine-du-client.fr. »
+   la forme attendue : « « suivibudget » n'est pas un domaine complet. Écris-le avec son extension : suivibudget.domaine-du-client.fr. »
    REFUS DU SERVEUR : `SaisieErreurs.refuser(form, { domaine: 'message', … })` pose chaque message sous son champ,
    par `name`, et le résumé ; un nom inconnu est ajouté au résumé seul, jamais perdu.
 

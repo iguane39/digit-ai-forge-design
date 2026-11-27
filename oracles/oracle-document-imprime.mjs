@@ -20,7 +20,7 @@
 //   DP2  contraste d'un texte contre l'aplat qui le porte : 4.5:1, 3:1 pour un grand texte (≥ 18 pt, ou ≥ 14 pt gras)
 //   DP3  débordement : un texte ou une image qui sort de la page ; un texte PDF qui sort du bloc qui le porte ; un
 //        texte PPTX dont la hauteur estimée dépasse sa boîte (estimation, en avertissement)
-//   DP4  équilibre des colonnes (PDF) : les pieds de deux colonnes côte à côte diffèrent de plus du seuil
+//   DP4  équilibre des colonnes (PDF) : les pieds de deux colonnes côte à côte diffèrent de plus du seuil — hors tableaux (TF-2892)
 //   DP5  vide sous le contenu (PDF) : une page suivie d'une autre s'arrête plus haut que la page la plus pleine,
 //        de plus du seuil — les 19,8 mm sous les cartes de la page 1
 //
@@ -308,9 +308,31 @@ if (!estPdf) {
   }
 
   // DP4 — les pieds de colonnes côte à côte
+  const LIGNES_TABLEAU = 3;       // lignes de cellules alignées qui font d'un couple de colonnes un tableau
+  const ALIGNE_PT = 0.3 * MM;     // « à quelques dixièmes de mm » : 0,3 mm entre deux ordonnées de haut de bloc
+  const lignesAlignees = (A, B) => {
+    const hautsB = B.items.filter(e => e.type === 'texte').map(e => e.y);
+    const pris = new Set();
+    let n = 0;
+    for (const ya of A.items.filter(e => e.type === 'texte').map(e => e.y)) {
+      const k = hautsB.findIndex((yb, i) => !pris.has(i) && Math.abs(ya - yb) <= ALIGNE_PT);
+      if (k >= 0) { pris.add(k); n++; }
+    }
+    return n;
+  };
+  // Un texte dont des segments (spans) commencent dans la colonne A ET dans la colonne B traverse la gouttière : il porte une ligne de
+  // cellules des deux colonnes. Une colonne de page n'a pas de bloc qui en reprenne une autre ; seuls les textes comptent (des cartes,
+  // aplats, n'ont pas ce trait).
+  const blocsTraversants = (m, A, B) => m.contenu.filter(e => e.type === 'texte'
+    && e.spans.some(s => s.bbox[0] >= A.x0 - 1 && s.bbox[0] < B.x0 - 1)
+    && e.spans.some(s => s.bbox[0] >= B.x0 - 1 && s.bbox[0] < B.x1)).length;
   for (const m of modele) {
     if (PAGES_LIBRES.has(m.p.n)) continue;
-    const etroits = m.contenu.filter(e => e.w < 0.6 * m.p.largeur).sort((a, b) => a.x - b.x);
+    // TF-2892 : DP4 ne juge que des colonnes de PAGE. Une cellule de tableau (texte ou aplat dont le centre tombe dans un tableau
+    // lu par ses traits) n'est pas une colonne : un document à une colonne qui porte un tableau de 3 colonnes rendait 85 et 151 mm
+    // d'écart entre ses colonnes de cellules (retour RD-16 du 25/11/2026). DP5 garde tout le contenu : un tableau EST du contenu.
+    const dansTableau = e => (m.p.tableaux || []).some(t => contient(t, e.x + e.w / 2, e.y + e.h / 2));
+    const etroits = m.contenu.filter(e => e.w < 0.6 * m.p.largeur && !dansTableau(e)).sort((a, b) => a.x - b.x);
     const colonnes = [];
     for (const e of etroits) {
       const c = colonnes.find(k => Math.min(k.x1, e.x + e.w) - Math.max(k.x0, e.x) > 0.5 * Math.min(k.x1 - k.x0, e.w));
@@ -325,6 +347,12 @@ if (!estPdf) {
         const A = vraies[a], B = vraies[b];
         const cote = Math.min(A.pied, B.pied) - Math.max(A.haut, B.haut);
         if (cote < 0.5 * Math.min(A.pied - A.haut, B.pied - B.haut)) continue; // pas côte à côte
+        // TF-2892 (2e passe) : deux colonnes dont au moins 3 TEXTES commencent à la même ordonnée sont les colonnes d'un tableau (une ligne
+        // de cellules), même sans trait ni aplat de cellule : l'export Word d'un tableau « Objectif / Évaluation associée » n'en porte aucun.
+        // Seuls les textes comptent : des cartes de deux colonnes de page, posées à la même hauteur, sont des aplats et restent jugées.
+        // 3e passe : PyMuPDF FUSIONNE parfois les lignes d'un tableau sans trait en blocs qui traversent la gouttière (cellule de gauche et
+        // cellule de droite dans le même bloc) ; un tel bloc EST une ligne de tableau, il compte comme un alignement.
+        if (lignesAlignees(A, B) + blocsTraversants(m, A, B) >= LIGNES_TABLEAU) continue;
         const ecart = Math.abs(A.pied - B.pied);
         if (ecart > seuilPt) {
           add('majeur', 'DP4',
@@ -334,6 +362,7 @@ if (!estPdf) {
       }
     }
   }
+  NJ.push('DP4 écarte de ses colonnes le texte et les aplats des TABLEAUX que PyMuPDF reconnaît à leurs traits ou aplats de cellule (2 lignes et 2 colonnes au moins) ; un tableau SANS trait ni aplat de cellule se reconnaît à ses lignes : au moins 3 textes de deux colonnes qui commencent à la même ordonnée (à 0,3 mm près) en font les colonnes d\'un tableau, non jugées (TF-2892) ; un bloc de texte qui traverse la gouttière (des segments qui commencent dans les deux colonnes, PyMuPDF fusionnant parfois les lignes d\'un tableau sans trait) compte comme une ligne du même tableau, avec les alignements. Limite : deux vraies colonnes de texte dont 3 blocs commencent à la même ordonnée, ou qu\'un bloc relie 3 fois, seraient lues comme un tableau ; des cartes, qui sont des aplats, ne comptent pour aucun des deux');
   NJ.push(`DP4 et DP5 : seuil unique de ${SEUIL_MM} mm, posé entre 19,8 mm (refusé) et 5,3 mm (accepté) des retours du 25 et 28/09/2026 — un réglage de la forge, à réviser sur les retours des produits ; un pied de page courant (numéro de page, élément répété) n'est pas du contenu`);
 }
 

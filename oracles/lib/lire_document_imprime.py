@@ -8,6 +8,7 @@ l'oracle les juge. Il ne juge rien lui-même.
 Usage : python lire_document_imprime.py <fichier.pdf|.pptx>
 Sortie (stdout, JSON) :
   { "format": "pdf"|"pptx", "pages": [ { "n": 1, "largeur": pt, "hauteur": pt, "fond": "#RRGGBB"|null,
+      "tableaux": [ { "x", "y", "w", "h" } ],     # PDF seulement (TF-2892) : les tableaux lus par leurs traits, 2 lignes et 2 colonnes au moins
       "elements": [ { "type": "forme"|"texte"|"image", "x", "y", "w", "h",   # points, origine en haut à gauche
           forme : "fond": "#RRGGBB"|null, "opacite": 0..1, "indecidable": "dégradé"|"motif"|null
           texte : "spans": [ { "texte", "taille", "gras", "couleur": "#RRGGBB"|null, "herite": bool, "bbox": [x0,y0,x1,y1] } ]
@@ -36,9 +37,13 @@ def hexa_flottants(t):
 # ── PDF ─────────────────────────────────────────────────────────────────────
 def lire_pdf(chemin):
     import pymupdf
+    # find_tables (TF-2892) fait écrire à PyMuPDF, sur la SORTIE STANDARD, une recommandation de paquet qui rend le JSON illisible ;
+    # l'API documentée la coupe (absente des versions qui n'écrivent pas ce message).
+    getattr(pymupdf, 'no_recommend_layout', lambda: None)()
     doc = pymupdf.open(chemin)
     pages = []
     ordre_pdf = False
+    tableaux_indisponibles = []
     for n, page in enumerate(doc, 1):
         r = page.rect
         elements = []
@@ -50,6 +55,17 @@ def lire_pdf(chemin):
             op = d.get('fill_opacity')
             elements.append({'type': 'forme', 'x': rc.x0, 'y': rc.y0, 'w': rc.width, 'h': rc.height,
                              'fond': hexa_flottants(fill), 'opacite': 1.0 if op is None else float(op), 'indecidable': None})
+        # TF-2892 : les tableaux de la page, par la lecture de leurs traits et de leurs aplats de cellule (PyMuPDF), AVANT l'élargissement
+        # de la boîte ci-dessous : leurs coordonnées sont celles de la page. Un tableau est d'au moins 2 lignes et 2 colonnes (une carte
+        # seule, ou une carte et son filet, n'en est pas un). L'oracle s'en sert pour ne pas lire les cellules comme des colonnes de page.
+        tableaux = []
+        try:
+            for t in page.find_tables().tables:
+                if t.row_count >= 2 and t.col_count >= 2:
+                    tableaux.append({'x': t.bbox[0], 'y': t.bbox[1], 'w': t.bbox[2] - t.bbox[0], 'h': t.bbox[3] - t.bbox[1]})
+        except Exception as e:  # PyMuPDF sans find_tables, ou lecture impossible : dit au non_juge, aucun tableau reconnu
+            if not tableaux_indisponibles:
+                tableaux_indisponibles.append("la reconnaissance des tableaux d'un PDF a échoué (%s) : aucun tableau n'est écarté de la lecture des colonnes (DP4)" % str(e).split('\n')[0][:120])
         # Un texte qui sort de la page doit être LU pour être jugé débordant : MuPDF écarte les glyphes hors de la boîte
         # de la page, même sans TEXT_MEDIABOX_CLIP. La boîte est donc élargie de MARGE pt de chaque côté, EN MÉMOIRE (le
         # fichier n'est jamais réécrit), et les coordonnées ramenées au repère de la page d'origine.
@@ -73,8 +89,9 @@ def lire_pdf(chemin):
                                   'bbox': [s['bbox'][0] - MARGE, s['bbox'][1] - MARGE, s['bbox'][2] - MARGE, s['bbox'][3] - MARGE]})
             if spans:
                 elements.append({'type': 'texte', 'x': bx0, 'y': by0, 'w': bx1 - bx0, 'h': by1 - by0, 'spans': spans})
-        pages.append({'n': n, 'largeur': r.width, 'hauteur': r.height, 'fond': '#FFFFFF', 'elements': elements})
+        pages.append({'n': n, 'largeur': r.width, 'hauteur': r.height, 'fond': '#FFFFFF', 'elements': elements, 'tableaux': tableaux})
         ordre_pdf = True
+    NON_JUGE.extend(tableaux_indisponibles)
     if ordre_pdf:
         NON_JUGE.append("l'ordre de peinture entre un texte et un aplat n'est pas lu dans un PDF : le texte est supposé au-dessus des aplats qui le contiennent")
         NON_JUGE.append("le fond d'une page PDF est supposé blanc (le papier) ; un aplat de page entière dessiné par le document est lu comme n'importe quel aplat")

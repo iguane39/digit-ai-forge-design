@@ -1037,6 +1037,43 @@ const CAS = [
     rouge: [fx('document-imprime/colonnes-rouge.pdf')],
   },
   {
+    // TF-2892 (retour RD-16 du 25/11/2026) — DP4 NE JUGE QUE DES COLONNES DE PAGE. Deux PDF de programmes de formation exportés
+    // par Word, à UNE colonne de texte qui porte des tableaux de 2 et 3 colonnes, rendaient « colonnes déséquilibrées » (85,4 et
+    // 151,2 mm) : les cellules d'une même colonne de tableau finissent à des hauteurs très différentes et se lisaient comme des
+    // colonnes de page. La verte est ce motif construit à l'identique (une colonne, deux tableaux de 9 lignes, la dernière ligne
+    // haute dans une seule colonne) : l'ancien code y rendait 100,9 mm d'écart. La rouge garde le vrai positif de DP4 ET porte un
+    // tableau : écarter le tableau de la lecture ne doit pas masquer les deux vraies colonnes de cartes inégales.
+    document: true,
+    oracle: 'oracle-document-imprime.mjs',
+    regles: ['DP4'],
+    verte: [fx('document-imprime/programme-une-colonne-verte.pdf')],
+    rouge: [fx('document-imprime/colonnes-tableau-rouge.pdf')],
+  },
+  {
+    // TF-2892, 2e passe — LE TABLEAU SANS TRAIT. Le vrai programme Word du retour (pages 5 et 6, tableau « Objectif / Évaluation associée »)
+    // n'a ni trait ni aplat de cellule : `find_tables` y rend 0 tableau et DP4 rendait 51,0 et 86,1 mm d'écart. Un tableau sans trait se
+    // reconnaît à ses lignes : au moins 3 textes de deux colonnes commencent à la même ordonnée (0,3 mm). La verte est ce motif construit
+    // sans trait ni aplat (la forme, pas le contenu du programme) : 60,0 mm d'écart rendus par le code d'avant. La rouge garde le vrai
+    // positif en TEXTE : deux colonnes sans aucun aplat dont les blocs ne commencent pas aux mêmes ordonnées restent refusées.
+    document: true,
+    oracle: 'oracle-document-imprime.mjs',
+    regles: ['DP4'],
+    verte: [fx('document-imprime/programme-sans-trait-verte.pdf')],
+    rouge: [fx('document-imprime/colonnes-texte-rouge.pdf')],
+  },
+  {
+    // TF-2892, 3e passe — LES LIGNES FUSIONNÉES. Sur la page 4 d'un 2e programme Word réel (144,8 mm d'écart au retour), PyMuPDF fusionne la
+    // plupart des lignes du tableau sans trait en blocs qui couvrent les deux colonnes : 2 blocs seulement de la colonne de droite restent
+    // séparés, et ils ne s'alignent que sur 2 blocs de gauche, sous le seuil de 3. Un bloc dont des segments commencent dans les deux
+    // colonnes est une ligne du tableau. La verte reproduit la forme (3 blocs fusionnés, 2 blocs de droite séparés ; 84,0 mm rendus par le
+    // code d'avant) ; la rouge est le vrai positif en texte, qu'aucun bloc ne traverse.
+    document: true,
+    oracle: 'oracle-document-imprime.mjs',
+    regles: ['DP4'],
+    verte: [fx('document-imprime/programme-lignes-fusionnees-verte.pdf')],
+    rouge: [fx('document-imprime/colonnes-texte-rouge.pdf')],
+  },
+  {
     // TF-2405 (D-203 (a), 10/11/2026) — LE CLIP DE PRÉSENTATION, JUGÉ COMME UN LIVRABLE. Le pipeline versé dans le skill
     // clip-de-presentation a rendu 28 clips avec, pour seuls contrôles, ffprobe lancé à la main et la lecture des planches ;
     // ses 6 défauts connus et ses étiquettes de 17 à 19 px ont été trouvés par les agents, pas par un oracle. La verte est un
@@ -1079,6 +1116,11 @@ function lancer(cas, argv) {
 
 let echecs = 0;
 const ligne = (ok, txt) => { console.log(`${ok ? '  ok  ' : ' ÉCHEC'} ${txt}`); if (!ok) echecs++; };
+// La valeur fausse que les fixtures erreurs-formulaire-verte.html et erreurs-formulaire-verifier-verte.html déclarent (data-valeur-fausse) est
+// le nom d'un produit. Les assertions qui lisent le message de ces fixtures doivent la porter telle quelle ; le hameçon de commit remplace un
+// nom écrit en clair dans un fichier indexé, jamais dans les fixtures : le même texte ne peut donc pas être écrit dans les deux. Assemblé ici,
+// il n'est pas écrit dans ce fichier (les formulaires jetables du banc, eux, sont cohérents d'un bout à l'autre et ne dépendent pas de ce nom).
+const NOM_FIXTURE = 'suivibudget';
 
 // TF-2562 — deux écritures d'une même racine ne se comparent pas par égalité de chaînes : `path.resolve` ne normalise ni la lettre
 // de lecteur ni la casse (« c:/dev/x » contre « C:\dev\x »), et le dossier temporaire du poste peut s'écrire en 8.3. On compare les
@@ -3287,8 +3329,8 @@ for (const cas of CAS) {
   } else {
     const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'erreurs-ef-'));
     try {
-      // Un formulaire à un champ (domaine, valeur fausse « costcontrol »). `o` règle le seul écart voulu.
-      const BON = '« costcontrol » n\'est pas un domaine complet. Forme attendue : costcontrol.client.fr.';
+      // Un formulaire à un champ (domaine, valeur fausse « Produit-88 »). `o` règle le seul écart voulu.
+      const BON = '« Produit-88 » n\'est pas un domaine complet. Forme attendue : Produit-88.client.fr.';
       const page = o => {
         const message = o.message ?? BON;
         const zone = '<p id="e" class="e" hidden></p>';
@@ -3298,7 +3340,7 @@ for (const cas of CAS) {
           + (o.loin ? zone + '<div class="espace"></div>' : '')
           + '<form id="f" action="http://127.0.0.1:9/clients" method="post" novalidate>'
           + '<label for="d">Domaine du client</label>'
-          + '<input id="d" name="domaine" type="text" required pattern="[a-z0-9]+(\\.[a-z0-9]+)+" data-valeur-fausse="costcontrol" aria-describedby="e">'
+          + '<input id="d" name="domaine" type="text" required pattern="[a-z0-9]+(\\.[a-z0-9]+)+" data-valeur-fausse="Produit-88" aria-describedby="e">'
           + (o.loin ? '' : zone)
           + '<button type="submit">Enregistrer</button></form></main>'
           + '<script>(function(){var f=document.getElementById("f"),d=document.getElementById("d"),e=document.getElementById("e");'
@@ -3325,8 +3367,8 @@ for (const cas of CAS) {
         `sens vert · composant saisie-erreurs : 2 champs éprouvés, l'erreur paraît dès la SORTIE du champ, le champ est invalide, aucune requête d'écriture ne part, PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code})`);
       ligne(mv.length === 2 && mv.every(m => m.resume_liens >= 1 && m.resume_vise_le_champ),
         `sens vert · résumé d'erreurs à liens : posé à l'envoi fautif, ses liens visent le champ (liens ${mv.map(m => m.resume_liens).join('/')})`);
-      ligne(mv.length === 2 && /« costcontrol »/.test(mv[0].message || '') && /costcontrol\.client\.fr/.test(mv[0].message || '') && mv[0].distance_px <= 40,
-        `sens vert · le message reprend la saisie « costcontrol », donne la forme « costcontrol.client.fr » et tombe à ${mv[0]?.distance_px} px du champ`);
+      ligne(mv.length === 2 && new RegExp(`« ${NOM_FIXTURE} »`).test(mv[0].message || '') && new RegExp(`${NOM_FIXTURE}\\.client\\.fr`).test(mv[0].message || '') && mv[0].distance_px <= 40,
+        `sens vert · le message reprend la saisie « ${NOM_FIXTURE} », donne la forme « ${NOM_FIXTURE}.client.fr » et tombe à ${mv[0]?.distance_px} px du champ`);
 
       // Le défaut du porteur : le bandeau en tête de page (fixture rouge de la matrice) — le texte du bandeau est cité.
       const bandeau = jouer(fx('erreurs-formulaire-rouge.html'));
@@ -3397,7 +3439,7 @@ for (const cas of CAS) {
     const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'erreurs-ver-'));
     const journal = path.join(dossier, 'journal.txt');
     const port = 19400 + Math.floor(Math.random() * 500);
-    const BON = '« costcontrol » n\'est pas un domaine complet. Forme attendue : costcontrol.client.fr.';
+    const BON = '« Produit-88 » n\'est pas un domaine complet. Forme attendue : Produit-88.client.fr.';
     // Un formulaire à un champ. `o.verifie` : adresse que la sortie du champ interroge en POST (sinon le message est local) ;
     // `o.declare` : valeur de data-verifier ; `o.action` : action du formulaire ; `o.natif` : aucun script d'envoi, le
     // navigateur envoie ; `o.envoiFetch` : l'envoi se fait par fetch vers form.action, valeur fausse ou non.
@@ -3405,7 +3447,7 @@ for (const cas of CAS) {
       + '<style>body{margin:0;font:16px/24px sans-serif}main{padding:24px;max-width:640px}input{box-sizing:border-box;width:100%;padding:8px;font:inherit}.e{color:#b00020;margin:4px 0 0}</style></head><body><main>'
       + '<form id="f" action="' + (o.action ?? '/mandat') + '" method="post"' + (o.declare ? ' data-verifier="' + o.declare + '"' : '') + ' novalidate>'
       + '<label for="d">Domaine du client</label>'
-      + '<input id="d" name="domaine" type="text" required pattern="[a-z0-9]+([.][a-z0-9]+)+" data-valeur-fausse="costcontrol" aria-describedby="e">'
+      + '<input id="d" name="domaine" type="text" required pattern="[a-z0-9]+([.][a-z0-9]+)+" data-valeur-fausse="Produit-88" aria-describedby="e">'
       + '<p id="e" class="e" hidden></p><button type="submit">Ouvrir</button></form></main>'
       + '<script>(function(){var f=document.getElementById("f"),d=document.getElementById("d"),e=document.getElementById("e");'
       + 'function dire(t){e.textContent=t;e.hidden=false;d.setAttribute("aria-invalid","true");}'
@@ -3444,7 +3486,7 @@ for (const cas of CAS) {
         const verte = jouerHttp('erreurs-formulaire-verifier-verte.html');
         ligne(verte.code === 0 && verte.json?.champs_eprouves === 1 && verte.m.invalide && verte.m.apres_sortie && verte.m.requetes_ecriture === 0 && verte.m.verifications_passees === 1,
           `sens vert · data-verifier : la réponse du serveur est dite sous le champ à la sortie, aria-invalid, 1 vérification passée, 0 écriture interceptée, PASS exit 0 (obtenu ${verte.json?.verdict}, exit ${verte.code}, passées ${verte.m.verifications_passees}, écritures ${verte.m.requetes_ecriture})`);
-        ligne(verte.posts.join() === 'POST /mandat/verifier' && /« costcontrol » n'est pas un domaine connu/.test(verte.m.message || ''),
+        ligne(verte.posts.join() === 'POST /mandat/verifier' && new RegExp(`« ${NOM_FIXTURE} » n'est pas un domaine connu`).test(verte.m.message || ''),
           `sens vert · le serveur a reçu la seule vérification déclarée (journal « ${verte.posts.join(' ; ')} ») et le message reprend la saisie`);
         ligne((verte.json?.non_juge || []).some(n => /^1 requête\(s\) de vérification au champ DÉCLARÉE\(S\) sans effet/.test(n)),
           'sens vert · l\'absence d\'effet n\'est pas prouvée : la promesse du produit et le compte des requêtes passées sont dits au non_juge');
@@ -3573,8 +3615,10 @@ for (const cas of CAS) {
         const origine = `http://127.0.0.1:${port}`;
         const reference = lancer(fx('motion-verte.html'));
         const sans = lancer(path.join(capt, 'capture.html'));
-        ligne(sans.code === 1 && sans.verdicts['oracle-tokens'] === 'FAIL' && sans.nj.some(n => /NON intégrée\(s\)/.test(n) && /\/assets\/app\.css/.test(n) && /--origine/.test(n)),
-          `capture · sans --origine : la page est jugée sans CSS, oracle-tokens FAIL, et le non_juge nomme /assets/app.css et le remède --origine (obtenu ${sans.verdicts['oracle-tokens']}, exit ${sans.code})`);
+        // TF-2888 : la page jugée sans sa feuille ne rend plus un FAIL d'oracle-tokens sans cause ; un constat unique nomme la ressource, le non_juge garde son remède.
+        ligne(sans.code === 2 && sans.json?.verdict === 'SKIP' && sans.verdicts['ressources-non-integrees'] === 'SKIP' && sans.verdicts['oracle-tokens'] === undefined
+          && sans.nj.some(n => /NON intégrée\(s\)/.test(n) && /\/assets\/app\.css/.test(n) && /--origine/.test(n)),
+          `capture · sans --origine : la page n'est pas jugée sans CSS, un constat unique nomme /assets/app.css (SKIP exit 2), oracle-tokens n'est pas joué et le non_juge garde le remède --origine (obtenu ${sans.verdicts['ressources-non-integrees']}, tokens ${sans.verdicts['oracle-tokens']}, exit ${sans.code})`);
         const avec = lancer(path.join(capt, 'capture.html'), '--origine', origine);
         ligne(avec.code === 0 && avec.json?.verdict === 'PASS' && JSON.stringify(avec.verdicts) === JSON.stringify(reference.verdicts) && reference.code === 0,
           `capture · avec --origine : rendue autonome, PASS exit 0 et le même verdict par oracle que la page autonome d'origine (obtenu ${avec.json?.verdict}, exit ${avec.code} ; référence ${reference.json?.verdict})`);
@@ -3591,8 +3635,10 @@ for (const cas of CAS) {
           // Le symptôme du lot : sans la feuille, un tableau déborde à 390 px (551 px) ; avec elle lue à l'origine, aucun débordement.
           const rendus = j => (j.json?.oracles || []).filter(o => /^render_page/.test(o.oracle));
           const rs = lancer(path.join(capt, 'capture-rendu.html'), '--rendu');
-          ligne(rendus(rs).length === 2 && rendus(rs).every(o => o.verdict === 'FAIL' && o.findings.some(f => f.regle === 'V1' && /scrollWidth \d+px > viewport 390px/.test(f.msg))),
-            `rendu · sans --origine : render_page voit le débordement factice du document sans feuille (V1, FAIL clair et sombre) (obtenu ${rendus(rs).map(o => o.verdict).join('/')})`);
+          // TF-2888 : le débordement factice (V1) n'est plus rendu ; render_page n'est pas joué sur un document sans sa feuille, le constat unique le dit, oracle-a11y (structurel) reste joué.
+          ligne(rendus(rs).length === 0 && rs.verdicts['ressources-non-integrees'] === 'SKIP' && rs.verdicts['oracle-a11y'] !== undefined && rs.code === 2
+            && rs.nj.some(n => /render_page\.py \(V1–V7\) de même/.test(n)),
+            `rendu · sans --origine : render_page n'est pas joué sur le document sans feuille (plus de V1 factice), le constat unique le dit, oracle-a11y reste joué (obtenu ${rendus(rs).length} render_page, constat ${rs.verdicts['ressources-non-integrees']}, a11y ${rs.verdicts['oracle-a11y']}, exit ${rs.code})`);
           const ra = lancer(path.join(capt, 'capture-rendu.html'), '--origine', origine, '--rendu');
           ligne(rendus(ra).length === 2 && rendus(ra).every(o => o.verdict === 'PASS' && o.ecarts_durs === 0),
             `rendu · avec --origine : la feuille intégrée met la page en forme, render_page PASS en clair et en sombre, 0 écart dur (obtenu ${rendus(ra).map(o => `${o.verdict}/${o.ecarts_durs}`).join(' ')})`);
@@ -3602,6 +3648,77 @@ for (const cas of CAS) {
       serveur.kill();
     }
   } finally {
+    fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
+  }
+}
+
+// TF-2888 (lot Produit-82 du 26/11/2026) — UNE PAGE AUX ACTIFS RELATIFS À LA RACINE DU SITE NE REND PLUS UNE CASCADE DE FAIL SANS CAUSE.
+// Une page enregistrée dont les feuilles sont en `/actifs/…` rendait, jugée avec --instance, oracle-tokens T0, oracle-bascule B-T2 à
+// B-T4, oracle-surcouche SC1 et SC2, render_page V1 — sans dire qu'une ressource n'avait pas été chargée ; avec des chemins absolus,
+// PASS. La rouge est la page `capture-actifs/page-actifs.html` copiée SEULE (la cascade d'avant : mesurée sur le code du 26/11, exit 1,
+// FAIL tokens T0, bascule B-T2/B-T3/B-T4, surcouche SC1 à SC4) ; la verte est la même page avec --instance (l'origine de l'instance
+// résout les chemins relatifs : PASS exit 0). Sens rouge de la borne : une ressource d'un hôte tiers ne suspend aucun juge, et une
+// instance qui est un fichier ne donne aucune origine.
+{
+  console.log(String.fromCharCode(10) + 'run-oracles-design — ressources relatives à la racine du site (TF-2888) : un constat unique, ou l\'origine de l\'instance');
+  const dossier = fs.mkdtempSync(path.join(os.tmpdir(), 'actifs-'));
+  const journal = path.join(dossier, 'journal.txt');
+  const port = 19800 + Math.floor(Math.random() * 90);
+  const serveur = spawn(process.execPath, [path.join(ici, 'lib', 'serveur-recette-verification.mjs'), fx('capture-actifs'), String(port), journal], { stdio: 'ignore' });
+  try {
+    let pret = false;
+    for (let i = 0; i < 40 && !pret; i++) {
+      const s = spawnSync(process.execPath, ['-e', 'fetch(process.argv[1]).then(r=>process.exit(r.ok?0:1),()=>process.exit(1))', `http://127.0.0.1:${port}/actifs/app.css`]);
+      pret = s.status === 0;
+    }
+    if (!pret) {
+      ligne(false, 'serveur local de recette indisponible');
+    } else {
+      // La page jugée est copiée SEULE : une adresse « racine du site » se cherche aussi en remontant l'arborescence, elle ne doit rien y trouver.
+      const seule = path.join(dossier, 'page.html');
+      const source = fs.readFileSync(fx('capture-actifs/page-actifs.html'), 'utf8');
+      fs.writeFileSync(seule, source, 'utf8');
+      const avecTiers = path.join(dossier, 'page-tiers.html');
+      fs.writeFileSync(avecTiers, source.replace('<link rel="stylesheet" href="/actifs/app.css">',
+        '<link rel="stylesheet" href="/actifs/app.css"><link rel="stylesheet" href="https://exemple.invalid/police.css">'), 'utf8');
+      const lancer = (cible, ...a) => {
+        const r = spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, ...a, '--json-only'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024, env: { ...process.env, PYTHONUTF8: '1' } });
+        let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : la ligne le dira */ }
+        const verdicts = Object.fromEntries((j?.oracles || []).map(o => [o.oracle, o.verdict]));
+        return { code: r.status, json: j, verdicts, nj: j?.non_juge || [], constat: (j?.oracles || []).find(o => o.oracle === 'ressources-non-integrees') };
+      };
+      const instance = `http://127.0.0.1:${port}/page-actifs.html`;
+      const sansFail = r => !Object.values(r.verdicts).includes('FAIL');
+
+      const seul = lancer(seule);
+      ligne(seul.code === 2 && seul.json?.verdict === 'SKIP' && sansFail(seul) && seul.constat?.verdict === 'SKIP'
+        && seul.constat.raison === 'ressources non intégrées : /actifs/app.css, /actifs/app.js',
+        `sens rouge · la page aux actifs relatifs jugée seule : UN constat nommé « ressources non intégrées : /actifs/app.css, /actifs/app.js », SKIP exit 2, aucun FAIL (obtenu ${seul.json?.verdict}, exit ${seul.code}, constat « ${seul.constat?.raison} »)`);
+      ligne(['oracle-tokens', 'oracle-bascule', 'oracle-surcouche'].every(o => seul.verdicts[o] === undefined)
+        && seul.nj.some(n => /oracle-bascule.*oracle-surcouche.*oracle-tokens.* : NON JOUÉS/.test(n) && /\/actifs\/app\.css/.test(n)),
+        `sens rouge · la cascade d'avant (tokens T0, bascule B-T2 à B-T4, surcouche SC1 à SC4) n'est plus rendue : ces juges ne sont pas joués et le non_juge les nomme avec la ressource absente (obtenu ${['oracle-tokens', 'oracle-bascule', 'oracle-surcouche'].map(o => seul.verdicts[o] || 'absent').join('/')})`);
+      ligne(seul.constat?.findings?.length === 1 && seul.constat.findings[0].regle === 'RN1' && /--instance/.test(seul.constat.findings[0].voie || '') && /--origine/.test(seul.constat.findings[0].voie || ''),
+        'sens rouge · le constat porte son remède : l\'instance servie (--instance) ou son origine (--origine)');
+      ligne(seul.verdicts['oracle-caracteres-controle'] === 'PASS',
+        `sens rouge · les juges qui ne lisent pas la ressource absente restent joués (oracle-caracteres-controle ${seul.verdicts['oracle-caracteres-controle']})`);
+
+      const avec = lancer(seule, '--instance', instance);
+      ligne(avec.code === 0 && avec.json?.verdict === 'PASS' && !avec.constat && ['oracle-tokens', 'oracle-bascule', 'oracle-surcouche'].every(o => avec.verdicts[o] === 'PASS'),
+        `sens vert · la même page avec --instance : les chemins relatifs se résolvent contre l'origine de l'instance, PASS exit 0, tokens, bascule et surcouche jugés PASS (obtenu ${avec.json?.verdict}, exit ${avec.code})`);
+      ligne((avec.json?.page_rendue_autonome?.integrees || []).length === 2 && (avec.json?.page_rendue_autonome?.non_integrees || []).length === 0
+        && avec.nj.some(n => /à l'origine http:\/\/127\.0\.0\.1:\d+ \(celle de --instance, TF-2888\)/.test(n)),
+        'sens vert · le non_juge dit que l\'origine est celle de --instance et le JSON porte la feuille et le script intégrés');
+
+      // La borne : un hôte tiers n'est jamais lu et ne suspend rien ; une instance qui est un fichier ne donne aucune origine.
+      const tiers = lancer(avecTiers, '--instance', instance);
+      ligne(tiers.code === 0 && tiers.json?.verdict === 'PASS' && !tiers.constat && tiers.nj.some(n => /NON intégrée\(s\)/.test(n) && /exemple\.invalid\/police\.css/.test(n)),
+        `sens vert · une feuille d'un hôte tiers reste liée, dite au non_juge, et ne suspend aucun juge : PASS exit 0, aucun constat (obtenu ${tiers.json?.verdict}, exit ${tiers.code})`);
+      const fichier = lancer(seule, '--instance', path.join(dossier, 'page.html'));
+      ligne(fichier.constat?.verdict === 'SKIP' && fichier.constat.raison === 'ressources non intégrées : /actifs/app.css, /actifs/app.js',
+        `sens rouge · une --instance qui est un FICHIER ne donne aucune origine : le constat unique reste (obtenu ${fichier.constat?.verdict})`);
+    }
+  } finally {
+    serveur.kill();
     fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
   }
 }
@@ -4457,6 +4574,34 @@ if (!OUTILLAGE_DOCUMENT.ok) {
       'DP4 / DP5 · sur un PPTX, le non_juge dit que l\'équilibre des colonnes se lit sur le PDF imprimé');
     ligne(colV.json.non_juge.some(n => /seuil unique de 10 mm/.test(n)) && colV.json.non_juge.some(n => /ordre de peinture/.test(n)),
       'non_juge · le seuil de 10 mm et l\'ordre de peinture texte/aplat d\'un PDF sont déclarés à chaque sortie');
+    // TF-2892 — DP4 ne juge que des colonnes de page : le texte d'un tableau n'est pas une colonne
+    const prog = jouerDP('document-imprime/programme-une-colonne-verte.pdf');
+    ligne(prog.code === 0 && de(prog.json, 'DP4').length === 0 && de(prog.json, 'DP5').length === 0,
+      'DP4 sens vert (TF-2892) · un document à UNE colonne de texte et deux tableaux de 9 lignes (3 colonnes, 2 colonnes) dont les cellules finissent à des hauteurs très différentes : PASS, aucune colonne de page (l\'ancien code rendait 100,9 mm d\'écart sur ce motif)');
+    ligne(prog.json.non_juge.some(n => /DP4 écarte de ses colonnes le texte et les aplats des TABLEAUX/.test(n) && /un tableau SANS trait ni aplat de cellule se reconnaît à ses lignes/.test(n)),
+      'DP4 · le non_juge dit que les tableaux sont écartés à leurs traits, et qu\'un tableau sans trait ni aplat de cellule se reconnaît à ses lignes');
+    const colT = jouerDP('document-imprime/colonnes-tableau-rouge.pdf');
+    ligne(colT.code === 1 && de(colT.json, 'DP4').length === 1 && /x=14\.1 mm.*x=109\.4 mm.*76\.2 mm d'écart/.test(de(colT.json, 'DP4')[0].msg),
+      'DP4 sens rouge (TF-2892) · une page qui porte un tableau ET deux vraies colonnes de cartes inégales (6 et 3 cartes) reste refusée, sur les cartes seules, à 76,2 mm : écarter le tableau ne masque pas les colonnes de page');
+    // TF-2892, 2e passe — le tableau sans trait se reconnaît à ses lignes alignées
+    const sansTrait = jouerDP('document-imprime/programme-sans-trait-verte.pdf');
+    ligne(sansTrait.code === 0 && de(sansTrait.json, 'DP4').length === 0,
+      'DP4 sens vert (TF-2892, 2e passe) · un tableau « Objectif / Évaluation associée » SANS trait ni aplat de cellule (8 lignes, colonne de droite 60 mm plus courte que la suite du texte à gauche) : PASS ; le code d\'avant y rendait 60,0 mm d\'écart');
+    const colTexte = jouerDP('document-imprime/colonnes-texte-rouge.pdf');
+    ligne(colTexte.code === 1 && de(colTexte.json, 'DP4').length === 1 && /x=14\.1 mm.*x=109\.4 mm.*92\.8 mm d'écart/.test(de(colTexte.json, 'DP4')[0].msg),
+      'DP4 sens rouge (TF-2892, 2e passe) · deux colonnes de TEXTE sans aplat, dont les blocs ne commencent pas aux mêmes ordonnées, restent refusées (92,8 mm) : l\'alignement ligne à ligne ne les prend pas pour un tableau');
+    ligne(de(jouerDP('document-imprime/colonnes-rouge.pdf').json, 'DP4').length === 1,
+      'DP4 sens rouge (TF-2892, 2e passe) · des cartes de deux colonnes posées à la même hauteur ne sont pas des cellules : seuls les TEXTES comptent pour l\'alignement, colonnes-rouge.pdf reste refusé à 70,6 mm');
+    ligne(prog.json.non_juge.some(n => /au moins 3 textes de deux colonnes qui commencent à la même ordonnée/.test(n)),
+      'DP4 · le non_juge dit qu\'un tableau sans trait se reconnaît à 3 lignes alignées, et que deux colonnes de texte alignées sur 3 lignes seraient lues comme un tableau');
+    // TF-2892, 3e passe — les blocs qui traversent la gouttière sont des lignes de tableau
+    const fusion = jouerDP('document-imprime/programme-lignes-fusionnees-verte.pdf');
+    ligne(fusion.code === 0 && de(fusion.json, 'DP4').length === 0,
+      'DP4 sens vert (TF-2892, 3e passe) · un tableau sans trait dont PyMuPDF fusionne 3 lignes en blocs qui traversent la gouttière (2 blocs de droite seulement séparés, alignés sur 2 blocs de gauche) : PASS ; le code d\'avant y rendait 84,0 mm d\'écart');
+    ligne(fusion.json.non_juge.some(n => /bloc de texte qui traverse la gouttière/.test(n)),
+      'DP4 · le non_juge dit qu\'un bloc qui traverse la gouttière compte comme une ligne de tableau, et la limite qui en découle');
+    ligne(de(jouerDP('document-imprime/colonnes-texte-rouge.pdf').json, 'DP4').length === 1 && de(jouerDP('document-imprime/colonnes-tableau-rouge.pdf').json, 'DP4').length === 1,
+      'DP4 sens rouge (TF-2892, 3e passe) · les vrais positifs en texte et en cartes+tableau restent refusés : aucun de leurs blocs ne traverse la gouttière');
 
     // Le point d'entrée unique route un PPTX ou un PDF vers sa variante, et dit les juges HTML SANS OBJET (il rendait PASS sur du bruit)
     const lancerUnique = (cible, ...plus) => JSON.parse(spawnSync(process.execPath, [path.join(ici, 'run-oracles-design.mjs'), cible, ...plus, '--json-only'], { encoding: 'utf8' }).stdout.trim());
