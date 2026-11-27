@@ -55,6 +55,9 @@ hors du substrat qui le permet est un mensonge de restitution.
 ## Mode d'exécution
 parallèle (3 agents) | dégradé mono-agent — conséquences assumées : {…}
 
+## Planche
+{chemin de planche.png} : une rangée par direction, captures à 1920 px, le nom de chaque maquette
+
 ## Retenue : {nom}
 {tokens.css} · {écran signature}
 Ce qu'on se rappellera : {la signature, en une phrase}

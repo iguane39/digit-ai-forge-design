@@ -137,6 +137,7 @@ node scripts/fabriquer-etat-connexion.mjs --url <page de connexion> --sortie <et
 node oracles/run-oracles-design.mjs --site <url d'une page servie de la boucle locale> [--composition <feuille.css|page|url>…] \
   [--classes-libres a,b,p-*] [--pages-max N] [--sans-instance] [options d'une page]                        # TOUTES les pages que la navigation sert, jugées une par une (TF-2901)
 node oracles/oracle-composition.mjs <page.html|url> --composition <feuille.css|page|url>… [--classes-libres a,b,p-*]   # CO1–CO3 : les composants de la page sont-ils dessinés par la feuille de la composition ? (TF-2901)
+node oracles/planche-mosaique.mjs --sortie <dossier> (--manifeste planche.json | --rangee "<nom>" <maquette>… …)   # la planche mosaïque d'une comparaison de maquettes ou de directions (TF-2909)
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
 node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
 node oracles/self-test-regles-jouees.mjs                      # verrou dédié des plages citées à la sortie des oracles (« M1–M11 sans écart ») : dérivées de REGLES_JOUEES, jamais en dur (TF-2287), deux sens
@@ -203,6 +204,24 @@ rien : le `non_juge` le dit, et une page restée dans l'ancienne composition ne 
 juges en voient. Ce que le contrôle ne fait pas : il compare des noms de classes, pas des styles ; une règle posée par balise
 (`h1 { text-transform: uppercase }`) ou un menu rendu par script après le chargement lui échappe, et une ancienne composition dont les
 règles sont restées dans la feuille de la composition passe.
+### La planche mosaïque d'une comparaison — `planche-mosaique.mjs` (TF-2909)
+
+Consigne du porteur du 27/11/2026, mot pour mot : « Très bien les mosaïques d'images, à conserver dans les principes de la Factory. »
+Toute comparaison de maquettes ou de directions se livre avec sa planche : les captures à **1920 px** assemblées en **rangées**, une
+par concepteur ou par direction, le **nom de chaque maquette** sous sa vignette.
+
+```
+node oracles/planche-mosaique.mjs --sortie <dossier hors dépôt> --titre "Écran Commandes" \
+  --rangee "Claude" "Tableau de bord=claude/tdb.html" "Liste=claude/liste.html" \
+  --rangee "Codex"  "Tableau de bord=codex/tdb.html"  "Liste=codex/liste.html"
+node oracles/planche-mosaique.mjs --sortie <dossier> --manifeste planche.json   # { "titre": "…", "rangees": [ { "nom": "…", "maquettes": [ { "nom": "…", "source": "chemin|url" } ] } ] }
+```
+
+Il écrit `planche.png` (la planche à livrer), `planche.html` (la même, autoportante) et `captures/` (un PNG plein par maquette).
+Playwright (Python, celui de `--rendu`) capture le premier écran à 1920×1080, ou la page entière jusqu'à `--hauteur-max` avec
+`--pleine-page` ; le mouvement est réduit à sa fin. Une maquette introuvable ou non capturée n'est jamais omise : sa vignette
+dit « CAPTURE MANQUANTE » avec le motif, le constat PM1 la nomme, exit 1. Sans navigateur ou sans `--sortie` : SKIP exit 2, jamais une
+planche vide. Les livrables vont dans `--sortie`, jamais dans ce dépôt. La planche aide à choisir, elle ne juge rien.
 Options de `run-oracles-design.mjs` :
 
 | Option | Effet |

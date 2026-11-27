@@ -1,7 +1,7 @@
 ---
 name: ameliore-le-design
 description: Transforme une idée, une spécification, un design ou un produit web existant — URL, screenshot, fichier — en maquette navigable : redesign intégral et parcours d'écrans simulés (landing, connexion, tableau de bord, CRUD, catalogue, galerie, onboarding), cible web ou mobile, en un seul fichier HTML autonome, thèmes clair et sombre, zéro réseau. Deux fidélités, wireframe ou maquette. Use when / déclencher dès que l'utilisateur veut refondre, relooker, moderniser ou repenser le design d'un site ou d'une application, demande une maquette, un prototype cliquable ou une proposition visuelle à partir d'une URL, d'un screenshot ou d'un simple brief, ou veut montrer à un client ce que son produit pourrait devenir. Ne pas déclencher pour une page chartée Digit-AI (→ digit-ai-page-html), une fiche ou un schéma (→ digit-ai-fiches-html), poser les tokens (→ systeme-de-marque), arbitrer entre directions (→ studio-de-direction), ni auditer une appli en production (→ audite-et-corrige-l-appli).
-version: 2.6.1
+version: 2.7.0
 ---
 
 # Améliore le design
@@ -34,7 +34,8 @@ unique, les patterns d'interaction attendus, et l'orchestration du contrôle.
                      cible mobile → references/cadre-mobile.md
 5. Contrôle        → python scripts/check_maquette.py <fichier.html>
                      puis les 4 oracles de la forge (criteres-sortie.md §Critères)
-6. Restitution     → references/criteres-sortie.md §Restitution
+6. Restitution     → references/criteres-sortie.md §Restitution ; plusieurs maquettes
+                     comparées : planche mosaïque (oracles/planche-mosaique.mjs)
 ```
 
 ## Trois designs à challenger, et les images
@@ -68,6 +69,13 @@ structure et le parcours — pas la peau.
 l'identité du client de bout en bout : typographie, palette et thème selon le
 secteur, pas selon le gabarit maison. Nommage du fichier et oracles restent
 applicables — règles de livraison, pas de design.
+
+**Une comparaison de maquettes se livre avec sa planche mosaïque** (TF-2909, consigne du porteur du 27/11/2026 :
+« Très bien les mosaïques d'images, à conserver dans les principes de la Factory. »). Dès que la restitution compare
+plusieurs maquettes ou plusieurs concepteurs (les 3 designs à challenger, les variantes d'un écran), elle porte
+`planche.png` : une rangée par concepteur ou par direction, les captures à 1920 px, le nom de chaque maquette sous
+sa vignette. `node "$FORGE_DESIGN_ROOT/oracles/planche-mosaique.mjs" --sortie <dossier du produit> --rangee
+"<concepteur>" "<nom>=<fichier>" …` l'écrit ; une capture manquante se dit sur la planche.
 
 **Une maquette de bureau se conçoit à 1920 px, et se vérifie jusqu'au 4K.** Le viewport
 du rendu de travail, les captures et les cotes annoncées sont à **1920 px** (Full HD) —

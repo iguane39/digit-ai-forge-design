@@ -5299,6 +5299,70 @@ const jouerNode = (script, argv, options = {}) => {
   }
 }
 
+// ── TF-2909 · planche-mosaique.mjs : la planche mosaïque d'une comparaison ──
+{
+  console.log(String.fromCharCode(10) + 'planche-mosaique (TF-2909) — captures à 1920 px en rangées, une par concepteur, le nom de chaque maquette');
+  if (!OUTILLAGE_RENDU.python) {
+    console.log(`  SKIP  navigateur Python indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')} — la planche n'est pas jouée sur ce poste`);
+    sautes.push('planche-mosaique');
+  } else {
+    const { decoderPng } = await import('./lib/png.mjs');
+    const dossierEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'planche-'));
+    try {
+      const entete = f => { const b = fs.readFileSync(f); return b.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) ? { largeur: b.readUInt32BE(16), hauteur: b.readUInt32BE(20) } : null; };
+      const cf = fx('planche');
+      const manifeste = path.join(dossierEssai, 'planche.json');
+      fs.writeFileSync(manifeste, JSON.stringify({
+        titre: 'Comparaison des écrans « Commandes »',
+        rangees: [
+          { nom: 'Concepteur Alpha', maquettes: [{ nom: 'Fond crème', source: path.join(cf, 'accueil-sobre.html') }, { nom: 'Rose vif', source: path.join(cf, 'accueil-vif.html') }] },
+          { nom: 'Concepteur Bêta', maquettes: [{ nom: 'Fond sombre', source: path.join(cf, 'accueil-sombre.html') }, { nom: 'Page nue & « sobre »', source: path.join(cf, 'accueil-sobre.html') }] },
+        ],
+      }), 'utf8');
+      const sortie = path.join(dossierEssai, 'sortie');
+      const r = jouerNode('planche-mosaique.mjs', ['--sortie', sortie, '--manifeste', manifeste]);
+      ligne(r.code === 0 && r.json?.verdict === 'PASS' && r.json?.findings.length === 0, `sens vert · une planche de 2 rangées de 2 maquettes : PASS exit 0, aucun constat (obtenu ${r.json?.verdict}, exit ${r.code})`);
+      const png = fs.existsSync(path.join(sortie, 'planche.png')) ? entete(path.join(sortie, 'planche.png')) : null;
+      ligne(png !== null && png.largeur === 32 * 2 + 960 * 2 + 24 && png.hauteur > 1000,
+        `sens vert · planche.png est un PNG de la largeur attendue (2 vignettes de 960 px, marges de 32, écart de 24 : 2008 px) (obtenu ${png ? `${png.largeur}×${png.hauteur}` : 'absent'})`);
+      const captures = fs.existsSync(path.join(sortie, 'captures')) ? fs.readdirSync(path.join(sortie, 'captures')).filter(f => /\.png$/.test(f)).sort() : [];
+      ligne(captures.length === 4 && captures.every(f => { const e = entete(path.join(sortie, 'captures', f)); return e && e.largeur === 1920 && e.hauteur === 1080; }),
+        `sens vert · les 4 captures pleines sont à 1920 px de large (le premier écran, 1920×1080), rangées par concepteur dans captures/ (obtenu ${captures.join(', ')})`);
+      const html = fs.existsSync(path.join(sortie, 'planche.html')) ? fs.readFileSync(path.join(sortie, 'planche.html'), 'utf8') : '';
+      ligne(['Concepteur Alpha', 'Concepteur Bêta', 'Fond crème', 'Rose vif', 'Fond sombre', 'Page nue &amp; « sobre »', 'Comparaison des écrans « Commandes »'].every(n => html.includes(n))
+        && (html.match(/<section class="rangee">/g) || []).length === 2 && (html.match(/<figcaption>/g) || []).length === 4,
+        'sens vert · la planche porte le nom de chaque rangée (concepteur), le nom de chaque maquette sous sa vignette et son titre ; 2 rangées, 4 vignettes');
+      const px = png ? decoderPng(fs.readFileSync(path.join(sortie, 'planche.png'))) : null;
+      const couleurs = new Set(); if (px) for (let i = 0; i < px.width * px.height; i += 997) couleurs.add(px.pixels.slice(i * px.canaux, i * px.canaux + 3).join(','));
+      ligne(px !== null && couleurs.size >= 4, `sens vert · la planche n'est pas vide : les pixels portent au moins 4 couleurs distinctes (obtenu ${couleurs.size})`);
+      ligne(!fs.existsSync(path.join(sortie, '.travail')), 'aucun fichier de travail ne reste dans le dossier de sortie');
+
+      // SENS ROUGE — une capture qui échoue n'est jamais omise : sa vignette le dit, exit 1.
+      const sortie2 = path.join(dossierEssai, 'sortie-manquante');
+      const m = jouerNode('planche-mosaique.mjs', ['--sortie', sortie2, '--rangee', 'Concepteur Alpha', `Fond crème=${path.join(cf, 'accueil-sobre.html')}`, `Absente=${path.join(cf, 'nexiste-pas.html')}`]);
+      const pm = fs.existsSync(path.join(sortie2, 'planche.png')) ? decoderPng(fs.readFileSync(path.join(sortie2, 'planche.png'))) : null;
+      let rouges = 0; if (pm) for (let i = 0; i < pm.width * pm.height; i += 7) { const [r0, g0, b0] = [pm.pixels[i * pm.canaux], pm.pixels[i * pm.canaux + 1], pm.pixels[i * pm.canaux + 2]]; if (r0 > 150 && g0 < 70 && b0 < 70) rouges++; }
+      ligne(m.code === 1 && m.json?.verdict === 'FAIL' && m.json?.findings.some(f => f.regle === 'PM1' && /« Absente »/.test(f.msg) && /fichier introuvable/.test(f.msg)),
+        `sens rouge · une maquette introuvable : constat PM1 qui la nomme, exit 1 (obtenu ${m.json?.verdict}, exit ${m.code})`);
+      ligne(pm !== null && rouges > 100 && /CAPTURE MANQUANTE/.test(fs.readFileSync(path.join(sortie2, 'planche.html'), 'utf8')) && m.json?.rangees[0].maquettes[1].capture === null,
+        `sens rouge · la planche existe et sa vignette dit « CAPTURE MANQUANTE » (liseré rouge, ${rouges} pixels échantillonnés), la maquette n'est pas montrée`);
+      const pleine = jouerNode('planche-mosaique.mjs', ['--sortie', path.join(dossierEssai, 'sortie-pleine'), '--rangee', 'Concepteur Alpha', path.join(cf, 'accueil-sobre.html'), '--pleine-page', '--hauteur-max', '1500']);
+      ligne(pleine.code === 0 && pleine.json?.rangees[0].maquettes[0].nom === 'accueil-sobre', `option · --pleine-page rend la planche, le nom par défaut est celui du fichier (obtenu exit ${pleine.code}, « ${pleine.json?.rangees[0].maquettes[0].nom} »)`);
+      // Les portes : appel incomplet, navigateur absent, hôte tiers — SKIP motivé, jamais une planche vide.
+      const incomplet = jouerNode('planche-mosaique.mjs', ['--rangee', 'Concepteur Alpha', path.join(cf, 'accueil-sobre.html')]);
+      ligne(incomplet.code === 2 && incomplet.json?.verdict === 'SKIP' && incomplet.json.findings.some(f => f.regle === 'PM0' && /--sortie/.test(f.msg)), `porte · sans --sortie : SKIP exit 2, rien n'est écrit (obtenu exit ${incomplet.code})`);
+      const sansNavigateur = jouerNode('planche-mosaique.mjs', ['--sortie', path.join(dossierEssai, 'sortie-sans'), '--rangee', 'A', path.join(cf, 'accueil-sobre.html')], { env: { FORGE_DESIGN_PYTHON: path.join(dossierEssai, 'python-inexistant.exe') } });
+      ligne(sansNavigateur.code === 2 && sansNavigateur.json?.verdict === 'SKIP' && !fs.existsSync(path.join(dossierEssai, 'sortie-sans', 'planche.png')),
+        `porte · navigateur introuvable : SKIP exit 2 et aucune planche n'est écrite — jamais une planche vide (obtenu exit ${sansNavigateur.code})`);
+      const tiers = jouerNode('planche-mosaique.mjs', ['--sortie', path.join(dossierEssai, 'sortie-tiers'), '--rangee', 'A', path.join(cf, 'accueil-sobre.html'), 'http://exemple.invalid/maquette.html']);
+      ligne(tiers.code === 1 && tiers.json?.findings.some(f => f.regle === 'PM1' && /hôte non local/.test(f.msg)),
+        `borne · une maquette servie par un hôte tiers n'est pas capturée : vignette « manquante » et exit 1, aucun accès réseau (obtenu exit ${tiers.code})`);
+    } finally {
+      fs.rmSync(dossierEssai, { recursive: true, force: true, maxRetries: 5 });
+    }
+  }
+}
+
 const joues = CAS.filter(c => !(c.python && !PYTHON) && !(c.rendu && !OUTILLAGE_RENDU.ok) && !(c.document && !OUTILLAGE_DOCUMENT.ok) && !(c.video && !OUTILLAGE_VIDEO.ok));
 console.log(echecs === 0
   ? `\nTout vert — ${joues.length} oracles, ${joues.reduce((n, c) => n + c.regles.length, 0)} règles verrouillées.`

@@ -90,6 +90,7 @@ en `SANS OBJET` ceux qui ne s'appliquent pas :
 python scripts/check_maquette.py <fichier.html>
 node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> [--mobile] [--tokens tokens.css] [--rendu]
 node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> --oracle textes-application   # C14, AVANT C15
+node "$FORGE_DESIGN_ROOT/oracles/planche-mosaique.mjs" --sortie <dossier> --rangee "<concepteur>" "<nom>=<fichier>" …   # plusieurs maquettes comparées
 ```
 
 `FORGE_DESIGN_ROOT` est lu dans l'environnement, puis dans le `.env` de la forge,
@@ -197,7 +198,9 @@ re-proposée aux suivantes.
 3. **Le relevé des contrôles** : verdicts exécutés, y compris les `SKIP` et les
    `SANS OBJET`, avec leur raison. Un `SKIP` reporté honnêtement vaut mieux qu'un
    `PASS` supposé.
-4. **Ce que la maquette ne fait pas** : section obligatoire et non vide. Elle dit
+4. **La planche mosaïque**, quand la restitution compare plusieurs maquettes ou plusieurs concepteurs : `planche.png`, une rangée par
+   concepteur, les captures à 1920 px, le nom de chaque maquette (TF-2909). Une comparaison sans planche est incomplète.
+5. **Ce que la maquette ne fait pas** : section obligatoire et non vide. Elle dit
    l'écart entre ce qui est montré et ce qui resterait à construire. Sans elle, une
    maquette qui « marche partout » se lit comme un produit déjà fait aux trois quarts.
 

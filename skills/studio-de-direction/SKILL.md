@@ -1,7 +1,7 @@
 ---
 name: studio-de-direction
 description: Fait converger plusieurs directions artistiques concurrentes vers une seule, retenue et argumentée : produit trois directions divergentes par construction sur un axe nommé, les juge sur une rubrique figée avant la première génération, et livre un DIRECTION.md portant la gagnante, les écartées avec leur raison, et le relevé de jugement. Use when / déclencher dès que l'utilisateur hésite entre plusieurs partis pris visuels, demande des variantes, des pistes, des propositions ou des directions à comparer, veut explorer avant de trancher, ou dit ne pas savoir quelle direction prendre pour un design. Ne pas déclencher pour figer les tokens d'une identité déjà arrêtée (→ systeme-de-marque), construire la maquette une fois la direction choisie (→ ameliore-le-design), juger un design déjà produit (→ critique-le-design), ni pour une boucle mono-candidat sans divergence (→ la-boucle).
-version: 1.1.1
+version: 1.2.0
 ---
 
 # Studio de direction
@@ -29,7 +29,8 @@ et la borne de coût.
                      1 par Claude, 1 par Codex, 1 par Gemini (delegue-a-codex-et-gemini)
 4. Filtre         → node oracles/oracle-slop.mjs sur chaque direction
 5. Jugement       → rubrique appliquée, puis oracle-judge en AVIS OUTILLÉ
-6. Restitution    → DIRECTION.md : la gagnante, les 2 écartées, le relevé
+6. Restitution    → DIRECTION.md : la gagnante, les 2 écartées, le relevé,
+                     et la planche mosaïque des 3 : oracles/planche-mosaique.mjs
 ```
 
 ## Ce qu'est une direction — et ce qu'elle n'est pas
@@ -71,6 +72,14 @@ Seuls les agents que `agent-tiers.mjs etat` rend disponibles sur le poste sont l
 porteur du 23/11/2026). Sur un poste sans Codex ni Gemini configuré, Claude produit les 3 directions
 lui-même, sur 3 axes distincts, et rien ne le signale comme un défaut. Si `etat` porte une `annonce`,
 elle se recopie une fois à l'utilisateur.
+
+**La comparaison se livre avec sa planche mosaïque** (TF-2909, consigne du porteur du 27/11/2026 : « Très bien
+les mosaïques d'images, à conserver dans les principes de la Factory. »). Les écrans signature des 3 directions se
+posent côte à côte dans une planche : une rangée par direction ou par concepteur (Claude, Codex, Gemini), les captures
+à 1920 px, le nom de chaque maquette sous sa vignette. `node "$FORGE_DESIGN_ROOT/oracles/planche-mosaique.mjs" --sortie
+<dossier du produit> --rangee "<direction>" "<écran>=<fichier>" …` l'écrit ; le chemin de `planche.png` part dans
+`DIRECTION.md`, et une comparaison livrée sans planche est incomplète. Une capture qui échoue se dit sur la planche
+(« capture manquante »), elle ne s'en retire pas.
 
 **Borne de coût : 3 directions, 1 passe de jugement, 1 approfondissement.** Au-delà,
 escalader. Une compétition qui s'étire indéfiniment est un aveu que la rubrique ne
