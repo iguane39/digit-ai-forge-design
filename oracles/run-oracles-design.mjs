@@ -116,8 +116,11 @@ import { rendreAutonome } from './lib/rendre-autonome.mjs';
 import { estHoteLocal } from './lib/lire-page-servie.mjs';
 import { lireStatutAttendu } from './lib/statut-attendu.mjs';
 import { capturesManquantes } from './lib/captures.mjs';
+import { releverSite, departAcceptable } from './lib/site-servi.mjs';
 
 const args = process.argv.slice(2);
+// TF-2901 : les options à valeur du mode --site et de la comparaison à la composition ; leur valeur n'est pas la cible.
+const OPTIONS_SITE_ET_COMPOSITION = ['--site', '--pages-max', '--composition', '--classes-libres'];
 const jsonOnly = args.includes('--json-only');
 const rendu = args.includes('--rendu');
 const etatsVisibilite = args.includes('--etats-visibilite');
@@ -134,7 +137,8 @@ const cible = args.find(a => !a.startsWith('--') && args[args.indexOf(a) - 1] !=
   && args[args.indexOf(a) - 1] !== '--etat-connexion' && args[args.indexOf(a) - 1] !== '--valeurs-derivees'
   && args[args.indexOf(a) - 1] !== '--type-page' && args[args.indexOf(a) - 1] !== '--origine'
   && args[args.indexOf(a) - 1] !== '--seuil-mm' && args[args.indexOf(a) - 1] !== '--pages-libres' && args[args.indexOf(a) - 1] !== '--statut-attendu'
-  && args[args.indexOf(a) - 1] !== '--minimum' && args[args.indexOf(a) - 1] !== '--visibilite-selecteur');
+  && args[args.indexOf(a) - 1] !== '--minimum' && args[args.indexOf(a) - 1] !== '--visibilite-selecteur'
+  && !OPTIONS_SITE_ET_COMPOSITION.includes(args[args.indexOf(a) - 1]));
 // TF-1687 — les instances alimentées, une par --instance (URL ou page rendue au volume réel).
 const instances = args.filter((a, i) => args[i - 1] === '--instance');
 const etatConnexion = opt('--etat-connexion');
@@ -185,6 +189,8 @@ const ORACLES = path.join(RACINE, 'oracles');
 let socleExempte = null;
 // TF-2309 : ce que l'intégration des ressources d'une page capturée a fait, dit au rapport quand elle a eu lieu.
 let autonomieDite = null;
+// TF-2901 : le relevé d'un site servi (mode --site), dit au rapport quand il a eu lieu.
+let siteDit = null;
 
 function sortir(verdict, resultats, nonJuge, code) {
   // TF-1241 — la forme d'ENTRÉE du lanceur général, pour un seul juge. Le verdict et le code sont
@@ -202,7 +208,7 @@ function sortir(verdict, resultats, nonJuge, code) {
     process.exit(v === 'FAIL' ? 1 : v === 'PASS' ? 0 : 2);
   }
   process.stdout.write(JSON.stringify({
-    orchestrateur: 'run-oracles-design', racine: RACINE, artefact: cible || opt('--corpus') || null,
+    orchestrateur: 'run-oracles-design', racine: RACINE, artefact: cible || opt('--corpus') || opt('--site') || null,
     // La grille est DITE, pas seulement passée à render_page.py : un lecteur du JSON
     // doit pouvoir constater à quelles largeurs le verdict a été rendu (TF-1066).
     grille_rendu: {
@@ -211,6 +217,7 @@ function sortir(verdict, resultats, nonJuge, code) {
     },
     verdict, oracles: resultats, non_juge: nonJuge,
     ...(autonomieDite ? { page_rendue_autonome: autonomieDite } : {}),
+    ...(siteDit ? { site: siteDit } : {}),
     // TF-2050 : le total des faits commerciaux « à faire confirmer », pour que l'agrégat le porte lui-même.
     a_faire_confirmer: resultats.reduce((n, r) => n + (r.a_confirmer || 0), 0),
     ...(socleExempte ? { socle_exempte: socleExempte } : {}),
@@ -499,6 +506,101 @@ for (const mode of [
   ], code);
 }
 
+// ── Mode site : toutes les pages que la navigation d'un site servi sert (TF-2901) ─────────────────────────
+// Le 26/11/2026, une nouvelle composition a été jugée sur la liste des 6 écrans refaits (12 pages, tout PASS) ; 9 autres écrans servis
+// sous la même adresse gardaient l'ancienne composition, et aucun oracle ne les avait rendus : ils n'étaient pas nommés. Ici la liste ne
+// se nomme pas, elle se RELÈVE : à partir d'une page servie, les liens de même origine des éléments de navigation (<nav>, <header>, rôle
+// navigation / menu / menubar), de page en page (lib/site-servi.mjs). Chaque page lue est jugée par CE point d'entrée, comme une page
+// servie (--instance, sauf --sans-instance), avec les mêmes options ; le verdict est rendu page par page. Un écran relevé et non lu se
+// DIT (non_juge, verdict INDÉTERMINÉ), il ne disparaît pas du rapport.
+if (args.includes('--site')) {
+  const depart = opt('--site');
+  const pagesMaxLu = opt('--pages-max');
+  const refus = !depart || depart.startsWith('--') ? '--site sans adresse : passer l\'URL d\'une page servie de la boucle locale (--site <url>)'
+    : departAcceptable(depart)
+      || (pagesMaxLu !== null && !/^\d+$/.test(pagesMaxLu) ? `--pages-max « ${pagesMaxLu} » illisible : un nombre de pages entier` : null);
+  if (refus) sortir('SKIP', [], [`${refus} — rien n'a été jugé`], 2);
+  const pagesMax = pagesMaxLu === null ? 40 : Number(pagesMaxLu);
+  const sansInstanceSite = args.includes('--sans-instance');
+  const releve = await releverSite(depart, { pagesMax, certificatLocal });
+  const dossierSite = fs.mkdtempSync(path.join(os.tmpdir(), `forge-design-site-${process.pid}-`));
+  const moi = fileURLToPath(import.meta.url);
+  // Les options qui valent pour chaque page : celles que le point d'entrée comprend déjà, passées telles quelles.
+  const OPTIONS_SEULES = ['--rendu', '--mobile', '--maquette', '--etats-visibilite', '--fluidite', '--accepter-certificat-local'];
+  const OPTIONS_VALEUR = ['--tokens', '--type-page', '--etat-connexion', '--valeurs-derivees', '--racine', '--visibilite-selecteur', '--classes-libres'];
+  const OPTIONS_REPETEES = ['--composition'];
+  const passe = [
+    ...args.filter(a => OPTIONS_SEULES.includes(a)),
+    ...OPTIONS_VALEUR.flatMap(o => (opt(o) ? [o, opt(o)] : [])),
+    ...OPTIONS_REPETEES.flatMap(o => args.flatMap((a, i) => (a === o && args[i + 1] ? [o, args[i + 1]] : []))),
+  ];
+  const pagesRendues = [];
+  const nonJugeSite = [];
+  const echecsDe = (j) => (j.oracles || []).flatMap(o => (o.findings || [])
+    .filter(f => f.sev === 'bloquant' || f.sev === 'majeur').map(f => ({ oracle: o.oracle, regle: f.regle, msg: String(f.msg || '').slice(0, 400), ...(f.where ? { where: f.where } : {}) })));
+  let numero = 0;
+  try {
+    for (const page of releve.pages) {
+      const base = { url: page.url, ...(page.finale !== page.url ? { finale: page.finale } : {}), trouvee_par: page.trouvee_par };
+      if (page.doublon) { pagesRendues.push({ ...base, verdict: 'DOUBLON', raison: page.raison }); continue; }
+      if (page.html === null) { pagesRendues.push({ ...base, verdict: 'NON_JUGEE', raison: page.raison }); continue; }
+      const fichier = path.join(dossierSite, `page-${String(++numero).padStart(2, '0')}.html`);
+      fs.writeFileSync(fichier, page.html, 'utf8');
+      const r = spawnSync(process.execPath, [moi, fichier, ...passe, ...(sansInstanceSite ? ['--origine', releve.origine] : ['--instance', page.finale]), '--json-only'],
+        { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, PYTHONUTF8: '1' } });
+      let j = null; try { j = JSON.parse(r.stdout.trim()); } catch { /* illisible : dit ci-dessous */ }
+      if (!j) { pagesRendues.push({ ...base, verdict: 'NON_JUGEE', raison: `sortie du jugement illisible (exit ${r.status}) : ${String(r.stderr || '').slice(0, 200)}` }); continue; }
+      // Les constats citent l'adresse servie, jamais la copie temporaire.
+      const jeton = s => JSON.stringify(s).slice(1, -1);
+      const citee = JSON.parse(JSON.stringify(j).split(jeton(fichier)).join(jeton(page.finale)));
+      const echecs = echecsDe(citee);
+      pagesRendues.push({
+        ...base, verdict: citee.verdict, exit: r.status, ecarts_durs: echecs.length,
+        oracles_joues: (citee.oracles || []).length, oracles_en_echec: (citee.oracles || []).filter(o => o.verdict === 'FAIL').map(o => o.oracle),
+        echecs, non_juge: citee.non_juge || [],
+      });
+    }
+  } finally {
+    fs.rmSync(dossierSite, { recursive: true, force: true, maxRetries: 5 });
+  }
+
+  const jugees = pagesRendues.filter(p => p.verdict === 'PASS' || p.verdict === 'FAIL' || p.verdict === 'SKIP');
+  const nonJugees = pagesRendues.filter(p => p.verdict === 'NON_JUGEE');
+  const doublons = pagesRendues.filter(p => p.verdict === 'DOUBLON');
+  if (nonJugees.length) nonJugeSite.push(`${nonJugees.length} écran(s) relevé(s) par la navigation et NON JUGÉ(S) : ${nonJugees.map(p => `${p.url} (${p.raison})`).join(' ; ')} — un écran non lu n'est pas un écran conforme`);
+  if (doublons.length) nonJugeSite.push(`${doublons.length} adresse(s) relevée(s) qui servent une page déjà jugée (même page après redirection) : ${doublons.map(p => p.url).join(', ')}`);
+  if (releve.au_dela_du_plafond.length) nonJugeSite.push(`${releve.au_dela_du_plafond.length} page(s) relevée(s) au-delà du plafond --pages-max ${pagesMax}, NON jugée(s) : ${releve.au_dela_du_plafond.join(', ')} — relancer avec un plafond plus haut`);
+  if (releve.hors_origine.length) nonJugeSite.push(`${releve.hors_origine.length} lien(s) de navigation d'une AUTRE origine, ni suivis ni jugés (aucun accès réseau vers un tiers) : ${releve.hors_origine.slice(0, 10).join(', ')}${releve.hors_origine.length > 10 ? `, … (${releve.hors_origine.length} au total)` : ''}`);
+  if (releve.hors_page.length) nonJugeSite.push(`${releve.hors_page.length} lien(s) de navigation vers un fichier qui n'est pas une page (image, feuille, document), non suivis : ${releve.hors_page.slice(0, 10).join(', ')}${releve.hors_page.length > 10 ? `, … (${releve.hors_page.length} au total)` : ''}`);
+  if (releve.pages.length === 1) nonJugeSite.push('aucun lien de navigation relevé sur la page de départ (ni <nav>, ni <header>, ni rôle navigation/menu/menubar) : une seule page a été jugée, le reste du site ne l\'a pas été');
+  nonJugeSite.push('la navigation est lue dans le HTML SERVI : un menu construit par script après le chargement n\'est pas relevé, et un écran que seul un lien du corps de page ou un bouton atteint (hors <nav>, <header> et rôle ARIA de navigation) n\'est pas relevé non plus');
+  if (!args.some((a, i) => a === '--composition' && args[i + 1])) nonJugeSite.push('comparaison à la feuille de la composition NON JOUÉE sur toutes les pages : aucune --composition fournie (TF-2901) ; sans elle, une page restée dans l\'ancienne composition ne se distingue que par ce que les autres oracles en voient');
+  if (sansInstanceSite) nonJugeSite.push('--sans-instance : les pages sont jugées comme des fichiers (--origine du site), sans l\'exploitabilité au volume réel (oracle-exploitabilite) ni les erreurs de formulaire (oracle-erreurs-formulaire) que --instance joue sur l\'écran servi');
+  // Ce que chaque page a dit à son non_juge, une fois chacun, sans les lignes de page qui se répètent d'une page à l'autre.
+  for (const ligne of new Set(jugees.flatMap(p => p.non_juge))) nonJugeSite.push(ligne);
+  for (const p of jugees) delete p.non_juge;
+
+  siteDit = { depart, origine: releve.origine, pages_relevees: releve.pages.length, pages_jugees: jugees.length, pages: pagesRendues };
+  const echecsSite = jugees.filter(p => p.verdict === 'FAIL');
+  const indetermines = jugees.filter(p => p.verdict === 'SKIP');
+  // Un écran relevé et non jugé (illisible, ou au-delà du plafond) rend le verdict INDÉTERMINÉ : jamais PASS sur ce qu'on n'a pas vu.
+  const sansVerdict = indetermines.length + nonJugees.length + releve.au_dela_du_plafond.length;
+  if (!jsonOnly) {
+    process.stderr.write(`\n  site ${depart} — ${releve.pages.length} page(s) relevée(s) par la navigation, ${jugees.length} jugée(s)\n`);
+    for (const p of pagesRendues) {
+      const detail = p.verdict === 'FAIL' ? ` — ${p.ecarts_durs} écart(s) dur(s) : ${[...new Set(p.echecs.map(e => `${e.oracle.replace(/^oracle-/, '')} ${e.regle || ''}`.trim()))].join(', ')}`
+        : p.verdict === 'NON_JUGEE' || p.verdict === 'DOUBLON' ? ` — ${p.raison}` : '';
+      process.stderr.write(`  ${p.verdict.padEnd(9)} ${p.url}${detail}\n`);
+    }
+    process.stderr.write(echecsSite.length ? `\nFAIL — ${echecsSite.length} page(s) sur ${jugees.length} en échec\n`
+      : sansVerdict ? `\nINDÉTERMINÉ — ${sansVerdict} page(s) non jugée(s) ou indéterminée(s)\n`
+      : '\nPASS — toutes les pages relevées sont vertes\n');
+  }
+  if (echecsSite.length) sortir('FAIL', [], nonJugeSite, 1);
+  if (sansVerdict || !jugees.length) sortir('SKIP', [], nonJugeSite, 2);
+  sortir('PASS', [], nonJugeSite, 0);
+}
+
 // ── Mode livrable ──────────────────────────────────────────────────────────
 if (!cible || !fs.existsSync(cible)) {
   sortir('SKIP', [], ['cible absente : passer un fichier .html ou --corpus <dossier>'], 2);
@@ -627,7 +729,7 @@ function passeFichier(fichier, { muet = false } = {}) {
   if (seul) {
     // TF-2043 : l'oracle de valeur affichée se joue HORS de cette passe (voir plus bas) — sur la copie
     // sans socle, dans le dossier temporaire, il ne retrouverait pas la déclaration voisine de la page.
-    if (seul === 'valeur-affichee') return [];
+    if (seul === 'valeur-affichee' || seul === 'composition') return [];
     const script = `oracle-${seul}.mjs`;
     const avecTokens = ['oracle-tokens.mjs', 'oracle-declencheurs.mjs', 'oracle-surcouche.mjs', 'oracle-perceptibilite.mjs'].includes(script);
     return [lancer(script, avecTokens && opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier])];
@@ -843,6 +945,23 @@ if (!seul && instances.length) {
   } else {
     if (ef.verdict === 'SKIP' && !ef.raison) ef.raison = (ef.non_juge || []).slice(-1)[0] || 'non jugé';
     resultats.push(ef);
+  }
+}
+
+// ── TF-2901 · les composants de la page sont-ils dessinés par la feuille de la composition ? ──
+// oracle-composition compare les classes de la page aux classes que la feuille de la composition dessine (--composition, répétable : une
+// feuille, une page servie ou une URL de la boucle locale). Hors de la passe du socle : une composition n'est pas un composant du socle.
+// Sans --composition, il n'est ni lancé ni en échec : il est dit SANS OBJET, à voix haute, et le mode --site le répète sur chaque page.
+if (!seul || seul === 'composition') {
+  const compositions = args.flatMap((a, i) => (a === '--composition' && args[i + 1] ? [args[i + 1]] : []));
+  if (compositions.length) {
+    const r = lancer('oracle-composition.mjs', [fichierJuge, ...compositions.flatMap(c => ['--composition', c]),
+      ...(opt('--classes-libres') ? ['--classes-libres', opt('--classes-libres')] : []), ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
+    if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'CO0') || {}).msg || 'non jugé';
+    resultats.push(citerLaCible(r));
+  } else if (!seul) {
+    sansObjet.push('oracle-composition : SANS OBJET — aucune feuille de composition fournie (--composition <feuille.css|page servie|url>) : les composants de la page n\'ont pas été comparés à ce que la composition dessine ; '
+      + 'à jouer dès qu\'une composition change, sur CHAQUE page servie (--site <url>)');
   }
 }
 

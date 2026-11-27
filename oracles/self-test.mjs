@@ -1087,6 +1087,19 @@ const CAS = [
     verte: [fx('clip/verte')],
     rouge: [fx('clip/rouge')],
   },
+  {
+    // TF-2901 (lot Produit-82 du 27/11/2026) — LES 9 ÉCRANS QUE PERSONNE N'AVAIT NOMMÉS. Une nouvelle composition jugée sur 6 écrans refaits
+    // (12 pages, tout PASS) laissait 9 autres écrans servis dans l'ancienne composition (capitales, plaques, cadres de 2 px, boutons en
+    // pilule). oracle-composition lit UNE page contre la feuille de la composition et nomme les composants qu'elle ne dessine pas ; le mode
+    // --site de run-oracles-design l'applique à toutes les pages que la navigation sert (bloc « run-oracles-design --site » plus bas).
+    // La verte est une page de la nouvelle composition ; la rouge est la page « journal » de la fixture, qui emploie encore les classes de
+    // l'ancienne (.contenu, .titre-capitales, .plaque, .plaque-titre, .btn-pilule : CO1 ×5) et une classe sans règle (CO2). CO3 et la
+    // porte d'appel CO0 se jouent au bloc dédié : CO3 sort avant CO1, ils ne peuvent pas partager la rouge.
+    oracle: 'oracle-composition.mjs',
+    regles: ['CO1', 'CO2'],
+    verte: [fx('site-servi/index.html'), '--composition', fx('site-servi/actifs/composition.css')],
+    rouge: [fx('site-servi/journal.html'), '--composition', fx('site-servi/actifs/composition.css')],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
@@ -5118,6 +5131,171 @@ if (!OUTILLAGE_DOCUMENT.ok) {
     } finally {
       fs.rmSync(dossier, { recursive: true, force: true, maxRetries: 5 });
     }
+  }
+}
+
+// Lot Produit-82 du 27/11/2026 — les gestes nés du retour du produit (TF-2901, TF-2909, TF-2910), joués au détail.
+// Un petit serveur local sert la fixture « site servi » (3 pages, dont 1 dans l'ancienne composition) ; les recettes qui lisent une page
+// servie ou ses feuilles passent par lui, jamais par le réseau.
+const demarrerServeur = async (dossier) => {
+  const journalServeur = path.join(os.tmpdir(), `serveur-fixture-${process.pid}-${Math.random().toString(36).slice(2, 7)}.txt`);
+  const port = 19900 + Math.floor(Math.random() * 90);
+  const processus = spawn(process.execPath, [path.join(ici, 'lib', 'serveur-recette-verification.mjs'), dossier, String(port), journalServeur], { stdio: 'ignore' });
+  let pret = false;
+  for (let i = 0; i < 40 && !pret; i++) {
+    const s = spawnSync(process.execPath, ['-e', 'fetch(process.argv[1]).then(r=>process.exit(r.status<500?0:1),()=>process.exit(1))', `http://127.0.0.1:${port}/index.html`]);
+    pret = s.status === 0;
+  }
+  return { port, pret, arreter: () => { processus.kill(); try { fs.unlinkSync(journalServeur); } catch { /* best-effort */ } } };
+};
+const lireJson = r => { try { return JSON.parse(r.stdout.trim()); } catch { return null; } };
+const jouerNode = (script, argv, options = {}) => {
+  const r = spawnSync(process.execPath, [path.join(ici, script), ...argv, '--json-only'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024, env: { ...process.env, PYTHONUTF8: '1', ...(options.env || {}) } });
+  return { code: r.status, json: lireJson(r), stderr: r.stderr };
+};
+
+// ── TF-2901 · lib/site-servi.mjs : la navigation d'une page, relevée sans réseau ──
+{
+  console.log(String.fromCharCode(10) + 'lib/site-servi.mjs (TF-2901) — la navigation d\'une page se relève, sans réseau et sans sortir de l\'origine');
+  const { liensDeNavigation, releverSite, departAcceptable } = await import('./lib/site-servi.mjs');
+  const page = '<header><nav><a href="/a">A</a><a href="/b#x">B</a></nav></header><main><a href="/corps">Corps</a></main>'
+    + '<div role="menu"><a href="/m">M</a><span role="menuitem" href="/mi">MI</span></div>'
+    + '<nav><a href="https://autre.exemple/x">E</a><a href="/doc.pdf">D</a><a href="#haut">H</a><a href="/t" download>T</a></nav>';
+  const liens = liensDeNavigation(page).map(l => l.href);
+  ligne(['/a', '/b#x', '/m', '/mi', 'https://autre.exemple/x', '/doc.pdf'].every(h => liens.includes(h)),
+    `sens vert · les liens d'un <nav>, d'un <header> et d'un rôle menu / menuitem sont relevés (obtenu ${liens.join(' ')})`);
+  ligne(!liens.includes('/corps') && !liens.includes('#haut') && !liens.includes('/t'),
+    'sens rouge · un lien du corps de page, une ancre et un lien de téléchargement ne sont pas des liens de navigation');
+  const site = {
+    'http://h.test/': { nav: ['/a', '/b', 'http://autre.test/x', '/f.pdf'] }, 'http://h.test/a': { nav: ['/c', '/'] },
+    'http://h.test/b': { status: 404 }, 'http://h.test/c': { type: 'application/json' },
+  };
+  const lire = async url => {
+    const e = site[url];
+    if (!e) return { ok: false, status: 404, text: async () => '', headers: new Headers() };
+    const corps = e.nav ? `<nav>${e.nav.map(h => `<a href="${h}">x</a>`).join('')}</nav>` : '<p>page</p>';
+    return { ok: (e.status || 200) < 400, status: e.status || 200, text: async () => corps, headers: new Headers({ 'content-type': e.type || 'text/html; charset=utf-8' }), url };
+  };
+  const r = await releverSite('http://h.test/', { lire });
+  ligne(r.pages.map(p => new URL(p.url).pathname).join(',') === '/,/a,/b,/c' && r.pages.length === 4,
+    `sens vert · quatre pages relevées de page en page, sans doublon du retour vers « / » (obtenu ${r.pages.map(p => new URL(p.url).pathname).join(',')})`);
+  ligne(r.pages[2].raison === 'HTTP 404' && r.pages[2].html === null && /pas une page HTML/.test(r.pages[3].raison || ''),
+    `sens rouge · un écran relevé et illisible garde sa raison, il ne disparaît pas (obtenu « ${r.pages[2].raison} », « ${r.pages[3].raison} »)`);
+  ligne(r.hors_origine.join() === 'http://autre.test/x' && r.hors_page.join() === 'http://h.test/f.pdf',
+    'sens rouge · un lien d\'une autre origine n\'est pas suivi mais compté, un fichier qui n\'est pas une page de même');
+  const court = await releverSite('http://h.test/', { lire, pagesMax: 2 });
+  ligne(court.pages.length === 2 && court.au_dela_du_plafond.map(u => new URL(u).pathname).join() === '/b,/c',
+    `sens rouge · au-delà du plafond, les pages relevées sont NOMMÉES, pas silencieusement abandonnées (obtenu ${court.au_dela_du_plafond.join(' ')})`);
+  ligne(departAcceptable('http://exemple.com/') !== null && /non local/.test(departAcceptable('http://exemple.com/'))
+    && departAcceptable('ftp://127.0.0.1/') !== null && departAcceptable('http://127.0.0.1:1/') === null && departAcceptable('pas une url') !== null,
+    'borne · seule une adresse http(s) de la boucle locale est un départ acceptable');
+}
+
+// ── TF-2901 · oracle-composition au détail, et run-oracles-design --site sur la fixture servie ──
+{
+  console.log(String.fromCharCode(10) + 'oracle-composition et run-oracles-design --site (TF-2901) — toutes les pages que la navigation sert, une par une');
+  const composition = fx('site-servi/actifs/composition.css');
+  const dossierEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'composition-'));
+  try {
+    const vide = path.join(dossierEssai, 'vide.css');
+    fs.writeFileSync(vide, '/* aucune règle */\n', 'utf8');
+    const sansComposition = jouerNode('oracle-composition.mjs', [fx('site-servi/journal.html')]);
+    ligne(sansComposition.code === 2 && sansComposition.json?.verdict === 'SKIP' && sansComposition.json.findings.some(f => f.regle === 'CO0'),
+      `porte · aucune --composition : SKIP exit 2 et CO0 le dit, jamais un PASS (obtenu ${sansComposition.json?.verdict}, exit ${sansComposition.code})`);
+    const co3 = jouerNode('oracle-composition.mjs', [fx('site-servi/journal.html'), '--composition', vide]);
+    ligne(co3.code === 1 && co3.json?.findings.some(f => f.regle === 'CO3' && f.sev === 'bloquant') && !co3.json.findings.some(f => f.regle === 'CO1'),
+      `sens rouge · une feuille sans aucun sélecteur de classe n'est pas une composition : CO3 bloquant seul, aucune page n'est comparée à elle (obtenu exit ${co3.code})`);
+    const introuvable = jouerNode('oracle-composition.mjs', [fx('site-servi/journal.html'), '--composition', path.join(dossierEssai, 'absente.css')]);
+    ligne(introuvable.code === 2 && introuvable.json?.verdict === 'SKIP' && introuvable.json.findings.some(f => f.regle === 'CO0' && /composition illisible/.test(f.msg)),
+      `porte · une composition introuvable : SKIP exit 2, jamais un PASS ni un FAIL (obtenu ${introuvable.json?.verdict}, exit ${introuvable.code})`);
+    const libres = jouerNode('oracle-composition.mjs', [fx('site-servi/journal.html'), '--composition', composition, '--classes-libres', 'contenu,titre-capitales,plaque*,btn-pilule,accroche-script']);
+    ligne(libres.code === 0 && libres.json?.verdict === 'PASS' && libres.json.findings.some(f => f.sev === 'info' && /dispensée\(s\) par --classes-libres/.test(f.msg)) && !libres.json.findings.some(f => f.sev === 'bloquant'),
+      `dispense · --classes-libres déclare les classes propres à la page (jeton exact et préfixe « plaque* ») : PASS, et la dispense est DITE (obtenu ${libres.json?.verdict}, exit ${libres.code})`);
+    const partielle = jouerNode('oracle-composition.mjs', [fx('site-servi/journal.html'), '--composition', composition, '--classes-libres', 'contenu,titre-capitales']);
+    ligne(partielle.code === 1 && partielle.json?.findings.filter(f => f.regle === 'CO1').length === 3,
+      `sens rouge · une dispense partielle ne lève que ce qu'elle nomme : 3 composants restent refusés (obtenu ${partielle.json?.findings.filter(f => f.regle === 'CO1').length})`);
+    const parPage = jouerNode('oracle-composition.mjs', [fx('site-servi/index.html'), '--composition', fx('site-servi/equipes.html')]);
+    ligne(parPage.code === 0 && parPage.json?.verdict === 'PASS',
+      `sens vert · la composition se donne aussi par une PAGE dont la feuille liée est lue (obtenu ${parPage.json?.verdict}, exit ${parPage.code})`);
+    const co1 = (r) => (r.json?.findings || []).filter(f => f.regle === 'CO1').map(f => f.where).sort().join(' ');
+    const rouge = jouerNode('oracle-composition.mjs', [fx('site-servi/journal.html'), '--composition', composition]);
+    ligne(co1(rouge) === '.btn-pilule .contenu .plaque .plaque-titre .titre-capitales' && (rouge.json?.findings || []).some(f => f.regle === 'CO2' && f.where === '.accroche-script' && f.sev === 'avertissement'),
+      `sens rouge · les cinq composants de l'ancienne composition sont NOMMÉS (CO1), la classe sans règle l'est en avertissement (CO2) (obtenu ${co1(rouge)})`);
+  } finally {
+    fs.rmSync(dossierEssai, { recursive: true, force: true, maxRetries: 5 });
+  }
+
+  if (!OUTILLAGE_RENDU.ok) {
+    console.log(`  SKIP  outillage de rendu indisponible : ${OUTILLAGE_RENDU.manques.join(' ; ')} — le mode --site (qui joue l'exploitabilité de chaque page servie) n'est pas joué sur ce poste`);
+    sautes.push('run-oracles-design --site');
+  } else {
+    const copie = fs.mkdtempSync(path.join(os.tmpdir(), 'site-servi-'));
+    const serveurs = [];
+    try {
+      const servir = async (dossier) => { const s = await demarrerServeur(dossier); serveurs.push(s); return s; };
+      const racine = fx('site-servi');
+      const compo = port => `http://127.0.0.1:${port}/actifs/composition.css`;
+      const pagesDe = j => Object.fromEntries((j?.site?.pages || []).map(p => [new URL(p.url).pathname, p]));
+      const rouge = await servir(racine);
+      if (!rouge.pret) {
+        ligne(false, 'serveur local de recette indisponible');
+      } else {
+        // SENS ROUGE — le cas du 26/11 : 3 pages servies, 1 dans l'ancienne composition. FAIL sur CETTE page seulement.
+        const r = jouerNode('run-oracles-design.mjs', ['--site', `http://127.0.0.1:${rouge.port}/index.html`, '--composition', compo(rouge.port)]);
+        const p = pagesDe(r.json);
+        ligne(r.code === 1 && r.json?.verdict === 'FAIL' && r.json?.site?.pages_relevees === 3 && r.json?.site?.pages_jugees === 3,
+          `sens rouge · le site de 3 pages est relevé par sa navigation et jugé en entier : FAIL exit 1 (obtenu ${r.json?.verdict}, exit ${r.code}, ${r.json?.site?.pages_relevees} relevée(s), ${r.json?.site?.pages_jugees} jugée(s))`);
+        ligne(p['/index.html']?.verdict === 'PASS' && p['/equipes.html']?.verdict === 'PASS' && p['/journal.html']?.verdict === 'FAIL',
+          `sens rouge · le verdict est rendu page par page, FAIL sur la seule page de l'ancienne composition (obtenu ${Object.entries(p).map(([u, x]) => `${u} ${x.verdict}`).join(', ')})`);
+        ligne(JSON.stringify(p['/journal.html']?.oracles_en_echec) === '["oracle-composition"]' && (p['/journal.html']?.echecs || []).length === 5
+          && p['/journal.html'].echecs.every(e => e.regle === 'CO1' && !/forge-design-site/.test(e.msg)),
+          `sens rouge · elle échoue pour la bonne raison : oracle-composition seul, 5 composants (CO1), aucun autre juge ne rougit (obtenu ${JSON.stringify(p['/journal.html']?.oracles_en_echec)}, ${(p['/journal.html']?.echecs || []).length} écart(s))`);
+        ligne(!Object.keys(p).some(u => /orphelin/.test(u)) && (r.json?.non_juge || []).some(n => /AUTRE origine/.test(n) && /exemple\.invalid\/aide/.test(n)),
+          'bornes · le lien du corps de page (/orphelin.html) n\'est pas relevé ; le lien de navigation d\'un autre hôte n\'est ni suivi ni caché (dit au non_juge)');
+        ligne((p['/journal.html']?.oracles_joues || 0) >= 8 && (r.json?.non_juge || []).some(n => /la navigation est lue dans le HTML SERVI/.test(n)),
+          'le jugement de chaque page est l\'agrégat complet (pas le seul oracle-composition), et la limite de la lecture de la navigation est dite');
+        // SENS ROUGE — sans la feuille de la composition, la page restée dans l'ancienne composition passe : c'est la raison de l'option.
+        const sans = jouerNode('run-oracles-design.mjs', ['--site', `http://127.0.0.1:${rouge.port}/index.html`, '--sans-instance']);
+        ligne(sans.code === 0 && sans.json?.verdict === 'PASS' && (sans.json?.non_juge || []).some(n => /comparaison à la feuille de la composition NON JOUÉE/.test(n))
+          && (sans.json?.non_juge || []).some(n => /--sans-instance/.test(n)),
+          `sens rouge · sans --composition les 3 pages passent (le défaut du 26/11 en une ligne) et le non_juge dit que la comparaison n'a PAS eu lieu (obtenu ${sans.json?.verdict}, exit ${sans.code})`);
+        // BORNE DU RELEVÉ — un plafond qui coupe le relevé rend INDÉTERMINÉ et nomme l'écran non jugé.
+        const plafond = jouerNode('run-oracles-design.mjs', ['--site', `http://127.0.0.1:${rouge.port}/index.html`, '--composition', compo(rouge.port), '--sans-instance', '--pages-max', '2']);
+        ligne(plafond.code === 2 && plafond.json?.verdict === 'SKIP' && (plafond.json?.non_juge || []).some(n => /au-delà du plafond --pages-max 2, NON jugée\(s\)/.test(n) && /journal\.html/.test(n)),
+          `sens rouge · --pages-max 2 : l'écran relevé au-delà du plafond est NOMMÉ non jugé, verdict INDÉTERMINÉ exit 2, jamais PASS (obtenu ${plafond.json?.verdict}, exit ${plafond.code})`);
+      }
+
+      // SENS VERT — le remède : la page est refaite dans la nouvelle composition (copie de la fixture, journal.html remplacé).
+      fs.cpSync(racine, copie, { recursive: true });
+      fs.copyFileSync(fx('site-servi/journal-refait.html'), path.join(copie, 'journal.html'));
+      const verte = await servir(copie);
+      if (!verte.pret) {
+        ligne(false, 'serveur local de recette indisponible (site refait)');
+      } else {
+        const r = jouerNode('run-oracles-design.mjs', ['--site', `http://127.0.0.1:${verte.port}/index.html`, '--composition', compo(verte.port)]);
+        const p = pagesDe(r.json);
+        ligne(r.code === 0 && r.json?.verdict === 'PASS' && Object.values(p).length === 3 && Object.values(p).every(x => x.verdict === 'PASS'),
+          `sens vert · le remède joué (la page refaite dans la composition) : les 3 pages PASS, exit 0 (obtenu ${r.json?.verdict}, exit ${r.code}, ${Object.entries(p).map(([u, x]) => `${u} ${x.verdict}`).join(', ')})`);
+        // UN ÉCRAN RELEVÉ ET ILLISIBLE SE DIT : un lien de navigation ajouté vers une page qui n'existe pas.
+        const index = path.join(copie, 'index.html');
+        fs.writeFileSync(index, fs.readFileSync(index, 'utf8').replace('<a href="/journal.html">Journal</a>', '<a href="/journal.html">Journal</a>\n    <a href="/disparue.html">Archives</a>'), 'utf8');
+        const mort = jouerNode('run-oracles-design.mjs', ['--site', `http://127.0.0.1:${verte.port}/index.html`, '--composition', compo(verte.port), '--sans-instance']);
+        const pm = pagesDe(mort.json);
+        ligne(mort.code === 2 && mort.json?.verdict === 'SKIP' && pm['/disparue.html']?.verdict === 'NON_JUGEE' && pm['/disparue.html']?.raison === 'HTTP 404'
+          && pm['/index.html']?.verdict === 'PASS' && (mort.json?.non_juge || []).some(n => /NON JUGÉ\(S\)/.test(n) && /disparue\.html \(HTTP 404\)/.test(n)),
+          `sens rouge · un écran de la navigation introuvable (404) est dit NON JUGÉ avec sa raison, les autres pages restent jugées : INDÉTERMINÉ exit 2 (obtenu ${mort.json?.verdict}, exit ${mort.code}, ${pm['/disparue.html']?.verdict})`);
+      }
+    } finally {
+      for (const s of serveurs) s.arreter();
+      fs.rmSync(copie, { recursive: true, force: true, maxRetries: 5 });
+    }
+    // Les refus : une adresse qui n'est pas de la boucle locale ou qui manque ne juge rien, et le dit.
+    const tiers = jouerNode('run-oracles-design.mjs', ['--site', 'http://exemple.invalid/']);
+    ligne(tiers.code === 2 && tiers.json?.verdict === 'SKIP' && (tiers.json?.non_juge || []).some(n => /non local/.test(n) && /rien n'a été jugé/.test(n)),
+      `refus · --site vers un hôte tiers : SKIP exit 2, aucun accès réseau (obtenu ${tiers.json?.verdict}, exit ${tiers.code})`);
+    const sansAdresse = jouerNode('run-oracles-design.mjs', ['--site']);
+    ligne(sansAdresse.code === 2 && (sansAdresse.json?.non_juge || []).some(n => /--site sans adresse/.test(n)),
+      `refus · --site sans adresse : SKIP exit 2 et le motif est dit (obtenu exit ${sansAdresse.code})`);
   }
 }
 

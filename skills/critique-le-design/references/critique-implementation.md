@@ -216,6 +216,21 @@ Un PPTX n'est pas paginé par le moteur d'impression : DP4 et DP5 y sont dites n
 PDF du deck se rejoue. L'oracle sans outillage (Python avec pymupdf et python-pptx) rend SKIP exit 2 avec
 son motif : la revue le déclare, jamais un PASS.
 
+## Toutes les pages que le menu sert (TF-2901, 27/11/2026)
+
+Quand une composition ou une charte change, la critique d'implémentation se joue sur toutes les pages que la navigation du produit sert, et pas sur la
+liste des écrans refaits. Le 26/11/2026, une composition a été jugée sur 6 écrans refaits (12 pages, tout PASS) ; 9 autres écrans servis sous la même
+adresse gardaient l'ancienne composition (titres en capitales, plaques sombres, cadres de 2 px, boutons en pilule) et le porteur l'a vu à l'œil, faute
+d'oracle qui les ait rendus.
+
+- **Relever, ne pas lister** : `node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" --site <url de la boucle locale> --composition <feuille de la
+  composition>` relève les pages liées par les `<nav>`, `<header>` et menus ARIA de même origine, juge chacune par l'agrégat complet et rend le verdict page
+  par page. Un écran relevé et non lu (404, au-delà du plafond) est dit non jugé, jamais conforme.
+- **Nommer les composants que la composition ne dessine pas** : `--composition` donne la feuille ; `oracle-composition` (CO1 à CO3) refuse, page par page, les classes
+  qu'une page dessine par sa propre feuille et que la feuille de la composition ne dessine pas.
+- **Dire la limite** : le relevé lit le HTML servi ; un menu construit par script, ou un écran que seul un lien du corps de page atteint, se relève à la main et se
+  passe à `run-oracles-design.mjs <page> --instance <url>`.
+
 ## Restitution — des retours, pas une revue
 
 Sortie : `revue-implementation.md` — même squelette que `restitution.md` (verdict

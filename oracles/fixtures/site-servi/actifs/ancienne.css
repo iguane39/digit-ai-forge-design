@@ -1,0 +1,23 @@
+/* Feuille de l'ANCIENNE composition de la fixture « site servi » (TF-2901) : plaques sombres, titres en capitales, cadres de 2 px,
+   boutons en pilule — ce que la page « journal » emploie encore et que la feuille de la composition ne dessine pas. */
+:root {
+  color-scheme: light;
+  --fond: #fbf9f5;
+  --fond-eleve: #f2eee6;
+  --texte: #1d2126;
+  --texte-secondaire: #4a5058;
+  --trait: #8a8272;
+  --plaque: #24303c;
+  --texte-sur-plaque: #f4f6f8;
+  --police: Georgia, serif;
+}
+body { background: var(--fond); color: var(--texte); font-family: var(--police); font-size: 18px; line-height: 1.6; margin: 0; }
+.bandeau { background: var(--fond-eleve); border-bottom: 2px solid var(--trait); padding: 16px 32px; }
+.bandeau a { color: var(--texte); text-decoration: underline; padding: 8px 24px 8px 0; }
+.contenu { padding: 32px; max-width: 880px; }
+.titre-capitales { font-size: 28px; line-height: 1.25; text-transform: uppercase; letter-spacing: 0.08em; margin: 0 0 24px; }
+.plaque { background: var(--plaque); color: var(--texte-sur-plaque); border: 2px solid var(--trait); padding: 24px; }
+.plaque-titre { font-size: 20px; text-transform: uppercase; margin: 0 0 12px; }
+.btn-pilule { display: inline-block; background: var(--plaque); color: var(--texte-sur-plaque); border: 2px solid var(--plaque); border-radius: 999px; padding: 12px 24px; text-decoration: none; }
+@media (max-width: 768px) { .contenu { padding: 16px; } .bandeau { padding: 12px 16px; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }

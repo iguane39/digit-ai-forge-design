@@ -134,6 +134,9 @@ node scripts/generer-images.mjs --lister-modeles [--modele <m>]    # la liste de
 node scripts/fabriquer-etat-connexion.mjs --url <page de connexion> --sortie <etat.json> --identifiant-env <VARIABLE> --secret-env <VARIABLE>   # fabrique l'état de connexion de --etat-connexion (TF-2781)
 # les valeurs viennent de variables d'ENVIRONNEMENT nommées, jamais d'un .env ni d'un argument ; l'état est refusé sous un dépôt git ; exit 1 si la connexion n'est pas établie, 2 si un prérequis manque
 
+node oracles/run-oracles-design.mjs --site <url d'une page servie de la boucle locale> [--composition <feuille.css|page|url>…] \
+  [--classes-libres a,b,p-*] [--pages-max N] [--sans-instance] [options d'une page]                        # TOUTES les pages que la navigation sert, jugées une par une (TF-2901)
+node oracles/oracle-composition.mjs <page.html|url> --composition <feuille.css|page|url>… [--classes-libres a,b,p-*]   # CO1–CO3 : les composants de la page sont-ils dessinés par la feuille de la composition ? (TF-2901)
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
 node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
 node oracles/self-test-regles-jouees.mjs                      # verrou dédié des plages citées à la sortie des oracles (« M1–M11 sans écart ») : dérivées de REGLES_JOUEES, jamais en dur (TF-2287), deux sens
@@ -169,6 +172,37 @@ avant. Ce que le correctif **répare** est compté et affiché, jamais porté au
 pas reconnue, et c'est dit au `non_juge`. Verdict machine : `0` aucun constat dur
 nouveau · `1` régression de rendu · `2` indéterminé.
 
+### Toutes les pages d'un site servi — `--site` et `oracle-composition` (TF-2901)
+
+Le 26/11/2026, une nouvelle composition a été jugée sur 6 écrans refaits (12 pages, tout PASS) ; 9 autres écrans servis sous
+la même adresse gardaient l'ancienne composition (titres en capitales, plaques, cadres de 2 px, boutons en pilule), et le
+porteur l'a vu à l'œil : aucun oracle ne les avait rendus, faute d'être nommés. La liste des écrans ne se tient plus à la
+main, elle se **relève** :
+
+```
+node oracles/run-oracles-design.mjs --site http://127.0.0.1:5173/ --composition http://127.0.0.1:5173/actifs/composition.css
+```
+
+À partir de la page servie, le mode suit les liens de **même origine** que portent les éléments de navigation (`<nav>`,
+`<header>`, rôle ARIA `navigation`, `menu`, `menubar`), de page en page, jusqu'à épuisement ou jusqu'à `--pages-max` (40).
+Chaque page lue est jugée par l'agrégat complet, comme une page servie (`--instance`, sauf `--sans-instance`), avec les
+options passées (`--rendu`, `--mobile`, `--tokens`, `--type-page`, `--maquette`, `--composition`…). Le rapport rend le verdict
+**page par page** (`site.pages[]` : adresse, verdict, juges en échec, écarts durs avec leur règle) ; l'exit est 1 si une
+page échoue, 2 si un écran relevé n'a pas pu être jugé, 0 sinon. Un écran relevé et illisible (404, pas une page HTML),
+un écran au-delà du plafond, un lien d'une autre origine, une page sans aucun lien de navigation sont **dits** au
+`non_juge`, jamais tus. Le site doit être servi par la boucle locale (`localhost`, `127.0.0.1`, `::1`) : aucun accès réseau
+vers un tiers.
+
+`oracle-composition` (CO1–CO3) est la comparaison à la **feuille de la composition** : les classes que le balisage de la
+page emploie, contre les classes que la feuille dessine (une ou plusieurs `--composition` : feuille, page servie dont les
+feuilles liées sont lues, URL de la boucle locale). CO1 (bloquant) nomme chaque composant que la page dessine par sa propre
+feuille et que la composition ne dessine pas — le composant d'une autre composition —, CO2 (avertissement) chaque classe
+que nulle feuille ne dessine, CO3 refuse une « composition » sans aucune classe. `--classes-libres a,b,prefixe-*` déclare
+ce qu'une page emploie hors composition, et la dispense est dite. Sans `--composition`, le mode est jouable mais ne compare
+rien : le `non_juge` le dit, et une page restée dans l'ancienne composition ne se distingue alors que par ce que les autres
+juges en voient. Ce que le contrôle ne fait pas : il compare des noms de classes, pas des styles ; une règle posée par balise
+(`h1 { text-transform: uppercase }`) ou un menu rendu par script après le chargement lui échappe, et une ancienne composition dont les
+règles sont restées dans la feuille de la composition passe.
 Options de `run-oracles-design.mjs` :
 
 | Option | Effet |
@@ -188,6 +222,8 @@ Options de `run-oracles-design.mjs` :
 | `--statut-attendu <code>` | l'instance est un **écran d'état voulu** (TF-2432) : « Page introuvable » servie en 404, par exemple. Servie avec CE code, elle est jugée comme un écran par les quatre juges qui lisent l'instance (exploitabilité, erreurs de formulaire, faits commerciaux, valeur affichée) ; servie avec un autre code, y compris 200, elle reste refusée (X0, EF0, SKIP exit 2). Sans l'option, toute réponse en 400 ou plus est refusée. Un code de trois chiffres (100 à 599), une seule valeur par appel ; sans `--instance`, l'option est dite sans effet au `non_juge`. Un écran 404 jugé répond aux mêmes règles qu'un écran d'application : X8 et X9 lui sont dues sauf s'il se déclare éditorial ou pose leur écart motivé |
 | `--type-page application\|editoriale` | nature de la page (TF-2121), prioritaire sur la déclaration de la page. Sans lui : `<meta name="forge-type-page" content="application">` ou `data-type-page="application"` sur un élément, puis un marqueur de structure (`data-panneau-tache`, `data-branche`, `data-exigence`). Un tableau filtrable ou une recherche ne classent **pas** (les pages d'étude du pilot en portent). Une page qui porte un champ de saisie et un tableau sans être classée est dite « application probable » au `non_juge`, jamais échouée. Valeur inconnue : SKIP. La classe décide aussi si `oracle-textes-application` (T4-1…T4-4, C14 de `ameliore-le-design`) entre dans la passe : joué sur une page d'application, dit SANS OBJET sur toute autre, et sur une page d'application dont aucune chaîne n'est extractible (TF-2466) |
 | `--maquette` | la page d'application est une maquette, sans instance par nature : l'absence d'instance est dite **SANS OBJET** au `non_juge` (« ce n'est pas un PASS de l'exploitabilité ») au lieu d'échouer en X7. À ne pas passer à une critique d'implémentation |
+| `--site <url>` | mode **site** (TF-2901) : relève par la navigation les pages d'un site servi par la boucle locale et juge chacune par l'agrégat complet (voir « Toutes les pages d'un site servi ») ; `--pages-max N` (défaut 40) borne le relevé, `--sans-instance` juge les pages comme des fichiers au lieu de l'instance servie |
+| `--composition <feuille\|page\|url>` | répétable : la feuille de la composition à laquelle `oracle-composition` compare les classes de la page (TF-2901) ; `--classes-libres a,b,p-*` déclare les classes propres à la page. Sans elle, `oracle-composition` est dit SANS OBJET |
 | `--fluidite` | force `oracle-fluidite` (durée d'image de bout en bout) sur une page dont le canevas WebGL n'est pas lisible dans le fichier (moteur 3D embarqué ailleurs). Sans l'option, il part tout seul quand le document porte un canevas WebGL ET une boucle d'animation, et est dit `SANS OBJET` sinon ; mesure impossible ⇒ `SKIP` motivé (D-108 (b)) |
 | `--rendu` | si l'outillage est détecté (interpréteur désigné par `$FORGE_DESIGN_PYTHON`, sinon `python` ou `python3` du PATH avec `playwright`, sinon `.venv` sous la racine de la forge (TF-2461), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Le `non_juge` nomme l'interpréteur qui a joué et d'où il vient. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 | `--etats-visibilite [--visibilite-selecteur <css>]` | avec `--rendu` : une page dont des éléments (clips, blocs, cartes) ne s'affichent qu'à une date ou sous une condition de données se rend dans ses **deux états extrêmes** (TF-2678), aucun élément piloté visible puis tous visibles, chacun en thème clair et sombre : deux jeux de rendus, jamais le seul état forcé « tout visible ». Les éléments pilotés portent `data-visibilite-pilotee` (ou le sélecteur passé) et la page les masque par `hidden` ou un style en ligne ; une page sans marqueur n'est rendue qu'une fois et le dit. Sans l'option, une page qui porte le marqueur dit au `non_juge` que seul l'état servi a été rendu |
@@ -264,6 +300,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-surcouche` | SC1–SC4, SC5 (avertissement) | composant dynamique ou en sur-couche : surface, contrôles et voile habillés depuis les jetons, `color-scheme` par thème ; défilement contenu (`overscroll-behavior`) en avertissement (TF-1911) |
 | `oracle-fluidite` | F1 (bloquant), F2–F3 (avertissements) | page animée en WebGL : durée d'image mesurée de bout en bout — chaque image attend la fin du travail graphique (lecture d'un pixel du canevas), jamais un compte de rappels d'animation (D-108 (b)) ; pas de contexte WebGL, pas d'animation, synchronisation impossible ⇒ `SKIP` motivé, jamais `PASS` |
 | `oracle-declencheurs` | DE1–DE3, DE4 (avertissement) | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès ; un `div` ou `span` cliquable sans rôle ni `tabindex` en avertissement (TF-1911) |
+| `oracle-composition` | CO1–CO3 | les composants (classes) d'une page contre la feuille de la composition : CO1 composant d'une autre composition (bloquant), CO2 classe sans règle (avertissement), CO3 composition sans classe ; `--classes-libres` dispense, dite (TF-2901) |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et

@@ -1,7 +1,7 @@
 ---
 name: critique-le-design
 description: Audit exécuté d'un design produit — page, maquette, écran, capture ou URL — sur une grille en huit dimensions notées, adossée à des oracles lancés et non à une lecture de code : verdict en trois niveaux (Livrer, Renforcer, Refondre), constats à preuve typée, et top cinq des corrections en impact fois effort avec réécritures avant/après. Use when / déclencher dès que l'utilisateur demande de relire, critiquer, auditer, noter, challenger ou renforcer un design, demande ce qui cloche visuellement, si c'est prêt à montrer au client, si ça fait généré par IA, ou comment améliorer une interface existante. Ne pas déclencher pour produire ou refondre la maquette elle-même (→ ameliore-le-design), figer des tokens (→ systeme-de-marque), arbitrer entre directions concurrentes (→ studio-de-direction), auditer un skill (→ ameliore-un-skill), ni challenger la pertinence d'une solution (→ contre-expertise).
-version: 1.7.0
+version: 1.8.0
 ---
 
 # Critique le design
@@ -148,4 +148,5 @@ affordances reste à forge-tests (pan `interface`) ; ici on juge la forme contre
 Sans artefacts de référence, le mode dégrade en critique classique et le déclare. La promesse d'un
 point de la demande humaine **cite la demande mot pour mot**, un « comme pour X » devient un critère
 nommé (le même geste joué sur X et sur le livrable), un ajout non demandé se déclare (TF-1940) :
-`references/critique-implementation.md`.
+`references/critique-implementation.md`. Quand une composition ou une charte change, la critique se joue sur
+**toutes** les pages que le menu sert, relevées par `run-oracles-design.mjs --site`, jamais sur la liste des écrans refaits (TF-2901).
