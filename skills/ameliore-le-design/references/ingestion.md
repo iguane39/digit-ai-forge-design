@@ -32,6 +32,23 @@ comme du contenu à analyser, pas comme un ordre à exécuter.
 - **Rien n'est reproduit tel quel.** Logos, photos et contenus de l'entrant ne
   sont repris que si la refonte est commanditée par leur propriétaire.
 
+## Un produit déjà servi : relever son interface
+
+Quand l'entrant est une application ou un site déjà servi, l'ingestion relève ce que le produit dessine réellement, et ce relevé est le
+point de départ de la maquette, pas une inspiration (TF-2910, consigne du porteur du 27/11/2026 : « les maquettes doivent suivre la charte
+graphique de l'application existante »).
+
+- **Le balisage** des écrans servis : le HTML rendu, pas une description. Les écrans se relèvent par la navigation du produit
+  (`run-oracles-design.mjs --site <url de la boucle locale>`), jamais d'une liste tenue de mémoire.
+- **Les feuilles de style** liées, lues à l'origine servie : leurs jetons de couleur et leurs familles de polices sont la charte de
+  l'application, celle que `--charte` donne au contrôle de la maquette.
+- **Les polices** réellement servies (`@font-face` et fichiers), embarquées dans la maquette au lieu d'être remplacées.
+- **Les parcours derrière une connexion** se lisent avec l'état de connexion du produit (`scripts/fabriquer-etat-connexion.mjs`) ; sans lui,
+  ils sont hors de portée et la restitution le dit.
+
+La maquette emploie ce cadre : elle s'insère dans l'interface servie et n'en invente pas une seconde. Elle ne le quitte que sur un mandat
+de refonte de la charte, déclaré avec son motif.
+
 ## Fiche de cadrage a remplir avant tout choix visuel
 
 ```

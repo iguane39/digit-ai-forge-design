@@ -1,8 +1,10 @@
-// lib/feuilles.mjs — LIRE LES FEUILLES D'UNE APPLICATION, ET EN TIRER LES CLASSES
-// (TF-2901, lot Produit-82 du 27/11/2026).
+// lib/feuilles.mjs — LIRE LES FEUILLES D'UNE APPLICATION, ET EN TIRER CLASSES, COULEURS ET FAMILLES DE POLICES
+// (TF-2901 et TF-2910, lot Produit-82 du 27/11/2026).
 //
-// LE FAIT. oracle-composition (TF-2901) compare les classes qu'une page emploie à celles que la feuille de la composition dessine.
-// Il lit une feuille, ou une page servie avec ses feuilles liées, et la lit ici, une fois.
+// LE FAIT. Deux contrôles comparent une page ou une maquette à ce que l'application SERVIE dessine : oracle-composition
+// (les classes de la page contre la feuille de la composition, TF-2901) et oracle-charte-application (les couleurs et les
+// familles de polices d'une maquette contre celles de la charte de l'application, TF-2910). Ils lisent la même chose, une
+// feuille ou une page servie avec ses feuilles liées, et la lisent ici, une fois.
 //
 // LA BORNE. Comme rendre-autonome.mjs (TF-2309), aucun accès réseau vers un tiers : une URL doit viser la boucle locale
 // (localhost, 127.0.0.1, ::1), et les feuilles qu'une page servie lie sont lues à son origine ou à côté du fichier. Une
@@ -14,6 +16,7 @@ import path from 'node:path';
 import { parse as parseHtml, css as cssDeLaPage, cssRulesDeep, arbres, elements } from './html.mjs';
 import { estHoteLocal, lirePageServie } from './lire-page-servie.mjs';
 import { rendreAutonome } from './rendre-autonome.mjs';
+import { parse as parseCouleur, findColors, resoudreVar } from './color.mjs';
 
 const TAILLE_MAX = 5_000_000;
 const sansCommentaires = css => String(css).replace(/\/\*[\s\S]*?\*\//g, ' ');
@@ -117,3 +120,104 @@ export function classesEmployees(html) {
 export function estClasseLibre(classe, libres) {
   return libres.some(l => (l.endsWith('*') ? classe.startsWith(l.slice(0, -1)) : classe === l));
 }
+
+// ── Les couleurs et les familles de polices ─────────────────────────────────────────────────────────────────────
+
+// Les mots-clés qui ne nomment pas une famille précise : ils ne se comparent pas.
+const GENERIQUES = new Set(['serif', 'sans-serif', 'monospace', 'cursive', 'fantasy', 'system-ui', 'ui-serif', 'ui-sans-serif', 'ui-monospace',
+  'ui-rounded', 'emoji', 'math', 'fangsong', 'inherit', 'initial', 'unset', 'revert', 'revert-layer']);
+
+/** Les noms de famille d'une pile `font-family`, sans guillemets, hors génériques et hors var(). Casse conservée. */
+export function nomsDePile(valeur) {
+  const v = String(valeur).replace(/!important/i, '');
+  const morceaux = [];
+  let courant = ''; let guillemet = null; let parentheses = 0;
+  for (const ch of v) {
+    if (guillemet) { courant += ch; if (ch === guillemet) guillemet = null; continue; }
+    if (ch === '"' || ch === "'") { guillemet = ch; courant += ch; continue; }
+    if (ch === '(') parentheses++;
+    if (ch === ')') parentheses--;
+    if (ch === ',' && parentheses === 0) { morceaux.push(courant); courant = ''; continue; }
+    courant += ch;
+  }
+  morceaux.push(courant);
+  return morceaux.map(s => s.trim().replace(/^(["'])(.*)\1$/, '$2').trim())
+    .filter(s => s && !/^var\(/i.test(s) && !GENERIQUES.has(s.toLowerCase()));
+}
+
+const clePile = nom => nom.toLowerCase().replace(/\s+/g, ' ');
+
+/** Une propriété personnalisée porte-t-elle une pile de polices ? Par son nom, ou par la forme de sa valeur. */
+function ressembleAUnePile(nom, valeur) {
+  if (/font|police|typo|famille|family/i.test(nom) && !/size|taille|weight|poids|height|hauteur|style|variant|stretch|spacing|feature/i.test(nom)) return true;
+  return /^(?:(?:"[^"]+"|'[^']+'|[\w -]+),\s*)+(?:serif|sans-serif|monospace|system-ui|ui-sans-serif|ui-serif|ui-monospace|cursive|fantasy)\s*$/i.test(valeur.trim());
+}
+
+/**
+ * Les jetons d'une feuille (ou d'une page) : propriétés personnalisées de couleur et de police, et littéraux de couleur
+ * et de famille posés par les règles. `litteralement` = la valeur est écrite dans la feuille, pas un alias.
+ * @returns {{couleurs: Array<{jeton:string|null, valeur:string, rgba:object, origine:string}>,
+ *            familles: Array<{jeton:string|null, nom:string, premier:boolean, origine:string}>,
+ *            non_resolus: string[]}}
+ */
+export function jetonsDe(cssText) {
+  const css = sansCommentaires(cssText);
+  const regles = cssRulesDeep(css);
+  // La table des propriétés personnalisées (dernière déclaration), pour résoudre un alias var(--x).
+  const table = new Map();
+  for (const r of regles) for (const m of r.body.matchAll(/(--[\w-]+)\s*:\s*([^;]+)/g)) table.set(m[1], m[2].trim());
+  const resoudre = v => resoudreVar(v, [n => table.get(n)]);
+  const couleurs = []; const familles = []; const non_resolus = [];
+  const vuesC = new Set(); const vuesF = new Set();
+  const posC = (jeton, valeur, origine) => {
+    const rgba = parseCouleur(valeur);
+    if (!rgba) return false;
+    const cle = `${jeton || ''}|${rgba.r.toFixed(0)},${rgba.g.toFixed(0)},${rgba.b.toFixed(0)},${(rgba.a ?? 1).toFixed(2)}`;
+    if (vuesC.has(cle)) return true;
+    vuesC.add(cle); couleurs.push({ jeton, valeur: valeur.trim(), rgba, origine });
+    return true;
+  };
+  const posF = (jeton, valeurPile, origine) => {
+    const noms = nomsDePile(valeurPile);
+    noms.forEach((nom, i) => {
+      const cle = `${jeton || ''}|${clePile(nom)}|${i === 0}`;
+      if (vuesF.has(cle)) return;
+      vuesF.add(cle); familles.push({ jeton, nom, premier: i === 0, origine });
+    });
+  };
+  for (const r of regles) {
+    const dansFontFace = /^@font-face\b/i.test(r.selector) || r.atRules.some(a => /^@font-face\b/i.test(a));
+    for (const m of r.body.matchAll(/(?:^|[;\s{])(--[\w-]+|font-family|[a-z-]+)\s*:\s*([^;]+)/gi)) {
+      const prop = m[1].toLowerCase(); const brut = m[2].trim();
+      if (prop.startsWith('--')) {
+        const nom = m[1];
+        const valeur = resoudre(brut);
+        if (valeur === null) { non_resolus.push(`${nom} : ${brut.slice(0, 40)}`); continue; }
+        if (ressembleAUnePile(nom, valeur)) { posF(nom, valeur, r.selector.slice(0, 60)); continue; }
+        if (!posC(nom, valeur, r.selector.slice(0, 60)) && /color|couleur|bg|fond|encre|ink|accent|brand|marque|trait|bord/i.test(nom) && !/^var\(/i.test(brut)
+          && !/^(?:transparent|currentcolor|inherit|initial|unset|none)$/i.test(brut)) non_resolus.push(`${nom} : ${brut.slice(0, 40)}`);
+      } else if (prop === 'font-family' && !dansFontFace) {
+        const valeur = resoudre(brut);
+        if (valeur !== null) posF(null, valeur, r.selector.slice(0, 60));
+      } else if (!dansFontFace) {
+        // Un littéral de couleur posé par une règle (color: #fff, border: 1px solid rgb(…)) : membre de la charte, jamais un jeton.
+        for (const c of findColors(brut)) posC(null, c.raw, r.selector.slice(0, 60));
+      }
+    }
+    if (dansFontFace) {
+      const m = /font-family\s*:\s*([^;]+)/i.exec(r.body);
+      if (m) for (const nom of nomsDePile(m[1])) {
+        const cle = `@font-face|${clePile(nom)}`;
+        if (!vuesF.has(cle)) { vuesF.add(cle); familles.push({ jeton: null, nom, premier: false, origine: '@font-face', fournie: true }); }
+      }
+    }
+  }
+  return { couleurs, familles, non_resolus };
+}
+
+/** Deux couleurs sont-elles la même ? Chaque canal à 1/255 près, l'opacité à 1 % près : la charte ne se lit pas à l'œil. */
+export function memeCouleur(a, b) {
+  return Math.abs(a.r - b.r) <= 1 && Math.abs(a.g - b.g) <= 1 && Math.abs(a.b - b.b) <= 1 && Math.abs((a.a ?? 1) - (b.a ?? 1)) <= 0.011;
+}
+
+export const nomDeFamille = clePile;

@@ -1,0 +1,16 @@
+/* Charte de l'APPLICATION servie de la fixture (TF-2910) : ses jetons de couleur et ses familles de polices. */
+@font-face { font-family: "Source Sans 3"; src: local("Source Sans 3"); font-weight: 400; }
+:root {
+  --encre: #1b2a41;
+  --fond: #f7f5f0;
+  --accent: #0b6e4f;
+  --accent-doux: hsl(160, 40%, 92%);
+  --alerte: #b3261e;
+  --voile: rgba(27, 42, 65, 0.5);
+  --police-texte: "Source Sans 3", "Helvetica Neue", sans-serif;
+  --police-titre: Georgia, serif;
+}
+body { background: var(--fond); color: var(--encre); font-family: var(--police-texte); }
+h1, h2 { font-family: var(--police-titre); }
+.bouton { background: var(--accent); color: #ffffff; border: 1px solid var(--accent); }
+.erreur { color: var(--alerte); }

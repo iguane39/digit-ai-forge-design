@@ -138,6 +138,8 @@ node oracles/run-oracles-design.mjs --site <url d'une page servie de la boucle l
   [--classes-libres a,b,p-*] [--pages-max N] [--sans-instance] [options d'une page]                        # TOUTES les pages que la navigation sert, jugées une par une (TF-2901)
 node oracles/oracle-composition.mjs <page.html|url> --composition <feuille.css|page|url>… [--classes-libres a,b,p-*]   # CO1–CO3 : les composants de la page sont-ils dessinés par la feuille de la composition ? (TF-2901)
 node oracles/planche-mosaique.mjs --sortie <dossier> (--manifeste planche.json | --rangee "<nom>" <maquette>… …)   # la planche mosaïque d'une comparaison de maquettes ou de directions (TF-2909)
+node oracles/oracle-charte-application.mjs <maquette.html> --charte <feuille.css|page|url>… \
+  [--dispense "<motif>"] [--dispenser "<jeton|valeur|famille>=<motif>"]…                                 # CH1–CH3 : la maquette suit-elle la charte de l'application servie ? (TF-2910)
 node oracles/decouvrir-oracles.mjs [--racine <chemin>]         # TOUS les oracles de la forge, lus sur le disque (TF-1319)
 node oracles/self-test-decouverte.mjs                         # verrou dédié de la découverte, deux sens
 node oracles/self-test-regles-jouees.mjs                      # verrou dédié des plages citées à la sortie des oracles (« M1–M11 sans écart ») : dérivées de REGLES_JOUEES, jamais en dur (TF-2287), deux sens
@@ -222,6 +224,27 @@ Playwright (Python, celui de `--rendu`) capture le premier écran à 1920×1080,
 `--pleine-page` ; le mouvement est réduit à sa fin. Une maquette introuvable ou non capturée n'est jamais omise : sa vignette
 dit « CAPTURE MANQUANTE » avec le motif, le constat PM1 la nomme, exit 1. Sans navigateur ou sans `--sortie` : SKIP exit 2, jamais une
 planche vide. Les livrables vont dans `--sortie`, jamais dans ce dépôt. La planche aide à choisir, elle ne juge rien.
+### La charte de l'application existante — `oracle-charte-application` (TF-2910)
+
+Consigne du porteur du 27/11/2026 : les maquettes doivent suivre la charte graphique de l'application existante, sinon il est
+difficile de se projeter sur le résultat final une fois implémenté. 18 maquettes à charte libre ont dû être refaites. Pour un produit
+**déjà servi**, la maquette part de l'interface servie (balisage, feuilles et polices réels : `skills/ameliore-le-design`), et ce
+contrôle compare ses jetons à ceux de la feuille de l'application :
+
+```
+node oracles/oracle-charte-application.mjs maquette.html --charte http://127.0.0.1:5173/actifs/app.css
+node oracles/run-oracles-design.mjs maquette.html --maquette --charte <feuille|page servie|url>   # dans l'agrégat
+```
+
+CH1 (bloquant) : un jeton de **couleur** de la maquette (propriété personnalisée) absent des couleurs de la charte — celles de ses
+jetons et de ses règles, comparées à 1/255 près par canal, hex, rgb, hsl et oklch confondus ; le message nomme la couleur de la charte
+la plus proche. CH2 (bloquant) : la **première famille** d'une pile de polices de la maquette n'est nommée par aucune pile ni aucun
+`@font-face` de la charte (génériques et familles de repli exclus). CH3 : la **dispense** déclarée et motivée — `--dispense "<motif>"`
+(`--dispense-charte` dans l'agrégat), `<meta name="forge-charte-dispense" content="<motif>">` dans la maquette, ou `--dispenser
+"<jeton|valeur|famille>=<motif>"` pour un seul écart — lève CH1 et CH2, qui restent écrits en information avec le motif ; un motif de
+moins de 12 caractères n'est pas une dispense. Une charte ou une maquette sans rien de comparable rend SKIP (CH0), jamais PASS. Sans
+`--charte`, l'agrégat dit la comparaison SANS OBJET à voix haute. Ce que le contrôle ne fait pas : il compare des valeurs, pas des
+rôles ni des mises en page, et la charte est celle des feuilles lues, pas de leur source.
 Options de `run-oracles-design.mjs` :
 
 | Option | Effet |
@@ -243,6 +266,7 @@ Options de `run-oracles-design.mjs` :
 | `--maquette` | la page d'application est une maquette, sans instance par nature : l'absence d'instance est dite **SANS OBJET** au `non_juge` (« ce n'est pas un PASS de l'exploitabilité ») au lieu d'échouer en X7. À ne pas passer à une critique d'implémentation |
 | `--site <url>` | mode **site** (TF-2901) : relève par la navigation les pages d'un site servi par la boucle locale et juge chacune par l'agrégat complet (voir « Toutes les pages d'un site servi ») ; `--pages-max N` (défaut 40) borne le relevé, `--sans-instance` juge les pages comme des fichiers au lieu de l'instance servie |
 | `--composition <feuille\|page\|url>` | répétable : la feuille de la composition à laquelle `oracle-composition` compare les classes de la page (TF-2901) ; `--classes-libres a,b,p-*` déclare les classes propres à la page. Sans elle, `oracle-composition` est dit SANS OBJET |
+| `--charte <feuille\|page\|url>` | répétable : la charte de l'application servie contre laquelle `oracle-charte-application` compare les couleurs et polices de la maquette (TF-2910) ; `--dispense-charte "<motif>"` et `--dispenser-charte "<clé>=<motif>"` déclarent la dispense. Sans elle, il est dit SANS OBJET |
 | `--fluidite` | force `oracle-fluidite` (durée d'image de bout en bout) sur une page dont le canevas WebGL n'est pas lisible dans le fichier (moteur 3D embarqué ailleurs). Sans l'option, il part tout seul quand le document porte un canevas WebGL ET une boucle d'animation, et est dit `SANS OBJET` sinon ; mesure impossible ⇒ `SKIP` motivé (D-108 (b)) |
 | `--rendu` | si l'outillage est détecté (interpréteur désigné par `$FORGE_DESIGN_PYTHON`, sinon `python` ou `python3` du PATH avec `playwright`, sinon `.venv` sous la racine de la forge (TF-2461), `render_page.py` et `oracle-a11y.py` aux chemins canoniques `~/.claude/skills/...`), lance `render_page.py` sur le fichier fourni ET sur une copie générée avec `data-theme="dark"`, puis `oracle-a11y.py`, et agrège leurs verdicts dans `oracles`. Le `non_juge` nomme l'interpréteur qui a joué et d'où il vient. Outillage manquant ⇒ `SKIP` motivé sur cette seule entrée, jamais une erreur. Sans l'option, comportement inchangé |
 | `--etats-visibilite [--visibilite-selecteur <css>]` | avec `--rendu` : une page dont des éléments (clips, blocs, cartes) ne s'affichent qu'à une date ou sous une condition de données se rend dans ses **deux états extrêmes** (TF-2678), aucun élément piloté visible puis tous visibles, chacun en thème clair et sombre : deux jeux de rendus, jamais le seul état forcé « tout visible ». Les éléments pilotés portent `data-visibilite-pilotee` (ou le sélecteur passé) et la page les masque par `hidden` ou un style en ligne ; une page sans marqueur n'est rendue qu'une fois et le dit. Sans l'option, une page qui porte le marqueur dit au `non_juge` que seul l'état servi a été rendu |
@@ -320,6 +344,7 @@ donne ce qui est au compte du socle. Rien n'est effacé, rien n'est deviné.
 | `oracle-fluidite` | F1 (bloquant), F2–F3 (avertissements) | page animée en WebGL : durée d'image mesurée de bout en bout — chaque image attend la fin du travail graphique (lecture d'un pixel du canevas), jamais un compte de rappels d'animation (D-108 (b)) ; pas de contexte WebGL, pas d'animation, synchronisation impossible ⇒ `SKIP` motivé, jamais `PASS` |
 | `oracle-declencheurs` | DE1–DE3, DE4 (avertissement) | nature du point d'entrée : une action se déclenche par un bouton, une navigation se fait par un lien, un fantôme n'est jamais l'unique accès ; un `div` ou `span` cliquable sans rôle ni `tabindex` en avertissement (TF-1911) |
 | `oracle-composition` | CO1–CO3 | les composants (classes) d'une page contre la feuille de la composition : CO1 composant d'une autre composition (bloquant), CO2 classe sans règle (avertissement), CO3 composition sans classe ; `--classes-libres` dispense, dite (TF-2901) |
+| `oracle-charte-application` | CH1–CH3 | les jetons de couleur et la première famille des piles de polices d'une maquette contre la charte de l'application servie : CH1 couleur hors charte, CH2 police hors charte, CH3 dispense motivée, dite, jamais effacée (TF-2910) |
 
 Ils lisent le DOM statique **et** les gabarits JS : le contrat impose un rendu
 dynamique, et un oracle aveugle au runtime se tairait sur les tables, les cartes et

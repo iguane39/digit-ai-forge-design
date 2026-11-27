@@ -1,7 +1,7 @@
 ---
 name: studio-de-direction
 description: Fait converger plusieurs directions artistiques concurrentes vers une seule, retenue et argumentée : produit trois directions divergentes par construction sur un axe nommé, les juge sur une rubrique figée avant la première génération, et livre un DIRECTION.md portant la gagnante, les écartées avec leur raison, et le relevé de jugement. Use when / déclencher dès que l'utilisateur hésite entre plusieurs partis pris visuels, demande des variantes, des pistes, des propositions ou des directions à comparer, veut explorer avant de trancher, ou dit ne pas savoir quelle direction prendre pour un design. Ne pas déclencher pour figer les tokens d'une identité déjà arrêtée (→ systeme-de-marque), construire la maquette une fois la direction choisie (→ ameliore-le-design), juger un design déjà produit (→ critique-le-design), ni pour une boucle mono-candidat sans divergence (→ la-boucle).
-version: 1.2.0
+version: 1.3.0
 ---
 
 # Studio de direction
@@ -80,6 +80,15 @@ posent côte à côte dans une planche : une rangée par direction ou par concep
 <dossier du produit> --rangee "<direction>" "<écran>=<fichier>" …` l'écrit ; le chemin de `planche.png` part dans
 `DIRECTION.md`, et une comparaison livrée sans planche est incomplète. Une capture qui échoue se dit sur la planche
 (« capture manquante »), elle ne s'en retire pas.
+
+**Pour un produit déjà servi, l'écran signature se dessine dans la charte de l'application servie** (TF-2910,
+consigne du porteur du 27/11/2026 : « les maquettes doivent suivre la charte graphique de l'application existante,
+sinon il est difficile de se projeter sur le résultat final une fois implémenté. »). L'axe de divergence porte alors
+sur la composition, la hiérarchie et le ton, jamais sur les couleurs et les polices de l'application, sauf mandat de
+refonte de la charte, déclaré avec son motif dans `DIRECTION.md`. Chaque direction part de l'interface servie
+(balisage, feuilles et polices réels : `ameliore-le-design`, `references/ingestion.md`) et passe
+`run-oracles-design.mjs <écran> --maquette --charte <feuille ou page servie>` ; la dispense (`--dispense-charte`)
+est ce mandat de refonte.
 
 **Borne de coût : 3 directions, 1 passe de jugement, 1 approfondissement.** Au-delà,
 escalader. Une compétition qui s'étire indéfiniment est un aveu que la rubrique ne

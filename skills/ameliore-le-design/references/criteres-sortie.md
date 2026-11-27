@@ -90,6 +90,7 @@ en `SANS OBJET` ceux qui ne s'appliquent pas :
 python scripts/check_maquette.py <fichier.html>
 node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> [--mobile] [--tokens tokens.css] [--rendu]
 node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> --oracle textes-application   # C14, AVANT C15
+node "$FORGE_DESIGN_ROOT/oracles/run-oracles-design.mjs" <fichier.html> --maquette --charte <feuille ou page servie>   # produit déjà servi : CH1–CH3, TF-2910
 node "$FORGE_DESIGN_ROOT/oracles/planche-mosaique.mjs" --sortie <dossier> --rangee "<concepteur>" "<nom>=<fichier>" …   # plusieurs maquettes comparées
 ```
 

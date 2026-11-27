@@ -120,7 +120,8 @@ import { releverSite, departAcceptable } from './lib/site-servi.mjs';
 
 const args = process.argv.slice(2);
 // TF-2901 : les options à valeur du mode --site et de la comparaison à la composition ; leur valeur n'est pas la cible.
-const OPTIONS_SITE_ET_COMPOSITION = ['--site', '--pages-max', '--composition', '--classes-libres'];
+// TF-2910 : et celles de la comparaison à la charte de l'application.
+const OPTIONS_SITE_ET_COMPOSITION = ['--site', '--pages-max', '--composition', '--classes-libres', '--charte', '--dispense-charte', '--dispenser-charte'];
 const jsonOnly = args.includes('--json-only');
 const rendu = args.includes('--rendu');
 const etatsVisibilite = args.includes('--etats-visibilite');
@@ -527,8 +528,8 @@ if (args.includes('--site')) {
   const moi = fileURLToPath(import.meta.url);
   // Les options qui valent pour chaque page : celles que le point d'entrée comprend déjà, passées telles quelles.
   const OPTIONS_SEULES = ['--rendu', '--mobile', '--maquette', '--etats-visibilite', '--fluidite', '--accepter-certificat-local'];
-  const OPTIONS_VALEUR = ['--tokens', '--type-page', '--etat-connexion', '--valeurs-derivees', '--racine', '--visibilite-selecteur', '--classes-libres'];
-  const OPTIONS_REPETEES = ['--composition'];
+  const OPTIONS_VALEUR = ['--tokens', '--type-page', '--etat-connexion', '--valeurs-derivees', '--racine', '--visibilite-selecteur', '--classes-libres', '--dispense-charte'];
+  const OPTIONS_REPETEES = ['--composition', '--charte', '--dispenser-charte'];
   const passe = [
     ...args.filter(a => OPTIONS_SEULES.includes(a)),
     ...OPTIONS_VALEUR.flatMap(o => (opt(o) ? [o, opt(o)] : [])),
@@ -729,7 +730,7 @@ function passeFichier(fichier, { muet = false } = {}) {
   if (seul) {
     // TF-2043 : l'oracle de valeur affichée se joue HORS de cette passe (voir plus bas) — sur la copie
     // sans socle, dans le dossier temporaire, il ne retrouverait pas la déclaration voisine de la page.
-    if (seul === 'valeur-affichee' || seul === 'composition') return [];
+    if (seul === 'valeur-affichee' || seul === 'composition' || seul === 'charte-application') return [];
     const script = `oracle-${seul}.mjs`;
     const avecTokens = ['oracle-tokens.mjs', 'oracle-declencheurs.mjs', 'oracle-surcouche.mjs', 'oracle-perceptibilite.mjs'].includes(script);
     return [lancer(script, avecTokens && opt('--tokens') ? [fichier, '--tokens', opt('--tokens')] : [fichier])];
@@ -962,6 +963,27 @@ if (!seul || seul === 'composition') {
   } else if (!seul) {
     sansObjet.push('oracle-composition : SANS OBJET — aucune feuille de composition fournie (--composition <feuille.css|page servie|url>) : les composants de la page n\'ont pas été comparés à ce que la composition dessine ; '
       + 'à jouer dès qu\'une composition change, sur CHAQUE page servie (--site <url>)');
+  }
+}
+
+// ── TF-2910 · la maquette suit-elle la charte graphique de l'application existante ? ──
+// oracle-charte-application compare les jetons de couleur et les familles de polices de la maquette à ceux de la charte de l'application
+// (--charte, répétable : feuille, page servie ou URL de la boucle locale). Consigne du porteur du 27/11/2026 : « les maquettes doivent suivre
+// la charte graphique de l'application existante, sinon il est difficile de se projeter sur le résultat final une fois implémenté. »
+// Sans --charte, il n'est ni lancé ni en échec : il est dit SANS OBJET, à voix haute — une maquette d'un produit déjà servi doit la passer.
+if (!seul || seul === 'charte-application') {
+  const chartes = args.flatMap((a, i) => (a === '--charte' && args[i + 1] ? [args[i + 1]] : []));
+  if (chartes.length) {
+    const r = lancer('oracle-charte-application.mjs', [fichierJuge, ...chartes.flatMap(c => ['--charte', c]),
+      ...(opt('--tokens') ? ['--tokens', opt('--tokens')] : []),
+      ...(opt('--dispense-charte') !== null ? ['--dispense', opt('--dispense-charte')] : []),
+      ...args.flatMap((a, i) => (a === '--dispenser-charte' && args[i + 1] ? ['--dispenser', args[i + 1]] : [])),
+      ...(certificatLocal ? ['--accepter-certificat-local'] : [])]);
+    if (r.verdict === 'SKIP' && !r.raison) r.raison = (r.findings.find(f => f.regle === 'CH0') || {}).msg || 'non jugé';
+    resultats.push(citerLaCible(r));
+  } else if (!seul) {
+    sansObjet.push('oracle-charte-application : SANS OBJET — aucune charte d\'application fournie (--charte <feuille.css|page servie|url>) : ni les couleurs ni les polices de la page n\'ont été comparées à celles de l\'application servie. '
+      + 'Pour la maquette d\'un produit déjà servi, ce n\'est pas un PASS : elle part de l\'interface servie et se juge contre sa charte (consigne du porteur du 27/11/2026, TF-2910)');
   }
 }
 

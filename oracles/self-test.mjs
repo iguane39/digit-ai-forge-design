@@ -1100,6 +1100,19 @@ const CAS = [
     verte: [fx('site-servi/index.html'), '--composition', fx('site-servi/actifs/composition.css')],
     rouge: [fx('site-servi/journal.html'), '--composition', fx('site-servi/actifs/composition.css')],
   },
+  {
+    // TF-2910 (lot Produit-82 du 27/11/2026) — LES MAQUETTES SUIVENT LA CHARTE DE L'APPLICATION EXISTANTE. Consigne du porteur, mot pour mot :
+    // « les maquettes doivent suivre la charte graphique de l'application existante, sinon il est difficile de se projeter sur le résultat
+    // final une fois implémenté. » 18 maquettes à charte libre ont dû être refaites. La verte reprend les jetons de la charte (une couleur
+    // écrite en rgb() et une en hex pour un hsl() de la charte : les formes ne comptent pas, la valeur oui ; une pile dont le repli diffère
+    // passe). La rouge porte une couleur (--accent) et une police (--police-texte) absentes de la charte : CH1 et CH2 ; CH3 est joué par
+    // une dispense au motif trop court (« court »), qui n'en est pas une et laisse les deux écarts bloquants. Les dispenses valables, la
+    // porte d'appel CH0 et le branchement à run-oracles-design se jouent au bloc dédié plus bas.
+    oracle: 'oracle-charte-application.mjs',
+    regles: ['CH1', 'CH2', 'CH3'],
+    verte: [fx('charte-application/maquette-verte.html'), '--charte', fx('charte-application/app.css')],
+    rouge: [fx('charte-application/maquette-rouge.html'), '--charte', fx('charte-application/app.css'), '--dispense', 'court'],
+  },
 ];
 
 const OUTILLAGE_RENDU = detecterOutillageRendu();
@@ -5360,6 +5373,93 @@ const jouerNode = (script, argv, options = {}) => {
     } finally {
       fs.rmSync(dossierEssai, { recursive: true, force: true, maxRetries: 5 });
     }
+  }
+}
+
+// ── TF-2910 · oracle-charte-application au détail, et son branchement à run-oracles-design ──
+{
+  console.log(String.fromCharCode(10) + 'oracle-charte-application (TF-2910) — les jetons d\'une maquette contre la charte de l\'application servie');
+  const charte = fx('charte-application/app.css');
+  const rouge = fx('charte-application/maquette-rouge.html');
+  const verte = fx('charte-application/maquette-verte.html');
+  const dossierEssai = fs.mkdtempSync(path.join(os.tmpdir(), 'charte-'));
+  try {
+    const chartes = (r) => (r.json?.findings || []).map(f => `${f.sev}:${f.regle}`).join(' ');
+    const refait = path.join(dossierEssai, 'maquette-refaite.html');
+    fs.writeFileSync(refait, fs.readFileSync(rouge, 'utf8').replace('#d6336c', '#0b6e4f').replace('"Playfair Display", Georgia, serif', 'Georgia, serif'), 'utf8');
+    const remede = jouerNode('oracle-charte-application.mjs', [refait, '--charte', charte]);
+    ligne(remede.code === 0 && remede.json?.verdict === 'PASS' && chartes(remede) === 'info:—',
+      `remède · le message de CH1 et CH2 dit « reprendre la valeur de la charte » : la même maquette ainsi corrigée PASSE, sans écart (obtenu ${remede.json?.verdict}, ${chartes(remede)})`);
+    const rougeSeule = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', charte]);
+    ligne(rougeSeule.code === 1 && chartes(rougeSeule) === 'bloquant:CH1 bloquant:CH2' && /la plus proche : --alerte/.test(rougeSeule.json.findings[0].msg) && /Playfair Display/.test(rougeSeule.json.findings[1].msg),
+      `sens rouge · sans dispense : la couleur et la police absentes de la charte sont NOMMÉES, avec la couleur la plus proche (obtenu ${chartes(rougeSeule)})`);
+    // La dispense : déclarée, motivée, et jamais effacée.
+    const totale = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', charte, '--dispense', 'refonte voulue de la charte par le porteur']);
+    ligne(totale.code === 0 && totale.json?.verdict === 'PASS' && chartes(totale) === 'info:CH1 info:CH2 info:CH3' && /refonte voulue de la charte par le porteur/.test(totale.json.findings[2].msg)
+      && !totale.json.findings.some(f => /sans écart/.test(f.msg)),
+      `dispense · --dispense motivée : PASS, mais CH1 et CH2 restent écrits (information) avec le motif, et « sans écart » n'est pas dit (obtenu ${chartes(totale)})`);
+    const meta = jouerNode('oracle-charte-application.mjs', [fx('charte-application/maquette-dispensee.html'), '--charte', charte]);
+    ligne(meta.code === 0 && chartes(meta) === 'info:CH1 info:CH2 info:CH3' && /meta name="forge-charte-dispense"/.test(meta.json.findings[2].msg),
+      `dispense · la dispense portée par la maquette (<meta name="forge-charte-dispense">) vaut celle de l'appel (obtenu ${chartes(meta)})`);
+    const courte = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', charte, '--dispense', 'court']);
+    ligne(courte.code === 1 && chartes(courte) === 'bloquant:CH3 bloquant:CH1 bloquant:CH2',
+      `sens rouge · un motif de moins de 12 caractères n'est pas une dispense : CH3 bloquant, CH1 et CH2 restent refusés (obtenu ${chartes(courte)})`);
+    const nommees = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', charte, '--dispenser', '--accent=couleur d\'une campagne ponctuelle validée', '--dispenser', 'Playfair Display=police de titre du lancement']);
+    ligne(nommees.code === 0 && chartes(nommees) === 'info:CH1 info:CH2' && /DISPENSÉ \(--dispenser\)/.test(nommees.json.findings[0].msg),
+      `dispense · --dispenser lève l'écart nommé (jeton, famille), un par un (obtenu ${chartes(nommees)})`);
+    const unSeul = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', charte, '--dispenser', '--accent=couleur d\'une campagne ponctuelle validée']);
+    ligne(unSeul.code === 1 && chartes(unSeul) === 'info:CH1 bloquant:CH2',
+      `sens rouge · une dispense nommée ne lève QUE son écart : la police reste refusée (obtenu ${chartes(unSeul)})`);
+    const inconnue = jouerNode('oracle-charte-application.mjs', [verte, '--charte', charte, '--dispenser', 'inconnu=un motif assez long pour passer']);
+    ligne(inconnue.code === 0 && chartes(inconnue) === 'avertissement:CH3',
+      `dispense sans objet · une dispense qui ne correspond à aucun écart est signalée en avertissement (obtenu ${chartes(inconnue)})`);
+    // La porte d'appel : un contrôle qui n'a rien comparé ne se lit pas « vert ».
+    const sansCharte = jouerNode('oracle-charte-application.mjs', [rouge]);
+    ligne(sansCharte.code === 2 && sansCharte.json?.verdict === 'SKIP' && sansCharte.json.findings.some(f => f.regle === 'CH0'), `porte · aucune --charte : SKIP exit 2, CH0 le dit (obtenu ${sansCharte.json?.verdict}, exit ${sansCharte.code})`);
+    const vide = path.join(dossierEssai, 'vide.css'); fs.writeFileSync(vide, '/* rien */\n', 'utf8');
+    const charteVide = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', vide]);
+    ligne(charteVide.code === 2 && charteVide.json?.findings.some(f => f.regle === 'CH0' && /aucune couleur ni aucune famille/.test(f.msg)), `porte · une charte sans couleur ni police : SKIP exit 2, jamais un PASS (obtenu exit ${charteVide.code})`);
+    const nue = path.join(dossierEssai, 'nue.html'); fs.writeFileSync(nue, '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Nue</title><style>body { margin: 0; }</style></head><body><p>Sans jeton.</p></body></html>', 'utf8');
+    const sansJeton = jouerNode('oracle-charte-application.mjs', [nue, '--charte', charte]);
+    ligne(sansJeton.code === 2 && sansJeton.json?.findings.some(f => f.regle === 'CH0' && /ne déclare aucun jeton/.test(f.msg)), `porte · une maquette sans jeton de couleur ni police : SKIP exit 2, rien n'a été comparé (obtenu exit ${sansJeton.code})`);
+    const charteAbsente = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', path.join(dossierEssai, 'absente.css')]);
+    ligne(charteAbsente.code === 2 && charteAbsente.json?.findings.some(f => f.regle === 'CH0' && /charte illisible/.test(f.msg)), `porte · une charte introuvable : SKIP exit 2 (obtenu exit ${charteAbsente.code})`);
+    const tiers = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', 'http://exemple.invalid/app.css']);
+    ligne(tiers.code === 2 && tiers.json?.findings.some(f => f.regle === 'CH0' && /hôte non local/.test(f.msg)), `borne · une charte servie par un hôte tiers n'est pas lue : SKIP exit 2, aucun accès réseau (obtenu exit ${tiers.code})`);
+
+    // La charte d'une application SERVIE : une page dont la feuille liée est lue à l'origine.
+    const serveur = await demarrerServeur(fx('charte-application'));
+    try {
+      if (!serveur.pret) ligne(false, 'serveur local de recette indisponible');
+      else {
+        const servie = jouerNode('oracle-charte-application.mjs', [verte, '--charte', `http://127.0.0.1:${serveur.port}/app.css`]);
+        const rougeServie = jouerNode('oracle-charte-application.mjs', [rouge, '--charte', `http://127.0.0.1:${serveur.port}/app.css`]);
+        ligne(servie.code === 0 && rougeServie.code === 1 && chartes(rougeServie) === 'bloquant:CH1 bloquant:CH2',
+          `sens vert et rouge · la charte lue depuis l'application SERVIE (URL de la boucle locale) donne les mêmes verdicts que le fichier (obtenu ${servie.json?.verdict} / ${rougeServie.json?.verdict})`);
+      }
+    } finally { serveur.arreter(); }
+
+    // Le branchement à run-oracles-design : --charte, --dispense-charte, et le SANS OBJET dit quand aucune charte n'est donnée.
+    const agg = (page, ...a) => jouerNode('run-oracles-design.mjs', [page, '--maquette', ...a]);
+    const aVerte = agg(verte, '--charte', charte);
+    const aRouge = agg(rouge, '--charte', charte);
+    const verdictDe = (r, nom) => (r.json?.oracles || []).find(o => o.oracle === nom)?.verdict;
+    ligne(aVerte.code === 0 && verdictDe(aVerte, 'oracle-charte-application') === 'PASS' && aRouge.code === 1 && verdictDe(aRouge, 'oracle-charte-application') === 'FAIL'
+      && (aRouge.json?.oracles || []).filter(o => o.verdict === 'FAIL').length === 1,
+      `agrégat · --charte entre dans le point d'entrée unique : maquette verte PASS exit 0, rouge FAIL exit 1 par le seul oracle-charte-application (obtenu ${aVerte.code} / ${aRouge.code})`);
+    const aDispense = agg(rouge, '--charte', charte, '--dispense-charte', 'refonte voulue de la charte par le porteur');
+    ligne(aDispense.code === 0 && verdictDe(aDispense, 'oracle-charte-application') === 'PASS',
+      `agrégat · --dispense-charte traverse le point d'entrée : la maquette rouge dispensée PASSE (obtenu exit ${aDispense.code})`);
+    const aSans = agg(verte);
+    ligne(aSans.code === 0 && verdictDe(aSans, 'oracle-charte-application') === undefined && (aSans.json?.non_juge || []).some(n => /oracle-charte-application : SANS OBJET — aucune charte d'application fournie/.test(n) && /ce n'est pas un PASS/.test(n)),
+      `agrégat · sans --charte, la comparaison est dite SANS OBJET à voix haute (« ce n'est pas un PASS »), pas silencieuse (obtenu exit ${aSans.code})`);
+    ligne((aSans.json?.non_juge || []).some(n => /oracle-composition : SANS OBJET — aucune feuille de composition fournie/.test(n)),
+      'agrégat · sans --composition, la comparaison des composants est dite SANS OBJET de même');
+    const aSeul = jouerNode('run-oracles-design.mjs', [rouge, '--oracle', 'charte-application', '--charte', charte, '--contrat-runner']);
+    ligne(aSeul.code === 1 && aSeul.json?.oracle === 'oracle-charte-application' && aSeul.json?.verdict === 'FAIL',
+      `agrégat · --oracle charte-application joue ce seul juge avec ses options (obtenu ${aSeul.json?.oracle} ${aSeul.json?.verdict}, exit ${aSeul.code})`);
+  } finally {
+    fs.rmSync(dossierEssai, { recursive: true, force: true, maxRetries: 5 });
   }
 }
 
